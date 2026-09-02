@@ -1,1 +1,20 @@
+.beats {
+  display: flex;
+  gap: 12px;
+  margin: 24px 0;
+}
 
+.beat {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 2px solid #888;
+  border-radius: 50%;
+}
+
+.beat.active {
+  color: white;
+  background: #646cff;
+  border-color: #646cff;
+}
