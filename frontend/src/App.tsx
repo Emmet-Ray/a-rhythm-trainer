@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { RhythmExercise } from "./RhythmModel";
 import { noteValueToDurationInQuarterNotes } from "./RhythmModel";
 import RhythmScore from "./RhythmScore";
+import { createTargetTapTimeline } from "./RhythmTiming";
 import "./App.css";
 
 type PlaybackPhase = "idle" | "countIn" | "playing" | "finished";
@@ -25,11 +26,15 @@ const exercise: RhythmExercise = {
     { kind: "note", noteValue: "eighth" },
   ],
 };
+const targetTapTimeline = createTargetTapTimeline(exercise, BPM);
+console.log("target tap time: ", targetTapTimeline);
 
 function App() {
   const [phase, setPhase] = useState<PlaybackPhase>("idle");
   const [countInBeat, setCountInBeat] = useState<number>(0);
   const [playingBeatIndex, setPlayingBeatIndex] = useState<number>(0);
+  const practiceStartTimeRef = useRef<number | null>(null);
+  const tapOffsetsRef = useRef<number[]>([]);
   const activeEventIndex = phase === "playing" ? playingBeatIndex : null;
 
   let beatText: string;
@@ -52,6 +57,9 @@ function App() {
       const timeoutId = window.setTimeout(() => {
         if (countInBeat === COUNT_IN_BEAT_COUNT - 1) {
           // 预备拍结束之后进入节奏击拍
+          const practiceStartTime = performance.now();
+          practiceStartTimeRef.current = practiceStartTime;
+          console.log(`practice started: ${practiceStartTime.toFixed(2)}ms`);
           setPhase("playing");
           setPlayingBeatIndex(0);
         } else {
@@ -71,9 +79,11 @@ function App() {
         );
       const timeoutId = window.setTimeout(() => {
         if (playingBeatIndex === exercise.events.length - 1) {
+          practiceStartTimeRef.current = null;
           setPhase("finished");
           setCountInBeat(0);
           setPlayingBeatIndex(0);
+          console.log("最终敲击结果: ", tapOffsetsRef.current);
         } else {
           setPlayingBeatIndex((prev) => prev + 1);
         }
@@ -86,14 +96,42 @@ function App() {
 
   function handlePlay() {
     if (phase === "countIn" || phase === "playing") {
+      practiceStartTimeRef.current = null;
       setPhase("idle");
       setCountInBeat(0);
       setPlayingBeatIndex(0);
     } else {
       setPhase("countIn");
       setCountInBeat(0);
+      practiceStartTimeRef.current = null;
+      tapOffsetsRef.current = [];
     }
   }
+
+  // 监听敲击空格键
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.code !== "Space" || event.repeat) {
+        return;
+      }
+
+      const practiceStartTime = practiceStartTimeRef.current;
+      if (practiceStartTime === null) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const tapOffsetMs = performance.now() - practiceStartTime;
+      tapOffsetsRef.current.push(tapOffsetMs);
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   return (
     <>
@@ -112,7 +150,13 @@ function App() {
 
       <div>
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
-        <button type="button" onClick={handlePlay}>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.currentTarget.blur();
+            handlePlay();
+          }}
+        >
           {phase === "countIn" || phase === "playing" ? "停止" : "开始"}
         </button>
         {/* 点击试听之后，该按钮变为停止状态，先播放预备拍，然后系统自动播放击拍，高亮当前击拍音符，播放声音 */}
