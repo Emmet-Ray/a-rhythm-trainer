@@ -72,12 +72,11 @@ function App() {
   const [countInBeat, setCountInBeat] = useState<number>(0);
   const [playingBeatIndex, setPlayingBeatIndex] = useState<number>(0);
   const [nextTargetIndex, setNextTargetIndex] = useState(0);
-  const [latestTimingEvent, setLatestTimingEvent] =
-    useState<TimingEvent | null>(null);
+  const [timingEvents, setTimingEvents] = useState<TimingEvent[]>([]);
   const practiceStartTimeRef = useRef<number | null>(null);
   const tapOffsetsRef = useRef<number[]>([]);
-  const timingEventsRef = useRef<TimingEvent[]>([]);
   const activeEventIndex = phase === "playing" ? playingBeatIndex : null;
+  const latestTimingEvent = timingEvents.at(-1) ?? null;
 
   let beatText: string;
   if (phase === "idle") {
@@ -127,7 +126,6 @@ function App() {
           setCountInBeat(0);
           setPlayingBeatIndex(0);
           console.log("最终敲击时间: ", [...tapOffsetsRef.current]);
-          console.log("最终计时事件: ", [...timingEventsRef.current]);
         } else {
           setPlayingBeatIndex((prev) => prev + 1);
         }
@@ -168,9 +166,10 @@ function App() {
         return;
       }
 
-      timingEventsRef.current.push(timingEvent);
-      // todo: 后续这里要更新乐谱/其他的视觉反馈的
-      setLatestTimingEvent(timingEvent);
+      setTimingEvents((previousEvents) => [
+        ...previousEvents,
+        timingEvent,
+      ]);
       setNextTargetIndex((previousIndex) => previousIndex + 1);
     }, delayMs);
 
@@ -186,7 +185,7 @@ function App() {
       setCountInBeat(0);
       setPlayingBeatIndex(0);
       setNextTargetIndex(0);
-      setLatestTimingEvent(null);
+      setTimingEvents([]);
     } else {
       // 在这里设置开始时间是为了在开始前的一个窗口内就可以匹配敲击键盘
       practiceStartTimeRef.current = performance.now() + COUNT_IN_DURATION_MS;
@@ -194,9 +193,8 @@ function App() {
       setPhase("countIn");
       setCountInBeat(0);
       setNextTargetIndex(0);
-      setLatestTimingEvent(null);
+      setTimingEvents([]);
       tapOffsetsRef.current = [];
-      timingEventsRef.current = [];
     }
   }
 
@@ -241,9 +239,10 @@ function App() {
         return;
       }
 
-      timingEventsRef.current.push(timingEvent);
-      // todo: 后续这里要更新乐谱/其他的视觉反馈的
-      setLatestTimingEvent(timingEvent);
+      setTimingEvents((previousEvents) => [
+        ...previousEvents,
+        timingEvent,
+      ]);
       if (timingEvent.kind === "hit") {
         setNextTargetIndex((previousIndex) => previousIndex + 1);
       }
@@ -268,7 +267,12 @@ function App() {
           todo: 这里后面要改成动态的当前练习的节奏片段
           todo：后面要使用具体的五线谱/其他节奏表示符号的库吧，vexflow等等
       */}
-      <RhythmScore exercise={exercise} activeEventIndex={activeEventIndex} />
+      <RhythmScore
+        exercise={exercise}
+        activeEventIndex={activeEventIndex}
+        targetTapTimeline={targetTapTimeline}
+        timingEvents={timingEvents}
+      />
       <div>{beatText}</div>
       <div>判定：{formatTimingEvent(latestTimingEvent)}</div>
 

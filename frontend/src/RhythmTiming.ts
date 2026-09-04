@@ -27,6 +27,7 @@ export type TimingEvent =
   | (TargetReference & {
       kind: "hit";
       grade: "perfect" | "early" | "late";
+      tapOffsetMs: number;
       errorMs: number;
     })
   | (TargetReference & {
@@ -34,6 +35,7 @@ export type TimingEvent =
     })
   | (TargetReference & {
       kind: "tooEarly";
+      tapOffsetMs: number;
       errorMs: number;
     });
 
@@ -98,6 +100,7 @@ export function evaluateTap(
       kind: "tooEarly",
       targetIndex: nextTargetIndex,
       eventIndex: target.eventIndex,
+      tapOffsetMs: tapTimeMs,
       errorMs,
     };
   }
@@ -120,6 +123,7 @@ export function evaluateTap(
     grade,
     targetIndex: nextTargetIndex,
     eventIndex: target.eventIndex,
+    tapOffsetMs: tapTimeMs,
     errorMs,
   };
 }
