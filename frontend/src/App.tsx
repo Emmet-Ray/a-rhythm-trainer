@@ -30,6 +30,7 @@ function App() {
   const [phase, setPhase] = useState<PlaybackPhase>("idle");
   const [countInBeat, setCountInBeat] = useState<number>(0);
   const [playingBeatIndex, setPlayingBeatIndex] = useState<number>(0);
+  const activeEventIndex = phase === "playing" ? playingBeatIndex : null;
 
   let beatText: string;
   if (phase === "idle") {
@@ -106,21 +107,7 @@ function App() {
           todo: 这里后面要改成动态的当前练习的节奏片段
           todo：后面要使用具体的五线谱/其他节奏表示符号的库吧，vexflow等等
       */}
-      <RhythmScore exercise={exercise} />
-      <div className="beats">
-        {exercise.events.map((_, index) => (
-          <span
-            key={index}
-            className={
-              phase === "playing" && playingBeatIndex === index
-                ? "beat active"
-                : "beat"
-            }
-          >
-            {index + 1}
-          </span>
-        ))}
-      </div>
+      <RhythmScore exercise={exercise} activeEventIndex={activeEventIndex} />
       <div>{beatText}</div>
 
       <div>
