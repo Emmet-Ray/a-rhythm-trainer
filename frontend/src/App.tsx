@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 
 import type { RhythmExercise } from "./RhythmModel";
 import { noteValueToDurationInQuarterNotes } from "./RhythmModel";
+import RhythmScore from "./RhythmScore";
 import "./App.css";
 
 type PlaybackPhase = "idle" | "countIn" | "playing" | "finished";
@@ -9,7 +10,7 @@ type PlaybackPhase = "idle" | "countIn" | "playing" | "finished";
 // 临时写死的常量
 const BPM = 60;
 const BEAT_DURATION_MS = 60000 / BPM;
-const COUNT_IN_BEAT_COUNT = 1;
+const COUNT_IN_BEAT_COUNT = 1; // todo: 实际上这里的预备拍数应该跟当前的节拍类型挂钩吗？比如4/4拍就4拍，2/4拍就2拍？
 
 const exercise: RhythmExercise = {
   timeSignature: {
@@ -20,7 +21,8 @@ const exercise: RhythmExercise = {
     { kind: "note", noteValue: "quarter" },
     { kind: "note", noteValue: "quarter" },
     { kind: "note", noteValue: "quarter" },
-    { kind: "note", noteValue: "quarter" },
+    { kind: "note", noteValue: "eighth" },
+    { kind: "note", noteValue: "eighth" },
   ],
 };
 
@@ -44,11 +46,11 @@ function App() {
     if (phase === "idle" || phase === "finished") {
       return;
     }
-    // 预备拍阶段击拍
+    // 预备拍阶段击拍，
     if (phase === "countIn") {
       const timeoutId = window.setTimeout(() => {
         if (countInBeat === COUNT_IN_BEAT_COUNT - 1) {
-          // 第三拍预备拍结束之后进入节奏击拍
+          // 预备拍结束之后进入节奏击拍
           setPhase("playing");
           setPlayingBeatIndex(0);
         } else {
@@ -104,6 +106,7 @@ function App() {
           todo: 这里后面要改成动态的当前练习的节奏片段
           todo：后面要使用具体的五线谱/其他节奏表示符号的库吧，vexflow等等
       */}
+      <RhythmScore exercise={exercise} />
       <div className="beats">
         {exercise.events.map((_, index) => (
           <span

@@ -1,4 +1,4 @@
-export type { RhythmExercise };
+export type { RhythmExercise, RhythmEvent };
 export { noteValueToDurationInQuarterNotes };
 
 /***************************************************************/
