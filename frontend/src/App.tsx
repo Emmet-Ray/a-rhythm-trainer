@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+
+import type { RhythmExercise } from "./RhythmModel";
+import { noteValueToDurationInQuarterNotes } from "./RhythmModel";
 import "./App.css";
 
 type PlaybackPhase = "idle" | "countIn" | "playing" | "finished";
@@ -6,8 +9,20 @@ type PlaybackPhase = "idle" | "countIn" | "playing" | "finished";
 // 临时写死的常量
 const BPM = 60;
 const BEAT_DURATION_MS = 60000 / BPM;
-const COUNT_IN_BEAT_COUNT = 3;
-const NOTE_DURATIONS_IN_BEATS = [1 / 2, 1 / 2, 1, 1];
+const COUNT_IN_BEAT_COUNT = 1;
+
+const exercise: RhythmExercise = {
+  timeSignature: {
+    beats: 4,
+    beatType: 4,
+  },
+  events: [
+    { kind: "note", noteValue: "quarter" },
+    { kind: "note", noteValue: "quarter" },
+    { kind: "note", noteValue: "quarter" },
+    { kind: "note", noteValue: "quarter" },
+  ],
+};
 
 function App() {
   const [phase, setPhase] = useState<PlaybackPhase>("idle");
@@ -29,7 +44,7 @@ function App() {
     if (phase === "idle" || phase === "finished") {
       return;
     }
-    // 预备拍阶段敲三拍
+    // 预备拍阶段击拍
     if (phase === "countIn") {
       const timeoutId = window.setTimeout(() => {
         if (countInBeat === COUNT_IN_BEAT_COUNT - 1) {
@@ -46,15 +61,20 @@ function App() {
     }
     // 按照节奏击拍阶段
     if (phase === "playing") {
+      const durationTime =
+        BEAT_DURATION_MS *
+        noteValueToDurationInQuarterNotes(
+          exercise.events[playingBeatIndex].noteValue,
+        );
       const timeoutId = window.setTimeout(() => {
-        if (playingBeatIndex === NOTE_DURATIONS_IN_BEATS.length - 1) {
+        if (playingBeatIndex === exercise.events.length - 1) {
           setPhase("finished");
           setCountInBeat(0);
           setPlayingBeatIndex(0);
         } else {
           setPlayingBeatIndex((prev) => prev + 1);
         }
-      }, BEAT_DURATION_MS * NOTE_DURATIONS_IN_BEATS[playingBeatIndex]);
+      }, durationTime);
       return () => {
         window.clearTimeout(timeoutId);
       };
@@ -80,13 +100,12 @@ function App() {
       <div>BPM: {BPM}</div>
 
       {/* 先写死，写成固定的测试节奏
-          这里先用抽象的符号来表示 1代表4分音符，1/2代表8分音符等等
 
           todo: 这里后面要改成动态的当前练习的节奏片段
           todo：后面要使用具体的五线谱/其他节奏表示符号的库吧，vexflow等等
       */}
       <div className="beats">
-        {NOTE_DURATIONS_IN_BEATS.map((beat, index) => (
+        {exercise.events.map((_, index) => (
           <span
             key={index}
             className={
@@ -95,7 +114,7 @@ function App() {
                 : "beat"
             }
           >
-            {index + 1}: {beat * BEAT_DURATION_MS}ms
+            {index + 1}
           </span>
         ))}
       </div>
