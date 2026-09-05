@@ -53,6 +53,27 @@ const PRESETS: {
       ],
     },
   },
+  {
+    id: "halves",
+    title: "练习 4：二分音符",
+    description: "4/4 拍 · 两个二分音符，每隔两拍敲一次。",
+    exercise: {
+      timeSignature: { beats: 4, beatType: 4 },
+      events: [
+        { kind: "note", noteValue: "half" },
+        { kind: "note", noteValue: "half" },
+      ],
+    },
+  },
+  {
+    id: "whole",
+    title: "练习 5：全音符",
+    description: "4/4 拍 · 起点只敲一次，保持四拍，不要重复敲击。",
+    exercise: {
+      timeSignature: { beats: 4, beatType: 4 },
+      events: [{ kind: "note", noteValue: "whole" }],
+    },
+  },
 ];
 
 const MIN_BPM = 40;

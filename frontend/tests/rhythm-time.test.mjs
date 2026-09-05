@@ -26,6 +26,49 @@ const exercise = {
 };
 const timeline = timing.createExerciseTimeline(exercise, 60, 3, windows);
 
+test("全音符和二分音符按四分音符单位展开，长音符只生成一次敲击", () => {
+  for (const bpm of [60, 120]) {
+    const beatMs = 60_000 / bpm;
+    for (const [values, starts, ends] of [
+      [["whole"], [0], [4]],
+      [["half", "half"], [0, 2], [2, 4]],
+      [["half", "quarter", "eighth", "eighth"], [0, 2, 3, 3.5], [2, 3, 3.5, 4]],
+    ]) {
+      const expanded = timing.createExerciseTimeline({
+        ...exercise, events: values.map((noteValue) => ({ kind: "note", noteValue })),
+      }, bpm, 3, windows);
+      assert.deepEqual(expanded.targetTaps.map((target) => target.offsetMs), starts.map((n) => n * beatMs));
+      assert.deepEqual(expanded.eventEndOffsetsMs, ends.map((n) => n * beatMs));
+      assert.equal(expanded.finishOffsetMs, 4 * beatMs);
+      assert.equal(timing.getPlaybackPosition(expanded, 4 * beatMs - 1).phase, "playing");
+      assert.equal(timing.getPlaybackPosition(expanded, 4 * beatMs).phase, "finished");
+      for (const [index, target] of expanded.targetTaps.entries()) {
+        assert.equal(timing.evaluateTap(expanded.targetTaps, index, target.offsetMs, windows).grade, "perfect");
+      }
+      assert.deepEqual(timing.evaluateTap(expanded.targetTaps, expanded.targetTaps.length, 4 * beatMs - 1, windows), {
+        kind: "wrongTap", tapOffsetMs: 4 * beatMs - 1,
+      });
+    }
+  }
+});
+
+test("二分及全休止符占用时长但不生成敲击目标", () => {
+  const halfRest = timing.createExerciseTimeline({
+    ...exercise, events: [
+      { kind: "rest", noteValue: "half" },
+      { kind: "note", noteValue: "half" },
+    ],
+  }, 60, 0, windows);
+  assert.deepEqual(halfRest.targetTaps, [{ eventIndex: 1, offsetMs: 2000 }]);
+  assert.deepEqual(halfRest.eventEndOffsetsMs, [2000, 4000]);
+  const wholeRest = timing.createExerciseTimeline({
+    ...exercise, events: [{ kind: "rest", noteValue: "whole" }],
+  }, 60, 0, windows);
+  assert.deepEqual(wholeRest.targetTaps, []);
+  assert.deepEqual(wholeRest.eventEndOffsetsMs, [4000]);
+  assert.equal(wholeRest.finishOffsetMs, 4000);
+});
+
 function approximately(actual, expected) {
   assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`);
 }

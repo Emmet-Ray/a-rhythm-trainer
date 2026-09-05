@@ -3,7 +3,7 @@ export { noteValueToDurationInQuarterNotes };
 
 /***************************************************************/
 // 核心模型部分
-type NoteValue = "quarter" | "eighth";
+type NoteValue = "whole" | "half" | "quarter" | "eighth";
 
 type RhythmExercise = {
   // todo：目前是写死的 4/4 拍
@@ -21,11 +21,18 @@ type RhythmEvent = {
 };
 
 /***************************************************************/
+// todo: 校验输入内容
+
+/***************************************************************/
 // 将核心模型转换为其他类型
 
 function noteValueToDurationInQuarterNotes(noteValue: NoteValue): number {
-  // 将时值名称转换为以四分音符为单位的拍数。四分音符为 1 拍，八分音符为 1/2 拍。
+  // 单位始终是四分音符，不随拍号改变；音符与对应休止符共用时值。
   switch (noteValue) {
+    case "whole":
+      return 4;
+    case "half":
+      return 2;
     case "quarter":
       return 1;
     case "eighth":

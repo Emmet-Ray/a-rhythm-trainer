@@ -242,6 +242,12 @@ function rhythmEventToVexFlowStaveNote(event: RhythmEvent): StaveNote {
   // 将时值名称转换为 vexflow 对应的类型
   let duration: string;
   switch (event.noteValue) {
+    case "whole":
+      duration = "w";
+      break;
+    case "half":
+      duration = "h";
+      break;
     case "quarter":
       duration = "q";
       break;
