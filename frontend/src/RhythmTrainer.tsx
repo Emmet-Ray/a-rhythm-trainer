@@ -8,6 +8,7 @@ import {
   evaluateTap,
   getPlaybackPosition,
   getTargetTimingWindow,
+  summarizePractice,
   type PlaybackPosition,
   type TimingEvent,
   type TimingWindows,
@@ -117,6 +118,11 @@ function RhythmTrainer({
   const activeEventIndex =
     mode === "listen" && phase === "playing" ? playingBeatIndex : null;
   const latestTimingEvent = timingEvents.at(-1) ?? null;
+  // 在状态更新后的渲染中结算，包含结束帧补上的漏拍；不另存结果 state。
+  const result =
+    mode === "practice" && phase === "finished"
+      ? summarizePractice(targetTapTimeline.length, timingEvents)
+      : null;
 
   const stopScheduledSounds = useCallback(() => {
     for (const source of scheduledSourcesRef.current) {
@@ -344,6 +350,9 @@ function RhythmTrainer({
         <div>判定：{formatTimingEvent(latestTimingEvent)}</div>
       )}
       {audioError && <div role="alert">{audioError}</div>}
+      {result !== null && (
+        <p role="status">{result.passed ? "通过" : "未通过"}</p>
+      )}
 
       <div>
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}

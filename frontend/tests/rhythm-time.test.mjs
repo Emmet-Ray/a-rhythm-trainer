@@ -30,6 +30,47 @@ function approximately(actual, expected) {
   assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`);
 }
 
+test("结果统计：所有等级的命中均可通过，漏敲或误敲均不通过", () => {
+  const hits = ["perfect", "early", "late"].map((grade, index) => ({
+    kind: "hit", grade, targetIndex: index, eventIndex: index,
+    tapOffsetMs: index * 1000, errorMs: 0,
+  }));
+  const miss = { kind: "miss", targetIndex: 2, eventIndex: 2 };
+  const wrongTap = { kind: "wrongTap", tapOffsetMs: 3700 };
+  const cases = [
+    { events: hits, passed: true, hitCount: 3, missCount: 0, wrongTapCount: 0 },
+    { events: [...hits.slice(0, 2), miss], passed: false, hitCount: 2, missCount: 1, wrongTapCount: 0 },
+    { events: [...hits, wrongTap], passed: false, hitCount: 3, missCount: 0, wrongTapCount: 1 },
+    { events: [...hits.slice(0, 2), miss, wrongTap, wrongTap], passed: false, hitCount: 2, missCount: 1, wrongTapCount: 2 },
+  ];
+  for (const { events, ...expected } of cases) {
+    const before = structuredClone(events);
+    assert.deepEqual(timing.summarizePractice(3, events), { targetCount: 3, ...expected });
+    assert.deepEqual(events, before);
+  }
+});
+
+test("零目标结果：没有误敲通过，有误敲不通过", () => {
+  assert.deepEqual(timing.summarizePractice(0, []), {
+    passed: true, targetCount: 0, hitCount: 0, missCount: 0, wrongTapCount: 0,
+  });
+  assert.deepEqual(timing.summarizePractice(0, [{ kind: "wrongTap", tapOffsetMs: 500 }]), {
+    passed: false, targetCount: 0, hitCount: 0, missCount: 0, wrongTapCount: 1,
+  });
+});
+
+test("结束时先补齐遗漏目标，再汇总结果", () => {
+  const hits = timeline.targetTaps.slice(0, -1).map((target, index) =>
+    timing.evaluateTap(timeline.targetTaps, index, target.offsetMs, windows),
+  );
+  const misses = timing.collectExpiredTargets(
+    timeline.targetTaps, hits.length, timeline.finishOffsetMs, windows,
+  );
+  assert.deepEqual(timing.summarizePractice(timeline.targetTaps.length, [...hits, ...misses]), {
+    passed: false, targetCount: 5, hitCount: 4, missCount: 1, wrongTapCount: 0,
+  });
+});
+
 test("时钟以正式练习为零点，音频秒数与相对毫秒双向对应", () => {
   const context = { currentTime: 10 };
   const clock = createPracticeClock(context, 3000);

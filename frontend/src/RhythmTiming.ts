@@ -38,6 +38,51 @@ export type TimingEvent =
       tapOffsetMs: number;
     };
 
+export type PracticeResult = {
+  passed: boolean;
+  targetCount: number;
+  hitCount: number;
+  missCount: number;
+  wrongTapCount: number;
+};
+
+/**
+ * 汇总同一轮自然结束后的完整判定记录，不读取时钟或修改记录。
+ * targetCount 为本轮目标总数；每个目标应恰好有一次 hit 或 miss。
+ * 所有命中等级均算命中；零目标且没有误敲也通过。
+ * 是否自然结束由调用者判断，中断和试听不使用此函数结算。
+ */
+export function summarizePractice(
+  targetCount: number,
+  timingEvents: readonly TimingEvent[],
+): PracticeResult {
+  let hitCount = 0;
+  let missCount = 0;
+  let wrongTapCount = 0;
+
+  for (const event of timingEvents) {
+    switch (event.kind) {
+      case "hit":
+        hitCount += 1;
+        break;
+      case "miss":
+        missCount += 1;
+        break;
+      case "wrongTap":
+        wrongTapCount += 1;
+        break;
+    }
+  }
+
+  return {
+    passed: hitCount === targetCount && missCount === 0 && wrongTapCount === 0,
+    targetCount,
+    hitCount,
+    missCount,
+    wrongTapCount,
+  };
+}
+
 export type PlaybackPosition = {
   phase: "countIn" | "playing" | "finished";
   countInBeat: number;
