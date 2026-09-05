@@ -15,10 +15,13 @@ import {
 import {
   createPracticeClock,
   scheduleCountIn,
+  scheduleTapSound,
   playTapSound,
   type PracticeClock,
 } from "./RhythmAudio";
 import "./App.css";
+
+type PlaybackMode = "practice" | "listen";
 
 type PlaybackState = Omit<PlaybackPosition, "phase"> & {
   phase: "idle" | PlaybackPosition["phase"];
@@ -84,6 +87,7 @@ function formatTimingEvent(timingEvent: TimingEvent | null): string {
 }
 
 function App() {
+  const [mode, setMode] = useState<PlaybackMode>("practice");
   const [playback, setPlayback] = useState<PlaybackState>(IDLE_PLAYBACK);
   const { phase, countInBeat, playingBeatIndex } = playback;
   const [timingEvents, setTimingEvents] = useState<TimingEvent[]>([]);
@@ -95,23 +99,26 @@ function App() {
   const nextTargetIndexRef = useRef(0);
   const tapOffsetsRef = useRef<number[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const countInSourcesRef = useRef<AudioScheduledSourceNode[]>([]);
+  const scheduledSourcesRef = useRef<AudioScheduledSourceNode[]>([]);
   const startingRef = useRef(false);
   const startRequestRef = useRef(0);
 
   const isRunning = phase === "countIn" || phase === "playing";
-  const activeEventIndex = phase === "playing" ? playingBeatIndex : null;
+  const activeEventIndex =
+    mode === "listen" && phase === "playing" ? playingBeatIndex : null;
   const latestTimingEvent = timingEvents.at(-1) ?? null;
 
-  const stopCountInSounds = useCallback(() => {
-    for (const source of countInSourcesRef.current) {
+  const stopScheduledSounds = useCallback(() => {
+    for (const source of scheduledSourcesRef.current) {
       source.stop();
     }
-    countInSourcesRef.current = [];
+    scheduledSourcesRef.current = [];
   }, []);
 
   // 更新循环和键盘处理共用这一入口；游标保证每个目标只记一次 miss。
   const recordExpiredTargets = useCallback((nowMs: number) => {
+    if (mode !== "practice") return;
+
     const misses = collectExpiredTargets(
       targetTapTimeline,
       nextTargetIndexRef.current,
@@ -122,7 +129,7 @@ function App() {
       nextTargetIndexRef.current += misses.length;
       setTimingEvents((previous) => [...previous, ...misses]);
     }
-  }, []);
+  }, [mode]);
 
   let beatText: string;
   if (phase === "idle") {
@@ -174,16 +181,16 @@ function App() {
     return () => {
       startRequestRef.current += 1;
       clockRef.current = null;
-      stopCountInSounds();
+      stopScheduledSounds();
       const context = audioContextRef.current;
       audioContextRef.current = null;
       if (context && context.state !== "closed") void context.close();
     };
-  }, [stopCountInSounds]);
+  }, [stopScheduledSounds]);
 
-  async function handlePlay() {
+  async function handlePlay(requestedMode: PlaybackMode) {
     if (clockRef.current !== null) {
-      stopCountInSounds();
+      stopScheduledSounds();
       clockRef.current = null;
       nextTargetIndexRef.current = 0;
       setPlayback(IDLE_PLAYBACK);
@@ -204,18 +211,31 @@ function App() {
       await context.resume();
       if (request !== startRequestRef.current) return;
 
-      stopCountInSounds();
+      stopScheduledSounds();
       const clock = createPracticeClock(context, timeline.countInDurationMs);
       clockRef.current = clock;
+      setMode(requestedMode);
 
       timeline.countInOffsetsMs.forEach((offsetMs, index) => {
         scheduleCountIn(
           context,
           clock.audioTimeAt(offsetMs),
           index === 0,
-          countInSourcesRef.current,
+          scheduledSourcesRef.current,
         );
       });
+
+      // 试听提前安排全部音符，与预备拍共用声源列表，停止时一起取消。
+      // 使用请求参数，因为 setMode 不会改变本次函数执行中读到的 mode。
+      if (requestedMode === "listen") {
+        timeline.targetTaps.forEach((target) => {
+          scheduleTapSound(
+            context,
+            clock.audioTimeAt(target.offsetMs),
+            scheduledSourcesRef.current,
+          );
+        });
+      }
 
       nextTargetIndexRef.current = 0;
       tapOffsetsRef.current = [];
@@ -223,7 +243,7 @@ function App() {
       setPlayback(getPlaybackPosition(timeline, clock.nowMs()));
     } catch (error) {
       if (request !== startRequestRef.current) return;
-      stopCountInSounds();
+      stopScheduledSounds();
       clockRef.current = null;
       setPlayback(IDLE_PLAYBACK);
       setAudioError(
@@ -246,6 +266,8 @@ function App() {
       if (audioContext.state != "running") return;
 
       event.preventDefault();
+      if (mode !== "practice") return;
+
       const tapOffsetMs = clock.nowMs();
 
       // 补齐漏拍
@@ -282,12 +304,12 @@ function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [recordExpiredTargets]);
+  }, [mode, recordExpiredTargets]);
 
   return (
     <>
       <h1>节奏训练器</h1>
-      <p>击拍练习</p>
+      <p>{mode === "practice" ? "击拍练习" : "节奏试听"}</p>
       {/* 这里先是示意的bpm，后面也要调整成动态调整的 */}
       <div>BPM: {BPM}</div>
 
@@ -303,23 +325,34 @@ function App() {
         timingEvents={timingEvents}
       />
       <div>{beatText}</div>
-      <div>判定：{formatTimingEvent(latestTimingEvent)}</div>
+      {mode === "practice" && (
+        <div>判定：{formatTimingEvent(latestTimingEvent)}</div>
+      )}
       {audioError && <div role="alert">{audioError}</div>}
 
       <div>
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
         <button
           type="button"
-          disabled={isStarting}
+          disabled={isStarting || (isRunning && mode !== "practice")}
           onClick={(event) => {
             event.currentTarget.blur();
-            handlePlay();
+            void handlePlay("practice");
           }}
         >
-          {isStarting ? "准备音频…" : isRunning ? "停止" : "开始"}
+          {isRunning && mode === "practice" ? "停止" : "击拍练习"}
         </button>
         {/* 点击试听之后，该按钮变为停止状态，先播放预备拍，然后系统自动播放击拍，高亮当前击拍音符，播放声音 */}
-        <div>试听</div>
+        <button
+          type="button"
+          disabled={isStarting || (isRunning && mode !== "listen")}
+          onClick={(event) => {
+            event.currentTarget.blur();
+            void handlePlay("listen");
+          }}
+        >
+          {isRunning && mode === "listen" ? "停止" : "试听"}
+        </button>
       </div>
     </>
   );

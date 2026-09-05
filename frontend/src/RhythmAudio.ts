@@ -30,6 +30,7 @@ export function createPracticeClock(
 
 export type PracticeClock = ReturnType<typeof createPracticeClock>;
 
+/** 提前安排一声预备拍提示音，并保留声源以便中途取消。 */
 export function scheduleCountIn(
   context: AudioContext,
   startsAt: number,
@@ -57,10 +58,18 @@ export function scheduleCountIn(
 
 /** 立即播放用户击拍音；每次调用产生一声，结束后释放节点。 */
 export function playTapSound(context: AudioContext): void {
+  scheduleTapSound(context, context.currentTime);
+}
+
+/** 试听与用户击拍共用这一音色；试听传入声源列表，以便停止时取消排程。 */
+export function scheduleTapSound(
+  context: AudioContext,
+  startsAt: number,
+  sources?: AudioScheduledSourceNode[],
+): void {
   const oscillator = context.createOscillator();
   const gain = context.createGain();
 
-  const startsAt = context.currentTime;
   const duration = 0.05; // 50ms 的短音
 
   // 使用比预备拍更低的音，便于区分自己的敲击。
@@ -77,8 +86,13 @@ export function playTapSound(context: AudioContext): void {
   oscillator.onended = () => {
     oscillator.disconnect();
     gain.disconnect();
+    if (sources) {
+      const index = sources.indexOf(oscillator);
+      if (index !== -1) sources.splice(index, 1);
+    }
   };
 
   oscillator.start(startsAt);
   oscillator.stop(startsAt + duration);
+  sources?.push(oscillator);
 }
