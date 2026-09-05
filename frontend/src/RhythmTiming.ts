@@ -33,11 +33,10 @@ export type TimingEvent =
   | (TargetReference & {
       kind: "miss";
     })
-  | (TargetReference & {
-      kind: "tooEarly";
+  | {
+      kind: "wrongTap";
       tapOffsetMs: number;
-      errorMs: number;
-    });
+    };
 
 export type PlaybackPosition = {
   phase: "countIn" | "playing" | "finished";
@@ -170,14 +169,15 @@ export function getTargetTimingWindow(
 /**
  * 将一次敲击与 nextTargetIndex 指向的下一个待判定目标匹配。
  * tapTimeMs 与 target.offsetMs 均为相对正式练习起点的毫秒数。
- * 调用者应先收齐过期目标并推进游标；本函数只返回结果，不修改目标或游标。
+ * 调用者应先过滤本轮有效输入时间、收齐过期目标并推进游标；
+ * 本函数只返回结果，不修改目标或游标。
  *
  * 命中窗口为 [目标起点 - hitMs, 目标起点 + hitMs)，左闭右开：
- * - 早于窗口：返回 tooEarly，调用者保留当前目标，允许后续再次敲击。
+ * - 早于窗口或已无待匹配目标：返回 wrongTap，只记录敲击时间，不推进游标。
  * - 位于窗口内：返回 hit；误差 = 敲击时间 - 目标起点。
  *   |误差| <= perfectMs 为 perfect，其余负误差为 early，正误差为 late。
  *   调用者记录命中并将游标前移一个目标。
- * - 到达或超过窗口右边界，或已无目标：返回 null，表示本次敲击未匹配。
+ * - 到达或超过尚未清理的目标窗口右边界：返回 null，表示本次敲击未匹配。
  *   漏拍由过期检查负责，本函数不会直接生成 miss。
  */
 export function evaluateTap(
@@ -186,9 +186,9 @@ export function evaluateTap(
   tapTimeMs: number,
   windows: TimingWindows,
 ): TimingEvent | null {
-  // 已经结束了，不需要再判定了
+  // 目标耗尽不代表本轮结束；本轮是否仍接收输入由调用者判断。
   if (nextTargetIndex >= targetTaps.length) {
-    return null;
+    return { kind: "wrongTap", tapOffsetMs: tapTimeMs };
   }
 
   const target = targetTaps[nextTargetIndex];
@@ -197,11 +197,8 @@ export function evaluateTap(
 
   if (tapTimeMs < opensAtMs) {
     return {
-      kind: "tooEarly",
-      targetIndex: nextTargetIndex,
-      eventIndex: target.eventIndex,
+      kind: "wrongTap",
       tapOffsetMs: tapTimeMs,
-      errorMs,
     };
   }
   // 命中窗口采用左闭右开区间；到达右边界后由超时逻辑判定 miss。

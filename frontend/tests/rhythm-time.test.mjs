@@ -117,7 +117,10 @@ test("空练习、全休止符与零预备拍不会访问不存在的目标", ()
     const empty = timing.createExerciseTimeline({ ...exercise, events }, 60, 0, windows);
     assert.deepEqual(empty.countInOffsetsMs, []);
     assert.deepEqual(empty.targetTaps, []);
-    assert.equal(timing.evaluateTap(empty.targetTaps, 0, 0, windows), null);
+    // 判定函数不负责过滤本轮输入时间；没有目标的有效输入统一为误敲。
+    assert.deepEqual(timing.evaluateTap(empty.targetTaps, 0, 0, windows), {
+      kind: "wrongTap", tapOffsetMs: 0,
+    });
     assert.deepEqual(timing.collectExpiredTargets(empty.targetTaps, 0, 1000, windows), []);
     assert.equal(timing.getPlaybackPosition(empty, empty.finishOffsetMs).phase, "finished");
   }
@@ -133,12 +136,34 @@ test("命中窗口左闭右开，perfect 含正负边界，预备拍末尾允许
   assert.equal(early.errorMs, -100);
 });
 
-test("tooEarly 不消耗目标；目标全部判定后继续敲击返回 null", () => {
+test("窗口之前的误敲只记录时间，不消耗目标", () => {
   const before = structuredClone(timeline.targetTaps);
-  assert.equal(timing.evaluateTap(timeline.targetTaps, 1, 600, windows).kind, "tooEarly");
+  for (const tapOffsetMs of [600, 700, 849]) {
+    assert.deepEqual(timing.evaluateTap(timeline.targetTaps, 1, tapOffsetMs, windows), {
+      kind: "wrongTap", tapOffsetMs,
+    });
+  }
   assert.equal(timing.evaluateTap(timeline.targetTaps, 1, 1000, windows).grade, "perfect");
   assert.deepEqual(timeline.targetTaps, before);
-  assert.equal(timing.evaluateTap(timeline.targetTaps, 5, 3750, windows), null);
+});
+
+test("最后目标命中或漏拍后，本轮剩余时间内每次敲击均为误敲", () => {
+  const lastIndex = timeline.targetTaps.length - 1;
+  const lastTarget = timeline.targetTaps[lastIndex];
+  const hit = timing.evaluateTap(timeline.targetTaps, lastIndex, lastTarget.offsetMs, windows);
+  assert.equal(hit.kind, "hit");
+  const misses = timing.collectExpiredTargets(timeline.targetTaps, lastIndex, 3750, windows);
+  assert.equal(misses.length, 1);
+  assert.equal(misses[0].kind, "miss");
+  for (const nextIndex of [lastIndex + 1, lastIndex + misses.length]) {
+    for (const tapOffsetMs of [3750, 3800, 3999]) {
+      assert.ok(tapOffsetMs < timeline.finishOffsetMs);
+      assert.deepEqual(timing.evaluateTap(timeline.targetTaps, nextIndex, tapOffsetMs, windows), {
+        kind: "wrongTap", tapOffsetMs,
+      });
+      assert.deepEqual(timing.collectExpiredTargets(timeline.targetTaps, nextIndex, tapOffsetMs, windows), []);
+    }
+  }
 });
 
 test("漏拍在窗口关闭时产生，延迟后补齐多个目标，推进游标后不重复判定", () => {

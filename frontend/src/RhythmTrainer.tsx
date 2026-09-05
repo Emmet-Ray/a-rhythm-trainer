@@ -53,11 +53,11 @@ function formatTimingEvent(timingEvent: TimingEvent | null): string {
     return "漏拍";
   }
 
-  const absoluteErrorMs = Math.abs(timingEvent.errorMs).toFixed(0);
-  if (timingEvent.kind === "tooEarly") {
-    return `太早了 ${absoluteErrorMs}ms`;
+  if (timingEvent.kind === "wrongTap") {
+    return "误敲";
   }
 
+  const absoluteErrorMs = Math.abs(timingEvent.errorMs).toFixed(0);
   if (timingEvent.grade === "perfect") {
     return `完美（误差 ${absoluteErrorMs}ms）`;
   }

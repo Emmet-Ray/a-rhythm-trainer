@@ -79,14 +79,14 @@ function RhythmScore({
       const markerY = stave.getBottomLineY() + MARKER_Y_OFFSET;
 
       timingEvents.forEach((timingEvent) => {
-        if (timingEvent.kind === "tooEarly") {
+        if (timingEvent.kind === "wrongTap") {
           const markerX = timingOffsetToX(
             timingEvent.tapOffsetMs,
             anchors,
             stave.getNoteStartX(),
             stave.getNoteEndX(),
           );
-          drawTooEarlyMarker(context, markerX, markerY);
+          drawWrongTapMarker(context, markerX, markerY);
           return;
         }
 
@@ -205,7 +205,7 @@ function drawMissMarker(context: RenderContext, x: number, y: number): void {
     .restore();
 }
 
-function drawTooEarlyMarker(
+function drawWrongTapMarker(
   context: RenderContext,
   x: number,
   y: number,
