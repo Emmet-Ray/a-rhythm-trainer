@@ -39,30 +39,120 @@ export type TimingEvent =
       errorMs: number;
     });
 
-// todo: 这里后续可能需要把currentTimeMs作为一个参数传进来，因为现在在用的是相对时间，后面可能需要改成相对于传进来的时间。
-export function createTargetTapTimeline(
+export type PlaybackPosition = {
+  phase: "countIn" | "playing" | "finished";
+  countInBeat: number;
+  playingBeatIndex: number;
+};
+
+/**
+ * 将谱子的时值按 BPM 展开为时间线；不读取时钟，也不生成系统或音频的绝对时间。
+ * 正式练习起点统一为 0ms。BPM 当前以四分音符为单位，事件时长逐个累计，
+ * 休止符同样占用时间，但不生成待敲击目标。
+ *
+ * 返回值均以毫秒为单位：
+ * - targetTaps：音符的起点偏移及其原始事件下标，供敲击匹配使用。
+ * - eventEndOffsetsMs：所有事件（含休止符）的终点偏移，供画面定位使用；
+ *   它是音符/休止符的结束时刻，不是命中窗口关闭时刻。
+ * - countInDurationMs：预备拍的总时长，是持续时间而非时间点。
+ * - countInOffsetsMs：每声预备拍的起点偏移，位于正式起点之前，因而为负数。
+ * - finishOffsetMs：谱子总时长与最后一个目标窗口关闭时刻中较晚的值，
+ *   确保末尾休止符完整播放，也保留最后一拍允许晚击的时间。
+ *
+ * 例如 BPM 60、三拍预备拍：预备拍偏移为 [-3000, -2000, -1000]。
+ * 这些偏移在每轮练习中不变；实际声音排程时才通过 clock.audioTimeAt() 转为绝对秒数。
+ */
+export function createExerciseTimeline(
   exercise: RhythmExercise,
   bpm: number,
-): TargetTap[] {
+  countInBeatCount: number,
+  windows: TimingWindows,
+) {
   if (!Number.isFinite(bpm) || bpm <= 0) {
     throw new Error("BPM 必须是大于 0 的有限数字。");
   }
+  if (!Number.isInteger(countInBeatCount) || countInBeatCount < 0) {
+    throw new Error("预备拍数必须为非负整数。");
+  }
+  validateTimingWindows(windows);
 
   const quarterNoteDurationMs = 60_000 / bpm;
-  let currentTimeMs = 0;
+  let offsetMs = 0;
   const targetTaps: TargetTap[] = [];
+  const eventEndOffsetsMs: number[] = [];
 
   exercise.events.forEach((event, eventIndex) => {
     if (event.kind === "note") {
-      targetTaps.push({ eventIndex, offsetMs: currentTimeMs });
+      targetTaps.push({ eventIndex, offsetMs });
     }
 
-    currentTimeMs +=
+    offsetMs +=
       quarterNoteDurationMs *
       noteValueToDurationInQuarterNotes(event.noteValue);
+    eventEndOffsetsMs.push(offsetMs);
   });
 
-  return targetTaps;
+  const countInDurationMs = countInBeatCount * quarterNoteDurationMs;
+  const countInOffsetsMs = Array.from(
+    { length: countInBeatCount },
+    (_, index) => -countInDurationMs + index * quarterNoteDurationMs,
+  );
+  const lastTarget = targetTaps.at(-1);
+  const finishOffsetMs = Math.max(
+    offsetMs,
+    lastTarget ? getTargetTimingWindow(lastTarget, windows).closesAtMs : 0,
+  );
+
+  return {
+    targetTaps,
+    eventEndOffsetsMs,
+    countInDurationMs,
+    countInOffsetsMs,
+    finishOffsetMs,
+  };
+}
+
+export type ExerciseTimeline = ReturnType<typeof createExerciseTimeline>;
+
+/** 直接从时间定位画面；回调延迟时跳到正确位置，不逐拍补播。 */
+export function getPlaybackPosition(
+  timeline: ExerciseTimeline,
+  nowMs: number,
+): PlaybackPosition {
+  if (nowMs < 0) {
+    return {
+      phase: "countIn",
+      // -1 表示还在第一声之前的调度缓冲中。
+      countInBeat: timeline.countInOffsetsMs.findLastIndex((at) => nowMs >= at),
+      playingBeatIndex: 0,
+    };
+  }
+  if (nowMs >= timeline.finishOffsetMs) {
+    return { phase: "finished", countInBeat: 0, playingBeatIndex: 0 };
+  }
+  const index = timeline.eventEndOffsetsMs.findIndex((end) => nowMs < end);
+  return {
+    phase: "playing",
+    countInBeat: 0,
+    playingBeatIndex:
+      index === -1 ? timeline.eventEndOffsetsMs.length - 1 : index,
+  };
+}
+
+/** 一次收齐已过期目标；用于每帧检查、敲击前检查和结束前结算。 */
+export function collectExpiredTargets(
+  targetTaps: readonly TargetTap[],
+  nextTargetIndex: number,
+  nowMs: number,
+  windows: TimingWindows,
+): TimingEvent[] {
+  const misses: TimingEvent[] = [];
+  for (let index = nextTargetIndex; index < targetTaps.length; index += 1) {
+    const miss = evaluateExpiredTarget(targetTaps, index, nowMs, windows);
+    if (miss === null) break;
+    misses.push(miss);
+  }
+  return misses;
 }
 
 export function getTargetTimingWindow(
@@ -77,15 +167,25 @@ export function getTargetTimingWindow(
   };
 }
 
+/**
+ * 将一次敲击与 nextTargetIndex 指向的下一个待判定目标匹配。
+ * tapTimeMs 与 target.offsetMs 均为相对正式练习起点的毫秒数。
+ * 调用者应先收齐过期目标并推进游标；本函数只返回结果，不修改目标或游标。
+ *
+ * 命中窗口为 [目标起点 - hitMs, 目标起点 + hitMs)，左闭右开：
+ * - 早于窗口：返回 tooEarly，调用者保留当前目标，允许后续再次敲击。
+ * - 位于窗口内：返回 hit；误差 = 敲击时间 - 目标起点。
+ *   |误差| <= perfectMs 为 perfect，其余负误差为 early，正误差为 late。
+ *   调用者记录命中并将游标前移一个目标。
+ * - 到达或超过窗口右边界，或已无目标：返回 null，表示本次敲击未匹配。
+ *   漏拍由过期检查负责，本函数不会直接生成 miss。
+ */
 export function evaluateTap(
   targetTaps: readonly TargetTap[],
   nextTargetIndex: number,
   tapTimeMs: number,
   windows: TimingWindows,
 ): TimingEvent | null {
-  /**
-   *  todo: 具体怎么判断的？
-   */
   // 已经结束了，不需要再判定了
   if (nextTargetIndex >= targetTaps.length) {
     return null;
@@ -134,7 +234,6 @@ export function evaluateExpiredTarget(
   currentTimeMs: number,
   windows: TimingWindows,
 ): TimingEvent | null {
-  // 现在（currentTimeMs）是否已经吵了
   // 已经判定完了
   if (nextTargetIndex >= targetTaps.length) {
     return null;
@@ -142,8 +241,7 @@ export function evaluateExpiredTarget(
 
   const target = targetTaps[nextTargetIndex];
   const { closesAtMs } = getTargetTimingWindow(target, windows);
-  // nextTargetIndex已经 加1 过了，也就是上一个目标已经被匹配过了，没有miss
-  // 其实 加1 过之后根本不会运行到这里了，因为useEffect又重置了？
+  // 窗口关闭前仍然允许命中；右边界到达时才允许判漏拍。
   if (currentTimeMs < closesAtMs) {
     return null;
   }

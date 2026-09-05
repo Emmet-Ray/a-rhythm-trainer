@@ -1,25 +1,37 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { RhythmExercise } from "./RhythmModel";
-import { noteValueToDurationInQuarterNotes } from "./RhythmModel";
 import RhythmScore from "./RhythmScore";
 import {
-  createTargetTapTimeline,
-  evaluateExpiredTarget,
+  createExerciseTimeline,
+  collectExpiredTargets,
   evaluateTap,
+  getPlaybackPosition,
   getTargetTimingWindow,
+  type PlaybackPosition,
   type TimingEvent,
   type TimingWindows,
 } from "./RhythmTiming";
+import {
+  createPracticeClock,
+  scheduleCountIn,
+  playTapSound,
+  type PracticeClock,
+} from "./RhythmAudio";
 import "./App.css";
 
-type PlaybackPhase = "idle" | "countIn" | "playing" | "finished";
+type PlaybackState = Omit<PlaybackPosition, "phase"> & {
+  phase: "idle" | PlaybackPosition["phase"];
+};
+const IDLE_PLAYBACK: PlaybackState = {
+  phase: "idle",
+  countInBeat: 0,
+  playingBeatIndex: 0,
+};
 
 // 临时写死的常量
 const BPM = 60;
-const BEAT_DURATION_MS = 60000 / BPM;
-const COUNT_IN_BEAT_COUNT = 1; // todo: 实际上这里的预备拍数应该跟当前的节拍类型挂钩吗？比如4/4拍就4拍，2/4拍就2拍？
-const COUNT_IN_DURATION_MS = COUNT_IN_BEAT_COUNT * BEAT_DURATION_MS;
+const COUNT_IN_BEAT_COUNT = 3; // todo: 实际上这里的预备拍数应该跟当前的节拍类型挂钩吗？比如4/4拍就4拍，2/4拍就2拍？
 const TIMING_WINDOWS = {
   perfectMs: 50,
   hitMs: 150,
@@ -38,8 +50,13 @@ const exercise: RhythmExercise = {
     { kind: "note", noteValue: "eighth" },
   ],
 };
-const targetTapTimeline = createTargetTapTimeline(exercise, BPM);
-console.log("target tap time: ", targetTapTimeline);
+const timeline = createExerciseTimeline(
+  exercise,
+  BPM,
+  COUNT_IN_BEAT_COUNT,
+  TIMING_WINDOWS,
+);
+const targetTapTimeline = timeline.targetTaps;
 
 function formatTimingEvent(timingEvent: TimingEvent | null): string {
   if (timingEvent === null) {
@@ -67,22 +84,51 @@ function formatTimingEvent(timingEvent: TimingEvent | null): string {
 }
 
 function App() {
-  // todo: 现在状态挺多了，而且有的经常会同时更新设置，是不是应该集中一下表示了，现在全是分散的
-  const [phase, setPhase] = useState<PlaybackPhase>("idle");
-  const [countInBeat, setCountInBeat] = useState<number>(0);
-  const [playingBeatIndex, setPlayingBeatIndex] = useState<number>(0);
-  const [nextTargetIndex, setNextTargetIndex] = useState(0);
+  const [playback, setPlayback] = useState<PlaybackState>(IDLE_PLAYBACK);
+  const { phase, countInBeat, playingBeatIndex } = playback;
   const [timingEvents, setTimingEvents] = useState<TimingEvent[]>([]);
-  const practiceStartTimeRef = useRef<number | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+
+  const clockRef = useRef<PracticeClock | null>(null);
+  // 匹配游标只供事件处理使用，不直接决定画面；同步推进可避免连续敲击重复命中。
+  const nextTargetIndexRef = useRef(0);
   const tapOffsetsRef = useRef<number[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const countInSourcesRef = useRef<AudioScheduledSourceNode[]>([]);
+  const startingRef = useRef(false);
+  const startRequestRef = useRef(0);
+
+  const isRunning = phase === "countIn" || phase === "playing";
   const activeEventIndex = phase === "playing" ? playingBeatIndex : null;
   const latestTimingEvent = timingEvents.at(-1) ?? null;
+
+  const stopCountInSounds = useCallback(() => {
+    for (const source of countInSourcesRef.current) {
+      source.stop();
+    }
+    countInSourcesRef.current = [];
+  }, []);
+
+  // 更新循环和键盘处理共用这一入口；游标保证每个目标只记一次 miss。
+  const recordExpiredTargets = useCallback((nowMs: number) => {
+    const misses = collectExpiredTargets(
+      targetTapTimeline,
+      nextTargetIndexRef.current,
+      nowMs,
+      TIMING_WINDOWS,
+    );
+    if (misses.length > 0) {
+      nextTargetIndexRef.current += misses.length;
+      setTimingEvents((previous) => [...previous, ...misses]);
+    }
+  }, []);
 
   let beatText: string;
   if (phase === "idle") {
     beatText = "尚未开始";
   } else if (phase === "countIn") {
-    beatText = `预备拍：${countInBeat + 1}`;
+    beatText = countInBeat < 0 ? "准备中" : `预备拍：${countInBeat + 1}`;
   } else if (phase === "playing") {
     beatText = `当前拍：${playingBeatIndex + 1}`;
   } else {
@@ -90,170 +136,153 @@ function App() {
   }
 
   useEffect(() => {
-    if (phase === "idle" || phase === "finished") {
-      return;
-    }
-    // 预备拍阶段击拍，
-    if (phase === "countIn") {
-      const timeoutId = window.setTimeout(() => {
-        if (countInBeat === COUNT_IN_BEAT_COUNT - 1) {
-          // 预备拍结束之后进入节奏击拍
-          setPhase("playing");
-          setPlayingBeatIndex(0);
-        } else {
-          setCountInBeat((prev) => prev + 1);
-        }
-      }, BEAT_DURATION_MS);
-      return () => {
-        window.clearTimeout(timeoutId);
-      };
-    }
-    // 按照节奏击拍阶段
-    if (phase === "playing") {
-      let durationTime =
-        BEAT_DURATION_MS *
-        noteValueToDurationInQuarterNotes(
-          exercise.events[playingBeatIndex].noteValue,
-        );
-      const isLastEvent = playingBeatIndex === exercise.events.length - 1;
-      if (isLastEvent) {
-        durationTime = Math.max(durationTime, TIMING_WINDOWS.hitMs + 1);
-      }
-      const timeoutId = window.setTimeout(() => {
-        if (playingBeatIndex === exercise.events.length - 1) {
-          practiceStartTimeRef.current = null;
-          setPhase("finished");
-          setCountInBeat(0);
-          setPlayingBeatIndex(0);
-          console.log("最终敲击时间: ", [...tapOffsetsRef.current]);
-        } else {
-          setPlayingBeatIndex((prev) => prev + 1);
-        }
-      }, durationTime);
-      return () => {
-        window.clearTimeout(timeoutId);
-      };
-    }
-  }, [phase, countInBeat, playingBeatIndex]);
+    if (!isRunning) return;
+    let frameId: number;
 
-  // 当前目标超过命中窗口后，即使用户没有敲击，也会自动判定为 miss。
-  useEffect(() => {
-    if (phase !== "playing") {
-      return;
-    }
+    function update() {
+      const clock = clockRef.current;
+      if (clock === null) return;
 
-    const practiceStartTime = practiceStartTimeRef.current;
-    const currentTarget = targetTapTimeline[nextTargetIndex];
-    if (practiceStartTime === null || currentTarget === undefined) {
-      return;
-    }
+      // RAF 只负责唤醒。忽略它提供的时间戳，唯一时间来源是音频时钟。
+      const nowMs = clock.nowMs();
+      recordExpiredTargets(nowMs);
+      const position = getPlaybackPosition(timeline, nowMs);
 
-    const { closesAtMs } = getTargetTimingWindow(currentTarget, TIMING_WINDOWS);
-    const deadlineTime = practiceStartTime + closesAtMs;
-    const delayMs = Math.max(0, Math.ceil(deadlineTime - performance.now()));
-    // 上面这一段就是为了获得这个判断多长时间后不敲击就算是miss了，能不能简化一下
-
-    const timeoutId = window.setTimeout(() => {
-      const currentTimeMs = performance.now() - practiceStartTime;
-      const timingEvent = evaluateExpiredTarget(
-        targetTapTimeline,
-        nextTargetIndex,
-        currentTimeMs,
-        TIMING_WINDOWS,
+      // 时间每帧变化，但只有显示的阶段或音符变化时才更新 state。
+      setPlayback((previous) =>
+        previous.phase === position.phase &&
+        previous.countInBeat === position.countInBeat &&
+        previous.playingBeatIndex === position.playingBeatIndex
+          ? previous
+          : position,
       );
 
-      if (timingEvent === null) {
+      if (position.phase === "finished") {
+        // 已先收齐过期目标，不依赖“结束”和“漏拍”两个定时器的先后顺序。
+        clockRef.current = null;
+        console.log("最终敲击时间: ", [...tapOffsetsRef.current]);
         return;
       }
+      frameId = window.requestAnimationFrame(update);
+    }
+    frameId = window.requestAnimationFrame(update);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isRunning, recordExpiredTargets]);
 
-      setTimingEvents((previousEvents) => [
-        ...previousEvents,
-        timingEvent,
-      ]);
-      setNextTargetIndex((previousIndex) => previousIndex + 1);
-    }, delayMs);
-
+  useEffect(() => {
+    // 结束时清理音频资源
     return () => {
-      window.clearTimeout(timeoutId);
+      startRequestRef.current += 1;
+      clockRef.current = null;
+      stopCountInSounds();
+      const context = audioContextRef.current;
+      audioContextRef.current = null;
+      if (context && context.state !== "closed") void context.close();
     };
-  }, [phase, nextTargetIndex]);
+  }, [stopCountInSounds]);
 
-  function handlePlay() {
-    if (phase === "countIn" || phase === "playing") {
-      practiceStartTimeRef.current = null;
-      setPhase("idle");
-      setCountInBeat(0);
-      setPlayingBeatIndex(0);
-      setNextTargetIndex(0);
+  async function handlePlay() {
+    if (clockRef.current !== null) {
+      stopCountInSounds();
+      clockRef.current = null;
+      nextTargetIndexRef.current = 0;
+      setPlayback(IDLE_PLAYBACK);
       setTimingEvents([]);
-    } else {
-      // 在这里设置开始时间是为了在开始前的一个窗口内就可以匹配敲击键盘
-      practiceStartTimeRef.current = performance.now() + COUNT_IN_DURATION_MS;
+      return;
+    }
+    // resume 是异步的；在等待期间阻止重复开始。
+    if (startingRef.current) return;
+    startingRef.current = true;
+    setIsStarting(true);
+    setAudioError(null);
+    const request = ++startRequestRef.current;
 
-      setPhase("countIn");
-      setCountInBeat(0);
-      setNextTargetIndex(0);
-      setTimingEvents([]);
+    try {
+      const context =
+        audioContextRef.current ??
+        (audioContextRef.current = new AudioContext());
+      await context.resume();
+      if (request !== startRequestRef.current) return;
+
+      stopCountInSounds();
+      const clock = createPracticeClock(context, timeline.countInDurationMs);
+      clockRef.current = clock;
+
+      timeline.countInOffsetsMs.forEach((offsetMs, index) => {
+        scheduleCountIn(
+          context,
+          clock.audioTimeAt(offsetMs),
+          index === 0,
+          countInSourcesRef.current,
+        );
+      });
+
+      nextTargetIndexRef.current = 0;
       tapOffsetsRef.current = [];
+      setTimingEvents([]);
+      setPlayback(getPlaybackPosition(timeline, clock.nowMs()));
+    } catch (error) {
+      if (request !== startRequestRef.current) return;
+      stopCountInSounds();
+      clockRef.current = null;
+      setPlayback(IDLE_PLAYBACK);
+      setAudioError(
+        error instanceof Error ? error.message : "无法启动音频，请重试。",
+      );
+    } finally {
+      if (request === startRequestRef.current) {
+        startingRef.current = false;
+        setIsStarting(false);
+      }
     }
   }
 
-  // 监听敲击空格键
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.code !== "Space" || event.repeat) {
-        return;
-      }
-
-      const practiceStartTime = practiceStartTimeRef.current;
-      if (practiceStartTime === null) {
-        return;
-      }
-      const tapTime = performance.now();
-      const tapOffsetMs = tapTime - practiceStartTime;
-
-      // 开始前的一个窗口内可以进行匹配
-      if (phase === "countIn") {
-        const { opensAtMs } = getTargetTimingWindow(
-          targetTapTimeline[0],
-          TIMING_WINDOWS,
-        );
-
-        if (nextTargetIndex !== 0 || tapOffsetMs < opensAtMs) {
-          return;
-        }
-      }
+      if (event.code !== "Space" || event.repeat) return;
+      const clock = clockRef.current;
+      const audioContext = audioContextRef.current;
+      if (clock === null || audioContext === null) return;
+      if (audioContext.state != "running") return;
 
       event.preventDefault();
+      const tapOffsetMs = clock.nowMs();
 
+      // 补齐漏拍
+      recordExpiredTargets(tapOffsetMs);
+      if (tapOffsetMs >= timeline.finishOffsetMs) return;
+
+      // 敲击匹配
+      if (tapOffsetMs < 0) {
+        // 如果是在练习开始之前敲击的，要看是否是在第一个目标的开始窗口之后，如果不是就判定为无效
+        const firstTarget = targetTapTimeline[0];
+        if (firstTarget === undefined || nextTargetIndexRef.current !== 0)
+          return;
+        const { opensAtMs } = getTargetTimingWindow(
+          firstTarget,
+          TIMING_WINDOWS,
+        );
+        if (tapOffsetMs < opensAtMs) return;
+      }
+
+      // 敲击与判定
+      playTapSound(audioContext);
       tapOffsetsRef.current.push(tapOffsetMs);
-
       const timingEvent = evaluateTap(
         targetTapTimeline,
-        nextTargetIndex,
+        nextTargetIndexRef.current,
         tapOffsetMs,
         TIMING_WINDOWS,
       );
+      if (timingEvent === null) return;
 
-      if (timingEvent === null) {
-        return;
-      }
-
-      setTimingEvents((previousEvents) => [
-        ...previousEvents,
-        timingEvent,
-      ]);
-      if (timingEvent.kind === "hit") {
-        setNextTargetIndex((previousIndex) => previousIndex + 1);
-      }
+      if (timingEvent.kind === "hit") nextTargetIndexRef.current += 1;
+      setTimingEvents((previous) => [...previous, timingEvent]);
     }
 
     window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [nextTargetIndex, phase]);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [recordExpiredTargets]);
 
   return (
     <>
@@ -275,17 +304,19 @@ function App() {
       />
       <div>{beatText}</div>
       <div>判定：{formatTimingEvent(latestTimingEvent)}</div>
+      {audioError && <div role="alert">{audioError}</div>}
 
       <div>
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
         <button
           type="button"
+          disabled={isStarting}
           onClick={(event) => {
             event.currentTarget.blur();
             handlePlay();
           }}
         >
-          {phase === "countIn" || phase === "playing" ? "停止" : "开始"}
+          {isStarting ? "准备音频…" : isRunning ? "停止" : "开始"}
         </button>
         {/* 点击试听之后，该按钮变为停止状态，先播放预备拍，然后系统自动播放击拍，高亮当前击拍音符，播放声音 */}
         <div>试听</div>
