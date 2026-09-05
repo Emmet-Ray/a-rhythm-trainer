@@ -1,3 +1,40 @@
+.exercise-settings {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin: 0 16px 24px;
+}
+
+.exercise-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.exercise-settings select,
+.exercise-settings input,
+.exercise-settings button {
+  font: inherit;
+  padding: 6px 10px;
+}
+
+.exercise-settings input {
+  width: 5rem;
+}
+
+.tempo-settings {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.settings-hint {
+  max-width: 38rem;
+  font-size: 0.85rem;
+}
+
 .beats {
   display: flex;
   gap: 12px;
