@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import {
+  BarlineType,
   Formatter,
   Renderer,
   Stave,
@@ -8,9 +9,10 @@ import {
 } from "vexflow";
 
 import type { RhythmExercise, RhythmEvent } from "./RhythmModel";
-import type { TargetTap, TimingEvent } from "./RhythmTiming";
+import type { ExerciseTimeline, TimingEvent } from "./RhythmTiming";
+import { timingOffsetToScoreX, type MeasureLayout } from "./RhythmScoreLayout";
 
-const SCORE_WIDTH = 500;
+const MEASURE_WIDTH = 360;
 const SCORE_HEIGHT = 180;
 const ACTIVE_NOTE_COLOR = "#646cff";
 const HIT_MARKER_COLOR = "#65a94b";
@@ -20,157 +22,90 @@ const MARKER_Y_OFFSET = 32;
 type RhythmScoreProps = {
   exercise: RhythmExercise;
   activeEventIndex: number | null;
-  targetTapTimeline: readonly TargetTap[];
+  timeline: ExerciseTimeline;
   timingEvents: readonly TimingEvent[];
 };
 
-type TimelineAnchor = {
-  offsetMs: number;
-  x: number;
-};
-
-// todo: 这里还可以有一个提升点，但是这个点属于“可有可无”的。
-// 就是现在的渲染出来的谱子跟平时读的五线谱不太一样，
-// 比如现在两个八分音符是分着的，平时的五线谱里两个八分音符应该由连梁连接。
-// todo: 渲染优化点，虽然渲染规模并不大，但是还是要考虑优化一下，有时候还是能够感觉到“刷新的跳变“的。
+// 单行按小节排版；音符数组顺序与时间线的全局 eventIndex 一致。
+// todo: 连梁与增量渲染优化留待后续。
 function RhythmScore({
   exercise,
   activeEventIndex,
-  targetTapTimeline,
+  timeline,
   timingEvents,
 }: RhythmScoreProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { events, timeSignature } = exercise;
+  const { measures, timeSignature } = exercise;
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) {
-      return;
-    }
-
-    // VexFlow owns everything inside this container. Clearing before setup also
-    // makes the effect safe when StrictMode repeats the setup/cleanup cycle.
+    if (!container) return;
     container.replaceChildren();
-
     const renderer = new Renderer(container, Renderer.Backends.SVG);
-    renderer.resize(SCORE_WIDTH, SCORE_HEIGHT);
-
+    renderer.resize(Math.max(1, measures.length) * MEASURE_WIDTH + 20, SCORE_HEIGHT);
     const context = renderer.getContext();
-    const stave = new Stave(10, 40, SCORE_WIDTH - 20);
-    stave
-      .addClef("treble")
-      .addTimeSignature(`${timeSignature.beats}/${timeSignature.beatType}`);
-    stave.setContext(context).draw();
+    const notes: StaveNote[] = [];
+    const layouts: MeasureLayout[] = [];
+    let markerY = 0;
 
-    const notes = events.map(rhythmEventToVexFlowStaveNote);
-    const activeNote =
-      activeEventIndex === null ? undefined : notes[activeEventIndex];
-    if (activeNote) {
-      activeNote.setStyle({
-        fillStyle: ACTIVE_NOTE_COLOR,
-        strokeStyle: ACTIVE_NOTE_COLOR,
-      });
-    }
-
-    if (notes.length > 0) {
-      Formatter.FormatAndDraw(context, stave, notes);
-
-      const anchors = createTimelineAnchors(targetTapTimeline, notes);
-      const markerY = stave.getBottomLineY() + MARKER_Y_OFFSET;
-
-      timingEvents.forEach((timingEvent) => {
-        if (timingEvent.kind === "wrongTap") {
-          const markerX = timingOffsetToX(
-            timingEvent.tapOffsetMs,
-            anchors,
-            stave.getNoteStartX(),
-            stave.getNoteEndX(),
-          );
-          drawWrongTapMarker(context, markerX, markerY);
-          return;
-        }
-
-        const note = notes[timingEvent.eventIndex];
-        if (!note) {
-          return;
-        }
-
-        const markerX = getNoteCenterX(note);
-        if (timingEvent.kind === "miss") {
-          drawMissMarker(context, markerX, markerY);
-        } else {
-          drawHitMarker(context, markerX, markerY);
-        }
-      });
-    }
-
-    return () => {
-      container.replaceChildren();
-    };
-  }, [
-    activeEventIndex,
-    events,
-    targetTapTimeline,
-    timingEvents,
-    timeSignature.beats,
-    timeSignature.beatType,
-  ]);
-
-  return <div ref={containerRef} />;
-}
-
-function createTimelineAnchors(
-  targetTapTimeline: readonly TargetTap[],
-  notes: readonly StaveNote[],
-): TimelineAnchor[] {
-  return targetTapTimeline.flatMap((target) => {
-    const note = notes[target.eventIndex];
-    if (!note) {
-      return [];
-    }
-
-    return [{ offsetMs: target.offsetMs, x: getNoteCenterX(note) }];
-  });
-}
-
-function timingOffsetToX(
-  offsetMs: number,
-  anchors: readonly TimelineAnchor[],
-  minimumX: number,
-  maximumX: number,
-): number {
-  if (anchors.length === 0) {
-    return minimumX;
-  }
-
-  if (anchors.length === 1) {
-    return clamp(anchors[0].x, minimumX, maximumX);
-  }
-
-  let leftAnchor = anchors[0];
-  let rightAnchor = anchors[1];
-
-  if (offsetMs >= anchors[anchors.length - 1].offsetMs) {
-    leftAnchor = anchors[anchors.length - 2];
-    rightAnchor = anchors[anchors.length - 1];
-  } else {
-    for (let index = 1; index < anchors.length; index += 1) {
-      if (offsetMs <= anchors[index].offsetMs) {
-        leftAnchor = anchors[index - 1];
-        rightAnchor = anchors[index];
-        break;
+    measures.forEach((measure, measureIndex) => {
+      const stave = new Stave(10 + measureIndex * MEASURE_WIDTH, 40, MEASURE_WIDTH);
+      if (measureIndex === 0) {
+        stave.addClef("treble").addTimeSignature(`${timeSignature.beats}/${timeSignature.beatType}`);
+      } else {
+        // 左侧小节已画右边界，避免重复描画同一根线。
+        stave.setBegBarType(BarlineType.NONE);
       }
-    }
-  }
+      if (measureIndex === measures.length - 1) stave.setEndBarType(BarlineType.END);
+      stave.setContext(context).draw();
+      markerY = stave.getBottomLineY() + MARKER_Y_OFFSET;
+      const measureTime = timeline.measures[measureIndex];
+      const measureNotes = measure.events.map(rhythmEventToVexFlowStaveNote);
+      measureNotes.forEach((note, index) => {
+        if (measureTime.firstEventIndex + index === activeEventIndex) {
+          note.setStyle({ fillStyle: ACTIVE_NOTE_COLOR, strokeStyle: ACTIVE_NOTE_COLOR });
+        }
+      });
+      if (measureNotes.length > 0) Formatter.FormatAndDraw(context, stave, measureNotes);
+      notes.push(...measureNotes);
+      const anchors = measureNotes.map((note, index) => ({
+        offsetMs: timeline.eventStartOffsetsMs[measureTime.firstEventIndex + index],
+        x: getNoteCenterX(note),
+      }));
+      // 单个全音符/全休止符也有起点和终点，误敲不再固定在同一个位置。
+      if (anchors.length === 0) {
+        anchors.push({ offsetMs: measureTime.startOffsetMs, x: stave.getNoteStartX() });
+      }
+      anchors.push({ offsetMs: measureTime.endOffsetMs, x: stave.getNoteEndX() });
+      layouts.push({
+        ...measureTime,
+        minimumX: stave.getNoteStartX(),
+        maximumX: stave.getNoteEndX(),
+        anchors,
+      });
+    });
 
-  const durationMs = rightAnchor.offsetMs - leftAnchor.offsetMs;
-  if (durationMs === 0) {
-    return clamp(leftAnchor.x, minimumX, maximumX);
-  }
+    timingEvents.forEach((event) => {
+      if (event.kind === "wrongTap") {
+        const x = timingOffsetToScoreX(event.tapOffsetMs, layouts);
+        if (x !== null) drawWrongTapMarker(context, x, markerY);
+        return;
+      }
+      const note = notes[event.eventIndex];
+      if (!note) return;
+      const x = getNoteCenterX(note);
+      if (event.kind === "miss") drawMissMarker(context, x, markerY);
+      else drawHitMarker(context, x, markerY);
+    });
 
-  const progress = (offsetMs - leftAnchor.offsetMs) / durationMs;
-  const x = leftAnchor.x + (rightAnchor.x - leftAnchor.x) * progress;
-  return clamp(x, minimumX, maximumX);
+    return () => container.replaceChildren();
+  }, [activeEventIndex, measures, timeline, timingEvents, timeSignature.beats, timeSignature.beatType]);
+
+  return (
+    <div style={{ maxWidth: "100%", overflowX: "auto" }} role="region" aria-label="节奏乐谱" tabIndex={0}>
+      <div ref={containerRef} style={{ width: "max-content", margin: "0 auto" }} />
+    </div>
+  );
 }
 
 function getNoteCenterX(note: StaveNote): number {
@@ -232,10 +167,6 @@ function drawCross(
     .lineTo(x - size, y + size)
     .stroke()
     .restore();
-}
-
-function clamp(value: number, minimum: number, maximum: number): number {
-  return Math.min(Math.max(value, minimum), maximum);
 }
 
 function rhythmEventToVexFlowStaveNote(event: RhythmEvent): StaveNote {

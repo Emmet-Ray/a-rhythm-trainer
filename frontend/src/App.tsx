@@ -15,11 +15,15 @@ const PRESETS: {
     description: "4/4 拍 · 四个均匀的四分音符，练习保持稳定速度。",
     exercise: {
       timeSignature: { beats: 4, beatType: 4 },
-      events: [
-        { kind: "note", noteValue: "quarter" },
-        { kind: "note", noteValue: "quarter" },
-        { kind: "note", noteValue: "quarter" },
-        { kind: "note", noteValue: "quarter" },
+      measures: [
+        {
+          events: [
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+          ],
+        },
       ],
     },
   },
@@ -29,12 +33,16 @@ const PRESETS: {
     description: "4/4 拍 · 三个四分音符后接两个八分音符，练习细分节拍。",
     exercise: {
       timeSignature: { beats: 4, beatType: 4 },
-      events: [
-        { kind: "note", noteValue: "quarter" },
-        { kind: "note", noteValue: "quarter" },
-        { kind: "note", noteValue: "quarter" },
-        { kind: "note", noteValue: "eighth" },
-        { kind: "note", noteValue: "eighth" },
+      measures: [
+        {
+          events: [
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "eighth" },
+            { kind: "note", noteValue: "eighth" },
+          ],
+        },
       ],
     },
   },
@@ -44,12 +52,16 @@ const PRESETS: {
     description: "4/4 拍 · 加入四分和八分休止符，练习在停顿中保持节奏。",
     exercise: {
       timeSignature: { beats: 4, beatType: 4 },
-      events: [
-        { kind: "note", noteValue: "quarter" },
-        { kind: "rest", noteValue: "quarter" },
-        { kind: "note", noteValue: "eighth" },
-        { kind: "rest", noteValue: "eighth" },
-        { kind: "note", noteValue: "quarter" },
+      measures: [
+        {
+          events: [
+            { kind: "note", noteValue: "quarter" },
+            { kind: "rest", noteValue: "quarter" },
+            { kind: "note", noteValue: "eighth" },
+            { kind: "rest", noteValue: "eighth" },
+            { kind: "note", noteValue: "quarter" },
+          ],
+        },
       ],
     },
   },
@@ -59,9 +71,13 @@ const PRESETS: {
     description: "4/4 拍 · 两个二分音符，每隔两拍敲一次。",
     exercise: {
       timeSignature: { beats: 4, beatType: 4 },
-      events: [
-        { kind: "note", noteValue: "half" },
-        { kind: "note", noteValue: "half" },
+      measures: [
+        {
+          events: [
+            { kind: "note", noteValue: "half" },
+            { kind: "note", noteValue: "half" },
+          ],
+        },
       ],
     },
   },
@@ -71,7 +87,58 @@ const PRESETS: {
     description: "4/4 拍 · 起点只敲一次，保持四拍，不要重复敲击。",
     exercise: {
       timeSignature: { beats: 4, beatType: 4 },
-      events: [{ kind: "note", noteValue: "whole" }],
+      measures: [{ events: [{ kind: "note", noteValue: "whole" }] }],
+    },
+  },
+  {
+    id: "two-measures",
+    title: "练习 6：两小节连续练习",
+    description: "4/4 拍 · 两个二分音符后接一个全音符，小节之间不停顿。",
+    exercise: {
+      timeSignature: { beats: 4, beatType: 4 },
+      measures: [
+        {
+          events: [
+            { kind: "note", noteValue: "half" },
+            { kind: "note", noteValue: "half" },
+          ],
+        },
+        { events: [{ kind: "note", noteValue: "whole" }] },
+      ],
+    },
+  },
+  {
+    id: "three-measures",
+    title: "练习 7：三小节",
+    description: "4/4 拍 · 四个均匀的四分音符，练习保持稳定速度。",
+    exercise: {
+      timeSignature: { beats: 4, beatType: 4 },
+      measures: [
+        {
+          events: [
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+          ],
+        },
+        {
+          events: [
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+          ],
+        },
+        {
+          events: [
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+            { kind: "note", noteValue: "quarter" },
+          ],
+        },
+      ],
     },
   },
 ];
@@ -92,9 +159,14 @@ function App() {
       <section className="exercise-settings" aria-label="练习设置">
         <label className="exercise-field">
           节奏练习
-          <select value={presetId} onChange={(event) => setPresetId(event.target.value)}>
+          <select
+            value={presetId}
+            onChange={(event) => setPresetId(event.target.value)}
+          >
             {PRESETS.map((item) => (
-              <option key={item.id} value={item.id}>{item.title}</option>
+              <option key={item.id} value={item.id}>
+                {item.title}
+              </option>
             ))}
           </select>
         </label>
@@ -104,7 +176,12 @@ function App() {
           onSubmit={(event) => {
             event.preventDefault();
             const nextBpm = Number(bpmInput);
-            if (!Number.isInteger(nextBpm) || nextBpm < MIN_BPM || nextBpm > MAX_BPM) return;
+            if (
+              !Number.isInteger(nextBpm) ||
+              nextBpm < MIN_BPM ||
+              nextBpm > MAX_BPM
+            )
+              return;
             setBpm(nextBpm);
             setBpmInput(String(nextBpm));
           }}
@@ -125,11 +202,16 @@ function App() {
           <button type="submit">应用速度</button>
         </form>
         <p id="tempo-help" className="settings-hint">
-          BPM 支持 40–240。点击“应用速度”或按回车生效；切换练习或应用新速度会停止当前轮。
+          BPM 支持
+          40–240。点击“应用速度”或按回车生效；切换练习或应用新速度会停止当前轮。
         </p>
       </section>
       {/* 生效配置变化即卸载旧一轮，复用训练组件已有的音频与监听清理。 */}
-      <RhythmTrainer key={`${preset.id}:${bpm}`} exercise={preset.exercise} bpm={bpm} />
+      <RhythmTrainer
+        key={`${preset.id}:${bpm}`}
+        exercise={preset.exercise}
+        bpm={bpm}
+      />
     </>
   );
 }

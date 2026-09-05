@@ -1,4 +1,4 @@
-export type { RhythmExercise, RhythmEvent };
+export type { RhythmExercise, RhythmMeasure, RhythmEvent };
 export { noteValueToDurationInQuarterNotes };
 
 /***************************************************************/
@@ -12,6 +12,11 @@ type RhythmExercise = {
     beatType: 4;
   };
 
+  // 每个小节约定填满当前拍号；事件不跨小节，暂不支持连音线。
+  measures: RhythmMeasure[];
+};
+
+type RhythmMeasure = {
   events: RhythmEvent[];
 };
 

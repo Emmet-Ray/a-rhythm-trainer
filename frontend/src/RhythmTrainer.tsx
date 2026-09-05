@@ -342,7 +342,7 @@ function RhythmTrainer({
       <RhythmScore
         exercise={exercise}
         activeEventIndex={activeEventIndex}
-        targetTapTimeline={targetTapTimeline}
+        timeline={timeline}
         timingEvents={timingEvents}
       />
       <div>{beatText}</div>

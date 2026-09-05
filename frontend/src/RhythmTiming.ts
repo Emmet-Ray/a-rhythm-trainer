@@ -4,6 +4,7 @@ import {
 } from "./RhythmModel";
 
 export type TargetTap = {
+  // 按小节顺序展开后的全局事件下标，包含休止符占据的位置。
   eventIndex: number;
   offsetMs: number;
 };
@@ -94,8 +95,10 @@ export type PlaybackPosition = {
  * 正式练习起点统一为 0ms。BPM 当前以四分音符为单位，事件时长逐个累计，
  * 休止符同样占用时间，但不生成待敲击目标。
  *
- * 返回值均以毫秒为单位：
- * - targetTaps：音符的起点偏移及其原始事件下标，供敲击匹配使用。
+ * 返回的时间字段均以毫秒为单位，下标为按小节顺序展开的全局事件编号：
+ * - targetTaps：音符的起点偏移及全局事件下标，供敲击匹配使用。
+ * - measures：小节起止偏移及 firstEventIndex，供谱面关联时间与事件。
+ * - eventStartOffsetsMs：所有事件（含休止符）的起点，供反馈位置映射。
  * - eventEndOffsetsMs：所有事件（含休止符）的终点偏移，供画面定位使用；
  *   它是音符/休止符的结束时刻，不是命中窗口关闭时刻。
  * - countInDurationMs：预备拍的总时长，是持续时间而非时间点。
@@ -125,15 +128,21 @@ export function createExerciseTimeline(
   const targetTaps: TargetTap[] = [];
   const eventEndOffsetsMs: number[] = [];
 
-  exercise.events.forEach((event, eventIndex) => {
-    if (event.kind === "note") {
-      targetTaps.push({ eventIndex, offsetMs });
-    }
-
-    offsetMs +=
-      quarterNoteDurationMs *
-      noteValueToDurationInQuarterNotes(event.noteValue);
-    eventEndOffsetsMs.push(offsetMs);
+  const eventStartOffsetsMs: number[] = [];
+  // 小节之间不重置时间或事件编号，不插入停顿。
+  const measures = exercise.measures.map((measure) => {
+    const startOffsetMs = offsetMs;
+    const firstEventIndex = eventEndOffsetsMs.length;
+    measure.events.forEach((event) => {
+      const eventIndex = eventEndOffsetsMs.length;
+      eventStartOffsetsMs.push(offsetMs);
+      if (event.kind === "note") {
+        targetTaps.push({ eventIndex, offsetMs });
+      }
+      offsetMs += quarterNoteDurationMs * noteValueToDurationInQuarterNotes(event.noteValue);
+      eventEndOffsetsMs.push(offsetMs);
+    });
+    return { startOffsetMs, endOffsetMs: offsetMs, firstEventIndex };
   });
 
   const countInDurationMs = countInBeatCount * quarterNoteDurationMs;
@@ -149,6 +158,8 @@ export function createExerciseTimeline(
 
   return {
     targetTaps,
+    measures,
+    eventStartOffsetsMs,
     eventEndOffsetsMs,
     countInDurationMs,
     countInOffsetsMs,
