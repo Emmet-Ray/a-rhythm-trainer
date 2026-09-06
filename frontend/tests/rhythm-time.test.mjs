@@ -5,7 +5,7 @@ import { createServer } from "vite";
 // 复用已有的 Vite 转译 TypeScript，不启动 HTTP 服务或额外安装测试框架。
 const server = await createServer({
   configFile: false,
-  server: { middlewareMode: true, watch: null },
+  server: { middlewareMode: true, watch: null, ws: false },
   optimizeDeps: { noDiscovery: true, include: [] },
 });
 let timing;

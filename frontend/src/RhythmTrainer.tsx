@@ -45,11 +45,7 @@ const DEFAULT_TIMING_WINDOWS: TimingWindows = {
 };
 const DEFAULT_COUNT_IN_BEAT_COUNT = 3;
 
-function formatTimingEvent(timingEvent: TimingEvent | null): string {
-  if (timingEvent === null) {
-    return "等待敲击";
-  }
-
+function formatTimingEvent(timingEvent: TimingEvent): string {
   if (timingEvent.kind === "miss") {
     return "漏拍";
   }
@@ -147,15 +143,15 @@ function RhythmTrainer({
     }
   }, [mode, targetTapTimeline, effectiveTimingWindows]);
 
-  let beatText: string;
-  if (phase === "idle") {
-    beatText = "尚未开始";
+  let beatText: string | null = null;
+  if (isStarting) {
+    beatText = "准备中";
   } else if (phase === "countIn") {
     beatText = countInBeat < 0 ? "准备中" : `预备拍：${countInBeat + 1}`;
-  } else if (phase === "playing") {
-    beatText = `当前拍：${playingBeatIndex + 1}`;
-  } else {
-    beatText = "已结束";
+  } else if (mode === "listen" && phase === "playing") {
+    beatText = "试听中";
+  } else if (mode === "listen" && phase === "finished") {
+    beatText = "试听结束";
   }
 
   useEffect(() => {
@@ -335,26 +331,25 @@ function RhythmTrainer({
   ]);
 
   return (
-    <>
-      <p>{mode === "practice" ? "击拍练习" : "节奏试听"}</p>
-      <div>BPM: {bpm}</div>
-
+    <div className="rhythm-trainer">
       <RhythmScore
         exercise={exercise}
         activeEventIndex={activeEventIndex}
         timeline={timeline}
         timingEvents={timingEvents}
       />
-      <div>{beatText}</div>
-      {mode === "practice" && (
-        <div>判定：{formatTimingEvent(latestTimingEvent)}</div>
-      )}
-      {audioError && <div role="alert">{audioError}</div>}
-      {result !== null && (
-        <p role="status">{result.passed ? "通过" : "未通过"}</p>
-      )}
+      <div className="trainer-feedback">
+        {beatText !== null && <div>{beatText}</div>}
+        {mode === "practice" && isRunning && latestTimingEvent !== null && (
+          <div>{formatTimingEvent(latestTimingEvent)}</div>
+        )}
+        {audioError && <div role="alert">{audioError}</div>}
+        {result !== null && (
+          <p role="status">{result.passed ? "通过" : "未通过"}</p>
+        )}
+      </div>
 
-      <div>
+      <div className="trainer-actions">
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
         <button
           type="button"
@@ -378,7 +373,8 @@ function RhythmTrainer({
           {isRunning && mode === "listen" ? "停止" : "试听"}
         </button>
       </div>
-    </>
+      <p className="keyboard-hint"><kbd>空格</kbd> 键敲击</p>
+    </div>
   );
 }
 

@@ -1,218 +1,55 @@
-import { useState } from "react";
-import type { RhythmExercise } from "./RhythmModel";
-import RhythmTrainer from "./RhythmTrainer";
+import { lazy, Suspense, useEffect, useRef } from "react";
+import { Link, Route, Routes, useLocation } from "react-router";
+import ExerciseLibrary from "./pages/ExerciseLibrary";
+import NotFoundPage from "./pages/NotFoundPage";
 import "./App.css";
 
-const PRESETS: {
-  id: string;
-  title: string;
-  description: string;
-  exercise: RhythmExercise;
-}[] = [
-  {
-    id: "quarters",
-    title: "练习 1：四分音符",
-    description: "4/4 拍 · 四个均匀的四分音符，练习保持稳定速度。",
-    exercise: {
-      timeSignature: { beats: 4, beatType: 4 },
-      measures: [
-        {
-          events: [
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: "eighths",
-    title: "练习 2：加入八分音符",
-    description: "4/4 拍 · 三个四分音符后接两个八分音符，练习细分节拍。",
-    exercise: {
-      timeSignature: { beats: 4, beatType: 4 },
-      measures: [
-        {
-          events: [
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "eighth" },
-            { kind: "note", noteValue: "eighth" },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: "rests",
-    title: "练习 3：音符与休止符",
-    description: "4/4 拍 · 加入四分和八分休止符，练习在停顿中保持节奏。",
-    exercise: {
-      timeSignature: { beats: 4, beatType: 4 },
-      measures: [
-        {
-          events: [
-            { kind: "note", noteValue: "quarter" },
-            { kind: "rest", noteValue: "quarter" },
-            { kind: "note", noteValue: "eighth" },
-            { kind: "rest", noteValue: "eighth" },
-            { kind: "note", noteValue: "quarter" },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: "halves",
-    title: "练习 4：二分音符",
-    description: "4/4 拍 · 两个二分音符，每隔两拍敲一次。",
-    exercise: {
-      timeSignature: { beats: 4, beatType: 4 },
-      measures: [
-        {
-          events: [
-            { kind: "note", noteValue: "half" },
-            { kind: "note", noteValue: "half" },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: "whole",
-    title: "练习 5：全音符",
-    description: "4/4 拍 · 起点只敲一次，保持四拍，不要重复敲击。",
-    exercise: {
-      timeSignature: { beats: 4, beatType: 4 },
-      measures: [{ events: [{ kind: "note", noteValue: "whole" }] }],
-    },
-  },
-  {
-    id: "two-measures",
-    title: "练习 6：两小节连续练习",
-    description: "4/4 拍 · 两个二分音符后接一个全音符，小节之间不停顿。",
-    exercise: {
-      timeSignature: { beats: 4, beatType: 4 },
-      measures: [
-        {
-          events: [
-            { kind: "note", noteValue: "half" },
-            { kind: "note", noteValue: "half" },
-          ],
-        },
-        { events: [{ kind: "note", noteValue: "whole" }] },
-      ],
-    },
-  },
-  {
-    id: "three-measures",
-    title: "练习 7：三小节",
-    description: "4/4 拍 · 四个均匀的四分音符，练习保持稳定速度。",
-    exercise: {
-      timeSignature: { beats: 4, beatType: 4 },
-      measures: [
-        {
-          events: [
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-          ],
-        },
-        {
-          events: [
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-          ],
-        },
-        {
-          events: [
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-            { kind: "note", noteValue: "quarter" },
-          ],
-        },
-      ],
-    },
-  },
-];
-
-const MIN_BPM = 40;
-const MAX_BPM = 240;
+// 练习库不需要加载乐谱和音频代码，进入练习页时再加载。
+// todo: 这个lazy是干嘛的？
+const PracticePage = lazy(() => import("./pages/PracticePage"));
 
 function App() {
-  const [presetId, setPresetId] = useState(PRESETS[0].id);
-  const [bpm, setBpm] = useState(60);
-  // 输入草稿与生效配置分开，避免输入到一半时反复停止练习。
-  const [bpmInput, setBpmInput] = useState("60");
-  const preset = PRESETS.find((item) => item.id === presetId) ?? PRESETS[0];
+  const { pathname } = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    // 客户端导航没有整页加载，主动把阅读位置与键盘焦点带到新页面。
+    window.scrollTo(0, 0);
+    mainRef.current?.focus({ preventScroll: true });
+  }, [pathname]);
 
   return (
-    <>
-      <h1>节奏训练器</h1>
-      <section className="exercise-settings" aria-label="练习设置">
-        <label className="exercise-field">
-          节奏练习
-          <select
-            value={presetId}
-            onChange={(event) => setPresetId(event.target.value)}
-          >
-            {PRESETS.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.title}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p>{preset.description}</p>
-        <form
-          className="tempo-settings"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const nextBpm = Number(bpmInput);
-            if (
-              !Number.isInteger(nextBpm) ||
-              nextBpm < MIN_BPM ||
-              nextBpm > MAX_BPM
-            )
-              return;
-            setBpm(nextBpm);
-            setBpmInput(String(nextBpm));
-          }}
+    <div className="site-shell">
+      <a className="skip-link" href="#main-content">
+        跳到主要内容
+      </a>
+      <header className="site-header">
+        <Link to="/" className="brand">
+          节奏训练
+        </Link>
+        <nav aria-label="主导航">
+          <Link to="/" aria-current={pathname === "/" ? "page" : undefined}>
+            练习库
+          </Link>
+        </nav>
+      </header>
+      <main id="main-content" ref={mainRef} tabIndex={-1}>
+        {/* todo: 这个suspense是干嘛的 */}
+        <Suspense
+          fallback={
+            <p className="loading-message" role="status">
+              正在加载练习…
+            </p>
+          }
         >
-          <label className="exercise-field">
-            BPM
-            <input
-              type="number"
-              min={MIN_BPM}
-              max={MAX_BPM}
-              step={1}
-              required
-              value={bpmInput}
-              aria-describedby="tempo-help"
-              onChange={(event) => setBpmInput(event.target.value)}
-            />
-          </label>
-          <button type="submit">应用速度</button>
-        </form>
-        <p id="tempo-help" className="settings-hint">
-          BPM 支持
-          40–240。点击“应用速度”或按回车生效；切换练习或应用新速度会停止当前轮。
-        </p>
-      </section>
-      {/* 生效配置变化即卸载旧一轮，复用训练组件已有的音频与监听清理。 */}
-      <RhythmTrainer
-        key={`${preset.id}:${bpm}`}
-        exercise={preset.exercise}
-        bpm={bpm}
-      />
-    </>
+          <Routes>
+            <Route path="/" element={<ExerciseLibrary />} />
+            <Route path="/practice/:questionId" element={<PracticePage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </main>
+    </div>
   );
 }
 

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/rhythm-time.test.mjs",
+    "test": "node --test tests/rhythm-time.test.mjs tests/exercise-library.test.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
@@ -13,6 +13,7 @@
   "dependencies": {
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-router": "^8.3.1",
     "vexflow": "^5.0.0"
   },
   "devDependencies": {
