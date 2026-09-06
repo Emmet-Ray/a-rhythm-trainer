@@ -3,7 +3,7 @@ export { noteValueToDurationInQuarterNotes, rhythmEventToDurationInQuarterNotes,
 
 /***************************************************************/
 // 核心模型部分
-type NoteValue = "whole" | "half" | "quarter" | "eighth";
+type NoteValue = "whole" | "half" | "quarter" | "eighth" | "sixteenth";
 
 type RhythmExercise = {
   // todo：目前是写死的 4/4 拍
@@ -74,6 +74,8 @@ function noteValueToDurationInQuarterNotes(noteValue: NoteValue): number {
       return 1;
     case "eighth":
       return 1 / 2;
+    case "sixteenth":
+      return 1 / 4;
     default:
       throw new Error("暂不支持该时值。");
   }

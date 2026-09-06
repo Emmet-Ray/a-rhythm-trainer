@@ -1,20 +1,28 @@
 import { rhythmEventToDurationInQuarterNotes, type RhythmEvent } from "./RhythmModel";
 
-/** 单小节内按四分拍分组：只连接拍头开始的两个八分音符，休止符不参与。 */
-export function getEighthNoteBeamGroups(events: readonly RhythmEvent[]): [number, number][] {
-  const groups: [number, number][] = [];
+/** 返回小节内的拍内连梁分组。八分、十六分音符（含单附点）可混合；
+ * 休止符、长音符或跨拍事件断开分组，不连接跨拍/跨小节的音符。
+ * 单个音符保留符尾；梁的层数和局部短梁交给记谱库处理。
+ */
+export function getBeatBeamGroups(events: readonly RhythmEvent[]): number[][] {
+  const groups: number[][] = [];
+  let pending: number[] = [];
   let beat = 0;
+  const flush = () => {
+    if (pending.length > 1) groups.push(pending);
+    pending = [];
+  };
   events.forEach((event, index) => {
-    const next = events[index + 1];
-    if (Number.isInteger(beat)
-      && event.kind === "note" && event.noteValue === "eighth"
-      && event.dots !== 1
-      && next?.kind === "note" && next.noteValue === "eighth" && next.dots !== 1) {
-      groups.push([index, index + 1]);
-    }
-    // 休止符同样占用时间，不能通过过滤休止符后两两配对来分组。
-    beat += rhythmEventToDurationInQuarterNotes(event);
+    if (Number.isInteger(beat)) flush();
+    const end = beat + rhythmEventToDurationInQuarterNotes(event);
+    const canBeam = event.kind === "note"
+      && (event.noteValue === "eighth" || event.noteValue === "sixteenth")
+      && end <= Math.floor(beat) + 1;
+    if (canBeam) pending.push(index);
+    else flush();
+    beat = end;
   });
+  flush();
   return groups;
 }
 
@@ -22,8 +30,7 @@ const HORIZONTAL_PADDING = 10;
 const PREFERRED_MEASURE_WIDTH = 360;
 const ROW_HEIGHT = 180;
 const STAVE_TOP = 40;
-// 为带谱号、拍号的八个独立八分音符保留排版空间；更窄的容器统一缩放。
-const MINIMUM_SCORE_WIDTH = 340;
+const MINIMUM_MEASURE_WIDTH = 320;
 
 type MeasurePlacement = {
   x: number;
@@ -40,17 +47,20 @@ export type ScoreLayout = {
   measures: MeasurePlacement[];
 };
 
-/** 按完整小节换行；末行沿用前面的小节宽度并左对齐。未测得宽度时不排版。 */
-export function createScoreLayout(measureCount: number, containerWidth: number): ScoreLayout {
+/** 按完整小节换行；最小小节宽度可由记谱库测量提供。
+ * 末行等宽左对齐；放不下一个小节时统一缩放；未测得容器宽度时不排版。
+ */
+export function createScoreLayout(measureCount: number, containerWidth: number, minimumMeasureWidth = MINIMUM_MEASURE_WIDTH): ScoreLayout {
   const measuredWidth = Math.max(0, Math.floor(containerWidth));
   if (measureCount === 0 || measuredWidth === 0) {
     return { width: measuredWidth, height: 0, scale: 1, measures: [] };
   }
-  const width = Math.max(MINIMUM_SCORE_WIDTH, measuredWidth);
+  const minimumWidth = Math.max(MINIMUM_MEASURE_WIDTH, Math.ceil(minimumMeasureWidth));
+  const width = Math.max(minimumWidth + HORIZONTAL_PADDING * 2, measuredWidth);
   const availableWidth = width - HORIZONTAL_PADDING * 2;
   const measuresPerRow = Math.min(
     measureCount,
-    Math.max(1, Math.floor(availableWidth / PREFERRED_MEASURE_WIDTH)),
+    Math.max(1, Math.floor(availableWidth / Math.max(PREFERRED_MEASURE_WIDTH, minimumWidth))),
   );
   const measureWidth = availableWidth / measuresPerRow;
   return {

@@ -7,6 +7,7 @@ import {
   Renderer,
   Stave,
   StaveNote,
+  Voice,
   type RenderContext,
 } from "vexflow";
 
@@ -14,7 +15,7 @@ import type { RhythmExercise, RhythmEvent } from "./RhythmModel";
 import type { ExerciseTimeline, TimingEvent } from "./RhythmTiming";
 import {
   createScoreLayout,
-  getEighthNoteBeamGroups,
+  getBeatBeamGroups,
   timingOffsetToScorePosition,
   type MeasureLayout,
   type ScorePosition,
@@ -60,7 +61,22 @@ function RhythmScore({
     const container = containerRef.current;
     if (!container) return;
     container.replaceChildren();
-    const scoreLayout = createScoreLayout(measures.length, containerWidth);
+    if (containerWidth === 0) return;
+    // 先关联连梁，再测量无独立符尾时的最小排版宽度。
+    const preparedMeasures = measures.map((measure) => {
+      const notes = measure.events.map(rhythmEventToVexFlowStaveNote);
+      const beams = getBeatBeamGroups(measure.events).map((indexes) =>
+        new Beam(indexes.map((index) => notes[index])),
+      );
+      const voice = new Voice().setStrict(false).addTickables(notes);
+      const noteWidth = notes.length > 0
+        ? new Formatter().joinVoices([voice]).preCalculateMinTotalWidth([voice])
+        : 0;
+      // 为行首谱号/拍号和音符间的阅读间距留余量，不能只保证符号不重叠。
+      return { notes, beams, minimumWidth: Math.max(noteWidth + 120, 100 + notes.length * 24) };
+    });
+    const minimumWidth = Math.max(320, ...preparedMeasures.map((measure) => measure.minimumWidth));
+    const scoreLayout = createScoreLayout(measures.length, containerWidth, minimumWidth);
     if (scoreLayout.measures.length === 0) return;
     const renderer = new Renderer(container, Renderer.Backends.SVG);
     renderer.resize(containerWidth, scoreLayout.height * scoreLayout.scale);
@@ -69,7 +85,7 @@ function RhythmScore({
     const eventPositions: ScorePosition[] = [];
     const layouts: MeasureLayout[] = [];
 
-    measures.forEach((measure, measureIndex) => {
+    preparedMeasures.forEach(({ notes: measureNotes, beams }, measureIndex) => {
       const placement = scoreLayout.measures[measureIndex];
       const stave = new Stave(placement.x, placement.y, placement.width);
       if (placement.isRowStart) {
@@ -85,11 +101,6 @@ function RhythmScore({
       stave.setContext(context).draw();
       const markerY = stave.getBottomLineY() + MARKER_Y_OFFSET;
       const measureTime = timeline.measures[measureIndex];
-      const measureNotes = measure.events.map(rhythmEventToVexFlowStaveNote);
-      // 排版前关联 Beam，让 VexFlow 去掉独立符尾；排版后再绘制连梁。
-      const beams = getEighthNoteBeamGroups(measure.events).map(([first, second]) =>
-        new Beam([measureNotes[first], measureNotes[second]]),
-      );
       measureNotes.forEach((note, index) => {
         if (measureTime.firstEventIndex + index === activeEventIndex) {
           note.setStyle({ fillStyle: ACTIVE_NOTE_COLOR, strokeStyle: ACTIVE_NOTE_COLOR });
@@ -219,6 +230,9 @@ function rhythmEventToVexFlowStaveNote(event: RhythmEvent): StaveNote {
       break;
     case "eighth":
       duration = "8";
+      break;
+    case "sixteenth":
+      duration = "16";
       break;
     default:
       throw new Error("暂不支持该时值。");

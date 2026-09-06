@@ -50,7 +50,7 @@ test("八分音符按四分拍连梁，长音与休止符占时但不参与连�
       noteValue: values[symbol],
     }));
     const before = structuredClone(events);
-    assert.deepEqual(scoreLayout.getEighthNoteBeamGroups(events), expected, pattern);
+    assert.deepEqual(scoreLayout.getBeatBeamGroups(events), expected, pattern);
     assert.deepEqual(events, before);
   }
 });
@@ -59,8 +59,8 @@ test("连梁分组使用小节内下标，前一小节的末尾音不与下一�
   const note = (noteValue) => ({ kind: "note", noteValue });
   const first = [note("eighth"), note("quarter"), note("quarter"), note("quarter"), note("eighth")];
   const second = [note("eighth"), note("eighth"), note("half"), note("quarter")];
-  assert.deepEqual(scoreLayout.getEighthNoteBeamGroups(first), []);
-  assert.deepEqual(scoreLayout.getEighthNoteBeamGroups(second), [[0, 1]]);
+  assert.deepEqual(scoreLayout.getBeatBeamGroups(first), []);
+  assert.deepEqual(scoreLayout.getBeatBeamGroups(second), [[0, 1]]);
 });
 
 test("全音符和二分音符按四分音符单位展开，长音符只生成一次敲击", () => {
@@ -415,6 +415,17 @@ test("谱面布局按完整小节换行，末行等宽左对齐", () => {
   ]);
 });
 
+test("密集小节使用测量宽度减少每行小节数，并统一缩放反馈坐标", () => {
+  const wide = scoreLayout.createScoreLayout(4, 1000, 510);
+  assert.equal(wide.height, 720);
+  assert.ok(wide.measures.every(m => m.width >= 510 && m.isRowStart));
+  const narrow = scoreLayout.createScoreLayout(2, 280, 510);
+  assert.equal(narrow.width, 530);
+  assert.equal(narrow.width * narrow.scale, 280);
+  assert.equal(narrow.measures[0].width, 510);
+  assert.equal(narrow.measures[1].y, 220);
+});
+
 test("谱面布局支持单行、窄屏、空谱与未测得宽度", () => {
   assert.equal(scoreLayout.createScoreLayout(4, 1460).height, 180);
   const narrow = scoreLayout.createScoreLayout(8, 280);
@@ -493,17 +504,62 @@ test("小节校验拒绝空、欠拍、超拍以及非法附点，并给出小�
   assert.throws(() => model.validateRhythmExercise({ ...exercise, timeSignature: { beats: 3, beatType: 4 } }), /4\/4/);
 });
 
-test("附点后的连梁按完整时值定位，附点八分音符不作为普通八分音符配对", () => {
+test("附点后的连梁按完整时值定位，跨拍的附点组合不连梁", () => {
   const eighth = { kind: "note", noteValue: "eighth" };
-  assert.deepEqual(scoreLayout.getEighthNoteBeamGroups([
+  assert.deepEqual(scoreLayout.getBeatBeamGroups([
     { kind: "note", noteValue: "quarter", dots: 1 }, eighth, eighth, eighth,
     { kind: "note", noteValue: "quarter" },
   ]), [[2, 3]]);
   for (const kind of ["note", "rest"]) {
-    assert.deepEqual(scoreLayout.getEighthNoteBeamGroups([
+    assert.deepEqual(scoreLayout.getBeatBeamGroups([
       { kind, noteValue: "half", dots: 1 }, eighth, eighth,
     ]), [[1, 2]]);
   }
-  assert.deepEqual(scoreLayout.getEighthNoteBeamGroups([{ ...eighth, dots: 1 }, eighth]), []);
-  assert.deepEqual(scoreLayout.getEighthNoteBeamGroups([eighth, { ...eighth, dots: 1 }]), []);
+  assert.deepEqual(scoreLayout.getBeatBeamGroups([{ ...eighth, dots: 1 }, eighth]), []);
+  assert.deepEqual(scoreLayout.getBeatBeamGroups([eighth, { ...eighth, dots: 1 }]), []);
+});
+
+test("拍内混合连梁支持四平均、前八后十六、前十六后八、小附点和小切分", () => {
+  const values = { S: "sixteenth", E: "eighth", Q: "quarter" };
+  for (const [pattern, expected] of [
+    ["SSSS", [[0, 1, 2, 3]]], ["ESS", [[0, 1, 2]]],
+    ["SSE", [[0, 1, 2]]], ["E.S", [[0, 1]]], ["SES", [[0, 1, 2]]],
+    ["SSSSSSSS", [[0, 1, 2, 3], [4, 5, 6, 7]]],
+    ["SRS SS", [[2, 3]]], ["RS S E", [[1, 2]]],
+    ["S E. S E.", [[0, 1], [2, 3]]],
+    ["S E S. S", [[0, 1]]],
+    ["S. S E", [[0, 1]]],
+  ]) {
+    const events = pattern.replaceAll(" ", "").match(/R?[SEQ]\.?/g).map(token => ({
+      kind: token.startsWith("R") ? "rest" : "note",
+      noteValue: values[token.replace("R", "").replace(".", "")],
+      dots: token.endsWith(".") ? 1 : 0,
+    }));
+    const before = structuredClone(events);
+    assert.deepEqual(scoreLayout.getBeatBeamGroups(events), expected, pattern);
+    assert.deepEqual(events, before);
+  }
+});
+
+test("十六分音符和休止符支持时值、附点、BPM 缩放与快速顺序判定", () => {
+  for (const kind of ["note", "rest"]) {
+    assert.equal(model.rhythmEventToDurationInQuarterNotes({ kind, noteValue: "sixteenth" }), 0.25);
+    assert.equal(model.rhythmEventToDurationInQuarterNotes({ kind, noteValue: "sixteenth", dots: 1 }), 0.375);
+  }
+  const dense = { ...exercise, measures: [{ events: Array.from({ length: 16 }, () => ({kind: "note", noteValue: "sixteenth"})) }] };
+  for (const bpm of [60, 120, 240]) {
+    const result = timing.createExerciseTimeline(dense, bpm, 3, windows);
+    const interval = 60000 / bpm / 4;
+    assert.deepEqual(result.targetTaps.map(t => t.offsetMs), Array.from({length: 16}, (_, i) => i * interval));
+    assert.equal(result.finishOffsetMs, Math.max(16 * interval, 15 * interval + windows.hitMs));
+    result.targetTaps.forEach((t, i) => assert.equal(timing.evaluateTap(result.targetTaps, i, t.offsetMs, windows).grade, "perfect"));
+  }
+  const mixed = { ...exercise, measures: [{ events: [
+    {kind: "note", noteValue: "eighth", dots: 1},
+    {kind: "rest", noteValue: "sixteenth"},
+    {kind: "note", noteValue: "half", dots: 1},
+  ] }] };
+  const result = timing.createExerciseTimeline(mixed, 60, 3, windows);
+  assert.deepEqual(result.eventEndOffsetsMs, [750, 1000, 4000]);
+  assert.deepEqual(result.targetTaps, [{eventIndex: 0, offsetMs: 0}, {eventIndex: 2, offsetMs: 1000}]);
 });
