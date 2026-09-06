@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BarlineType,
   Formatter,
@@ -10,10 +10,13 @@ import {
 
 import type { RhythmExercise, RhythmEvent } from "./RhythmModel";
 import type { ExerciseTimeline, TimingEvent } from "./RhythmTiming";
-import { timingOffsetToScoreX, type MeasureLayout } from "./RhythmScoreLayout";
+import {
+  createScoreLayout,
+  timingOffsetToScorePosition,
+  type MeasureLayout,
+  type ScorePosition,
+} from "./RhythmScoreLayout";
 
-const MEASURE_WIDTH = 360;
-const SCORE_HEIGHT = 180;
 const ACTIVE_NOTE_COLOR = "#646cff";
 const HIT_MARKER_COLOR = "#65a94b";
 const ERROR_MARKER_COLOR = "#df4438";
@@ -26,7 +29,7 @@ type RhythmScoreProps = {
   timingEvents: readonly TimingEvent[];
 };
 
-// 单行按小节排版；音符数组顺序与时间线的全局 eventIndex 一致。
+// 按完整小节换行；反馈位置按时间线的全局 eventIndex 保存。
 // todo: 连梁与增量渲染优化留待后续。
 function RhythmScore({
   exercise,
@@ -34,31 +37,50 @@ function RhythmScore({
   timeline,
   timingEvents,
 }: RhythmScoreProps) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const { measures, timeSignature } = exercise;
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const width = Math.floor(entry.contentRect.width);
+      if (width > 0) setContainerWidth((previous) => previous === width ? previous : width);
+    });
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     container.replaceChildren();
+    const scoreLayout = createScoreLayout(measures.length, containerWidth);
+    if (scoreLayout.measures.length === 0) return;
     const renderer = new Renderer(container, Renderer.Backends.SVG);
-    renderer.resize(Math.max(1, measures.length) * MEASURE_WIDTH + 20, SCORE_HEIGHT);
+    renderer.resize(containerWidth, scoreLayout.height * scoreLayout.scale);
     const context = renderer.getContext();
-    const notes: StaveNote[] = [];
+    context.scale(scoreLayout.scale, scoreLayout.scale);
+    const eventPositions: ScorePosition[] = [];
     const layouts: MeasureLayout[] = [];
-    let markerY = 0;
 
     measures.forEach((measure, measureIndex) => {
-      const stave = new Stave(10 + measureIndex * MEASURE_WIDTH, 40, MEASURE_WIDTH);
-      if (measureIndex === 0) {
-        stave.addClef("treble").addTimeSignature(`${timeSignature.beats}/${timeSignature.beatType}`);
+      const placement = scoreLayout.measures[measureIndex];
+      const stave = new Stave(placement.x, placement.y, placement.width);
+      if (placement.isRowStart) {
+        stave.addClef("treble");
       } else {
         // 左侧小节已画右边界，避免重复描画同一根线。
         stave.setBegBarType(BarlineType.NONE);
       }
+      if (measureIndex === 0) {
+        stave.addTimeSignature(`${timeSignature.beats}/${timeSignature.beatType}`);
+      }
       if (measureIndex === measures.length - 1) stave.setEndBarType(BarlineType.END);
       stave.setContext(context).draw();
-      markerY = stave.getBottomLineY() + MARKER_Y_OFFSET;
+      const markerY = stave.getBottomLineY() + MARKER_Y_OFFSET;
       const measureTime = timeline.measures[measureIndex];
       const measureNotes = measure.events.map(rhythmEventToVexFlowStaveNote);
       measureNotes.forEach((note, index) => {
@@ -67,7 +89,12 @@ function RhythmScore({
         }
       });
       if (measureNotes.length > 0) Formatter.FormatAndDraw(context, stave, measureNotes);
-      notes.push(...measureNotes);
+      measureNotes.forEach((note, index) => {
+        eventPositions[measureTime.firstEventIndex + index] = {
+          x: getNoteCenterX(note),
+          y: markerY,
+        };
+      });
       const anchors = measureNotes.map((note, index) => ({
         offsetMs: timeline.eventStartOffsetsMs[measureTime.firstEventIndex + index],
         x: getNoteCenterX(note),
@@ -79,6 +106,7 @@ function RhythmScore({
       anchors.push({ offsetMs: measureTime.endOffsetMs, x: stave.getNoteEndX() });
       layouts.push({
         ...measureTime,
+        markerY,
         minimumX: stave.getNoteStartX(),
         maximumX: stave.getNoteEndX(),
         anchors,
@@ -87,23 +115,22 @@ function RhythmScore({
 
     timingEvents.forEach((event) => {
       if (event.kind === "wrongTap") {
-        const x = timingOffsetToScoreX(event.tapOffsetMs, layouts);
-        if (x !== null) drawWrongTapMarker(context, x, markerY);
+        const position = timingOffsetToScorePosition(event.tapOffsetMs, layouts);
+        if (position) drawWrongTapMarker(context, position.x, position.y);
         return;
       }
-      const note = notes[event.eventIndex];
-      if (!note) return;
-      const x = getNoteCenterX(note);
-      if (event.kind === "miss") drawMissMarker(context, x, markerY);
-      else drawHitMarker(context, x, markerY);
+      const position = eventPositions[event.eventIndex];
+      if (!position) return;
+      if (event.kind === "miss") drawMissMarker(context, position.x, position.y);
+      else drawHitMarker(context, position.x, position.y);
     });
 
     return () => container.replaceChildren();
-  }, [activeEventIndex, measures, timeline, timingEvents, timeSignature.beats, timeSignature.beatType]);
+  }, [containerWidth, activeEventIndex, measures, timeline, timingEvents, timeSignature.beats, timeSignature.beatType]);
 
   return (
-    <div style={{ maxWidth: "100%", overflowX: "auto" }} role="region" aria-label="节奏乐谱" tabIndex={0}>
-      <div ref={containerRef} style={{ width: "max-content", margin: "0 auto" }} />
+    <div ref={viewportRef} style={{ width: "100%", minWidth: 0 }} role="region" aria-label="节奏乐谱" tabIndex={0}>
+      <div ref={containerRef} />
     </div>
   );
 }

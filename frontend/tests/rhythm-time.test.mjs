@@ -118,19 +118,19 @@ test("两小节交界窗口允许提前命中第二小节，不重复判漏拍",
 
 test("误敲位置按小节映射：单个长音、休止符、小节边界和首尾限制", () => {
   const layouts = [
-    { startOffsetMs: 0, endOffsetMs: 4000, minimumX: 90, maximumX: 350,
+    { startOffsetMs: 0, endOffsetMs: 4000, minimumX: 90, maximumX: 350, markerY: 150,
       anchors: [{ offsetMs: 0, x: 100 }, { offsetMs: 4000, x: 350 }] },
-    { startOffsetMs: 4000, endOffsetMs: 8000, minimumX: 370, maximumX: 710,
+    { startOffsetMs: 4000, endOffsetMs: 8000, minimumX: 370, maximumX: 710, markerY: 330,
       anchors: [{ offsetMs: 4000, x: 380 }, { offsetMs: 6000, x: 550 }, { offsetMs: 8000, x: 710 }] },
   ];
-  assert.equal(scoreLayout.timingOffsetToScoreX(1000, layouts), 162.5);
-  assert.equal(scoreLayout.timingOffsetToScoreX(3000, layouts), 287.5);
-  assert.equal(scoreLayout.timingOffsetToScoreX(4000, layouts), 380);
-  assert.equal(scoreLayout.timingOffsetToScoreX(5000, layouts), 465);
-  assert.equal(scoreLayout.timingOffsetToScoreX(7000, layouts), 630);
-  assert.equal(scoreLayout.timingOffsetToScoreX(-10000, layouts), 90);
-  assert.equal(scoreLayout.timingOffsetToScoreX(9000, layouts), 710);
-  assert.equal(scoreLayout.timingOffsetToScoreX(0, []), null);
+  assert.deepEqual(scoreLayout.timingOffsetToScorePosition(1000, layouts), { x: 162.5, y: 150 });
+  assert.deepEqual(scoreLayout.timingOffsetToScorePosition(3000, layouts), { x: 287.5, y: 150 });
+  assert.deepEqual(scoreLayout.timingOffsetToScorePosition(4000, layouts), { x: 380, y: 330 });
+  assert.deepEqual(scoreLayout.timingOffsetToScorePosition(5000, layouts), { x: 465, y: 330 });
+  assert.deepEqual(scoreLayout.timingOffsetToScorePosition(7000, layouts), { x: 630, y: 330 });
+  assert.deepEqual(scoreLayout.timingOffsetToScorePosition(-10000, layouts), { x: 90, y: 150 });
+  assert.deepEqual(scoreLayout.timingOffsetToScorePosition(9000, layouts), { x: 710, y: 330 });
+  assert.equal(scoreLayout.timingOffsetToScorePosition(0, []), null);
 });
 
 test("结果统计：所有等级的命中均可通过，漏敲或误敲均不通过", () => {
@@ -360,4 +360,42 @@ test("非法 BPM、预备拍数和判定窗口给出明确错误", () => {
   ]) {
     assert.throws(() => timing.createExerciseTimeline(exercise, 60, 3, invalid), /判定窗口/);
   }
+});
+
+test("谱面布局按完整小节换行，末行等宽左对齐", () => {
+  const layout = scoreLayout.createScoreLayout(5, 1000);
+  assert.equal(layout.width, 1000);
+  assert.equal(layout.height, 540);
+  assert.deepEqual(layout.measures, [
+    { x: 10, y: 40, width: 490, isRowStart: true },
+    { x: 500, y: 40, width: 490, isRowStart: false },
+    { x: 10, y: 220, width: 490, isRowStart: true },
+    { x: 500, y: 220, width: 490, isRowStart: false },
+    { x: 10, y: 400, width: 490, isRowStart: true },
+  ]);
+});
+
+test("谱面布局支持单行、窄屏、空谱与未测得宽度", () => {
+  assert.equal(scoreLayout.createScoreLayout(4, 1460).height, 180);
+  const narrow = scoreLayout.createScoreLayout(8, 280);
+  assert.equal(narrow.height, 1440);
+  assert.equal(narrow.width * narrow.scale, 280);
+  assert.ok(narrow.measures.every((measure) => measure.isRowStart && measure.width === 320));
+  assert.deepEqual(scoreLayout.createScoreLayout(0, 1000), { width: 1000, height: 0, scale: 1, measures: [] });
+  assert.deepEqual(scoreLayout.createScoreLayout(8, 0), { width: 0, height: 0, scale: 1, measures: [] });
+  assert.equal(scoreLayout.createScoreLayout(4, 739).height, 720);
+  assert.equal(scoreLayout.createScoreLayout(4, 740).height, 360);
+});
+
+test("误敲跨行时直接切换到下一小节，不在行间插值", () => {
+  const measures = [
+    { startOffsetMs: 0, endOffsetMs: 4000, minimumX: 100, maximumX: 700, markerY: 150,
+      anchors: [{ offsetMs: 0, x: 100 }, { offsetMs: 4000, x: 700 }] },
+    { startOffsetMs: 4000, endOffsetMs: 8000, minimumX: 60, maximumX: 350, markerY: 330,
+      anchors: [{ offsetMs: 4000, x: 60 }, { offsetMs: 8000, x: 350 }] },
+  ];
+  assert.deepEqual(scoreLayout.timingOffsetToScorePosition(3999, measures), { x: 699.85, y: 150 });
+  assert.deepEqual(scoreLayout.timingOffsetToScorePosition(4000, measures), { x: 60, y: 330 });
+  assert.deepEqual(scoreLayout.timingOffsetToScorePosition(6000, measures), { x: 205, y: 330 });
+  assert.deepEqual(scoreLayout.timingOffsetToScorePosition(4000, [{ ...measures[1], anchors: [] }]), { x: 60, y: 330 });
 });
