@@ -2435,6 +2435,847 @@ export const presetTopics: PracticeTopic[] = [
       { mode: "geometry", questions: [] },
     ],
   },
+  {
+    id: "eighth-triplets",
+    title: "小三连节奏",
+    description: "",
+    modes: [
+      {
+        mode: "tapping",
+        questions: [
+          // Q Q Q Q | T Q T Q
+          {
+            id: "eighth-triplets-01",
+            title: "一拍三下",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // T Q Q Q | Q T Q Q | Q Q T T
+          {
+            id: "eighth-triplets-02",
+            title: "三连音搬家",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+          // EE T EE T | T EE T EE | T T T T | Q Q Q Q
+          {
+            id: "eighth-triplets-03",
+            title: "两下换三下",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  elements: [
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  elements: [
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // SSSS T Q Q | T SSSS Q Q | ESS T SSE T | T ESS T SSE
+          {
+            id: "eighth-triplets-04",
+            title: "三下换四下",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  elements: [
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+              ],
+            },
+          },
+          // H H | T T Q Q | W | Q T Q T | T T T T | EE T SSSS Q
+          {
+            id: "eighth-triplets-05",
+            title: "三连音小旅程",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "half" },
+                  ],
+                },
+                {
+                  elements: [
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "whole" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  elements: [
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { mode: "dictation", questions: [] },
+      { mode: "geometry", questions: [] },
+    ],
+  },
+  {
+    id: "mixed-values-4",
+    title: "综合练习4（所有的）",
+    description: "",
+    modes: [
+      {
+        mode: "tapping",
+        questions: [
+          // EE T Q Q | SSSS T EE Q
+          {
+            id: "mixed-values-4-01",
+            title: "两下三下四下",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // Q. E T Q | E Q E T Q | T Q. E Q | T E Q E Q
+          {
+            id: "mixed-values-4-02",
+            title: "三连音遇见大附点与大切分",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // E.S SES T Q | T ESS SSE Q | SES T E.S EE | SSSS T ESS SSE
+          {
+            id: "mixed-values-4-03",
+            title: "一拍节奏轮换",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+              ],
+            },
+          },
+          // RQ T EE Q | RH T Q | RW | T E.S SES Q | RE E T ESS Q
+          {
+            id: "mixed-values-4-04",
+            title: "停顿中的衔接",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "rest", noteValue: "quarter" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "rest", noteValue: "half" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "rest", noteValue: "whole" },
+                  ],
+                },
+                {
+                  elements: [
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "rest", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // W | H T EE | Q. E E Q E | SSSS ESS SSE T | E.S SES T Q | RE E T RQ Q
+          {
+            id: "mixed-values-4-05",
+            title: "六小节总挑战",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "whole" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "half" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "rest", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    {
+                      kind: "triplet",
+                      notes: [
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                        { kind: "note", noteValue: "eighth" },
+                      ],
+                    },
+                    { kind: "rest", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { mode: "dictation", questions: [] },
+      { mode: "geometry", questions: [] },
+    ],
+  },
 ];
 
 /** 返回题目、所属主题与模式；未知 ID 不回退到其他题目。 */
