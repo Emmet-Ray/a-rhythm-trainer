@@ -1,5 +1,5 @@
 export type { RhythmExercise, RhythmMeasure, RhythmEvent };
-export { noteValueToDurationInQuarterNotes };
+export { noteValueToDurationInQuarterNotes, rhythmEventToDurationInQuarterNotes, validateRhythmExercise };
 
 /***************************************************************/
 // 核心模型部分
@@ -23,10 +23,42 @@ type RhythmMeasure = {
 type RhythmEvent = {
   kind: "note" | "rest";
   noteValue: NoteValue;
+  /** 省略或 0 表示无附点；第一版只支持单附点，音符与休止符共用。 */
+  dots?: 0 | 1;
 };
 
 /***************************************************************/
-// todo: 校验输入内容
+/** 返回完整事件的四分音符单位时值；拒绝尚未支持的附点数。 */
+function rhythmEventToDurationInQuarterNotes(event: RhythmEvent): number {
+  if (event.dots !== undefined && event.dots !== 0 && event.dots !== 1) {
+    throw new Error("附点数只支持 0 或 1。");
+  }
+  return noteValueToDurationInQuarterNotes(event.noteValue) * (event.dots === 1 ? 1.5 : 1);
+}
+
+/** 校验当前 4/4 模型：每个已存在的小节必须填满四拍，不自动补拍或拆分。
+ * 零小节保留为空练习；空小节不同于全小节休止，必须显式录入休止符。
+ * 这是类型化练习的内容校验，不是任意外部 JSON 的结构解析器。
+ */
+function validateRhythmExercise(exercise: RhythmExercise): void {
+  if (exercise.timeSignature.beats !== 4 || exercise.timeSignature.beatType !== 4) {
+    throw new Error("目前只支持 4/4 拍。");
+  }
+  exercise.measures.forEach((measure, measureIndex) => {
+    let duration = 0;
+    measure.events.forEach((event, eventIndex) => {
+      try {
+        if (event.kind !== "note" && event.kind !== "rest") throw new Error("事件类型必须为 note 或 rest。");
+        duration += rhythmEventToDurationInQuarterNotes(event);
+      } catch (error) {
+        throw new Error(`第 ${measureIndex + 1} 小节第 ${eventIndex + 1} 个事件：${error instanceof Error ? error.message : String(error)}`, { cause: error });
+      }
+    });
+    if (duration !== 4) {
+      throw new Error(`第 ${measureIndex + 1} 小节时值为 ${duration} 拍，应为 4 拍。`);
+    }
+  });
+}
 
 /***************************************************************/
 // 将核心模型转换为其他类型

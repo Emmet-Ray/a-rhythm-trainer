@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   BarlineType,
   Beam,
+  Dot,
   Formatter,
   Renderer,
   Stave,
@@ -223,10 +224,14 @@ function rhythmEventToVexFlowStaveNote(event: RhythmEvent): StaveNote {
       throw new Error("暂不支持该时值。");
   }
 
-  return new StaveNote({
+  const note = new StaveNote({
     keys: ["b/4"],
     duration: event.kind === "rest" ? `${duration}r` : duration,
+    dots: event.dots ?? 0,
   });
+  // dots 决定 VexFlow 内部时值；Dot modifier 才负责画出可见的点。
+  if (event.dots === 1) Dot.buildAndAttach([note]);
+  return note;
 }
 
 export default RhythmScore;

@@ -1,5 +1,6 @@
 import {
-  noteValueToDurationInQuarterNotes,
+  rhythmEventToDurationInQuarterNotes,
+  validateRhythmExercise,
   type RhythmExercise,
 } from "./RhythmModel";
 
@@ -123,6 +124,8 @@ export function createExerciseTimeline(
   }
   validateTimingWindows(windows);
 
+  validateRhythmExercise(exercise);
+
   const quarterNoteDurationMs = 60_000 / bpm;
   let offsetMs = 0;
   const targetTaps: TargetTap[] = [];
@@ -139,7 +142,7 @@ export function createExerciseTimeline(
       if (event.kind === "note") {
         targetTaps.push({ eventIndex, offsetMs });
       }
-      offsetMs += quarterNoteDurationMs * noteValueToDurationInQuarterNotes(event.noteValue);
+      offsetMs += quarterNoteDurationMs * rhythmEventToDurationInQuarterNotes(event);
       eventEndOffsetsMs.push(offsetMs);
     });
     return { startOffsetMs, endOffsetMs: offsetMs, firstEventIndex };

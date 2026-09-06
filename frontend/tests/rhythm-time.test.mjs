@@ -9,9 +9,11 @@ const server = await createServer({
   optimizeDeps: { noDiscovery: true, include: [] },
 });
 let timing;
+let model;
 let scoreLayout;
 let createPracticeClock;
 try {
+  model = await server.ssrLoadModule("/src/RhythmModel.ts");
   timing = await server.ssrLoadModule("/src/RhythmTiming.ts");
   scoreLayout = await server.ssrLoadModule("/src/RhythmScoreLayout.ts");
   ({ createPracticeClock } = await server.ssrLoadModule("/src/RhythmAudio.ts"));
@@ -280,18 +282,19 @@ test("首尾休止符占用时间，但不生成待敲击目标", () => {
     measures: [{ events: [
       { kind: "rest", noteValue: "quarter" },
       { kind: "note", noteValue: "eighth" },
-      { kind: "rest", noteValue: "quarter" },
+      { kind: "rest", noteValue: "half" },
+      { kind: "rest", noteValue: "eighth" },
     ] }],
   }, 60, 3, windows);
   assert.deepEqual(rests.targetTaps, [{ eventIndex: 1, offsetMs: 1000 }]);
-  assert.deepEqual(rests.eventEndOffsetsMs, [1000, 1500, 2500]);
+  assert.deepEqual(rests.eventEndOffsetsMs, [1000, 1500, 3500, 4000]);
   assert.equal(timing.getTargetTimingWindow(rests.targetTaps[0], windows).opensAtMs, 850);
-  assert.equal(rests.finishOffsetMs, 2500);
+  assert.equal(rests.finishOffsetMs, 4000);
 });
 
 test("空练习、全休止符与零预备拍不会访问不存在的目标", () => {
-  for (const events of [[], [{ kind: "rest", noteValue: "quarter" }]]) {
-    const empty = timing.createExerciseTimeline({ ...exercise, measures: [{ events }] }, 60, 0, windows);
+  for (const measures of [[], [{ events: [{ kind: "rest", noteValue: "whole" }] }]]) {
+    const empty = timing.createExerciseTimeline({ ...exercise, measures }, 60, 0, windows);
     assert.deepEqual(empty.countInOffsetsMs, []);
     assert.deepEqual(empty.targetTaps, []);
     // 判定函数不负责过滤本轮输入时间；没有目标的有效输入统一为误敲。
@@ -356,20 +359,24 @@ test("漏拍在窗口关闭时产生，延迟后补齐多个目标，推进游�
 
 test("结束时可收齐漏拍；最后音符短于命中窗口时要等到窗口关闭", () => {
   const short = timing.createExerciseTimeline({
-    ...exercise, measures: [{ events: [{ kind: "note", noteValue: "eighth" }] }],
+    ...exercise, measures: [{ events: [
+      { kind: "rest", noteValue: "half", dots: 1 },
+      { kind: "rest", noteValue: "eighth" },
+      { kind: "note", noteValue: "eighth" },
+    ] }],
   }, 600, 0, windows);
-  assert.equal(short.eventEndOffsetsMs[0], 50);
-  assert.equal(short.finishOffsetMs, 150);
-  assert.equal(timing.getPlaybackPosition(short, 149).phase, "playing");
-  assert.equal(timing.collectExpiredTargets(short.targetTaps, 0, 150, windows).length, 1);
-  assert.equal(timing.getPlaybackPosition(short, 150).phase, "finished");
+  assert.equal(short.eventEndOffsetsMs.at(-1), 400);
+  assert.equal(short.finishOffsetMs, 500);
+  assert.equal(timing.getPlaybackPosition(short, 499).phase, "playing");
+  assert.equal(timing.collectExpiredTargets(short.targetTaps, 0, 500, windows).length, 1);
+  assert.equal(timing.getPlaybackPosition(short, 500).phase, "finished");
   assert.equal(timing.collectExpiredTargets(timeline.targetTaps, 0, timeline.finishOffsetMs, windows).length, 5);
 });
 
 test("窗口重叠时匹配最靠前的待判定目标，而非时间上最近的目标", () => {
   const fast = timing.createExerciseTimeline({
     ...exercise,
-    measures: [{ events: [{ kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "eighth" }] }],
+    measures: [{ events: [{ kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "eighth" }, { kind: "rest", noteValue: "half", dots: 1 }] }],
   }, 120, 3, windows);
   const first = timing.evaluateTap(fast.targetTaps, 0, 140, windows);
   assert.equal(first.targetIndex, 0);
@@ -431,4 +438,72 @@ test("误敲跨行时直接切换到下一小节，不在行间插值", () => {
   assert.deepEqual(scoreLayout.timingOffsetToScorePosition(4000, measures), { x: 60, y: 330 });
   assert.deepEqual(scoreLayout.timingOffsetToScorePosition(6000, measures), { x: 205, y: 330 });
   assert.deepEqual(scoreLayout.timingOffsetToScorePosition(4000, [{ ...measures[1], anchors: [] }]), { x: 60, y: 330 });
+});
+
+test("单附点时值、休止符、BPM 缩放与跨小节时间保持一致", () => {
+  for (const [noteValue, base] of [["whole", 4], ["half", 2], ["quarter", 1], ["eighth", 0.5]]) {
+    for (const kind of ["note", "rest"]) {
+      assert.equal(model.rhythmEventToDurationInQuarterNotes({ kind, noteValue }), base);
+      assert.equal(model.rhythmEventToDurationInQuarterNotes({ kind, noteValue, dots: 0 }), base);
+      assert.equal(model.rhythmEventToDurationInQuarterNotes({ kind, noteValue, dots: 1 }), base * 1.5);
+    }
+  }
+  const dotted = { ...exercise, measures: [
+    { events: [
+      { kind: "note", noteValue: "quarter", dots: 1 },
+      { kind: "note", noteValue: "eighth" },
+      { kind: "note", noteValue: "quarter" },
+      { kind: "note", noteValue: "quarter" },
+    ] },
+    { events: [
+      { kind: "rest", noteValue: "half", dots: 1 },
+      { kind: "note", noteValue: "quarter" },
+    ] },
+  ] };
+  const before = structuredClone(dotted);
+  for (const bpm of [60, 120]) {
+    const beatMs = 60000 / bpm;
+    const result = timing.createExerciseTimeline(dotted, bpm, 3, windows);
+    assert.deepEqual(result.targetTaps.map((target) => target.offsetMs), [0, 1.5, 2, 3, 7].map(n => n * beatMs));
+    assert.deepEqual(result.eventEndOffsetsMs, [1.5, 2, 3, 4, 7, 8].map(n => n * beatMs));
+    assert.equal(result.finishOffsetMs, 8 * beatMs);
+    assert.equal(timing.getPlaybackPosition(result, 1.5 * beatMs - 1).playingBeatIndex, 0);
+    assert.equal(timing.getPlaybackPosition(result, 1.5 * beatMs).playingBeatIndex, 1);
+    assert.equal(timing.evaluateTap(result.targetTaps, 1, 1.5 * beatMs, windows).grade, "perfect");
+  }
+  assert.deepEqual(dotted, before);
+});
+
+test("小节校验拒绝空、欠拍、超拍以及非法附点，并给出小节位置", () => {
+  for (const [events, actual] of [
+    [[], 0],
+    [[{ kind: "note", noteValue: "half" }], 2],
+    [[{ kind: "note", noteValue: "whole", dots: 1 }], 6],
+    [[{ kind: "note", noteValue: "quarter", dots: 1 }, ...Array.from({ length: 3 }, () => ({ kind: "note", noteValue: "quarter" }))], 4.5],
+  ]) {
+    assert.throws(() => timing.createExerciseTimeline({
+      ...exercise, measures: [...exercise.measures, { events }],
+    }, 60, 3, windows), new RegExp(`第 2 小节时值为 ${actual} 拍，应为 4 拍`));
+  }
+  for (const dots of [2, -1, 0.5, NaN, null, "1"]) {
+    assert.throws(() => timing.createExerciseTimeline({
+      ...exercise, measures: [{ events: [{ kind: "note", noteValue: "whole", dots }] }],
+    }, 60, 3, windows), /第 1 小节第 1 个事件：附点数/);
+  }
+  assert.throws(() => model.validateRhythmExercise({ ...exercise, timeSignature: { beats: 3, beatType: 4 } }), /4\/4/);
+});
+
+test("附点后的连梁按完整时值定位，附点八分音符不作为普通八分音符配对", () => {
+  const eighth = { kind: "note", noteValue: "eighth" };
+  assert.deepEqual(scoreLayout.getEighthNoteBeamGroups([
+    { kind: "note", noteValue: "quarter", dots: 1 }, eighth, eighth, eighth,
+    { kind: "note", noteValue: "quarter" },
+  ]), [[2, 3]]);
+  for (const kind of ["note", "rest"]) {
+    assert.deepEqual(scoreLayout.getEighthNoteBeamGroups([
+      { kind, noteValue: "half", dots: 1 }, eighth, eighth,
+    ]), [[1, 2]]);
+  }
+  assert.deepEqual(scoreLayout.getEighthNoteBeamGroups([{ ...eighth, dots: 1 }, eighth]), []);
+  assert.deepEqual(scoreLayout.getEighthNoteBeamGroups([eighth, { ...eighth, dots: 1 }]), []);
 });

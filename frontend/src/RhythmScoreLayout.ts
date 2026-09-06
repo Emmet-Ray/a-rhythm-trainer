@@ -1,4 +1,4 @@
-import { noteValueToDurationInQuarterNotes, type RhythmEvent } from "./RhythmModel";
+import { rhythmEventToDurationInQuarterNotes, type RhythmEvent } from "./RhythmModel";
 
 /** 单小节内按四分拍分组：只连接拍头开始的两个八分音符，休止符不参与。 */
 export function getEighthNoteBeamGroups(events: readonly RhythmEvent[]): [number, number][] {
@@ -8,11 +8,12 @@ export function getEighthNoteBeamGroups(events: readonly RhythmEvent[]): [number
     const next = events[index + 1];
     if (Number.isInteger(beat)
       && event.kind === "note" && event.noteValue === "eighth"
-      && next?.kind === "note" && next.noteValue === "eighth") {
+      && event.dots !== 1
+      && next?.kind === "note" && next.noteValue === "eighth" && next.dots !== 1) {
       groups.push([index, index + 1]);
     }
     // 休止符同样占用时间，不能通过过滤休止符后两两配对来分组。
-    beat += noteValueToDurationInQuarterNotes(event.noteValue);
+    beat += rhythmEventToDurationInQuarterNotes(event);
   });
   return groups;
 }
