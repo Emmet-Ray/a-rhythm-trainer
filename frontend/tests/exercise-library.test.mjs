@@ -49,7 +49,7 @@ test("未知题目 ID 不回退到默认题，查找不修改内容", () => {
   assert.deepEqual(catalog.presetTopics, before);
 });
 
-test("七个主题的 31 道题符合预设顺序，每小节四拍且时间线连续", () => {
+test("十一个主题的 48 道题符合预设顺序，每小节四拍且时间线连续", () => {
   // 独立列出出题稿，避免仅校验总时长而漏掉音符顺序错误。
   const expected = [
     ["basic-values", [
@@ -95,9 +95,34 @@ test("七个主题的 31 道题符合预设顺序，每小节四拍且时间线�
       "RQ E Q E Q | Q. E RQ Q | RH E Q E | E Q E Q RQ",
       "H E Q E | Q. E EE Q | E Q E Q Q | W | RE E E Q E Q | Q Q Q Q",
     ]],
+    ["sixteenth-notes", [
+      "EE EE Q Q | SSSS SSSS Q Q",
+      "ESS Q ESS Q | ESS ESS ESS ESS",
+      "SSE Q SSE Q | Q SSE Q SSE | SSE SSE Q Q",
+      "ESS SSE Q Q | SSE ESS Q Q | SSSS ESS SSE Q | ESS SSE SSSS Q",
+      "Q Q EE EE | SSSS SSSS SSSS SSSS | ESS Q SSE Q | SSE ESS SSSS EE | H ESS SSE | ESS SSE EE Q",
+    ]],
+    ["dotted-eighths", [
+      "EE Q EE Q | E.S Q E.S Q",
+      "E.S Q Q Q | Q E.S Q Q | Q Q E.S E.S",
+      "E.S ESS Q Q | ESS E.S Q Q | E.S E.S SSE Q | SSSS E.S EE Q",
+      "H E.S Q | E.S ESS SSE Q | W | Q E.S Q E.S | E.S E.S E.S E.S | EE EE Q Q",
+    ]],
+    ["small-syncopation", [
+      "EE Q EE Q | SES Q SES Q",
+      "SES Q Q Q | Q SES Q Q | Q Q SES SES",
+      "SSSS SES Q Q | SES SSSS Q Q | ESS SES SSE Q | SES SES EE Q",
+      "H H | SES Q SES Q | W | Q SES SSE ESS | SES SES SES SES | EE EE Q Q",
+    ]],
+    ["mixed-values-3", [
+      "E.S Q SES Q | SES Q E.S Q",
+      "ESS SSE E.S SES | SES E.S SSE ESS | H SSSS EE | E.S SES Q Q",
+      "RQ SES E.S Q | E.S RE E SES Q | RH ESS SSE | SES Q RQ Q",
+      "Q. E ESS SSE | E Q E E.S SES | SSSS ESS SSE Q | W | RE E SES E.S Q | E.S SES EE Q",
+    ]],
   ];
-  const symbols = { whole: "W", half: "H", quarter: "Q", eighth: "E" };
-  const beats = { W: 4, H: 2, Q: 1, E: 0.5 };
+  const symbols = { whole: "W", half: "H", quarter: "Q", eighth: "E", sixteenth: "S" };
+  const beats = { W: 4, H: 2, Q: 1, E: 0.5, S: 0.25 };
   assert.deepEqual(catalog.presetTopics.map((topic) => topic.id), expected.map(([id]) => id));
   for (const [topicIndex, [topicId, patterns]] of expected.entries()) {
     const questions = catalog.presetTopics[topicIndex].modes.find((group) => group.mode === "tapping").questions;
@@ -108,7 +133,7 @@ test("七个主题的 31 道题符合预设顺序，每小节四拍且时间线�
       assert.deepEqual(question.exercise.timeSignature, { beats: 4, beatType: 4 });
       const measures = pattern.replaceAll(" ", "").split("|");
       assert.deepEqual(question.exercise.measures.map((measure) =>
-        measure.events.map((event) => {
+        measure.elements.map((event) => {
           assert.ok(event.kind === "note" || event.kind === "rest");
           assert.ok(event.dots === undefined || event.dots === 0 || event.dots === 1);
           return `${event.kind === "rest" ? "R" : ""}${symbols[event.noteValue]}${event.dots === 1 ? "." : ""}`;
@@ -121,7 +146,7 @@ test("七个主题的 31 道题符合预设顺序，每小节四拍且时间线�
         const expectedIndexes = [];
         let eventIndex = 0;
         for (const measure of measures) {
-          const tokens = measure.match(/R?[WHQE]\.?/g);
+          const tokens = measure.match(/R?[WHQES]\.?/g);
           assert.equal(tokens.join(""), measure);
           let measureBeats = 0;
           for (const token of tokens) {
@@ -137,7 +162,10 @@ test("七个主题的 31 道题符合预设顺序，每小节四拍且时间线�
           assert.equal(measureBeats, 4, question.id);
         }
         const timeline = timing.createExerciseTimeline(question.exercise, bpm, 3, { perfectMs: 50, hitMs: 150 });
-        assert.equal(timeline.finishOffsetMs, measures.length * 4 * beatMs);
+        assert.equal(timeline.finishOffsetMs, Math.max(
+          measures.length * 4 * beatMs,
+          expectedTargets.length > 0 ? expectedTargets.at(-1) + 150 : 0,
+        ));
         assert.deepEqual(timeline.targetTaps.map((target) => target.offsetMs), expectedTargets);
         assert.deepEqual(timeline.targetTaps.map((target) => target.eventIndex), expectedIndexes);
         assert.deepEqual(timeline.measures.map((measure) => [measure.startOffsetMs, measure.endOffsetMs]),
@@ -165,7 +193,7 @@ test("查找题目按实际所属模式返回，而不是默认当作击拍题",
   const question = {
     id: "test-dictation", title: "听写测试题", description: "",
     exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [
-      { events: [{ kind: "note", noteValue: "whole" }] },
+      { elements: [{ kind: "note", noteValue: "whole" }] },
     ] },
   };
   // 仅测试夹具临时增加一题，确保新模式的查询路径可用。

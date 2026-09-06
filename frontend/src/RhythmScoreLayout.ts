@@ -1,26 +1,25 @@
-import { rhythmEventToDurationInQuarterNotes, type RhythmEvent } from "./RhythmModel";
+import { expandRhythmElements, TICKS_PER_QUARTER, type RhythmElement } from "./RhythmModel";
 
 /** 返回小节内的拍内连梁分组。八分、十六分音符（含单附点）可混合；
  * 休止符、长音符或跨拍事件断开分组，不连接跨拍/跨小节的音符。
  * 单个音符保留符尾；梁的层数和局部短梁交给记谱库处理。
  */
-export function getBeatBeamGroups(events: readonly RhythmEvent[]): number[][] {
+export function getBeatBeamGroups(elements: readonly RhythmElement[]): number[][] {
+  const expanded = expandRhythmElements(elements);
   const groups: number[][] = [];
   let pending: number[] = [];
-  let beat = 0;
   const flush = () => {
     if (pending.length > 1) groups.push(pending);
     pending = [];
   };
-  events.forEach((event, index) => {
-    if (Number.isInteger(beat)) flush();
-    const end = beat + rhythmEventToDurationInQuarterNotes(event);
+  expanded.events.forEach(({ event, startTick, durationTicks }, index) => {
+    if (startTick % TICKS_PER_QUARTER === 0) flush();
+    const end = startTick + durationTicks;
     const canBeam = event.kind === "note"
       && (event.noteValue === "eighth" || event.noteValue === "sixteenth")
-      && end <= Math.floor(beat) + 1;
+      && end <= (Math.floor(startTick / TICKS_PER_QUARTER) + 1) * TICKS_PER_QUARTER;
     if (canBeam) pending.push(index);
     else flush();
-    beat = end;
   });
   flush();
   return groups;

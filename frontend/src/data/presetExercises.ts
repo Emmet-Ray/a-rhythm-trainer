@@ -49,7 +49,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -57,7 +57,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -76,14 +76,14 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "half" },
                   ],
                 },
                 {
-                  events: [{ kind: "note", noteValue: "whole" }],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
               ],
             },
@@ -97,7 +97,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -105,17 +105,17 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                   ],
                 },
                 {
-                  events: [{ kind: "note", noteValue: "whole" }],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "half" },
@@ -147,7 +147,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -157,7 +157,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -178,7 +178,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -187,7 +187,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -196,7 +196,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -205,7 +205,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -225,7 +225,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -235,7 +235,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -245,7 +245,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -255,7 +255,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -274,7 +274,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -284,7 +284,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -294,7 +294,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -304,7 +304,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -323,7 +323,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -334,7 +334,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -345,7 +345,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -356,7 +356,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -378,7 +378,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -387,7 +387,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -397,7 +397,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -407,7 +407,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -444,7 +444,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -453,7 +453,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -461,7 +461,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -469,7 +469,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -487,7 +487,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -496,7 +496,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -504,7 +504,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -512,7 +512,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "half" },
@@ -530,10 +530,10 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [{ kind: "note", noteValue: "whole" }],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -545,10 +545,10 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [{ kind: "note", noteValue: "whole" }],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -569,7 +569,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -577,7 +577,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -589,13 +589,13 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "half" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -616,7 +616,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -624,7 +624,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -634,7 +634,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -642,7 +642,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -650,10 +650,10 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [{ kind: "note", noteValue: "whole" }],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -663,7 +663,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -673,7 +673,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -705,7 +705,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "rest", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -713,7 +713,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -732,19 +732,19 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "rest", noteValue: "half" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "rest", noteValue: "half" },
                     { kind: "note", noteValue: "half" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -763,23 +763,23 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "whole" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "rest", noteValue: "whole" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "half" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -798,7 +798,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -807,7 +807,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "rest", noteValue: "eighth" },
@@ -816,7 +816,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "rest", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -826,7 +826,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -845,13 +845,13 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "rest", noteValue: "half" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "rest", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -860,17 +860,17 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "whole" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "rest", noteValue: "whole" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "rest", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -880,7 +880,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -913,7 +913,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -921,7 +921,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -940,7 +940,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -948,7 +948,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter", dots: 1 },
@@ -956,7 +956,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
@@ -964,7 +964,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -983,7 +983,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter", dots: 1 },
@@ -991,7 +991,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -1000,7 +1000,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -1009,7 +1009,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -1028,26 +1028,26 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "half" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "whole" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
@@ -1055,7 +1055,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter", dots: 1 },
@@ -1063,7 +1063,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -1096,7 +1096,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -1104,7 +1104,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1124,7 +1124,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1133,7 +1133,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1142,7 +1142,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1163,7 +1163,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -1173,7 +1173,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1182,7 +1182,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1192,7 +1192,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1212,7 +1212,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -1220,7 +1220,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1228,12 +1228,12 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "whole" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -1242,7 +1242,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1252,7 +1252,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
@@ -1285,7 +1285,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -1293,7 +1293,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1313,7 +1313,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -1322,7 +1322,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1331,7 +1331,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -1339,7 +1339,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "half" },
@@ -1357,7 +1357,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "rest", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -1366,7 +1366,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "rest", noteValue: "quarter" },
@@ -1374,7 +1374,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "rest", noteValue: "half" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -1382,7 +1382,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1402,7 +1402,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "half" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
@@ -1410,7 +1410,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter", dots: 1 },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -1419,7 +1419,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "eighth" },
@@ -1428,12 +1428,12 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "whole" },
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "rest", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "eighth" },
@@ -1443,10 +1443,986 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  events: [
+                  elements: [
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
                     { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { mode: "dictation", questions: [] },
+      { mode: "geometry", questions: [] },
+    ],
+  },
+  {
+    id: "sixteenth-notes",
+    title: "十六分音符、四平均节奏、前八后十六节奏、前十六后八节奏",
+    description: "",
+    modes: [
+      {
+        mode: "tapping",
+        questions: [
+          // EE EE Q Q | SSSS SSSS Q Q
+          {
+            id: "sixteenth-notes-01",
+            title: "一拍四下",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // ESS Q ESS Q | ESS ESS ESS ESS
+          {
+            id: "sixteenth-notes-02",
+            title: "前长后短",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                  ],
+                },
+              ],
+            },
+          },
+          // SSE Q SSE Q | Q SSE Q SSE | SSE SSE Q Q
+          {
+            id: "sixteenth-notes-03",
+            title: "前短后长",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // ESS SSE Q Q | SSE ESS Q Q | SSSS ESS SSE Q | ESS SSE SSSS Q
+          {
+            id: "sixteenth-notes-04",
+            title: "前后换一换",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // Q Q EE EE | SSSS SSSS SSSS SSSS | ESS Q SSE Q | SSE ESS SSSS EE | H ESS SSE | ESS SSE EE Q
+          {
+            id: "sixteenth-notes-05",
+            title: "十六分小旅程",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { mode: "dictation", questions: [] },
+      { mode: "geometry", questions: [] },
+    ],
+  },
+  {
+    id: "dotted-eighths",
+    title: "附点八分音符、小附点节奏",
+    description: "",
+    modes: [
+      {
+        mode: "tapping",
+        questions: [
+          // EE Q EE Q | E.S Q E.S Q
+          {
+            id: "dotted-eighths-01",
+            title: "认识小附点",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // E.S Q Q Q | Q E.S Q Q | Q Q E.S E.S
+          {
+            id: "dotted-eighths-02",
+            title: "小附点搬家",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                  ],
+                },
+              ],
+            },
+          },
+          // E.S ESS Q Q | ESS E.S Q Q | E.S E.S SSE Q | SSSS E.S EE Q
+          {
+            id: "dotted-eighths-03",
+            title: "长短辨一辨",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // H E.S Q | E.S ESS SSE Q | W | Q E.S Q E.S | E.S E.S E.S E.S | EE EE Q Q
+          {
+            id: "dotted-eighths-04",
+            title: "小附点旅程",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "whole" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { mode: "dictation", questions: [] },
+      { mode: "geometry", questions: [] },
+    ],
+  },
+  {
+    id: "small-syncopation",
+    title: "小切分节奏",
+    description: "",
+    modes: [
+      {
+        mode: "tapping",
+        questions: [
+          // EE Q EE Q | SES Q SES Q
+          {
+            id: "small-syncopation-01",
+            title: "认识小切分",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // SES Q Q Q | Q SES Q Q | Q Q SES SES
+          {
+            id: "small-syncopation-02",
+            title: "小切分搬家",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                  ],
+                },
+              ],
+            },
+          },
+          // SSSS SES Q Q | SES SSSS Q Q | ESS SES SSE Q | SES SES EE Q
+          {
+            id: "small-syncopation-03",
+            title: "中间留住",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // H H | SES Q SES Q | W | Q SES SSE ESS | SES SES SES SES | EE EE Q Q
+          {
+            id: "small-syncopation-04",
+            title: "小切分旅程",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "half" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "whole" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { mode: "dictation", questions: [] },
+      { mode: "geometry", questions: [] },
+    ],
+  },
+  {
+    id: "mixed-values-3",
+    title: "综合练习3（基础+十六分+小附点节奏+小切分节奏）",
+    description: "",
+    modes: [
+      {
+        mode: "tapping",
+        questions: [
+          // E.S Q SES Q | SES Q E.S Q
+          {
+            id: "mixed-values-3-01",
+            title: "小附点遇见小切分",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // ESS SSE E.S SES | SES E.S SSE ESS | H SSSS EE | E.S SES Q Q
+          {
+            id: "mixed-values-3-02",
+            title: "一拍多种走法",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // RQ SES E.S Q | E.S RE E SES Q | RH ESS SSE | SES Q RQ Q
+          {
+            id: "mixed-values-3-03",
+            title: "留白再接上",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "rest", noteValue: "quarter" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "rest", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "rest", noteValue: "half" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "rest", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // Q. E ESS SSE | E Q E E.S SES | SSSS ESS SSE Q | W | RE E SES E.S Q | E.S SES EE Q
+          {
+            id: "mixed-values-3-04",
+            title: "六小节挑战",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "whole" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "rest", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "eighth", dots: 1 },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "sixteenth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
                     { kind: "note", noteValue: "quarter" },
                   ],
                 },

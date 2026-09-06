@@ -1,4 +1,4 @@
-export type { RhythmExercise, RhythmMeasure, RhythmEvent };
+export type { RhythmExercise, RhythmMeasure, RhythmEvent, RhythmElement, EighthTriplet };
 export { noteValueToDurationInQuarterNotes, rhythmEventToDurationInQuarterNotes, validateRhythmExercise };
 
 /***************************************************************/
@@ -17,7 +17,7 @@ type RhythmExercise = {
 };
 
 type RhythmMeasure = {
-  events: RhythmEvent[];
+  elements: RhythmElement[];
 };
 
 type RhythmEvent = {
@@ -26,6 +26,57 @@ type RhythmEvent = {
   /** 省略或 0 表示无附点；第一版只支持单附点，音符与休止符共用。 */
   dots?: 0 | 1;
 };
+
+/** 第一版仅支持三个无附点八分音符，整组占一四分拍。 */
+type TripletNote = { kind: "note"; noteValue: "eighth"; dots?: 0 };
+type EighthTriplet = {
+  kind: "triplet";
+  notes: [TripletNote, TripletNote, TripletNote];
+};
+type RhythmElement = RhythmEvent | EighthTriplet;
+
+// 音乐时值使用整数；24 可精确表达现有单附点时值及一拍三等分。
+// 与 VexFlow 的内部 ticks 无关，只在生成播放时间线时换算为毫秒。
+export const TICKS_PER_QUARTER = 24;
+
+/** 展开一个小节的元素（也可用于未填满的小节片段）。
+ * 输出事件起点为小节内 tick，组下标指向展开事件；不修改输入。
+ * 验证三连音结构与拍头对齐，但四拍总长由 validateRhythmExercise 检查。
+ */
+export function expandRhythmElements(elements: readonly RhythmElement[]) {
+  const events: { event: RhythmEvent; startTick: number; durationTicks: number }[] = [];
+  const tripletGroups: number[][] = [];
+  let durationTicks = 0;
+  elements.forEach((element, index) => {
+    try {
+      if (element.kind === "triplet") {
+        if (!Array.isArray(element.notes) || element.notes.length !== 3 || element.notes.some(note =>
+          note.kind !== "note" || note.noteValue !== "eighth"
+          || (note.dots !== undefined && note.dots !== 0))) {
+          throw new Error("小三连必须包含三个无附点八分音符，不支持休止符或嵌套组。");
+        }
+        if (durationTicks % TICKS_PER_QUARTER !== 0) {
+          throw new Error("小三连必须从四分拍的拍头开始。");
+        }
+        const group: number[] = [];
+        element.notes.forEach(event => {
+          group.push(events.length);
+          events.push({ event, startTick: durationTicks, durationTicks: 8 });
+          durationTicks += 8;
+        });
+        tripletGroups.push(group);
+      } else {
+        if (element.kind !== "note" && element.kind !== "rest") throw new Error("事件类型必须为 note 或 rest。");
+        const ticks = rhythmEventToDurationInQuarterNotes(element) * TICKS_PER_QUARTER;
+        events.push({ event: element, startTick: durationTicks, durationTicks: ticks });
+        durationTicks += ticks;
+      }
+    } catch (error) {
+      throw new Error(`第 ${index + 1} 个事件：${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    }
+  });
+  return { events, tripletGroups, durationTicks };
+}
 
 /***************************************************************/
 /** 返回完整事件的四分音符单位时值；拒绝尚未支持的附点数。 */
@@ -45,17 +96,14 @@ function validateRhythmExercise(exercise: RhythmExercise): void {
     throw new Error("目前只支持 4/4 拍。");
   }
   exercise.measures.forEach((measure, measureIndex) => {
-    let duration = 0;
-    measure.events.forEach((event, eventIndex) => {
-      try {
-        if (event.kind !== "note" && event.kind !== "rest") throw new Error("事件类型必须为 note 或 rest。");
-        duration += rhythmEventToDurationInQuarterNotes(event);
-      } catch (error) {
-        throw new Error(`第 ${measureIndex + 1} 小节第 ${eventIndex + 1} 个事件：${error instanceof Error ? error.message : String(error)}`, { cause: error });
-      }
-    });
-    if (duration !== 4) {
-      throw new Error(`第 ${measureIndex + 1} 小节时值为 ${duration} 拍，应为 4 拍。`);
+    let expanded;
+    try {
+      expanded = expandRhythmElements(measure.elements);
+    } catch (error) {
+      throw new Error(`第 ${measureIndex + 1} 小节${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    }
+    if (expanded.durationTicks !== 4 * TICKS_PER_QUARTER) {
+      throw new Error(`第 ${measureIndex + 1} 小节时值为 ${expanded.durationTicks / TICKS_PER_QUARTER} 拍，应为 4 拍。`);
     }
   });
 }

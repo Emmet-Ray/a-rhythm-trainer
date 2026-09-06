@@ -1,5 +1,6 @@
 import {
-  rhythmEventToDurationInQuarterNotes,
+  expandRhythmElements,
+  TICKS_PER_QUARTER,
   validateRhythmExercise,
   type RhythmExercise,
 } from "./RhythmModel";
@@ -128,6 +129,7 @@ export function createExerciseTimeline(
 
   const quarterNoteDurationMs = 60_000 / bpm;
   let offsetMs = 0;
+  let measureStartTick = 0;
   const targetTaps: TargetTap[] = [];
   const eventEndOffsetsMs: number[] = [];
 
@@ -136,15 +138,19 @@ export function createExerciseTimeline(
   const measures = exercise.measures.map((measure) => {
     const startOffsetMs = offsetMs;
     const firstEventIndex = eventEndOffsetsMs.length;
-    measure.events.forEach((event) => {
+    const expanded = expandRhythmElements(measure.elements);
+    const toMs = (tick: number) => tick / TICKS_PER_QUARTER * quarterNoteDurationMs;
+    expanded.events.forEach(({ event, startTick, durationTicks }) => {
       const eventIndex = eventEndOffsetsMs.length;
-      eventStartOffsetsMs.push(offsetMs);
+      const eventStartMs = toMs(measureStartTick + startTick);
+      eventStartOffsetsMs.push(eventStartMs);
       if (event.kind === "note") {
-        targetTaps.push({ eventIndex, offsetMs });
+        targetTaps.push({ eventIndex, offsetMs: eventStartMs });
       }
-      offsetMs += quarterNoteDurationMs * rhythmEventToDurationInQuarterNotes(event);
-      eventEndOffsetsMs.push(offsetMs);
+      eventEndOffsetsMs.push(toMs(measureStartTick + startTick + durationTicks));
     });
+    measureStartTick += expanded.durationTicks;
+    offsetMs = toMs(measureStartTick);
     return { startOffsetMs, endOffsetMs: offsetMs, firstEventIndex };
   });
 

@@ -8,10 +8,11 @@ import {
   Stave,
   StaveNote,
   Voice,
+  Tuplet,
   type RenderContext,
 } from "vexflow";
 
-import type { RhythmExercise, RhythmEvent } from "./RhythmModel";
+import { expandRhythmElements, type RhythmExercise, type RhythmEvent } from "./RhythmModel";
 import type { ExerciseTimeline, TimingEvent } from "./RhythmTiming";
 import {
   createScoreLayout,
@@ -64,8 +65,13 @@ function RhythmScore({
     if (containerWidth === 0) return;
     // 先关联连梁，再测量无独立符尾时的最小排版宽度。
     const preparedMeasures = measures.map((measure) => {
-      const notes = measure.events.map(rhythmEventToVexFlowStaveNote);
-      const beams = getBeatBeamGroups(measure.events).map((indexes) =>
+      const expanded = expandRhythmElements(measure.elements);
+      const notes = expanded.events.map(({ event }) => rhythmEventToVexFlowStaveNote(event));
+      // Tuplet 同时设置 3:2 的记谱时值比例和可见数字；必须在测量/排版前关联。
+      const tuplets = expanded.tripletGroups.map(indexes => new Tuplet(
+        indexes.map(index => notes[index]), { numNotes: 3, notesOccupied: 2, bracketed: false },
+      ));
+      const beams = getBeatBeamGroups(measure.elements).map((indexes) =>
         new Beam(indexes.map((index) => notes[index])),
       );
       const voice = new Voice().setStrict(false).addTickables(notes);
@@ -73,7 +79,7 @@ function RhythmScore({
         ? new Formatter().joinVoices([voice]).preCalculateMinTotalWidth([voice])
         : 0;
       // 为行首谱号/拍号和音符间的阅读间距留余量，不能只保证符号不重叠。
-      return { notes, beams, minimumWidth: Math.max(noteWidth + 120, 100 + notes.length * 24) };
+      return { notes, beams, tuplets, minimumWidth: Math.max(noteWidth + 120, 100 + notes.length * 24) };
     });
     const minimumWidth = Math.max(320, ...preparedMeasures.map((measure) => measure.minimumWidth));
     const scoreLayout = createScoreLayout(measures.length, containerWidth, minimumWidth);
@@ -85,7 +91,7 @@ function RhythmScore({
     const eventPositions: ScorePosition[] = [];
     const layouts: MeasureLayout[] = [];
 
-    preparedMeasures.forEach(({ notes: measureNotes, beams }, measureIndex) => {
+    preparedMeasures.forEach(({ notes: measureNotes, beams, tuplets }, measureIndex) => {
       const placement = scoreLayout.measures[measureIndex];
       const stave = new Stave(placement.x, placement.y, placement.width);
       if (placement.isRowStart) {
@@ -108,6 +114,7 @@ function RhythmScore({
       });
       if (measureNotes.length > 0) Formatter.FormatAndDraw(context, stave, measureNotes);
       beams.forEach((beam) => beam.setContext(context).draw());
+      tuplets.forEach((tuplet) => tuplet.setContext(context).draw());
       measureNotes.forEach((note, index) => {
         eventPositions[measureTime.firstEventIndex + index] = {
           x: getNoteCenterX(note),
