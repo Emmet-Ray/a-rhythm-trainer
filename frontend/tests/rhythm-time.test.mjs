@@ -28,6 +28,39 @@ const exercise = {
 };
 const timeline = timing.createExerciseTimeline(exercise, 60, 3, windows);
 
+test("八分音符按四分拍连梁，长音与休止符占时但不参与连梁", () => {
+  const values = { E: "eighth", Q: "quarter", H: "half", W: "whole", r: "eighth", R: "quarter" };
+  for (const [pattern, expected] of [
+    ["", []],
+    ["EEEEEEEE", [[0, 1], [2, 3], [4, 5], [6, 7]]],
+    ["QEEQEE", [[1, 2], [4, 5]]],
+    ["HEEEE", [[1, 2], [3, 4]]],
+    ["W", []],
+    ["HH", []],
+    ["QQQQ", []],
+    ["rEErEEEE", [[4, 5], [6, 7]]],
+    ["REEQQ", [[1, 2]]],
+    ["ErQQQ", []],
+    ["EQEQEE", [[4, 5]]],
+  ]) {
+    const events = [...pattern].map((symbol) => ({
+      kind: symbol === "r" || symbol === "R" ? "rest" : "note",
+      noteValue: values[symbol],
+    }));
+    const before = structuredClone(events);
+    assert.deepEqual(scoreLayout.getEighthNoteBeamGroups(events), expected, pattern);
+    assert.deepEqual(events, before);
+  }
+});
+
+test("连梁分组使用小节内下标，前一小节的末尾音不与下一小节相连", () => {
+  const note = (noteValue) => ({ kind: "note", noteValue });
+  const first = [note("eighth"), note("quarter"), note("quarter"), note("quarter"), note("eighth")];
+  const second = [note("eighth"), note("eighth"), note("half"), note("quarter")];
+  assert.deepEqual(scoreLayout.getEighthNoteBeamGroups(first), []);
+  assert.deepEqual(scoreLayout.getEighthNoteBeamGroups(second), [[0, 1]]);
+});
+
 test("全音符和二分音符按四分音符单位展开，长音符只生成一次敲击", () => {
   for (const bpm of [60, 120]) {
     const beatMs = 60_000 / bpm;

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   BarlineType,
+  Beam,
   Formatter,
   Renderer,
   Stave,
@@ -12,6 +13,7 @@ import type { RhythmExercise, RhythmEvent } from "./RhythmModel";
 import type { ExerciseTimeline, TimingEvent } from "./RhythmTiming";
 import {
   createScoreLayout,
+  getEighthNoteBeamGroups,
   timingOffsetToScorePosition,
   type MeasureLayout,
   type ScorePosition,
@@ -30,7 +32,7 @@ type RhythmScoreProps = {
 };
 
 // 按完整小节换行；反馈位置按时间线的全局 eventIndex 保存。
-// todo: 连梁与增量渲染优化留待后续。
+// todo: 增量渲染优化留待后续。
 function RhythmScore({
   exercise,
   activeEventIndex,
@@ -83,12 +85,17 @@ function RhythmScore({
       const markerY = stave.getBottomLineY() + MARKER_Y_OFFSET;
       const measureTime = timeline.measures[measureIndex];
       const measureNotes = measure.events.map(rhythmEventToVexFlowStaveNote);
+      // 排版前关联 Beam，让 VexFlow 去掉独立符尾；排版后再绘制连梁。
+      const beams = getEighthNoteBeamGroups(measure.events).map(([first, second]) =>
+        new Beam([measureNotes[first], measureNotes[second]]),
+      );
       measureNotes.forEach((note, index) => {
         if (measureTime.firstEventIndex + index === activeEventIndex) {
           note.setStyle({ fillStyle: ACTIVE_NOTE_COLOR, strokeStyle: ACTIVE_NOTE_COLOR });
         }
       });
       if (measureNotes.length > 0) Formatter.FormatAndDraw(context, stave, measureNotes);
+      beams.forEach((beam) => beam.setContext(context).draw());
       measureNotes.forEach((note, index) => {
         eventPositions[measureTime.firstEventIndex + index] = {
           x: getNoteCenterX(note),
