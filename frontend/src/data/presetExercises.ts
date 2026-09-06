@@ -688,6 +688,777 @@ export const presetTopics: PracticeTopic[] = [
       { mode: "geometry", questions: [] },
     ],
   },
+  {
+    id: "rests",
+    title: "四种休止符",
+    description: "",
+    modes: [
+      {
+        mode: "tapping",
+        questions: [
+          // Q RQ Q RQ | Q Q Q Q
+          {
+            id: "rests-01",
+            title: "练习 1",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "rest", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "rest", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // H RH | RH H | Q Q Q Q
+          {
+            id: "rests-02",
+            title: "练习 2",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "rest", noteValue: "half" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "rest", noteValue: "half" },
+                    { kind: "note", noteValue: "half" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // W | RW | H H | Q Q Q Q
+          {
+            id: "rests-03",
+            title: "练习 3",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "whole" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "rest", noteValue: "whole" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "half" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // Q Q E RE Q | Q Q RE E Q | E RE Q RE E Q | Q Q Q Q
+          {
+            id: "rests-04",
+            title: "练习 4",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "rest", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "rest", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "rest", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "rest", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // H RH | RQ Q EE Q | W | RW | RE E Q E RE Q | Q Q Q Q
+          {
+            id: "rests-05",
+            title: "练习 5",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "rest", noteValue: "half" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "rest", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "whole" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "rest", noteValue: "whole" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "rest", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "rest", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { mode: "dictation", questions: [] },
+      { mode: "geometry", questions: [] },
+    ],
+  },
+  {
+    id: "dotted-quarters",
+    title: "附点四分音符、大附点节奏",
+    description: "",
+    modes: [
+      {
+        mode: "tapping",
+        questions: [
+          // Q. E Q Q | Q Q Q Q
+          {
+            id: "dotted-quarters-01",
+            title: "练习 1",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // Q. E Q Q | Q Q Q. E | Q Q. E Q | Q Q Q Q
+          {
+            id: "dotted-quarters-02",
+            title: "练习 2",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // Q. E Q. E | Q. E EE Q | EE Q Q. E | Q Q Q Q
+          {
+            id: "dotted-quarters-03",
+            title: "练习 3",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // H Q. E | Q. E H | W | Q Q. E Q | Q. E Q. E | Q Q Q Q
+          {
+            id: "dotted-quarters-04",
+            title: "练习 4",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "half" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "whole" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { mode: "dictation", questions: [] },
+      { mode: "geometry", questions: [] },
+    ],
+  },
+  {
+    id: "syncopation",
+    title: "大切分节奏",
+    description: "",
+    modes: [
+      {
+        mode: "tapping",
+        questions: [
+          // Q Q Q Q | E Q E Q Q
+          {
+            id: "syncopation-01",
+            title: "练习 1",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // E Q E Q Q | Q Q E Q E | E Q E E Q E
+          {
+            id: "syncopation-02",
+            title: "练习 2",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+              ],
+            },
+          },
+          // EE EE Q Q | E Q E Q Q | Q Q EE EE | Q Q E Q E
+          {
+            id: "syncopation-03",
+            title: "练习 3",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+              ],
+            },
+          },
+          // H E Q E | E Q E H | W | Q E Q E Q | E Q E E Q E | Q Q Q Q
+          {
+            id: "syncopation-04",
+            title: "练习 4",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "half" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "whole" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { mode: "dictation", questions: [] },
+      { mode: "geometry", questions: [] },
+    ],
+  },
+  {
+    id: "mixed-values-2",
+    title: "综合练习2（基础+大附点节奏+大切分节奏）",
+    description: "",
+    modes: [
+      {
+        mode: "tapping",
+        questions: [
+          // Q. E Q Q | E Q E Q Q
+          {
+            id: "mixed-values-2-01",
+            title: "附点遇见切分",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // Q. E E Q E | E Q E Q Q | H E Q E | Q. E H
+          {
+            id: "mixed-values-2-02",
+            title: "两种节奏接力",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "half" },
+                  ],
+                },
+              ],
+            },
+          },
+          // RQ E Q E Q | Q. E RQ Q | RH E Q E | E Q E Q RQ
+          {
+            id: "mixed-values-2-03",
+            title: "留白再出发",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "rest", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "rest", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "rest", noteValue: "half" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "rest", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+          // H E Q E | Q. E EE Q | E Q E Q Q | W | RE E E Q E Q | Q Q Q Q
+          {
+            id: "mixed-values-2-04",
+            title: "六小节挑战",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  events: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter", dots: 1 },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "whole" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "rest", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  events: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { mode: "dictation", questions: [] },
+      { mode: "geometry", questions: [] },
+    ],
+  },
 ];
 
 /** 返回题目、所属主题与模式；未知 ID 不回退到其他题目。 */

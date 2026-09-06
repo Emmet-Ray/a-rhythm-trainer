@@ -49,7 +49,7 @@ test("未知题目 ID 不回退到默认题，查找不修改内容", () => {
   assert.deepEqual(catalog.presetTopics, before);
 });
 
-test("前三个主题的 14 道题符合预设顺序，每小节四拍且时间线连续", () => {
+test("七个主题的 31 道题符合预设顺序，每小节四拍且时间线连续", () => {
   // 独立列出出题稿，避免仅校验总时长而漏掉音符顺序错误。
   const expected = [
     ["basic-values", [
@@ -70,6 +70,31 @@ test("前三个主题的 14 道题符合预设顺序，每小节四拍且时间�
       "Q Q Q Q | EE EE EE EE | H H | Q EE Q EE",
       "Q Q Q Q | Q EE Q EE | H EE Q | EE Q H | W | EE EE Q Q | Q Q EE EE | H Q Q",
     ]],
+    ["rests", [
+      "Q RQ Q RQ | Q Q Q Q",
+      "H RH | RH H | Q Q Q Q",
+      "W | RW | H H | Q Q Q Q",
+      "Q Q E RE Q | Q Q RE E Q | E RE Q RE E Q | Q Q Q Q",
+      "H RH | RQ Q EE Q | W | RW | RE E Q E RE Q | Q Q Q Q",
+    ]],
+    ["dotted-quarters", [
+      "Q. E Q Q | Q Q Q Q",
+      "Q. E Q Q | Q Q Q. E | Q Q. E Q | Q Q Q Q",
+      "Q. E Q. E | Q. E EE Q | EE Q Q. E | Q Q Q Q",
+      "H Q. E | Q. E H | W | Q Q. E Q | Q. E Q. E | Q Q Q Q",
+    ]],
+    ["syncopation", [
+      "Q Q Q Q | E Q E Q Q",
+      "E Q E Q Q | Q Q E Q E | E Q E E Q E",
+      "EE EE Q Q | E Q E Q Q | Q Q EE EE | Q Q E Q E",
+      "H E Q E | E Q E H | W | Q E Q E Q | E Q E E Q E | Q Q Q Q",
+    ]],
+    ["mixed-values-2", [
+      "Q. E Q Q | E Q E Q Q",
+      "Q. E E Q E | E Q E Q Q | H E Q E | Q. E H",
+      "RQ E Q E Q | Q. E RQ Q | RH E Q E | E Q E Q RQ",
+      "H E Q E | Q. E EE Q | E Q E Q Q | W | RE E E Q E Q | Q Q Q Q",
+    ]],
   ];
   const symbols = { whole: "W", half: "H", quarter: "Q", eighth: "E" };
   const beats = { W: 4, H: 2, Q: 1, E: 0.5 };
@@ -84,25 +109,37 @@ test("前三个主题的 14 道题符合预设顺序，每小节四拍且时间�
       const measures = pattern.replaceAll(" ", "").split("|");
       assert.deepEqual(question.exercise.measures.map((measure) =>
         measure.events.map((event) => {
-          assert.equal(event.kind, "note");
-          return symbols[event.noteValue];
+          assert.ok(event.kind === "note" || event.kind === "rest");
+          assert.ok(event.dots === undefined || event.dots === 0 || event.dots === 1);
+          return `${event.kind === "rest" ? "R" : ""}${symbols[event.noteValue]}${event.dots === 1 ? "." : ""}`;
         }).join("")
       ), measures, question.id);
       for (const bpm of [60, 120]) {
         const beatMs = 60000 / bpm;
         let offset = 0;
         const expectedTargets = [];
+        const expectedIndexes = [];
+        let eventIndex = 0;
         for (const measure of measures) {
-          assert.equal([...measure].reduce((sum, symbol) => sum + beats[symbol], 0), 4);
-          for (const symbol of measure) {
-            expectedTargets.push(offset);
-            offset += beats[symbol] * beatMs;
+          const tokens = measure.match(/R?[WHQE]\.?/g);
+          assert.equal(tokens.join(""), measure);
+          let measureBeats = 0;
+          for (const token of tokens) {
+            const duration = beats[token.replace("R", "").replace(".", "")] * (token.endsWith(".") ? 1.5 : 1);
+            if (!token.startsWith("R")) {
+              expectedTargets.push(offset);
+              expectedIndexes.push(eventIndex);
+            }
+            offset += duration * beatMs;
+            measureBeats += duration;
+            eventIndex++;
           }
+          assert.equal(measureBeats, 4, question.id);
         }
         const timeline = timing.createExerciseTimeline(question.exercise, bpm, 3, { perfectMs: 50, hitMs: 150 });
         assert.equal(timeline.finishOffsetMs, measures.length * 4 * beatMs);
         assert.deepEqual(timeline.targetTaps.map((target) => target.offsetMs), expectedTargets);
-        assert.deepEqual(timeline.targetTaps.map((target) => target.eventIndex), expectedTargets.map((_, i) => i));
+        assert.deepEqual(timeline.targetTaps.map((target) => target.eventIndex), expectedIndexes);
         assert.deepEqual(timeline.measures.map((measure) => [measure.startOffsetMs, measure.endOffsetMs]),
           measures.map((_, i) => [i * 4 * beatMs, (i + 1) * 4 * beatMs]));
       }
