@@ -56,9 +56,38 @@ export function scheduleCountIn(
   sources.push(oscillator);
 }
 
-/** 立即播放用户击拍音；每次调用产生一声，结束后释放节点。 */
-export function playTapSound(context: AudioContext): void {
-  scheduleTapSound(context, context.currentTime);
+// 试听参数集中在这里；保留原始采样，便于按实际听感调整。
+const PIANO_URL = `${import.meta.env.BASE_URL}assets/audio/felt-piano-a4.mp3`;
+const PIANO_OFFSET_SECONDS = 0.01;
+const PIANO_DURATION_SECONDS = 0.8;
+const PIANO_FADE_SECONDS = 0.4;
+const PIANO_GAIN = 0.7;
+const pianoBuffers = new WeakMap<AudioContext, AudioBuffer>();
+const pianoLoads = new WeakMap<AudioContext, Promise<void>>();
+
+/** 开始一轮前等待加载/解码完成，再建立时钟。重复调用复用结果，失败后允许重试。 */
+export function prepareTapSound(context: AudioContext): Promise<void> {
+  const existing = pianoLoads.get(context);
+  if (existing) return existing;
+  const pending = (async () => {
+    try {
+      const response = await fetch(PIANO_URL);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const buffer = await context.decodeAudioData(await response.arrayBuffer());
+      if (buffer.duration <= PIANO_OFFSET_SECONDS) throw new Error("采样过短");
+      pianoBuffers.set(context, buffer);
+    } catch {
+      pianoLoads.delete(context);
+      throw new Error("钢琴声音加载失败，请重试。");
+    }
+  })();
+  pianoLoads.set(context, pending);
+  return pending;
+}
+
+/** 准备完成后同步发声，不在敲击路径上等待网络或解码。 */
+export function playTapSound(context: AudioContext, sources?: AudioScheduledSourceNode[]): void {
+  scheduleTapSound(context, context.currentTime, sources);
 }
 
 /** 试听与用户击拍共用这一音色；试听传入声源列表，以便停止时取消排程。 */
@@ -67,32 +96,31 @@ export function scheduleTapSound(
   startsAt: number,
   sources?: AudioScheduledSourceNode[],
 ): void {
-  const oscillator = context.createOscillator();
+  const buffer = pianoBuffers.get(context);
+  if (!buffer) throw new Error("请先等待 prepareTapSound() 完成。");
+  const source = context.createBufferSource();
+  source.buffer = buffer;
   const gain = context.createGain();
-
-  const duration = 0.05; // 50ms 的短音
-
-  // 使用比预备拍更低的音，便于区分自己的敲击。
-  oscillator.type = "sine";
-  oscillator.frequency.setValueAtTime(600, startsAt);
-
-  // 先快速起音，再衰减。
+  const duration = Math.min(PIANO_DURATION_SECONDS, buffer.duration - PIANO_OFFSET_SECONDS);
+  const attack = Math.min(0.002, duration / 4);
+  const fadeStart = Math.max(attack, duration - PIANO_FADE_SECONDS);
+  // 跳过开头弱信号，短淡入避免切入噪声，末尾淡出避免截断产生爆音。
   gain.gain.setValueAtTime(0, startsAt);
-  gain.gain.linearRampToValueAtTime(0.15, startsAt + 0.002);
-  gain.gain.exponentialRampToValueAtTime(0.001, startsAt + duration);
+  gain.gain.linearRampToValueAtTime(PIANO_GAIN, startsAt + attack);
+  gain.gain.setValueAtTime(PIANO_GAIN, startsAt + fadeStart);
+  gain.gain.linearRampToValueAtTime(0, startsAt + duration);
 
-  oscillator.connect(gain).connect(context.destination);
+  source.connect(gain).connect(context.destination);
 
-  oscillator.onended = () => {
-    oscillator.disconnect();
+  source.onended = () => {
+    source.disconnect();
     gain.disconnect();
     if (sources) {
-      const index = sources.indexOf(oscillator);
+      const index = sources.indexOf(source);
       if (index !== -1) sources.splice(index, 1);
     }
   };
 
-  oscillator.start(startsAt);
-  oscillator.stop(startsAt + duration);
-  sources?.push(oscillator);
+  source.start(startsAt, PIANO_OFFSET_SECONDS, duration);
+  sources?.push(source);
 }

@@ -9,7 +9,7 @@ import {
 import { rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
 import { getBeatBeamGroups } from "./RhythmScoreLayout";
 import { createExerciseTimeline } from "./RhythmTiming";
-import { createPracticeClock, scheduleCountIn, scheduleTapSound } from "./RhythmAudio";
+import { createPracticeClock, prepareTapSound, scheduleCountIn, scheduleTapSound } from "./RhythmAudio";
 
 {
   /*
@@ -224,7 +224,7 @@ function RhythmQuestionPlayback({ exercise, bpm }: RhythmDictationProps) {
       // 复用标准答案时间线；这里只取音乐时值，不使用命中窗口或判定结束时间。
       const timeline = createExerciseTimeline(exercise, bpm, 3, { perfectMs: 50, hitMs: 150 });
       const context = contextRef.current ?? (contextRef.current = new AudioContext());
-      await context.resume();
+      await Promise.all([context.resume(), prepareTapSound(context)]);
       if (request !== requestRef.current) return;
       const clock = createPracticeClock(context, timeline.countInDurationMs);
       timeline.countInOffsetsMs.forEach((offset, index) => {

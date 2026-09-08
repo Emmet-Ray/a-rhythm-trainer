@@ -18,6 +18,7 @@ import {
   scheduleCountIn,
   scheduleTapSound,
   playTapSound,
+  prepareTapSound,
   type PracticeClock,
 } from "./RhythmAudio";
 
@@ -220,7 +221,7 @@ function RhythmTrainer({
       const context =
         audioContextRef.current ??
         (audioContextRef.current = new AudioContext());
-      await context.resume();
+      await Promise.all([context.resume(), prepareTapSound(context)]);
       if (request !== startRequestRef.current) return;
 
       stopScheduledSounds();
@@ -306,7 +307,7 @@ function RhythmTrainer({
       }
 
       // 敲击与判定
-      playTapSound(audioContext);
+      playTapSound(audioContext, scheduledSourcesRef.current);
       tapOffsetsRef.current.push(tapOffsetMs);
       const timingEvent = evaluateTap(
         targetTapTimeline,
