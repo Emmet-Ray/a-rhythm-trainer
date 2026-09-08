@@ -24,10 +24,33 @@ import { createPracticeClock, scheduleCountIn, scheduleTapSound } from "./Rhythm
     # 核心内容是乐谱交互（写、删、验证），我想的最理想的状态是用户直接在乐谱上写/删
     */
 }
+/**
+ * 判断普通音符/休止符小节的记谱是否一致，不修改输入。
+ * 空白答案不通过；其余按数量、顺序、kind、noteValue 和 dots 比较。
+ * dots 省略等同于 0，不接受仅总时值相同的不同写法。
+ * expected 应为已校验的标准小节；本函数不负责拍数校验或三连音组展开。
+ */
+// eslint-disable-next-line react-refresh/only-export-components -- 与听写组件同文件维护，导出纯函数供测试；修改此导出时可能触发完整刷新。
+export function isMeasureAnswerCorrect(
+  answer: readonly RhythmEvent[],
+  expected: readonly RhythmEvent[],
+): boolean {
+  if (answer.length === 0 || answer.length !== expected.length) return false;
+
+  return answer.every((event, index) => {
+    const target = expected[index];
+    return event.kind === target.kind
+      && event.noteValue === target.noteValue
+      && (event.dots ?? 0) === (target.dots ?? 0);
+  });
+}
+
 type RhythmDictationProps = {
   exercise: RhythmExercise;
   bpm: number;
 };
+
+type MeasureVerdict = "unchecked" | "correct" | "incorrect";
 
 // 一次挂载对应一道题；调用方换题时通过 key 重建，清空答案和交互状态。
 export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
@@ -39,6 +62,37 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
     exercise.measures.map(() => []),
   );
   const hasSelectedMeasure = answerMeasures[selectedMeasureIndex] !== undefined;
+  const [measureVerdicts, setMeasureVerdicts] = useState<MeasureVerdict[]>(() =>
+    exercise.measures.map(() => "unchecked"),
+  );
+  // 编辑器目前只能填写无附点的四分、八分音符。不把尚不能作答的题判成用户错误。
+  const expectedMeasures = useMemo(() => exercise.measures.map(({ elements }) => {
+    if (elements.every((event): event is RhythmEvent =>
+      event.kind === "note"
+      && (event.noteValue === "quarter" || event.noteValue === "eighth")
+      && (event.dots ?? 0) === 0,
+    )) return elements;
+    return null;
+  }), [exercise]);
+  const expectedMeasure = expectedMeasures[selectedMeasureIndex];
+  const selectedVerdict = measureVerdicts[selectedMeasureIndex];
+  const isComplete = measureVerdicts.length > 0
+    && measureVerdicts.every((verdict) => verdict === "correct");
+
+  function clearSelectedVerdict() {
+    setMeasureVerdicts((previous) => previous.map((verdict, index) =>
+      index === selectedMeasureIndex ? "unchecked" : verdict,
+    ));
+  }
+
+  function verifySelectedMeasure() {
+    if (!hasSelectedMeasure || !expectedMeasure) return;
+    const correct = isMeasureAnswerCorrect(answerMeasures[selectedMeasureIndex], expectedMeasure);
+    setAddNoteMessage("");
+    setMeasureVerdicts((previous) => previous.map((verdict, index) =>
+      index === selectedMeasureIndex ? (correct ? "correct" : "incorrect") : verdict,
+    ));
+  }
 
   function addNote(noteValue: "quarter" | "eighth") {
     if (!hasSelectedMeasure) return;
@@ -59,6 +113,7 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
     }
 
     setAddNoteMessage("");
+    clearSelectedVerdict();
     setAnswerMeasures((previous) =>
       previous.map((events, index) =>
         index === selectedMeasureIndex ? [...events, newEvent] : events,
@@ -67,7 +122,9 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
   }
 
   function removeLastNote() {
+    if (!hasSelectedMeasure || answerMeasures[selectedMeasureIndex].length === 0) return;
     setAddNoteMessage("");
+    clearSelectedVerdict();
     setAnswerMeasures((previous) =>
       previous.map((events, index) =>
         index === selectedMeasureIndex ? events.slice(0, -1) : events,
@@ -110,6 +167,18 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
         </button>
       </div>
       <p role="status">{addNoteMessage}</p>
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 16 }}>
+        <button type="button" disabled={!hasSelectedMeasure || !expectedMeasure} onClick={verifySelectedMeasure}>
+          验证当前小节
+        </button>
+        <span role="status" aria-label="当前小节验证结果">
+          {selectedVerdict === "correct" ? "正确" : selectedVerdict === "incorrect" ? "有错误" : ""}
+        </span>
+      </div>
+      {expectedMeasures.some((measure) => measure === null) && (
+        <p role="alert">本题包含当前编辑器暂不支持的节奏，暂时无法完成作答。</p>
+      )}
+      <p role="status" aria-label="整题完成状态">{isComplete ? "本题完成" : ""}</p>
     </div>
   );
 }
