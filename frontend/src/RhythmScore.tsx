@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   BarlineType,
   Beam,
-  Dot,
   Formatter,
   Renderer,
   Stave,
@@ -12,7 +11,8 @@ import {
   type RenderContext,
 } from "vexflow";
 
-import { expandRhythmElements, type RhythmExercise, type RhythmEvent } from "./RhythmModel";
+import { expandRhythmElements, type RhythmExercise } from "./RhythmModel";
+import { rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
 import type { ExerciseTimeline, TimingEvent } from "./RhythmTiming";
 import {
   createScoreLayout,
@@ -220,39 +220,6 @@ function drawCross(
     .lineTo(x - size, y + size)
     .stroke()
     .restore();
-}
-
-function rhythmEventToVexFlowStaveNote(event: RhythmEvent): StaveNote {
-  // 将时值名称转换为 vexflow 对应的类型
-  let duration: string;
-  switch (event.noteValue) {
-    case "whole":
-      duration = "w";
-      break;
-    case "half":
-      duration = "h";
-      break;
-    case "quarter":
-      duration = "q";
-      break;
-    case "eighth":
-      duration = "8";
-      break;
-    case "sixteenth":
-      duration = "16";
-      break;
-    default:
-      throw new Error("暂不支持该时值。");
-  }
-
-  const note = new StaveNote({
-    keys: ["b/4"],
-    duration: event.kind === "rest" ? `${duration}r` : duration,
-    dots: event.dots ?? 0,
-  });
-  // dots 决定 VexFlow 内部时值；Dot modifier 才负责画出可见的点。
-  if (event.dots === 1) Dot.buildAndAttach([note]);
-  return note;
 }
 
 export default RhythmScore;

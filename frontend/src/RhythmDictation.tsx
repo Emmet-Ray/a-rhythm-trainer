@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Formatter, Renderer, Stave } from "vexflow";
 
-import type { RhythmEvent } from "./RhythmModel";
+import { rhythmEventToDurationInQuarterNotes, type RhythmEvent } from "./RhythmModel";
+import { rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
 
 {
   /*
@@ -16,7 +18,10 @@ import type { RhythmEvent } from "./RhythmModel";
     */
 }
 export function RhythmDictation() {
+  // 当前答题谱表固定为 4/4，拍数以四分音符为单位。
+  const measureBeats = 4;
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
+  const [addNoteMessage, setAddNoteMessage] = useState("");
   const [answerMeasures, setAnswerMeasures] = useState<RhythmEvent[][]>([
     [
       { kind: "note", noteValue: "quarter" },
@@ -34,6 +39,17 @@ export function RhythmDictation() {
       noteValue,
     };
 
+    const usedBeats = answerMeasures[selectedMeasureIndex].reduce(
+      (total, event) => total + rhythmEventToDurationInQuarterNotes(event),
+      0,
+    );
+    const excessBeats = usedBeats + rhythmEventToDurationInQuarterNotes(newEvent) - measureBeats;
+    if (excessBeats > 0) {
+      setAddNoteMessage("添加这个音符会超出当前小节允许的拍数。");
+      return;
+    }
+
+    setAddNoteMessage("");
     setAnswerMeasures((previous) =>
       previous.map((events, index) =>
         index === selectedMeasureIndex ? [...events, newEvent] : events,
@@ -42,6 +58,7 @@ export function RhythmDictation() {
   }
 
   function removeLastNote() {
+    setAddNoteMessage("");
     setAnswerMeasures((previous) =>
       previous.map((events, index) =>
         index === selectedMeasureIndex ? events.slice(0, -1) : events,
@@ -57,7 +74,7 @@ export function RhythmDictation() {
       <div
         role="group"
         aria-label="选择答题小节"
-        style={{ display: "flex", gap: 12 }}
+        style={{ display: "flex", flexWrap: "wrap", gap: 12 }}
       >
         {answerMeasures.map((events, measureIndex) => {
           const isSelected = selectedMeasureIndex === measureIndex;
@@ -67,10 +84,14 @@ export function RhythmDictation() {
               key={measureIndex}
               type="button"
               aria-pressed={isSelected}
-              onClick={() => setSelectedMeasureIndex(measureIndex)}
+              onClick={() => {
+                setSelectedMeasureIndex(measureIndex);
+                setAddNoteMessage("");
+              }}
               style={{
-                width: 140,
-                height: 100,
+                width: 328,
+                minHeight: 180,
+                padding: 12,
                 border: `2px solid ${isSelected ? "#646cff" : "#ccc"}`,
                 backgroundColor: isSelected ? "#f0efff" : "transparent",
                 color: "inherit",
@@ -78,15 +99,7 @@ export function RhythmDictation() {
             >
               <span>小节 {measureIndex + 1}</span>
 
-              <span style={{ display: "block", marginTop: 8 }}>
-                {events
-                  .map((event) => {
-                    if (event.noteValue === "quarter") return "四分";
-                    if (event.noteValue === "eighth") return "八分";
-                    return event.noteValue;
-                  })
-                  .join(" · ")}
-              </span>
+              <RhythmAnswerMeasure events={events} />
             </button>
           );
         })}
@@ -112,6 +125,42 @@ export function RhythmDictation() {
           删除末尾
         </button>
       </div>
+      <p role="status">{addNoteMessage}</p>
     </div>
   );
+}
+
+type RhythmAnswerMeasureProps = {
+  events: readonly RhythmEvent[];
+};
+
+// 原样显示答案草稿，不自动补休止符；填写拍数限制由上层处理。
+function RhythmAnswerMeasure({ events }: RhythmAnswerMeasureProps) {
+  const containerRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // VexFlow 要求 div 容器；生成 SVG 后放入 span，保持外层按钮的合法内容结构。
+    const drawingContainer = document.createElement("div");
+    const renderer = new Renderer(drawingContainer, Renderer.Backends.SVG);
+    renderer.resize(300, 140);
+    const context = renderer.getContext();
+    const stave = new Stave(10, 20, 280);
+    stave.addClef("treble").addTimeSignature("4/4");
+    stave.setContext(context).draw();
+
+    if (events.length > 0) {
+      const notes = events.map(rhythmEventToVexFlowStaveNote);
+      // FormatAndDraw 使用宽松的 Voice，不要求草稿满足完整小节时值。
+      Formatter.FormatAndDraw(context, stave, notes);
+    }
+    container.replaceChildren(...drawingContainer.childNodes);
+
+    // 同时兼容卸载与开发模式的 Effect 重建，避免留下重复 SVG。
+    return () => container.replaceChildren();
+  }, [events]);
+
+  return <span ref={containerRef} aria-hidden="true" style={{ display: "block" }} />;
 }
