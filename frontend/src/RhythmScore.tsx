@@ -4,7 +4,6 @@ import {
   Beam,
   Formatter,
   Renderer,
-  Stave,
   StaveNote,
   Voice,
   Tuplet,
@@ -12,7 +11,7 @@ import {
 } from "vexflow";
 
 import { expandRhythmElements, type RhythmExercise } from "./RhythmModel";
-import { rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
+import { createRhythmStave, getRhythmLineY, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
 import type { ExerciseTimeline, TimingEvent } from "./RhythmTiming";
 import {
   createScoreLayout,
@@ -93,10 +92,8 @@ function RhythmScore({
 
     preparedMeasures.forEach(({ notes: measureNotes, beams, tuplets }, measureIndex) => {
       const placement = scoreLayout.measures[measureIndex];
-      const stave = new Stave(placement.x, placement.y, placement.width);
-      if (placement.isRowStart) {
-        stave.addClef("treble");
-      } else {
+      const stave = createRhythmStave(placement.x, placement.y, placement.width, placement.isRowStart);
+      if (!placement.isRowStart) {
         // 左侧小节已画右边界，避免重复描画同一根线。
         stave.setBegBarType(BarlineType.NONE);
       }
@@ -105,7 +102,7 @@ function RhythmScore({
       }
       if (measureIndex === measures.length - 1) stave.setEndBarType(BarlineType.END);
       stave.setContext(context).draw();
-      const markerY = stave.getBottomLineY() + MARKER_Y_OFFSET;
+      const markerY = getRhythmLineY(stave) + MARKER_Y_OFFSET;
       const measureTime = timeline.measures[measureIndex];
       measureNotes.forEach((note, index) => {
         if (measureTime.firstEventIndex + index === activeEventIndex) {

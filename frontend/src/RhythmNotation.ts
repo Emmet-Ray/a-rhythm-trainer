@@ -1,5 +1,18 @@
-import { Dot, StaveNote } from "vexflow";
+import { Dot, Stave, StaveNote, Stem } from "vexflow";
 import type { RhythmEvent } from "./RhythmModel";
+
+/** 只显示中线，保留五线坐标供谱号、拍号和休止符定位；隐藏线不代表音高。 */
+export function createRhythmStave(x: number, y: number, width: number, showClef: boolean): Stave {
+  const stave = new Stave(x, y, width);
+  stave.setConfigForLines(Array.from({ length: 5 }, (_, index) => ({ visible: index === 2 })));
+  if (showClef) stave.addClef("percussion");
+  return stave;
+}
+
+/** 单线谱的可见中线位置，而非 VexFlow 内部五线区域的底部。 */
+export function getRhythmLineY(stave: Stave): number {
+  return stave.getYForLine(2);
+}
 
 // 统一节奏事件的记谱规则；不负责小节校验、排版或连梁。
 export function rhythmEventToVexFlowStaveNote(event: RhythmEvent): StaveNote {
@@ -26,6 +39,7 @@ export function rhythmEventToVexFlowStaveNote(event: RhythmEvent): StaveNote {
 
   const note = new StaveNote({
     keys: ["b/4"],
+    stemDirection: Stem.UP,
     duration: event.kind === "rest" ? `${duration}r` : duration,
     dots: event.dots ?? 0,
   });

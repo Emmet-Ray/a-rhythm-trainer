@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BarlineType, Beam, Formatter, Renderer, Stave, Voice } from "vexflow";
+import { BarlineType, Beam, Formatter, Renderer, Voice } from "vexflow";
 
 import {
   rhythmEventToDurationInQuarterNotes,
   type RhythmEvent,
   type RhythmExercise,
 } from "./RhythmModel";
-import { rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
+import { createRhythmStave, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
 import { getBeatBeamGroups } from "./RhythmScoreLayout";
 import { createExerciseTimeline } from "./RhythmTiming";
 import { createPracticeClock, prepareTapSound, scheduleCountIn, scheduleTapSound } from "./RhythmAudio";
@@ -293,8 +293,8 @@ function RhythmAnswerScore({
       const beams = getBeatBeamGroups(events).map(
         (indexes) => new Beam(indexes.map((noteIndex) => notes[noteIndex])),
       );
-      const stave = new Stave(x, 40, 280);
-      if (index === 0) stave.addClef("treble").addTimeSignature(`${timeSignature.beats}/${timeSignature.beatType}`);
+      const stave = createRhythmStave(x, 40, 280, index === 0);
+      if (index === 0) stave.addTimeSignature(`${timeSignature.beats}/${timeSignature.beatType}`);
       else stave.setBegBarType(BarlineType.NONE);
       if (index === measures.length - 1) stave.setEndBarType(BarlineType.END);
 
