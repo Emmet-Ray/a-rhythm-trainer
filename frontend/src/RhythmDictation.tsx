@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { Formatter, Renderer, Stave } from "vexflow";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BarlineType, Beam, Formatter, Renderer, Stave, Voice } from "vexflow";
 
-import { rhythmEventToDurationInQuarterNotes, type RhythmEvent } from "./RhythmModel";
+import {
+  rhythmEventToDurationInQuarterNotes,
+  type RhythmEvent,
+} from "./RhythmModel";
 import { rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
+import { getBeatBeamGroups } from "./RhythmScoreLayout";
 
 {
   /*
@@ -43,7 +47,8 @@ export function RhythmDictation() {
       (total, event) => total + rhythmEventToDurationInQuarterNotes(event),
       0,
     );
-    const excessBeats = usedBeats + rhythmEventToDurationInQuarterNotes(newEvent) - measureBeats;
+    const excessBeats =
+      usedBeats + rhythmEventToDurationInQuarterNotes(newEvent) - measureBeats;
     if (excessBeats > 0) {
       setAddNoteMessage("添加这个音符会超出当前小节允许的拍数。");
       return;
@@ -71,43 +76,18 @@ export function RhythmDictation() {
       {/* | 这里是一段乐谱 | 
     | 播放按钮 |    */}
 
-      <div
-        role="group"
-        aria-label="选择答题小节"
-        style={{ display: "flex", flexWrap: "wrap", gap: 12 }}
-      >
-        {answerMeasures.map((events, measureIndex) => {
-          const isSelected = selectedMeasureIndex === measureIndex;
-
-          return (
-            <button
-              key={measureIndex}
-              type="button"
-              aria-pressed={isSelected}
-              onClick={() => {
-                setSelectedMeasureIndex(measureIndex);
-                setAddNoteMessage("");
-              }}
-              style={{
-                width: 328,
-                minHeight: 180,
-                padding: 12,
-                border: `2px solid ${isSelected ? "#646cff" : "#ccc"}`,
-                backgroundColor: isSelected ? "#f0efff" : "transparent",
-                color: "inherit",
-              }}
-            >
-              <span>小节 {measureIndex + 1}</span>
-
-              <RhythmAnswerMeasure events={events} />
-            </button>
-          );
-        })}
-      </div>
+      <RhythmAnswerScore
+        measures={answerMeasures}
+        selectedMeasureIndex={selectedMeasureIndex}
+        onSelectMeasure={(index) => {
+          setSelectedMeasureIndex(index);
+          setAddNoteMessage("");
+        }}
+      />
       <div
         role="group"
         aria-label="添加音符"
-        style={{ display: "flex", gap: 12, marginTop: 16 }}
+        style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 16 }}
       >
         <button type="button" onClick={() => addNote("quarter")}>
           四分音符
@@ -130,37 +110,116 @@ export function RhythmDictation() {
   );
 }
 
-type RhythmAnswerMeasureProps = {
-  events: readonly RhythmEvent[];
+type RhythmAnswerScoreProps = {
+  measures: readonly (readonly RhythmEvent[])[];
+  selectedMeasureIndex: number;
+  onSelectMeasure: (index: number) => void;
 };
 
 // 原样显示答案草稿，不自动补休止符；填写拍数限制由上层处理。
-function RhythmAnswerMeasure({ events }: RhythmAnswerMeasureProps) {
-  const containerRef = useRef<HTMLSpanElement>(null);
+function RhythmAnswerScore({
+  measures,
+  selectedMeasureIndex,
+  onSelectMeasure,
+}: RhythmAnswerScoreProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  // 测量结果同时供绘谱和选择区域使用；切换选中小节不重新排版。
+  const score = useMemo(() => {
+    let x = 10;
+    const preparedMeasures = [];
+    for (const [index, events] of measures.entries()) {
+      const notes = events.map(rhythmEventToVexFlowStaveNote);
+      const beams = getBeatBeamGroups(events).map(
+        (indexes) => new Beam(indexes.map((noteIndex) => notes[noteIndex])),
+      );
+      const stave = new Stave(x, 40, 280);
+      if (index === 0) stave.addClef("treble").addTimeSignature("4/4");
+      else stave.setBegBarType(BarlineType.NONE);
+      if (index === measures.length - 1) stave.setEndBarType(BarlineType.END);
+
+      const voice = new Voice().setStrict(false).addTickables(notes);
+      const noteWidth =
+        notes.length > 0
+          ? new Formatter()
+              .joinVoices([voice])
+              .preCalculateMinTotalWidth([voice])
+          : 0;
+      // 谱号、拍号和右边界占用空间；额外留出音符的阅读间距。
+      const notationPadding = stave.getNoteStartX() - x + 30;
+      const width = Math.ceil(
+        Math.max(
+          280,
+          notationPadding + Math.max(noteWidth + 40, notes.length * 30),
+        ),
+      );
+      stave.setWidth(width);
+      const measure = { x, width, stave, notes, beams };
+      x += width;
+      preparedMeasures.push(measure);
+    }
+    return { measures: preparedMeasures, width: x + 10, height: 180 };
+  }, [measures]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // VexFlow 要求 div 容器；生成 SVG 后放入 span，保持外层按钮的合法内容结构。
-    const drawingContainer = document.createElement("div");
-    const renderer = new Renderer(drawingContainer, Renderer.Backends.SVG);
-    renderer.resize(300, 140);
+    container.replaceChildren();
+    const renderer = new Renderer(container, Renderer.Backends.SVG);
+    renderer.resize(score.width, score.height);
     const context = renderer.getContext();
-    const stave = new Stave(10, 20, 280);
-    stave.addClef("treble").addTimeSignature("4/4");
-    stave.setContext(context).draw();
-
-    if (events.length > 0) {
-      const notes = events.map(rhythmEventToVexFlowStaveNote);
-      // FormatAndDraw 使用宽松的 Voice，不要求草稿满足完整小节时值。
-      Formatter.FormatAndDraw(context, stave, notes);
-    }
-    container.replaceChildren(...drawingContainer.childNodes);
+    score.measures.forEach(({ stave, notes, beams }) => {
+      stave.setContext(context).draw();
+      // 宽松排版允许空小节和未填满的小节，不补休止符。
+      if (notes.length > 0) Formatter.FormatAndDraw(context, stave, notes);
+      beams.forEach((beam) => beam.setContext(context).draw());
+    });
 
     // 同时兼容卸载与开发模式的 Effect 重建，避免留下重复 SVG。
     return () => container.replaceChildren();
-  }, [events]);
+  }, [score]);
 
-  return <span ref={containerRef} aria-hidden="true" style={{ display: "block" }} />;
+  return (
+    <div style={{ maxWidth: "100%", overflowX: "auto" }}>
+      <div
+        style={{
+          position: "relative",
+          width: score.width,
+          height: score.height,
+        }}
+      >
+        <div role="group" aria-label="选择答题小节">
+          {score.measures.map(({ x, width }, index) => (
+            <button
+              key={index}
+              type="button"
+              aria-label={`小节 ${index + 1}`}
+              aria-pressed={index === selectedMeasureIndex}
+              onClick={() => onSelectMeasure(index)}
+              style={{
+                position: "absolute",
+                left: x,
+                top: 10,
+                width,
+                height: score.height - 20,
+                padding: 0,
+                border: 0,
+                borderRadius: 0,
+                outlineOffset: -3,
+                backgroundColor:
+                  index === selectedMeasureIndex ? "#f0efff" : "transparent",
+              }}
+            />
+          ))}
+        </div>
+        {/* 谱线画在选择背景上方；点击穿透到按钮，两层一起滚动。 */}
+        <div
+          className="rhythm-answer-notation"
+          ref={containerRef}
+          aria-hidden="true"
+          style={{ position: "relative", pointerEvents: "none" }}
+        />
+      </div>
+    </div>
+  );
 }
