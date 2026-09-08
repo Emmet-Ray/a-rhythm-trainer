@@ -39,7 +39,12 @@ export default function PracticePage() {
           <h1>{selected.question.title}</h1>
         </header>
 
-        <RhythmDictation key={selected.question.id} />
+        {/* 换题时重建草稿；标准答案只作为配置传入，不直接显示。 */}
+        <RhythmDictation
+          key={selected.question.id}
+          exercise={selected.question.exercise}
+          bpm={60} // todo：后面这里的bpm也要改成可以调整的吧
+        />
       </>
     );
   }

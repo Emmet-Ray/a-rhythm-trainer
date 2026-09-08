@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BarlineType, Beam, Formatter, Renderer, Stave, Voice } from "vexflow";
 
 import {
   rhythmEventToDurationInQuarterNotes,
   type RhythmEvent,
+  type RhythmExercise,
 } from "./RhythmModel";
 import { rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
 import { getBeatBeamGroups } from "./RhythmScoreLayout";
+import { createExerciseTimeline } from "./RhythmTiming";
+import { createPracticeClock, scheduleCountIn, scheduleTapSound } from "./RhythmAudio";
 
 {
   /*
@@ -21,23 +24,24 @@ import { getBeatBeamGroups } from "./RhythmScoreLayout";
     # 核心内容是乐谱交互（写、删、验证），我想的最理想的状态是用户直接在乐谱上写/删
     */
 }
-export function RhythmDictation() {
-  // 当前答题谱表固定为 4/4，拍数以四分音符为单位。
-  const measureBeats = 4;
+type RhythmDictationProps = {
+  exercise: RhythmExercise;
+  bpm: number;
+};
+
+// 一次挂载对应一道题；调用方换题时通过 key 重建，清空答案和交互状态。
+export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
+  const measureBeats = exercise.timeSignature.beats * (4 / exercise.timeSignature.beatType);
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
   const [addNoteMessage, setAddNoteMessage] = useState("");
-  const [answerMeasures, setAnswerMeasures] = useState<RhythmEvent[][]>([
-    [
-      { kind: "note", noteValue: "quarter" },
-      { kind: "note", noteValue: "quarter" },
-    ],
-    [
-      { kind: "note", noteValue: "eighth" },
-      { kind: "note", noteValue: "eighth" },
-    ],
-  ]);
+  // 只取标准答案的小节数量，绝不把标准答案的音符复制到草稿。
+  const [answerMeasures, setAnswerMeasures] = useState<RhythmEvent[][]>(() =>
+    exercise.measures.map(() => []),
+  );
+  const hasSelectedMeasure = answerMeasures[selectedMeasureIndex] !== undefined;
 
   function addNote(noteValue: "quarter" | "eighth") {
+    if (!hasSelectedMeasure) return;
     const newEvent: RhythmEvent = {
       kind: "note",
       noteValue,
@@ -73,11 +77,11 @@ export function RhythmDictation() {
 
   return (
     <div>
-      {/* | 这里是一段乐谱 | 
-    | 播放按钮 |    */}
+      <RhythmQuestionPlayback key={bpm} exercise={exercise} bpm={bpm} />
 
       <RhythmAnswerScore
         measures={answerMeasures}
+        timeSignature={exercise.timeSignature}
         selectedMeasureIndex={selectedMeasureIndex}
         onSelectMeasure={(index) => {
           setSelectedMeasureIndex(index);
@@ -89,17 +93,17 @@ export function RhythmDictation() {
         aria-label="添加音符"
         style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 16 }}
       >
-        <button type="button" onClick={() => addNote("quarter")}>
+        <button type="button" disabled={!hasSelectedMeasure} onClick={() => addNote("quarter")}>
           四分音符
         </button>
 
-        <button type="button" onClick={() => addNote("eighth")}>
+        <button type="button" disabled={!hasSelectedMeasure} onClick={() => addNote("eighth")}>
           八分音符
         </button>
 
         <button
           type="button"
-          disabled={answerMeasures[selectedMeasureIndex].length === 0}
+          disabled={!hasSelectedMeasure || answerMeasures[selectedMeasureIndex].length === 0}
           onClick={removeLastNote}
         >
           删除末尾
@@ -110,8 +114,95 @@ export function RhythmDictation() {
   );
 }
 
+// 播放只读取标准答案，不接触草稿、谱面高亮或击拍判定。
+function RhythmQuestionPlayback({ exercise, bpm }: RhythmDictationProps) {
+  const [status, setStatus] = useState<"idle" | "starting" | "countIn" | "playing" | "finished">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const contextRef = useRef<AudioContext | null>(null);
+  const sourcesRef = useRef<AudioScheduledSourceNode[]>([]);
+  const frameRef = useRef<number | null>(null);
+  const requestRef = useRef(0);
+  const activeRef = useRef(false);
+
+  const cancelPlayback = useCallback(() => {
+    // resume 尚未完成时也能取消；旧请求恢复后不得再安排声音。
+    requestRef.current += 1;
+    activeRef.current = false;
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    frameRef.current = null;
+    sourcesRef.current.forEach((source) => source.stop());
+    sourcesRef.current = [];
+  }, []);
+
+  useEffect(() => () => {
+    cancelPlayback();
+    const context = contextRef.current;
+    contextRef.current = null;
+    if (context && context.state !== "closed") void context.close().catch(() => {});
+  }, [cancelPlayback]);
+
+  async function togglePlayback() {
+    if (activeRef.current) {
+      cancelPlayback();
+      setStatus("idle");
+      return;
+    }
+    activeRef.current = true;
+    const request = ++requestRef.current;
+    setStatus("starting");
+    setError(null);
+    try {
+      // 复用标准答案时间线；这里只取音乐时值，不使用命中窗口或判定结束时间。
+      const timeline = createExerciseTimeline(exercise, bpm, 3, { perfectMs: 50, hitMs: 150 });
+      const context = contextRef.current ?? (contextRef.current = new AudioContext());
+      await context.resume();
+      if (request !== requestRef.current) return;
+      const clock = createPracticeClock(context, timeline.countInDurationMs);
+      timeline.countInOffsetsMs.forEach((offset, index) => {
+        scheduleCountIn(context, clock.audioTimeAt(offset), index === 0, sourcesRef.current);
+      });
+      timeline.targetTaps.forEach((target) => {
+        scheduleTapSound(context, clock.audioTimeAt(target.offsetMs), sourcesRef.current);
+      });
+      // 末尾休止符同样占时，不能以“最后一声播完”作为整题结束。
+      const endsAtMs = timeline.eventEndOffsetsMs.at(-1) ?? 0;
+      function update() {
+        if (request !== requestRef.current) return;
+        const nowMs = clock.nowMs();
+        if (nowMs >= endsAtMs) {
+          cancelPlayback();
+          setStatus("finished");
+          return;
+        }
+        setStatus(nowMs < 0 ? "countIn" : "playing");
+        frameRef.current = requestAnimationFrame(update);
+      }
+      frameRef.current = requestAnimationFrame(update);
+    } catch {
+      if (request !== requestRef.current) return;
+      cancelPlayback();
+      setStatus("idle");
+      setError("无法播放声音，请重试。");
+    }
+  }
+
+  const isActive = status === "starting" || status === "countIn" || status === "playing";
+  const text = status === "starting" ? "准备中" : status === "countIn" ? "预备拍"
+    : status === "playing" ? "播放中" : status === "finished" ? "播放结束" : "";
+  return (
+    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+      <button type="button" onClick={() => void togglePlayback()}>
+        {isActive ? "停止" : "播放题目"}
+      </button>
+      <span role="status">{text}</span>
+      {error && <span role="alert">{error}</span>}
+    </div>
+  );
+}
+
 type RhythmAnswerScoreProps = {
   measures: readonly (readonly RhythmEvent[])[];
+  timeSignature: RhythmExercise["timeSignature"];
   selectedMeasureIndex: number;
   onSelectMeasure: (index: number) => void;
 };
@@ -119,6 +210,7 @@ type RhythmAnswerScoreProps = {
 // 原样显示答案草稿，不自动补休止符；填写拍数限制由上层处理。
 function RhythmAnswerScore({
   measures,
+  timeSignature,
   selectedMeasureIndex,
   onSelectMeasure,
 }: RhythmAnswerScoreProps) {
@@ -133,7 +225,7 @@ function RhythmAnswerScore({
         (indexes) => new Beam(indexes.map((noteIndex) => notes[noteIndex])),
       );
       const stave = new Stave(x, 40, 280);
-      if (index === 0) stave.addClef("treble").addTimeSignature("4/4");
+      if (index === 0) stave.addClef("treble").addTimeSignature(`${timeSignature.beats}/${timeSignature.beatType}`);
       else stave.setBegBarType(BarlineType.NONE);
       if (index === measures.length - 1) stave.setEndBarType(BarlineType.END);
 
@@ -158,7 +250,7 @@ function RhythmAnswerScore({
       preparedMeasures.push(measure);
     }
     return { measures: preparedMeasures, width: x + 10, height: 180 };
-  }, [measures]);
+  }, [measures, timeSignature.beats, timeSignature.beatType]);
 
   useEffect(() => {
     const container = containerRef.current;
