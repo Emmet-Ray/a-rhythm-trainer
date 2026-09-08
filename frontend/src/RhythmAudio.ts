@@ -59,8 +59,8 @@ export function scheduleCountIn(
 // 试听参数集中在这里；保留原始采样，便于按实际听感调整。
 const PIANO_URL = `${import.meta.env.BASE_URL}assets/audio/felt-piano-a4.mp3`;
 const PIANO_OFFSET_SECONDS = 0.01;
-const PIANO_DURATION_SECONDS = 0.8;
-const PIANO_FADE_SECONDS = 0.4;
+const PIANO_FADE_SECONDS = 0.08;
+const TAP_SOUND_SECONDS = 0.2;
 const PIANO_GAIN = 0.7;
 const pianoBuffers = new WeakMap<AudioContext, AudioBuffer>();
 const pianoLoads = new WeakMap<AudioContext, Promise<void>>();
@@ -85,25 +85,31 @@ export function prepareTapSound(context: AudioContext): Promise<void> {
   return pending;
 }
 
-/** 准备完成后同步发声，不在敲击路径上等待网络或解码。 */
+/** 立即播放固定长度的击拍反馈，不依赖谱面时值或命中误差。 */
 export function playTapSound(context: AudioContext, sources?: AudioScheduledSourceNode[]): void {
-  scheduleTapSound(context, context.currentTime, sources);
+  const startsAt = context.currentTime;
+  scheduleTapSound(context, startsAt, startsAt + TAP_SOUND_SECONDS, sources);
 }
 
-/** 试听与用户击拍共用这一音色；试听传入声源列表，以便停止时取消排程。 */
+/** 起止时刻均为 AudioContext 上的绝对秒数；终点前平滑淡出，不越过音符边界。 */
 export function scheduleTapSound(
   context: AudioContext,
   startsAt: number,
+  endsAt: number,
   sources?: AudioScheduledSourceNode[],
 ): void {
+  if (!Number.isFinite(startsAt) || startsAt < 0 || !Number.isFinite(endsAt) || endsAt <= startsAt) {
+    throw new Error("声音终点必须晚于起点，且起止时刻必须是有效音频时间。");
+  }
   const buffer = pianoBuffers.get(context);
   if (!buffer) throw new Error("请先等待 prepareTapSound() 完成。");
   const source = context.createBufferSource();
   source.buffer = buffer;
   const gain = context.createGain();
-  const duration = Math.min(PIANO_DURATION_SECONDS, buffer.duration - PIANO_OFFSET_SECONDS);
+  // 音符结束或素材播完时收音；不循环或拉伸采样来伪造延音。
+  const duration = Math.min(endsAt - startsAt, buffer.duration - PIANO_OFFSET_SECONDS);
   const attack = Math.min(0.002, duration / 4);
-  const fadeStart = Math.max(attack, duration - PIANO_FADE_SECONDS);
+  const fadeStart = duration - Math.min(PIANO_FADE_SECONDS, duration / 4);
   // 跳过开头弱信号，短淡入避免切入噪声，末尾淡出避免截断产生爆音。
   gain.gain.setValueAtTime(0, startsAt);
   gain.gain.linearRampToValueAtTime(PIANO_GAIN, startsAt + attack);

@@ -80,19 +80,51 @@ test("发声同步复用采样，保留调度时刻并应用偏移和淡出，�
   assert.throws(() => audio.playTapSound(context), /prepareTapSound/);
   await audio.prepareTapSound(context);
   const pending = [];
-  audio.scheduleTapSound(context, 12, pending);
+  audio.scheduleTapSound(context, 12, 14, pending);
   audio.playTapSound(context, pending);
   assert.equal(fetch.mock.callCount(), 1);
   assert.equal(pending.length, 2);
   assert.notEqual(pending[0], pending[1]);
   assert.equal(pending[0].buffer, pending[1].buffer);
-  assert.deepEqual(pending[0].started, [12, 0.01, 0.8]);
-  assert.deepEqual(pending[1].started, [10, 0.01, 0.8]);
-  assert.deepEqual(context.gains[0].gain.changes.at(-2), [0.7, 12.4]);
-  assert.deepEqual(context.gains[0].gain.changes.at(-1), [0, 12.8]);
+  assert.deepEqual(pending[0].started, [12, 0.01, 2]);
+  assert.equal(pending[1].started[0], 10);
+  assert.equal(pending[1].started[1], 0.01);
+  assert.ok(Math.abs(pending[1].started[2] - 0.2) < 1e-10);
+  assert.deepEqual(context.gains[0].gain.changes.at(-2), [0.7, 13.92]);
+  assert.deepEqual(context.gains[0].gain.changes.at(-1), [0, 14]);
   const first = pending[0];
   first.onended();
   assert.equal(pending.length, 1);
   assert.equal(first.disconnected, true);
   assert.equal(context.gains[0].disconnected, true);
+});
+
+test("击拍立即发声，每次均为固定短音，不依赖目标时值或敲击时刻", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => response());
+  const context = fakeContext();
+  await audio.prepareTapSound(context);
+  for (const now of [9.9, 10, 10.1]) {
+    context.currentTime = now;
+    audio.playTapSound(context);
+    const [start, , duration] = context.sources.at(-1).started;
+    assert.equal(start, now);
+    assert.ok(Math.abs(duration - 0.2) < 1e-10);
+    assert.deepEqual(context.gains.at(-1).gain.changes.at(-1), [0, now + 0.2]);
+  }
+});
+
+test("短音按比例淡出，慢速长音保持完整时值，采样不循环延长", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => response());
+  const context = fakeContext();
+  await audio.prepareTapSound(context);
+  for (const duration of [0.05, 0.125, 1, 2, 4, 8, 20]) {
+    audio.scheduleTapSound(context, 0, duration);
+    const actual = Math.min(duration, 13.32 - 0.01);
+    assert.equal(context.sources.at(-1).started[2], actual);
+    assert.deepEqual(context.gains.at(-1).gain.changes.at(-2), [0.7, actual - Math.min(0.08, actual / 4)]);
+    assert.deepEqual(context.gains.at(-1).gain.changes.at(-1), [0, actual]);
+  }
+  for (const [start, end] of [[1, 1], [1, 0], [-1, 1], [0, NaN], [0, Infinity]]) {
+    assert.throws(() => audio.scheduleTapSound(context, start, end), /声音终点/);
+  }
 });

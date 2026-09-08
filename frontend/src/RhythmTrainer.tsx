@@ -245,6 +245,7 @@ function RhythmTrainer({
           scheduleTapSound(
             context,
             clock.audioTimeAt(target.offsetMs),
+            clock.audioTimeAt(timeline.eventEndOffsetsMs[target.eventIndex]),
             scheduledSourcesRef.current,
           );
         });
@@ -307,7 +308,6 @@ function RhythmTrainer({
       }
 
       // 敲击与判定
-      playTapSound(audioContext, scheduledSourcesRef.current);
       tapOffsetsRef.current.push(tapOffsetMs);
       const timingEvent = evaluateTap(
         targetTapTimeline,
@@ -317,7 +317,11 @@ function RhythmTrainer({
       );
       if (timingEvent === null) return;
 
-      if (timingEvent.kind === "hit") nextTargetIndexRef.current += 1;
+      // 命中与误敲使用相同声音，反馈实际敲击；对错由视觉和统计表达。
+      playTapSound(audioContext, scheduledSourcesRef.current);
+      if (timingEvent.kind === "hit") {
+        nextTargetIndexRef.current += 1;
+      }
       setTimingEvents((previous) => [...previous, timingEvent]);
     }
 

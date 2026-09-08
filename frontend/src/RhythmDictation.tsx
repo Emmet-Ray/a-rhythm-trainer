@@ -216,6 +216,8 @@ function RhythmQuestionPlayback({ exercise, bpm }: RhythmDictationProps) {
       setStatus("idle");
       return;
     }
+    // 新一轮开始前清理上一轮尚未结束的自然尾音。
+    cancelPlayback();
     activeRef.current = true;
     const request = ++requestRef.current;
     setStatus("starting");
@@ -231,7 +233,12 @@ function RhythmQuestionPlayback({ exercise, bpm }: RhythmDictationProps) {
         scheduleCountIn(context, clock.audioTimeAt(offset), index === 0, sourcesRef.current);
       });
       timeline.targetTaps.forEach((target) => {
-        scheduleTapSound(context, clock.audioTimeAt(target.offsetMs), sourcesRef.current);
+        scheduleTapSound(
+          context,
+          clock.audioTimeAt(target.offsetMs),
+          clock.audioTimeAt(timeline.eventEndOffsetsMs[target.eventIndex]),
+          sourcesRef.current,
+        );
       });
       // 末尾休止符同样占时，不能以“最后一声播完”作为整题结束。
       const endsAtMs = timeline.eventEndOffsetsMs.at(-1) ?? 0;
@@ -239,6 +246,7 @@ function RhythmQuestionPlayback({ exercise, bpm }: RhythmDictationProps) {
         if (request !== requestRef.current) return;
         const nowMs = clock.nowMs();
         if (nowMs >= endsAtMs) {
+          // 声音已按各自终点归零，这里收尾，不等待采样的长尾音。
           cancelPlayback();
           setStatus("finished");
           return;
