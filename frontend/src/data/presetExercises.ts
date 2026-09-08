@@ -3,7 +3,7 @@ import type { RhythmExercise } from "../RhythmModel";
 // 网站训练模式；与击拍组件内部的 practice/listen（练习/试听）不是同一个概念。
 export const practiceModes = [
   { id: "tapping", label: "击拍练习", available: true },
-  { id: "dictation", label: "节奏听写", available: false },
+  { id: "dictation", label: "节奏听写", available: true },
   { id: "geometry", label: "几何游戏", available: false },
 ] as const;
 
@@ -423,7 +423,30 @@ export const presetTopics: PracticeTopic[] = [
           },
         ],
       },
-      { mode: "dictation", questions: [] },
+      {
+        mode: "dictation",
+        questions: [
+          {
+            id: "dictation-eighths-01",
+            title: "练习 1",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
       { mode: "geometry", questions: [] },
     ],
   },
@@ -763,14 +786,10 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  elements: [
-                    { kind: "note", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
-                  elements: [
-                    { kind: "rest", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "rest", noteValue: "whole" }],
                 },
                 {
                   elements: [
@@ -860,14 +879,10 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  elements: [
-                    { kind: "note", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
-                  elements: [
-                    { kind: "rest", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "rest", noteValue: "whole" }],
                 },
                 {
                   elements: [
@@ -1042,9 +1057,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  elements: [
-                    { kind: "note", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
                   elements: [
@@ -1228,9 +1241,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  elements: [
-                    { kind: "note", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
                   elements: [
@@ -1428,9 +1439,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  elements: [
-                    { kind: "note", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
                   elements: [
@@ -1918,9 +1927,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  elements: [
-                    { kind: "note", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
                   elements: [
@@ -2138,9 +2145,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  elements: [
-                    { kind: "note", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
                   elements: [
@@ -2398,9 +2403,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  elements: [
-                    { kind: "note", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
                   elements: [
@@ -2786,9 +2789,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  elements: [
-                    { kind: "note", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
                   elements: [
@@ -3131,9 +3132,7 @@ export const presetTopics: PracticeTopic[] = [
                   ],
                 },
                 {
-                  elements: [
-                    { kind: "rest", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "rest", noteValue: "whole" }],
                 },
                 {
                   elements: [
@@ -3183,9 +3182,7 @@ export const presetTopics: PracticeTopic[] = [
               timeSignature: { beats: 4, beatType: 4 },
               measures: [
                 {
-                  elements: [
-                    { kind: "note", noteValue: "whole" },
-                  ],
+                  elements: [{ kind: "note", noteValue: "whole" }],
                 },
                 {
                   elements: [
