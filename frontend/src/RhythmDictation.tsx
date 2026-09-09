@@ -68,7 +68,8 @@ const answerEventOptions = [
 
 // 按主题逐步开放附点范围；按钮和标准答案检查遵守相同规则。
 function canToggleDot(event: RhythmEvent): boolean {
-  return event.kind === "note" && event.noteValue === "quarter";
+  return event.kind === "note"
+    && (event.noteValue === "quarter" || event.noteValue === "eighth");
 }
 
 // 一次挂载对应一道题；调用方换题时通过 key 重建，清空答案和交互状态。
@@ -204,7 +205,7 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
           type="button"
           disabled={!canToggleLastDot}
           aria-pressed={lastEvent?.dots === 1}
-          title="切换当前小节末尾四分音符的附点"
+          title="切换当前小节末尾四分或八分音符的附点"
           onClick={toggleLastDot}
           style={lastEvent?.dots === 1 ? { backgroundColor: "#efedff", borderColor: "#6558d3" } : undefined}
         >

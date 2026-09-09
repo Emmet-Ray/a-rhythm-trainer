@@ -99,6 +99,16 @@ test("dots 省略与显式 0 双向等价", () => {
   assert.equal(isMeasureAnswerCorrect(expected, explicit), true);
 });
 
+test("附点八分音符占四分之三拍，小附点组合按记谱判定", () => {
+  const dottedEighth = note("eighth", 1);
+  assert.equal(rhythmEventToDurationInQuarterNotes(dottedEighth), 0.75);
+  const target = [note("half"), note("quarter"), dottedEighth, note("sixteenth")];
+  assert.equal(target.reduce((sum, event) => sum + rhythmEventToDurationInQuarterNotes(event), 0), 4);
+  assert.equal(isMeasureAnswerCorrect(structuredClone(target), target), true);
+  assert.equal(isMeasureAnswerCorrect([note("half"), note("quarter"), note("eighth", 0), note("sixteenth")], target), false);
+  assert.equal(isMeasureAnswerCorrect([note("half"), note("quarter"), note("eighth"), note("eighth")], target), false);
+});
+
 test("成功和失败都不修改输入，支持冻结的数组和事件", () => {
   const frozen = (events) => Object.freeze(events.map((event) => Object.freeze({ ...event })));
   const target = frozen(expected);
