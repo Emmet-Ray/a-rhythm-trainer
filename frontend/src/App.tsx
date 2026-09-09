@@ -50,6 +50,7 @@ function App() {
             <Route path="/random" element={<RandomPracticePage />} />
             <Route path="/random/:mode" element={<RandomPracticePage />} />
             <Route path="/custom" element={<CustomPracticePage />} />
+            <Route path="/custom/:mode" element={<CustomPracticePage />} />
             <Route path="/custom/:mode/new" element={<CustomPracticePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

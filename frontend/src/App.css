@@ -126,3 +126,10 @@ main:focus { outline: none; }
 }
 
 .custom-playback { padding-top: 16px; }
+.custom-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.custom-new-link { color: var(--accent); padding: 10px 0; white-space: nowrap; }
+.custom-save-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.custom-save-button { background: var(--accent); color: white; border-color: var(--accent); }
+.custom-save-button:hover:not(:disabled) { background: #45409e; }
+.custom-save-actions [role="alert"] { color: #b33131; font-size: 13px; }
+.custom-save-actions [role="status"] { color: var(--muted); font-size: 13px; }

@@ -25,12 +25,21 @@ async function renderPage(path, route) {
   return new Response(stream).text();
 }
 
-test("自定义入口分别提供击拍和听写的新建地址，几何游戏不开放", async () => {
+test("自定义入口分别提供击拍和听写的列表地址，几何游戏不开放", async () => {
   const html = await renderPage("/custom", "/custom");
-  assert.match(html, /href="\/custom\/tapping\/new"/);
-  assert.match(html, /href="\/custom\/dictation\/new"/);
+  assert.match(html, /href="\/custom\/tapping"/);
+  assert.match(html, /href="\/custom\/dictation"/);
   assert.doesNotMatch(html, /href="[^\"]*geometry/);
   assert.match(html, /aria-current="page"[^>]*>自定义练习/);
+});
+
+test("模式列表保留新建入口，持久化未接入时不伪造已保存题目", async () => {
+  for (const mode of ["tapping", "dictation"]) {
+    const html = await renderPage(`/custom/${mode}`, "/custom/:mode");
+    assert.ok(html.includes(`href="/custom/${mode}/new"`));
+    assert.match(html, /保存功能暂未开放/);
+    assert.doesNotMatch(html, /已保存的自定义练习|编辑自定义练习/);
+  }
 });
 
 test("未知模式和未开放的几何模式不回退到默认编辑器", async () => {
@@ -50,6 +59,7 @@ test("新建草稿默认两节、空名称、4/4，提供公共设置但全空�
   assert.match(html, /4\/4 拍/);
   assert.match(html, /离开或刷新页面后草稿会丢失/);
   assert.match(html, /添加休止符/);
+  assert.match(html, /保存练习/);
   assert.match(html, /应用速度/);
   assert.match(html, /value="60"/);
   assert.match(html, /type="checkbox" checked=""/);
