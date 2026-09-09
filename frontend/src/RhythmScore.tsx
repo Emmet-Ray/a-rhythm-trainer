@@ -139,13 +139,12 @@ function RhythmScore({
     timingEvents.forEach((event) => {
       if (event.kind === "wrongTap") {
         const position = timingOffsetToScorePosition(event.tapOffsetMs, layouts);
-        if (position) drawWrongTapMarker(context, position.x, position.y);
+        if (position) drawTimingMarker(context, position.x, position.y, event.kind);
         return;
       }
       const position = eventPositions[event.eventIndex];
       if (!position) return;
-      if (event.kind === "miss") drawMissMarker(context, position.x, position.y);
-      else drawHitMarker(context, position.x, position.y);
+      drawTimingMarker(context, position.x, position.y, event.kind);
     });
 
     return () => container.replaceChildren();
@@ -162,61 +161,27 @@ function getNoteCenterX(note: StaveNote): number {
   return (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2;
 }
 
-function drawHitMarker(context: RenderContext, x: number, y: number): void {
-  context
-    .save()
-    .setFillStyle(HIT_MARKER_COLOR)
-    .beginPath()
-    .arc(x, y, 6, 0, Math.PI * 2, false)
-    .fill()
-    .restore();
-}
-
-function drawMissMarker(context: RenderContext, x: number, y: number): void {
-  const size = 7;
-
-  context
-    .save()
-    .setStrokeStyle(ERROR_MARKER_COLOR)
-    .setLineWidth(2.25)
-    .setLineCap("round")
-    .beginPath()
-    .moveTo(x, y - size)
-    .lineTo(x + size, y)
-    .lineTo(x, y + size)
-    .lineTo(x - size, y)
-    .closePath()
-    .stroke()
-    .restore();
-}
-
-function drawWrongTapMarker(
+// 实心表示发生了敲击（绿：命中，红：误敲），空心红圆表示漏拍。
+function drawTimingMarker(
   context: RenderContext,
   x: number,
   y: number,
+  kind: TimingEvent["kind"],
 ): void {
-  drawCross(context, x, y, 6, 5.5);
-}
-
-function drawCross(
-  context: RenderContext,
-  x: number,
-  y: number,
-  size: number,
-  lineWidth: number,
-): void {
+  const color = kind === "hit" ? HIT_MARKER_COLOR : ERROR_MARKER_COLOR;
+  const lineWidth = 2;
+  // 空心圆的描边向两侧延伸，缩小路径半径以保持相同的外径。
+  const radius = kind === "miss" ? 6 - lineWidth / 2 : 6;
   context
     .save()
-    .setStrokeStyle(ERROR_MARKER_COLOR)
+    .setFillStyle(color)
+    .setStrokeStyle(color)
     .setLineWidth(lineWidth)
-    .setLineCap("round")
     .beginPath()
-    .moveTo(x - size, y - size)
-    .lineTo(x + size, y + size)
-    .moveTo(x + size, y - size)
-    .lineTo(x - size, y + size)
-    .stroke()
-    .restore();
+    .arc(x, y, radius, 0, Math.PI * 2, false);
+  if (kind === "miss") context.stroke();
+  else context.fill();
+  context.restore();
 }
 
 export default RhythmScore;
