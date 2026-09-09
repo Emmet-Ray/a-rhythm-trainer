@@ -17,9 +17,7 @@ export default function ExerciseLibrary() {
       <div className="option-strip" role="group" aria-label="内容来源">
         <span className="option-current">预设练习</span>
         <Link to="/random">随机练习</Link>
-        <button type="button" disabled>
-          自定义练习 <small>未开放</small>
-        </button>
+        <Link to="/custom">自定义练习</Link>
       </div>
       <div className="topic-list">
         {presetTopics.map((topic, index) => (

@@ -90,10 +90,22 @@ main:focus { outline: none; }
 .not-found { padding: 48px 0; }
 .not-found .back-link { margin-top: 20px; }
 .loading-message { color: var(--muted); padding: 40px 0; }
-.random-mode-selection { padding-top: 24px; }
-.random-mode-selection h2 { margin-bottom: 12px; }
-.random-mode-unavailable { padding: 12px; color: var(--muted); }
-.random-mode-unavailable small { margin-left: 8px; }
+.random-mode-selection, .custom-mode-selection { padding-top: 24px; }
+.random-mode-selection h2, .custom-mode-selection h2 { margin-bottom: 12px; }
+.random-mode-unavailable, .custom-mode-unavailable { padding: 12px; color: var(--muted); }
+.random-mode-unavailable small, .custom-mode-unavailable small { margin-left: 8px; }
+.custom-exercise-editor { min-width: 0; }
+.custom-name { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.custom-name input { width: 240px; min-width: 0; }
+.custom-measure-count { display: flex; align-items: center; gap: 12px; }
+.custom-measure-count button { width: 42px; padding: 8px; }
+.custom-measure-count output { min-width: 2ch; text-align: center; font-variant-numeric: tabular-nums; }
+.custom-time-signature, .custom-draft-notice { color: var(--muted); font-size: 13px; }
+.custom-draft-notice { margin: 12px 0 8px; }
+@media (max-width: 480px) {
+  .custom-name { width: 100%; flex-wrap: wrap; }
+  .custom-name input { width: 100%; }
+}
 .skip-link { position: fixed; top: 8px; left: 12px; padding: 8px 16px; background: white; z-index: 10; transform: translateY(-200%); }
 .skip-link:focus { transform: translateY(0); }
 @media (max-width: 680px) {

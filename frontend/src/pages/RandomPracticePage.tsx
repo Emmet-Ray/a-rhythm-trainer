@@ -39,7 +39,7 @@ export default function RandomPracticePage() {
       <nav className="option-strip" aria-label="内容来源">
         <Link to="/">预设练习</Link>
         <Link to="/random" className="option-current" aria-current="page">随机练习</Link>
-        <button type="button" disabled>自定义练习 <small>未开放</small></button>
+        <Link to="/custom">自定义练习</Link>
       </nav>
       <section className="random-mode-selection" aria-labelledby="random-mode-heading">
         <h2 id="random-mode-heading">选择训练方式</h2>

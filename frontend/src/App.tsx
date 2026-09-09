@@ -8,6 +8,7 @@ import "./App.css";
 // todo: 这个lazy是干嘛的？
 const PracticePage = lazy(() => import("./pages/PracticePage"));
 const RandomPracticePage = lazy(() => import("./pages/RandomPracticePage"));
+const CustomPracticePage = lazy(() => import("./pages/CustomPracticePage"));
 
 function App() {
   const { pathname } = useLocation();
@@ -48,6 +49,8 @@ function App() {
             <Route path="/practice/:questionId" element={<PracticePage />} />
             <Route path="/random" element={<RandomPracticePage />} />
             <Route path="/random/:mode" element={<RandomPracticePage />} />
+            <Route path="/custom" element={<CustomPracticePage />} />
+            <Route path="/custom/:mode/new" element={<CustomPracticePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
