@@ -21,6 +21,7 @@ import {
   scheduleTapSound,
   playTapSound,
   prepareTapSound,
+  prepareMetronomeSound,
   type PracticeClock,
 } from "./RhythmAudio";
 
@@ -235,7 +236,7 @@ function RhythmTrainer({
       const context =
         audioContextRef.current ??
         (audioContextRef.current = new AudioContext());
-      await Promise.all([context.resume(), prepareTapSound(context)]);
+      await Promise.all([context.resume(), prepareTapSound(context), prepareMetronomeSound(context)]);
       if (request !== startRequestRef.current) return;
 
       stopScheduledSounds();

@@ -66,6 +66,33 @@ export function createMetronome(
 
 export type Metronome = ReturnType<typeof createMetronome>;
 
+const METRONOME_URL = `${import.meta.env.BASE_URL}assets/audio/metronome.mp3`;
+// 当前素材主起音约在 46ms；保留少量起音余量，不修改原文件。
+const METRONOME_OFFSET_SECONDS = 0.044;
+const METRONOME_DURATION_SECONDS = 0.2;
+const metronomeBuffers = new WeakMap<AudioContext, AudioBuffer>();
+const metronomeLoads = new WeakMap<AudioContext, Promise<void>>();
+
+/** 预备拍也依赖此采样，因此节拍器关闭时仍需准备。失败后允许重试。 */
+export function prepareMetronomeSound(context: AudioContext): Promise<void> {
+  const existing = metronomeLoads.get(context);
+  if (existing) return existing;
+  const pending = (async () => {
+    try {
+      const response = await fetch(METRONOME_URL);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const buffer = await context.decodeAudioData(await response.arrayBuffer());
+      if (buffer.duration < METRONOME_OFFSET_SECONDS + METRONOME_DURATION_SECONDS) throw new Error("采样过短");
+      metronomeBuffers.set(context, buffer);
+    } catch {
+      metronomeLoads.delete(context);
+      throw new Error("节拍器声音加载失败，请重试。");
+    }
+  })();
+  metronomeLoads.set(context, pending);
+  return pending;
+}
+
 /** 提前安排一声预备拍提示音，并保留声源以便中途取消。 */
 export function scheduleCountIn(
   context: AudioContext,
@@ -73,23 +100,27 @@ export function scheduleCountIn(
   accent: boolean,
   sources: AudioScheduledSourceNode[],
 ) {
-  const oscillator = context.createOscillator();
+  if (!Number.isFinite(startsAt) || startsAt < 0) throw new Error("节拍器起点必须是有效音频时间。");
+  const buffer = metronomeBuffers.get(context);
+  if (!buffer) throw new Error("请先等待 prepareMetronomeSound() 完成。");
+  const source = context.createBufferSource();
+  source.buffer = buffer;
   const gain = context.createGain();
-  const duration = 0.035;
-  oscillator.type = "triangle";
-  oscillator.frequency.setValueAtTime(accent ? 1350 : 900, startsAt);
-  gain.gain.setValueAtTime(accent ? 0.11 : 0.075, startsAt);
-  gain.gain.exponentialRampToValueAtTime(0.001, startsAt + duration);
-  oscillator.connect(gain).connect(context.destination);
-  oscillator.onended = () => {
-    oscillator.disconnect();
+  const duration = METRONOME_DURATION_SECONDS;
+  const volume = accent ? 0.7 : 0.45;
+  gain.gain.setValueAtTime(0, startsAt);
+  gain.gain.linearRampToValueAtTime(volume, startsAt + 0.001);
+  gain.gain.setValueAtTime(volume, startsAt + duration - 0.02);
+  gain.gain.linearRampToValueAtTime(0, startsAt + duration);
+  source.connect(gain).connect(context.destination);
+  source.onended = () => {
+    source.disconnect();
     gain.disconnect();
-    const index = sources.indexOf(oscillator);
+    const index = sources.indexOf(source);
     if (index !== -1) sources.splice(index, 1);
   };
-  oscillator.start(startsAt);
-  oscillator.stop(startsAt + duration + 0.005);
-  sources.push(oscillator);
+  source.start(startsAt, METRONOME_OFFSET_SECONDS, duration);
+  sources.push(source);
 }
 
 // 试听参数集中在这里；保留原始采样，便于按实际听感调整。
