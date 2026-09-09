@@ -18,12 +18,42 @@ try {
 }
 
 const note = (noteValue, dots) => ({ kind: "note", noteValue, ...(dots === undefined ? {} : { dots }) });
+const triplet = () => ({ kind: "triplet", notes: [note("eighth"), note("eighth"), note("eighth")] });
 const expected = [note("quarter"), note("eighth"), note("eighth"), note("half")];
 
 test("完全相同的记谱通过，不要求对象引用相同", () => {
   assert.equal(isMeasureAnswerCorrect(structuredClone(expected), expected), true);
   const withRest = [note("half"), { kind: "rest", noteValue: "half" }];
   assert.equal(isMeasureAnswerCorrect(structuredClone(withRest), withRest), true);
+});
+
+test("三连音按组比较，混合答案和连续四组可通过且不修改输入", () => {
+  for (const target of [[note("quarter"), triplet(), note("half")], Array.from({ length: 4 }, triplet)]) {
+    const answer = structuredClone(target);
+    assert.equal(isMeasureAnswerCorrect(answer, target), true);
+    assert.deepEqual(answer, target);
+    const explicit = answer.map((element) => element.kind === "triplet"
+      ? { ...element, notes: element.notes.map((event) => ({ ...event, dots: 0 })) }
+      : element);
+    assert.equal(isMeasureAnswerCorrect(explicit, target), true);
+  }
+});
+
+test("三连音不能被普通八分音符或同拍数符号替代，组内记谱必须一致", () => {
+  const target = [triplet(), note("half"), note("quarter")];
+  for (const prefix of [[note("eighth"), note("eighth"), note("eighth")], [note("quarter")]]) {
+    const answer = [...prefix, ...target.slice(1)];
+    assert.equal(isMeasureAnswerCorrect(answer, target), false);
+    assert.equal(isMeasureAnswerCorrect(target, answer), false);
+  }
+  for (const replacement of [note("quarter"), note("eighth", 1), { kind: "rest", noteValue: "eighth" }]) {
+    const changed = triplet();
+    changed.notes[1] = replacement;
+    assert.equal(isMeasureAnswerCorrect([changed, ...target.slice(1)], target), false);
+  }
+  const short = triplet();
+  short.notes.pop();
+  assert.equal(isMeasureAnswerCorrect([short, ...target.slice(1)], target), false);
 });
 
 test("空白、少写、多写都不通过", () => {

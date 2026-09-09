@@ -1,18 +1,27 @@
 import { expandRhythmElements, TICKS_PER_QUARTER, type RhythmElement } from "./RhythmModel";
 
 /** 返回小节内的拍内连梁分组。八分、十六分音符（含单附点）可混合；
- * 休止符、长音符或跨拍事件断开分组，不连接跨拍/跨小节的音符。
+ * 普通符号遇休止符、长音符或跨拍事件断开分组。
+ * 三连音无论从何处开始都独立连梁，不与前后普通音符相连；所有组均不跨小节。
  * 单个音符保留符尾；梁的层数和局部短梁交给记谱库处理。
  */
 export function getBeatBeamGroups(elements: readonly RhythmElement[]): number[][] {
   const expanded = expandRhythmElements(elements);
   const groups: number[][] = [];
+  const tripletStarts = new Map(expanded.tripletGroups.map((group) => [group[0], group]));
+  const tripletIndexes = new Set(expanded.tripletGroups.flat());
   let pending: number[] = [];
   const flush = () => {
     if (pending.length > 1) groups.push(pending);
     pending = [];
   };
   expanded.events.forEach(({ event, startTick, durationTicks }, index) => {
+    if (tripletIndexes.has(index)) {
+      flush();
+      const group = tripletStarts.get(index);
+      if (group) groups.push(group);
+      return;
+    }
     if (startTick % TICKS_PER_QUARTER === 0) flush();
     const end = startTick + durationTicks;
     const canBeam = event.kind === "note"

@@ -41,7 +41,7 @@ export const TICKS_PER_QUARTER = 24;
 
 /** 展开一个小节的元素（也可用于未填满的小节片段）。
  * 输出事件起点为小节内 tick，组下标指向展开事件；不修改输入。
- * 验证三连音结构与拍头对齐，但四拍总长由 validateRhythmExercise 检查。
+ * 验证三连音结构，允许非拍头起点；四拍总长由 validateRhythmExercise 检查。
  */
 export function expandRhythmElements(elements: readonly RhythmElement[]) {
   const events: { event: RhythmEvent; startTick: number; durationTicks: number }[] = [];
@@ -54,9 +54,6 @@ export function expandRhythmElements(elements: readonly RhythmElement[]) {
           note.kind !== "note" || note.noteValue !== "eighth"
           || (note.dots !== undefined && note.dots !== 0))) {
           throw new Error("小三连必须包含三个无附点八分音符，不支持休止符或嵌套组。");
-        }
-        if (durationTicks % TICKS_PER_QUARTER !== 0) {
-          throw new Error("小三连必须从四分拍的拍头开始。");
         }
         const group: number[] = [];
         element.notes.forEach(event => {

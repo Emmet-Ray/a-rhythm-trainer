@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BarlineType, Beam, Formatter, Renderer, Voice } from "vexflow";
+import { BarlineType, Beam, Formatter, Renderer, Tuplet, Voice } from "vexflow";
 
 import {
   rhythmEventToDurationInQuarterNotes,
+  expandRhythmElements,
+  TICKS_PER_QUARTER,
+  type RhythmElement,
   type RhythmEvent,
   type RhythmExercise,
 } from "./RhythmModel";
@@ -25,20 +28,25 @@ import { createPracticeClock, prepareTapSound, scheduleCountIn, scheduleTapSound
     */
 }
 /**
- * 判断普通音符/休止符小节的记谱是否一致，不修改输入。
+ * 判断小节的记谱是否一致，不修改输入；三连音保留组边界并比较组内音符。
  * 空白答案不通过；其余按数量、顺序、kind、noteValue 和 dots 比较。
  * dots 省略等同于 0，不接受仅总时值相同的不同写法。
  * expected 应为已校验的标准小节；本函数不负责拍数校验或三连音组展开。
  */
 // eslint-disable-next-line react-refresh/only-export-components -- 与听写组件同文件维护，导出纯函数供测试；修改此导出时可能触发完整刷新。
 export function isMeasureAnswerCorrect(
-  answer: readonly RhythmEvent[],
-  expected: readonly RhythmEvent[],
+  answer: readonly RhythmElement[],
+  expected: readonly RhythmElement[],
 ): boolean {
   if (answer.length === 0 || answer.length !== expected.length) return false;
 
   return answer.every((event, index) => {
     const target = expected[index];
+    if (event.kind === "triplet" || target.kind === "triplet") {
+      return event.kind === "triplet" && target.kind === "triplet"
+        && event.notes.length === 3 && target.notes.length === 3
+        && isMeasureAnswerCorrect(event.notes, target.notes);
+    }
     return event.kind === target.kind
       && event.noteValue === target.noteValue
       && (event.dots ?? 0) === (target.dots ?? 0);
@@ -67,7 +75,7 @@ const answerEventOptions = [
 ] as const;
 
 // 按主题逐步开放附点范围；按钮和标准答案检查遵守相同规则。
-function canToggleDot(event: RhythmEvent): boolean {
+function canToggleDot(event: RhythmElement): event is RhythmEvent {
   return event.kind === "note"
     && (event.noteValue === "quarter" || event.noteValue === "eighth");
 }
@@ -78,19 +86,23 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
   const [addEventMessage, setAddEventMessage] = useState("");
   // 只取标准答案的小节数量，绝不把标准答案的音符复制到草稿。
-  const [answerMeasures, setAnswerMeasures] = useState<RhythmEvent[][]>(() =>
+  const [answerMeasures, setAnswerMeasures] = useState<RhythmElement[][]>(() =>
     exercise.measures.map(() => []),
   );
   const hasSelectedMeasure = answerMeasures[selectedMeasureIndex] !== undefined;
   const lastEvent = answerMeasures[selectedMeasureIndex]?.at(-1);
   const canToggleLastDot = lastEvent !== undefined && canToggleDot(lastEvent);
+  const lastHasDot = lastEvent?.kind !== "triplet" && lastEvent?.dots === 1;
+  const usedTicks = expandRhythmElements(answerMeasures[selectedMeasureIndex] ?? []).durationTicks;
   const [measureVerdicts, setMeasureVerdicts] = useState<MeasureVerdict[]>(() =>
     exercise.measures.map(() => "unchecked"),
   );
   // 不把编辑器尚不能作答的题判成用户错误。
   const expectedMeasures = useMemo(() => exercise.measures.map(({ elements }) => {
-    if (elements.every((event): event is RhythmEvent =>
-      (event.kind === "note" || event.kind === "rest")
+    if (elements.every((event) => event.kind === "triplet"
+      ? event.notes.length === 3 && event.notes.every((note) =>
+        note.kind === "note" && note.noteValue === "eighth" && (note.dots ?? 0) === 0)
+      : (event.kind === "note" || event.kind === "rest")
       && answerEventOptions.some((option) => option.kind === event.kind && option.noteValue === event.noteValue)
       && ((event.dots ?? 0) === 0 || (event.dots === 1 && canToggleDot(event))),
     )) return elements;
@@ -116,20 +128,10 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
     ));
   }
 
-  function addEvent({ kind, noteValue }: (typeof answerEventOptions)[number]) {
+  function addElement(newElement: RhythmElement) {
     if (!hasSelectedMeasure) return;
-    const newEvent: RhythmEvent = {
-      kind,
-      noteValue,
-    };
-
-    const usedBeats = answerMeasures[selectedMeasureIndex].reduce(
-      (total, event) => total + rhythmEventToDurationInQuarterNotes(event),
-      0,
-    );
-    const excessBeats =
-      usedBeats + rhythmEventToDurationInQuarterNotes(newEvent) - measureBeats;
-    if (excessBeats > 0) {
+    const nextElements = [...answerMeasures[selectedMeasureIndex], newElement];
+    if (expandRhythmElements(nextElements).durationTicks > measureBeats * TICKS_PER_QUARTER) {
       setAddEventMessage("添加这个符号会超出当前小节允许的拍数。");
       return;
     }
@@ -138,18 +140,15 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
     clearSelectedVerdict();
     setAnswerMeasures((previous) =>
       previous.map((events, index) =>
-        index === selectedMeasureIndex ? [...events, newEvent] : events,
+        index === selectedMeasureIndex ? nextElements : events,
       ),
     );
   }
 
   function toggleLastDot() {
-    if (!lastEvent || !canToggleLastDot) return;
+    if (!lastEvent || !canToggleDot(lastEvent)) return;
     const updatedEvent: RhythmEvent = { ...lastEvent, dots: lastEvent.dots === 1 ? 0 : 1 };
-    const usedBeats = answerMeasures[selectedMeasureIndex].reduce(
-      (total, event) => total + rhythmEventToDurationInQuarterNotes(event),
-      0,
-    );
+    const usedBeats = usedTicks / TICKS_PER_QUARTER;
     const updatedBeats = usedBeats - rhythmEventToDurationInQuarterNotes(lastEvent)
       + rhythmEventToDurationInQuarterNotes(updatedEvent);
     if (updatedBeats > measureBeats) {
@@ -196,18 +195,29 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
         style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 16 }}
       >
         {answerEventOptions.map((option) => (
-          <button key={`${option.kind}-${option.noteValue}`} type="button" disabled={!hasSelectedMeasure} onClick={() => addEvent(option)}>
+          <button key={`${option.kind}-${option.noteValue}`} type="button" disabled={!hasSelectedMeasure} onClick={() => addElement({ kind: option.kind, noteValue: option.noteValue })}>
             {option.label}
           </button>
         ))}
 
+        <button type="button" disabled={!hasSelectedMeasure} onClick={() => addElement({
+          kind: "triplet",
+          notes: [
+            { kind: "note", noteValue: "eighth" },
+            { kind: "note", noteValue: "eighth" },
+            { kind: "note", noteValue: "eighth" },
+          ],
+        })}>
+          小三连
+        </button>
+
         <button
           type="button"
           disabled={!canToggleLastDot}
-          aria-pressed={lastEvent?.dots === 1}
+          aria-pressed={lastHasDot}
           title="切换当前小节末尾四分或八分音符的附点"
           onClick={toggleLastDot}
-          style={lastEvent?.dots === 1 ? { backgroundColor: "#efedff", borderColor: "#6558d3" } : undefined}
+          style={lastHasDot ? { backgroundColor: "#efedff", borderColor: "#6558d3" } : undefined}
         >
           附点
         </button>
@@ -332,7 +342,7 @@ function RhythmQuestionPlayback({ exercise, bpm }: RhythmDictationProps) {
 }
 
 type RhythmAnswerScoreProps = {
-  measures: readonly (readonly RhythmEvent[])[];
+  measures: readonly (readonly RhythmElement[])[];
   timeSignature: RhythmExercise["timeSignature"];
   selectedMeasureIndex: number;
   onSelectMeasure: (index: number) => void;
@@ -350,9 +360,15 @@ function RhythmAnswerScore({
   const score = useMemo(() => {
     let x = 10;
     const preparedMeasures = [];
-    for (const [index, events] of measures.entries()) {
-      const notes = events.map(rhythmEventToVexFlowStaveNote);
-      const beams = getBeatBeamGroups(events).map(
+    for (const [index, elements] of measures.entries()) {
+      const expanded = expandRhythmElements(elements);
+      const notes = expanded.events.map(({ event }) => rhythmEventToVexFlowStaveNote(event));
+      // 三连音比例会改变排版时值，必须在测量之前关联，草稿仍保留组结构。
+      const tuplets = expanded.tripletGroups.map((indexes) => new Tuplet(
+        indexes.map((noteIndex) => notes[noteIndex]),
+        { numNotes: 3, notesOccupied: 2, bracketed: false },
+      ));
+      const beams = getBeatBeamGroups(elements).map(
         (indexes) => new Beam(indexes.map((noteIndex) => notes[noteIndex])),
       );
       const stave = createRhythmStave(x, 40, 280, index === 0);
@@ -376,7 +392,7 @@ function RhythmAnswerScore({
         ),
       );
       stave.setWidth(width);
-      const measure = { x, width, stave, notes, beams };
+      const measure = { x, width, stave, notes, beams, tuplets };
       x += width;
       preparedMeasures.push(measure);
     }
@@ -391,11 +407,12 @@ function RhythmAnswerScore({
     const renderer = new Renderer(container, Renderer.Backends.SVG);
     renderer.resize(score.width, score.height);
     const context = renderer.getContext();
-    score.measures.forEach(({ stave, notes, beams }) => {
+    score.measures.forEach(({ stave, notes, beams, tuplets }) => {
       stave.setContext(context).draw();
       // 宽松排版允许空小节和未填满的小节，不补休止符。
       if (notes.length > 0) Formatter.FormatAndDraw(context, stave, notes);
       beams.forEach((beam) => beam.setContext(context).draw());
+      tuplets.forEach((tuplet) => tuplet.setContext(context).draw());
     });
 
     // 同时兼容卸载与开发模式的 Effect 重建，避免留下重复 SVG。

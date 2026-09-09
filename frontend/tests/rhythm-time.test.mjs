@@ -613,7 +613,31 @@ test("三连音与普通连梁、附点及休止符混排时，组保持独立",
   assert.equal(line.eventEndOffsetsMs.at(-1),4000);
 });
 
-test("三连音拒绝缺音、多音、附点、休止符、嵌套及非拍头起点", () => {
+test("非拍头三连音保留精确位置和独立连梁，支持跨拍及连续组", () => {
+  for (const [noteValue, dots, start] of [["sixteenth", 0, 6], ["eighth", 0, 12], ["eighth", 1, 18]]) {
+    const elements = [{ kind: "note", noteValue, dots }, triplet(), triplet()];
+    const expanded = model.expandRhythmElements(elements);
+    assert.deepEqual(expanded.events.map(e => e.startTick), [0, start, start + 8, start + 16, start + 24, start + 32, start + 40]);
+    assert.equal(expanded.durationTicks, start + 48);
+    assert.deepEqual(scoreLayout.getBeatBeamGroups(elements), [[1, 2, 3], [4, 5, 6]]);
+  }
+  const note = noteValue => ({ kind: "note", noteValue });
+  const elements = [note("sixteenth"), note("sixteenth"), triplet(), note("sixteenth"), note("sixteenth"), note("half")];
+  assert.deepEqual(scoreLayout.getBeatBeamGroups(elements), [[0, 1], [2, 3, 4], [5, 6]]);
+  const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements }, { elements }] };
+  for (const bpm of [60, 137]) {
+    const line = timing.createExerciseTimeline(exercise, bpm, 3, windows);
+    const ticks = [0, 6, 12, 20, 28, 36, 42, 48];
+    assert.deepEqual(line.targetTaps.map(t => t.offsetMs), [...ticks, ...ticks.map(t => t + 96)].map(t => t / 24 * (60000 / bpm)));
+    assert.equal(line.eventEndOffsetsMs.at(-1), 8 * (60000 / bpm));
+  }
+  assert.throws(() => model.validateRhythmExercise({
+    timeSignature: { beats: 4, beatType: 4 },
+    measures: [{ elements: [note("half"), note("quarter"), note("eighth"), triplet()] }],
+  }), /第 1 小节/);
+});
+
+test("三连音拒绝缺音、多音、附点、休止符及嵌套", () => {
   const normal = triplet().notes[0];
   for (const notes of [
     [normal,normal], [normal,normal,normal,normal],
@@ -627,5 +651,4 @@ test("三连音拒绝缺音、多音、附点、休止符、嵌套及非拍头�
       measures:[{elements:[{kind:"triplet",notes},{kind:"note",noteValue:"half",dots:1}]}],
     }), /第 1 小节第 1 个事件：小三连/);
   }
-  assert.throws(()=>model.expandRhythmElements([{kind:"note",noteValue:"eighth"},triplet()]), /拍头/);
 });
