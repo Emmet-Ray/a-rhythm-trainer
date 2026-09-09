@@ -21,34 +21,7 @@ export default function PracticePage() {
     (mode) => mode.id === selected.mode,
   )!.label;
   // 未实现的模式不能因为已有题目数据就错误进入击拍组件。
-  //todo：这里应该根据练习题的模式来返回对应的组件的
-  if (selected.mode === "dictation") {
-    // todo: 后续变复杂之后抽象成单独的组件
-    return (
-      <>
-        <title>{selected.question.title} · 节奏听写</title>
-
-        <Link className="back-link" to="/">
-          ← 返回练习库
-        </Link>
-
-        <header className="page-heading practice-heading">
-          <p className="eyebrow">
-            {selected.topic.title} / {modeLabel}
-          </p>
-          <h1>{selected.question.title}</h1>
-        </header>
-
-        {/* 换题时重建草稿；标准答案只作为配置传入，不直接显示。 */}
-        <RhythmDictation
-          key={selected.question.id}
-          exercise={selected.question.exercise}
-          bpm={60} // todo：后面这里的bpm也要改成可以调整的吧
-        />
-      </>
-    );
-  }
-  if (selected.mode !== "tapping") {
+  if (selected.mode !== "tapping" && selected.mode !== "dictation") {
     return (
       <section className="page-heading">
         <title>{selected.question.title} · 节奏训练</title>
@@ -69,6 +42,7 @@ export default function PracticePage() {
       key={selected.question.id}
       topic={selected.topic}
       question={selected.question}
+      mode={selected.mode}
       modeLabel={modeLabel}
     />
   );
@@ -77,10 +51,12 @@ export default function PracticePage() {
 function PracticeWorkspace({
   topic,
   question,
+  mode,
   modeLabel,
 }: {
   topic: PracticeTopic;
   question: PresetQuestion;
+  mode: "tapping" | "dictation";
   modeLabel: string;
 }) {
   const [bpm, setBpm] = useState(60);
@@ -91,7 +67,7 @@ function PracticeWorkspace({
 
   return (
     <>
-      <title>{question.title} · 节奏训练</title>
+      <title>{question.title} · {modeLabel}</title>
       <Link className="back-link" to="/">
         ← 返回练习库
       </Link>
@@ -158,13 +134,18 @@ function PracticeWorkspace({
           )}
         </form>
       </section>
-      <section className="training-workspace" aria-label="击拍训练区">
-        {/* 只在生效配置改变时重建训练；编辑草稿、应用相同速度不打断。 */}
-        <RhythmTrainer
-          key={`${question.id}:${bpm}`}
-          exercise={question.exercise}
-          bpm={bpm}
-        />
+      <section className={mode === "tapping" ? "training-workspace" : undefined} aria-label={mode === "dictation" ? "节奏听写区" : "击拍训练区"}>
+        {mode === "dictation" ? (
+          // BPM 改变只重建听写内部播放器，保留草稿、验证结果和参考答案状态。
+          <RhythmDictation exercise={question.exercise} bpm={bpm} />
+        ) : (
+          // 只在生效配置改变时重建训练；编辑速度输入、应用相同速度不打断。
+          <RhythmTrainer
+            key={`${question.id}:${bpm}`}
+            exercise={question.exercise}
+            bpm={bpm}
+          />
+        )}
       </section>
     </>
   );
