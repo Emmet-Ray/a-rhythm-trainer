@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { BarlineType, Beam, Formatter, Renderer, Tuplet, Voice } from "vexflow";
 
 import {
@@ -116,6 +116,9 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
   const [playbackScope, setPlaybackScope] = useState<"all" | "measure">("all");
   const [addEventMessage, setAddEventMessage] = useState("");
+  const [isReferenceAnswerVisible, setIsReferenceAnswerVisible] = useState(false);
+  const referenceAnswerId = useId();
+  const referenceMeasures = useMemo(() => exercise.measures.map(({ elements }) => elements), [exercise]);
   // 只取标准答案的小节数量，绝不把标准答案的音符复制到草稿。
   const [answerMeasures, setAnswerMeasures] = useState<RhythmElement[][]>(() =>
     exercise.measures.map(() => []),
@@ -309,6 +312,14 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
         <button type="button" disabled={!hasSelectedMeasure || !expectedMeasure} onClick={verifySelectedMeasure}>
           验证当前小节
         </button>
+        <button
+          type="button"
+          aria-expanded={isReferenceAnswerVisible}
+          aria-controls={referenceAnswerId}
+          onClick={() => setIsReferenceAnswerVisible((previous) => !previous)}
+        >
+          {isReferenceAnswerVisible ? "收起答案" : "查看答案"}
+        </button>
         <span role="status" aria-label="当前小节验证结果">
           {selectedVerdict === "correct" ? "正确" : selectedVerdict === "incorrect" ? "有错误" : ""}
         </span>
@@ -317,6 +328,14 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
         <p role="alert">本题包含当前编辑器暂不支持的节奏，暂时无法完成作答。</p>
       )}
       <p role="status" aria-label="整题完成状态">{isComplete ? "本题完成" : ""}</p>
+      <section id={referenceAnswerId} aria-label="参考答案" hidden={!isReferenceAnswerVisible}>
+        {isReferenceAnswerVisible && (
+          <>
+            <h3>参考答案</h3>
+            <RhythmAnswerScore measures={referenceMeasures} timeSignature={exercise.timeSignature} />
+          </>
+        )}
+      </section>
     </div>
   );
 }
@@ -429,11 +448,11 @@ function RhythmDictationPlayback({ exercise, bpm, answerMeasures }: RhythmDictat
 type RhythmAnswerScoreProps = {
   measures: readonly (readonly RhythmElement[])[];
   timeSignature: RhythmExercise["timeSignature"];
-  selectedMeasureIndex: number;
-  onSelectMeasure: (index: number) => void;
+  selectedMeasureIndex?: number;
+  onSelectMeasure?: (index: number) => void;
 };
 
-// 原样显示答案草稿，不自动补休止符；填写拍数限制由上层处理。
+// 原样显示草稿或参考答案，不自动补休止符；未传选择回调时仅展示谱面。
 function RhythmAnswerScore({
   measures,
   timeSignature,
@@ -513,7 +532,7 @@ function RhythmAnswerScore({
           height: score.height,
         }}
       >
-        <div role="group" aria-label="选择答题小节">
+        {onSelectMeasure && <div role="group" aria-label="选择答题小节">
           {score.measures.map(({ x, width }, index) => (
             <button
               key={index}
@@ -536,7 +555,7 @@ function RhythmAnswerScore({
               }}
             />
           ))}
-        </div>
+        </div>}
         {/* 谱线画在选择背景上方；点击穿透到按钮，两层一起滚动。 */}
         <div
           className="rhythm-answer-notation"
