@@ -3,6 +3,7 @@ import {
   TICKS_PER_QUARTER,
   validateRhythmExercise,
   type RhythmExercise,
+  type RhythmElement,
 } from "./RhythmModel";
 
 export type TargetTap = {
@@ -338,4 +339,35 @@ function validateTimingWindows(windows: TimingWindows): void {
       "判定窗口必须满足：0 <= perfectMs <= hitMs，且 hitMs > 0。",
     );
   }
+}
+
+/** 题目与草稿共用的播放时间线。未填满/空小节保留完整时长，不修改或补写草稿。 */
+export function createRhythmPlaybackTimeline(
+  measures: readonly (readonly RhythmElement[])[],
+  timeSignature: RhythmExercise["timeSignature"],
+  bpm: number,
+) {
+  if (!Number.isFinite(bpm) || bpm <= 0) throw new Error("BPM 必须为正数。");
+  const beatMs = 60000 / bpm;
+  const measureTicks =
+    timeSignature.beats * (4 / timeSignature.beatType) * TICKS_PER_QUARTER;
+  const notes: { startOffsetMs: number; endOffsetMs: number }[] = [];
+  measures.forEach((elements, index) => {
+    const expanded = expandRhythmElements(elements);
+    if (expanded.durationTicks > measureTicks)
+      throw new Error(`第 ${index + 1} 小节超出允许的拍数。`);
+    expanded.events.forEach(({ event, startTick, durationTicks }) => {
+      if (event.kind !== "note") return;
+      const start = index * measureTicks + startTick;
+      notes.push({
+        startOffsetMs: (start / TICKS_PER_QUARTER) * beatMs,
+        endOffsetMs: ((start + durationTicks) / TICKS_PER_QUARTER) * beatMs,
+      });
+    });
+  });
+  return {
+    notes,
+    durationMs: ((measures.length * measureTicks) / TICKS_PER_QUARTER) * beatMs,
+    ...createCountInTimeline(timeSignature, bpm),
+  };
 }

@@ -9,10 +9,11 @@ const server = await createServer({
   optimizeDeps: { noDiscovery: true, include: [] },
 });
 let isMeasureAnswerCorrect;
-let createDictationPlaybackTimeline;
+let createRhythmPlaybackTimeline;
 let rhythmEventToDurationInQuarterNotes;
 try {
-  ({ isMeasureAnswerCorrect, createDictationPlaybackTimeline } = await server.ssrLoadModule("/src/practice/RhythmDictation.tsx"));
+  ({ isMeasureAnswerCorrect } = await server.ssrLoadModule("/src/practice/RhythmDictation.tsx"));
+  ({ createRhythmPlaybackTimeline } = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts"));
   ({ rhythmEventToDurationInQuarterNotes } = await server.ssrLoadModule("/src/rhythm/RhythmModel.ts"));
 } finally {
   await server.close();
@@ -25,7 +26,7 @@ const expected = [note("quarter"), note("eighth"), note("eighth"), note("half")]
 test("草稿播放保留空白与未填满小节的时间，不补写答案", () => {
   const measures = [[], [note("quarter")], []];
   const before = structuredClone(measures);
-  const line = createDictationPlaybackTimeline(measures, { beats: 4, beatType: 4 }, 60);
+  const line = createRhythmPlaybackTimeline(measures, { beats: 4, beatType: 4 }, 60);
   assert.deepEqual(line.notes, [{ startOffsetMs: 4000, endOffsetMs: 5000 }]);
   assert.equal(line.durationMs, 12000);
   assert.deepEqual(line.countInOffsetsMs, [-4000, -3000, -2000, -1000]);
@@ -39,13 +40,13 @@ test("当前小节播放从该小节零点开始，保留预备拍和未填满�
   const measures = [[note("whole")], [{ kind: "rest", noteValue: "eighth" }, note("quarter")], []];
   const before = structuredClone(measures);
   const signature = { beats: 4, beatType: 4 };
-  const all = createDictationPlaybackTimeline(measures, signature, 60);
-  const current = createDictationPlaybackTimeline(measures.slice(1, 2), signature, 60);
+  const all = createRhythmPlaybackTimeline(measures, signature, 60);
+  const current = createRhythmPlaybackTimeline(measures.slice(1, 2), signature, 60);
   assert.deepEqual(current.notes, [{ startOffsetMs: 500, endOffsetMs: 1500 }]);
   assert.equal(all.notes[1].startOffsetMs, 4500);
   assert.equal(current.durationMs, 4000);
   assert.deepEqual(current.countInOffsetsMs, all.countInOffsetsMs);
-  const empty = createDictationPlaybackTimeline(measures.slice(2, 3), signature, 60);
+  const empty = createRhythmPlaybackTimeline(measures.slice(2, 3), signature, 60);
   assert.deepEqual(empty.notes, []);
   assert.equal(empty.durationMs, 4000);
   assert.deepEqual(measures, before);
@@ -53,21 +54,21 @@ test("当前小节播放从该小节零点开始，保留预备拍和未填满�
 
 test("答案播放正确处理附点、非拍头三连音、休止符及 BPM", () => {
   const measures = [[note("eighth", 1), triplet(), { kind: "rest", noteValue: "quarter" }]];
-  const line = createDictationPlaybackTimeline(measures, { beats: 4, beatType: 4 }, 60);
+  const line = createRhythmPlaybackTimeline(measures, { beats: 4, beatType: 4 }, 60);
   assert.deepEqual(line.notes, [
     { startOffsetMs: 0, endOffsetMs: 750 },
     ...[18, 26, 34].map(t => ({ startOffsetMs: t / 24 * 1000, endOffsetMs: (t + 8) / 24 * 1000 })),
   ]);
   assert.equal(line.durationMs, 4000);
-  const faster = createDictationPlaybackTimeline(measures, { beats: 4, beatType: 4 }, 120);
+  const faster = createRhythmPlaybackTimeline(measures, { beats: 4, beatType: 4 }, 120);
   assert.equal(faster.durationMs, 2000);
   assert.deepEqual(faster.notes, line.notes.map(n => ({ startOffsetMs: n.startOffsetMs / 2, endOffsetMs: n.endOffsetMs / 2 })));
-  const silent = createDictationPlaybackTimeline([[{ kind: "rest", noteValue: "whole" }]], { beats: 4, beatType: 4 }, 60);
+  const silent = createRhythmPlaybackTimeline([[{ kind: "rest", noteValue: "whole" }]], { beats: 4, beatType: 4 }, 60);
   assert.deepEqual(silent.notes, []);
   assert.equal(silent.durationMs, 4000);
-  assert.deepEqual(createDictationPlaybackTimeline([], { beats: 4, beatType: 4 }, 60).notes, []);
-  assert.throws(() => createDictationPlaybackTimeline([[note("whole"), note("quarter")]], { beats: 4, beatType: 4 }, 60), /超出/);
-  assert.throws(() => createDictationPlaybackTimeline([], { beats: 4, beatType: 4 }, 0), /BPM/);
+  assert.deepEqual(createRhythmPlaybackTimeline([], { beats: 4, beatType: 4 }, 60).notes, []);
+  assert.throws(() => createRhythmPlaybackTimeline([[note("whole"), note("quarter")]], { beats: 4, beatType: 4 }, 60), /超出/);
+  assert.throws(() => createRhythmPlaybackTimeline([], { beats: 4, beatType: 4 }, 0), /BPM/);
 });
 
 test("完全相同的记谱通过，不要求对象引用相同", () => {

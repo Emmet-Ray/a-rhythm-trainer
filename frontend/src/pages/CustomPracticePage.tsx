@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
 import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
 import type { RhythmEditorHandle } from "../practice/RhythmEditor";
+import PracticeSettings from "../practice/PracticeSettings";
+import RhythmPlayback from "../practice/RhythmPlayback";
 
 // 选择训练方式时不加载 VexFlow；进入新建页面后才加载编辑器。
 const RhythmEditor = lazy(() => import("../practice/RhythmEditor").then((module) => ({ default: module.RhythmEditor })));
@@ -65,7 +67,7 @@ export default function CustomPracticePage() {
 const timeSignature: RhythmExercise["timeSignature"] = { beats: 4, beatType: 4 };
 
 /**
- * 一次挂载对应一份未保存草稿。允许小节未填满，不将草稿当成合法练习播放或判题。
+ * 一次挂载对应一份未保存草稿。允许小节未填满，试听保留完整小节时长，不做判题。
  * 小节只从末尾增减，删除有内容的小节需确认；至少保留一节，选择始终在有效范围内。
  * 名称、谱面及选择仅在本页内存中持有，不做存储或模式间共享。
  */
@@ -109,6 +111,20 @@ function CustomExerciseEditor() {
         <span className="custom-time-signature">4/4 拍</span>
       </div>
       <p className="custom-draft-notice">暂未提供保存，离开或刷新页面后草稿会丢失。</p>
+      <PracticeSettings>
+        {({ bpm, metronomeEnabled }) => (
+          <div className="custom-playback">
+            {/* 速度与小节数改变时仅重建播放器；名称、谱面和选中状态保留。 */}
+            <RhythmPlayback
+              key={[bpm, measures.length].join(":")}
+              bpm={bpm}
+              metronomeEnabled={metronomeEnabled}
+              timeSignature={timeSignature}
+              options={[{ id: "draft", label: "试听", stopLabel: "停止", measures }]}
+            />
+          </div>
+        )}
+      </PracticeSettings>
       <RhythmEditor
         ref={editorRef}
         measures={measures}

@@ -1,6 +1,4 @@
 import {
-  useCallback,
-  useEffect,
   useId,
   useMemo,
   useRef,
@@ -9,22 +7,8 @@ import {
 import { RhythmEditor, canEditRhythmElements, type RhythmEditorHandle } from "./RhythmEditor";
 import { RhythmDraftScore } from "../rhythm/notation/RhythmDraftScore";
 
-import {
-  expandRhythmElements,
-  TICKS_PER_QUARTER,
-  type RhythmElement,
-  type RhythmExercise,
-} from "../rhythm/RhythmModel";
-import { createCountInTimeline } from "../rhythm/RhythmTiming";
-import {
-  createPracticeClock,
-  createMetronome,
-  prepareTapSound,
-  prepareMetronomeSound,
-  scheduleCountIn,
-  scheduleTapSound,
-  type Metronome,
-} from "../rhythm/RhythmAudio";
+import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
+import RhythmPlayback from "./RhythmPlayback";
 
 {
   /*
@@ -76,38 +60,6 @@ type RhythmDictationProps = {
   bpm: number;
   metronomeEnabled?: boolean;
 };
-
-/** 题目与草稿共用的播放时间线。未填满/空小节保留完整时长，不修改或补写草稿。 */
-// eslint-disable-next-line react-refresh/only-export-components -- 与听写播放器共置，导出纯函数供测试。
-export function createDictationPlaybackTimeline(
-  measures: readonly (readonly RhythmElement[])[],
-  timeSignature: RhythmExercise["timeSignature"],
-  bpm: number,
-) {
-  if (!Number.isFinite(bpm) || bpm <= 0) throw new Error("BPM 必须为正数。");
-  const beatMs = 60000 / bpm;
-  const measureTicks =
-    timeSignature.beats * (4 / timeSignature.beatType) * TICKS_PER_QUARTER;
-  const notes: { startOffsetMs: number; endOffsetMs: number }[] = [];
-  measures.forEach((elements, index) => {
-    const expanded = expandRhythmElements(elements);
-    if (expanded.durationTicks > measureTicks)
-      throw new Error(`第 ${index + 1} 小节超出允许的拍数。`);
-    expanded.events.forEach(({ event, startTick, durationTicks }) => {
-      if (event.kind !== "note") return;
-      const start = index * measureTicks + startTick;
-      notes.push({
-        startOffsetMs: (start / TICKS_PER_QUARTER) * beatMs,
-        endOffsetMs: ((start + durationTicks) / TICKS_PER_QUARTER) * beatMs,
-      });
-    });
-  });
-  return {
-    notes,
-    durationMs: ((measures.length * measureTicks) / TICKS_PER_QUARTER) * beatMs,
-    ...createCountInTimeline(timeSignature, bpm),
-  };
-}
 
 type MeasureVerdict = "unchecked" | "correct" | "incorrect";
 
@@ -174,29 +126,25 @@ export function RhythmDictation({
     <div className="rhythm-dictation">
       <div className="dictation-playbar">
         {/* 只重建播放器：切换范围/小节取消旧排程，草稿和验证结果仍保留。 */}
-        <RhythmDictationPlayback
-          metronomeEnabled={metronomeEnabled}
-          key={`${bpm}-${playbackScope}-${selectedMeasureIndex}`}
-          exercise={
-            !exercise || playbackScope === "all"
-              ? exercise
-              : {
-                  ...exercise,
-                  measures: exercise.measures.slice(
-                    selectedMeasureIndex,
-                    selectedMeasureIndex + 1,
-                  ),
-                }
-          }
+        <RhythmPlayback
+          key={[bpm, playbackScope, selectedMeasureIndex].join("-")}
           bpm={bpm}
-          answerMeasures={
-            playbackScope === "all"
-              ? answerMeasures
-              : answerMeasures.slice(
-                  selectedMeasureIndex,
-                  selectedMeasureIndex + 1,
-                )
-          }
+          metronomeEnabled={metronomeEnabled}
+          timeSignature={exercise?.timeSignature ?? null}
+          options={[
+            {
+              id: "question", label: "播放题目", stopLabel: "停止题目",
+              measures: !exercise ? null : playbackScope === "all"
+                ? referenceMeasures
+                : referenceMeasures.slice(selectedMeasureIndex, selectedMeasureIndex + 1),
+            },
+            {
+              id: "answer", label: "播放我的答案", stopLabel: "停止答案",
+              measures: playbackScope === "all"
+                ? answerMeasures
+                : answerMeasures.slice(selectedMeasureIndex, selectedMeasureIndex + 1),
+            },
+          ]}
         />
         <div className="dictation-scope" role="group" aria-label="播放范围">
           <span>范围</span>
@@ -286,176 +234,6 @@ export function RhythmDictation({
           </>
         )}
       </section>
-    </div>
-  );
-}
-
-// 两个入口共用声源和请求序号，互斥播放；每次点击固定一份时间线，不随草稿编辑改变。
-function RhythmDictationPlayback({
-  exercise,
-  bpm,
-  answerMeasures,
-  metronomeEnabled = true,
-}: RhythmDictationProps & {
-  answerMeasures: readonly (readonly RhythmElement[])[];
-}) {
-  const [status, setStatus] = useState<
-    "idle" | "starting" | "countIn" | "playing" | "finished"
-  >("idle");
-  const [error, setError] = useState<string | null>(null);
-  const contextRef = useRef<AudioContext | null>(null);
-  const sourcesRef = useRef<AudioScheduledSourceNode[]>([]);
-  const metronomeRef = useRef<Metronome | null>(null);
-  const metronomeEnabledRef = useRef(metronomeEnabled);
-  useEffect(() => {
-    metronomeEnabledRef.current = metronomeEnabled;
-    metronomeRef.current?.setEnabled(metronomeEnabled);
-  }, [metronomeEnabled]);
-  const frameRef = useRef<number | null>(null);
-  const requestRef = useRef(0);
-  const activeRef = useRef<"question" | "answer" | null>(null);
-  const [playbackSource, setPlaybackSource] = useState<"question" | "answer">(
-    "question",
-  );
-
-  const cancelPlayback = useCallback(() => {
-    metronomeRef.current?.dispose();
-    metronomeRef.current = null;
-    // resume 尚未完成时也能取消；旧请求恢复后不得再安排声音。
-    requestRef.current += 1;
-    activeRef.current = null;
-    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
-    frameRef.current = null;
-    sourcesRef.current.forEach((source) => source.stop());
-    sourcesRef.current = [];
-  }, []);
-
-  useEffect(
-    () => () => {
-      cancelPlayback();
-      const context = contextRef.current;
-      contextRef.current = null;
-      if (context && context.state !== "closed")
-        void context.close().catch(() => {});
-    },
-    [cancelPlayback],
-  );
-
-  async function togglePlayback(source: "question" | "answer") {
-    if (!exercise) return;
-    if (activeRef.current === source) {
-      cancelPlayback();
-      setStatus("idle");
-      return;
-    }
-    // 新一轮开始前清理上一轮尚未结束的自然尾音。
-    cancelPlayback();
-    activeRef.current = source;
-    setPlaybackSource(source);
-    const request = ++requestRef.current;
-    setStatus("starting");
-    setError(null);
-    try {
-      const measures =
-        source === "question"
-          ? exercise.measures.map(({ elements }) => elements)
-          : answerMeasures;
-      const timeline = createDictationPlaybackTimeline(
-        measures,
-        exercise.timeSignature,
-        bpm,
-      );
-      const context =
-        contextRef.current ?? (contextRef.current = new AudioContext());
-      await Promise.all([
-        context.resume(),
-        prepareTapSound(context),
-        prepareMetronomeSound(context),
-      ]);
-      if (request !== requestRef.current) return;
-      const clock = createPracticeClock(context, timeline.countInDurationMs);
-      metronomeRef.current = createMetronome(
-        context,
-        clock,
-        bpm,
-        exercise.timeSignature.beats,
-        timeline.durationMs,
-      );
-      metronomeRef.current.setEnabled(metronomeEnabledRef.current);
-      timeline.countInOffsetsMs.forEach((offset, index) => {
-        scheduleCountIn(
-          context,
-          clock.audioTimeAt(offset),
-          index === 0,
-          sourcesRef.current,
-        );
-      });
-      timeline.notes.forEach((note) => {
-        scheduleTapSound(
-          context,
-          clock.audioTimeAt(note.startOffsetMs),
-          clock.audioTimeAt(note.endOffsetMs),
-          sourcesRef.current,
-        );
-      });
-      // 末尾休止符同样占时，不能以“最后一声播完”作为整题结束。
-      const endsAtMs = timeline.durationMs;
-      function update() {
-        if (request !== requestRef.current) return;
-        const nowMs = clock.nowMs();
-        if (nowMs >= endsAtMs) {
-          // 声音已按各自终点归零，这里收尾，不等待采样的长尾音。
-          cancelPlayback();
-          setStatus("finished");
-          return;
-        }
-        setStatus(nowMs < 0 ? "countIn" : "playing");
-        frameRef.current = requestAnimationFrame(update);
-      }
-      frameRef.current = requestAnimationFrame(update);
-    } catch {
-      if (request !== requestRef.current) return;
-      cancelPlayback();
-      setStatus("idle");
-      setError("无法播放声音，请重试。");
-    }
-  }
-
-  const isActive =
-    status === "starting" || status === "countIn" || status === "playing";
-  const text =
-    status === "starting"
-      ? "准备中"
-      : status === "countIn"
-        ? "预备拍"
-        : status === "playing"
-          ? "播放中"
-          : status === "finished"
-            ? "播放结束"
-            : "";
-  return (
-    <div className="dictation-playback">
-      <div className="dictation-playback-buttons">
-        <button type="button" disabled={!exercise} onClick={() => void togglePlayback("question")}>
-          {isActive && playbackSource === "question" ? "停止题目" : "播放题目"}
-        </button>
-        <button
-          type="button"
-          disabled={
-            !(isActive && playbackSource === "answer") &&
-            answerMeasures.every((elements) => elements.length === 0)
-          }
-          onClick={() => void togglePlayback("answer")}
-        >
-          {isActive && playbackSource === "answer"
-            ? "停止答案"
-            : "播放我的答案"}
-        </button>
-      </div>
-      <span className="dictation-playback-status" role="status">
-        {text}
-      </span>
-      {error && <span role="alert">{error}</span>}
     </div>
   );
 }
