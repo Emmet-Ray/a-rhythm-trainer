@@ -59,8 +59,8 @@ test("音符和休止符不能互相替代", () => {
   assert.equal(isMeasureAnswerCorrect(expected, restAnswer), false);
 });
 
-test("四种休止符按对应时值占拍，正确答案通过，同长度音符不能替代", () => {
-  for (const [noteValue, beats] of [["whole", 4], ["half", 2], ["quarter", 1], ["eighth", 0.5]]) {
+test("五种休止符按对应时值占拍，正确答案通过，同长度音符不能替代", () => {
+  for (const [noteValue, beats] of [["whole", 4], ["half", 2], ["quarter", 1], ["eighth", 0.5], ["sixteenth", 0.25]]) {
     const rest = { kind: "rest", noteValue };
     assert.equal(rhythmEventToDurationInQuarterNotes(rest), beats);
     const target = Array.from({ length: 4 / beats }, () => ({ ...rest }));
@@ -72,6 +72,18 @@ test("四种休止符按对应时值占拍，正确答案通过，同长度音�
     [{ kind: "rest", noteValue: "half" }, { kind: "rest", noteValue: "half" }],
     [{ kind: "rest", noteValue: "whole" }],
   ), false);
+});
+
+test("十六分音符每个占四分之一拍，满小节及混合记谱可验证", () => {
+  assert.equal(rhythmEventToDurationInQuarterNotes(note("sixteenth")), 0.25);
+  const sixteenths = Array.from({ length: 16 }, () => note("sixteenth"));
+  assert.equal(isMeasureAnswerCorrect(structuredClone(sixteenths), sixteenths), true);
+  assert.equal(isMeasureAnswerCorrect(sixteenths.slice(0, -1), sixteenths), false);
+  assert.equal(isMeasureAnswerCorrect([...sixteenths, note("sixteenth")], sixteenths), false);
+  const mixed = [note("half"), note("quarter"), note("eighth"), note("sixteenth"), { kind: "rest", noteValue: "sixteenth" }];
+  assert.equal(mixed.reduce((sum, event) => sum + rhythmEventToDurationInQuarterNotes(event), 0), 4);
+  assert.equal(isMeasureAnswerCorrect(structuredClone(mixed), mixed), true);
+  assert.equal(isMeasureAnswerCorrect([...mixed.slice(0, -2), note("eighth")], mixed), false);
 });
 
 test("附点不同不通过；相同附点通过", () => {

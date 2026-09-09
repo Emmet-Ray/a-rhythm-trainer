@@ -58,10 +58,12 @@ const answerEventOptions = [
   { kind: "note", noteValue: "half", label: "二分音符" },
   { kind: "note", noteValue: "quarter", label: "四分音符" },
   { kind: "note", noteValue: "eighth", label: "八分音符" },
+  { kind: "note", noteValue: "sixteenth", label: "十六分音符" },
   { kind: "rest", noteValue: "whole", label: "全休止符" },
   { kind: "rest", noteValue: "half", label: "二分休止符" },
   { kind: "rest", noteValue: "quarter", label: "四分休止符" },
   { kind: "rest", noteValue: "eighth", label: "八分休止符" },
+  { kind: "rest", noteValue: "sixteenth", label: "十六分休止符" },
 ] as const;
 
 // 按主题逐步开放附点范围；按钮和标准答案检查遵守相同规则。
