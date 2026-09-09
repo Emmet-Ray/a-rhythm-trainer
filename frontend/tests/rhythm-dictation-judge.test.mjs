@@ -9,9 +9,10 @@ const server = await createServer({
   optimizeDeps: { noDiscovery: true, include: [] },
 });
 let isMeasureAnswerCorrect;
+let createDictationPlaybackTimeline;
 let rhythmEventToDurationInQuarterNotes;
 try {
-  ({ isMeasureAnswerCorrect } = await server.ssrLoadModule("/src/RhythmDictation.tsx"));
+  ({ isMeasureAnswerCorrect, createDictationPlaybackTimeline } = await server.ssrLoadModule("/src/RhythmDictation.tsx"));
   ({ rhythmEventToDurationInQuarterNotes } = await server.ssrLoadModule("/src/RhythmModel.ts"));
 } finally {
   await server.close();
@@ -20,6 +21,37 @@ try {
 const note = (noteValue, dots) => ({ kind: "note", noteValue, ...(dots === undefined ? {} : { dots }) });
 const triplet = () => ({ kind: "triplet", notes: [note("eighth"), note("eighth"), note("eighth")] });
 const expected = [note("quarter"), note("eighth"), note("eighth"), note("half")];
+
+test("草稿播放保留空白与未填满小节的时间，不补写答案", () => {
+  const measures = [[], [note("quarter")], []];
+  const before = structuredClone(measures);
+  const line = createDictationPlaybackTimeline(measures, { beats: 4, beatType: 4 }, 60);
+  assert.deepEqual(line.notes, [{ startOffsetMs: 4000, endOffsetMs: 5000 }]);
+  assert.equal(line.durationMs, 12000);
+  assert.deepEqual(line.countInOffsetsMs, [-3000, -2000, -1000]);
+  assert.deepEqual(measures, before);
+  measures[1].push(note("quarter"));
+  assert.equal(line.notes.length, 1); // 排程不随后续草稿修改而改变。
+});
+
+test("答案播放正确处理附点、非拍头三连音、休止符及 BPM", () => {
+  const measures = [[note("eighth", 1), triplet(), { kind: "rest", noteValue: "quarter" }]];
+  const line = createDictationPlaybackTimeline(measures, { beats: 4, beatType: 4 }, 60);
+  assert.deepEqual(line.notes, [
+    { startOffsetMs: 0, endOffsetMs: 750 },
+    ...[18, 26, 34].map(t => ({ startOffsetMs: t / 24 * 1000, endOffsetMs: (t + 8) / 24 * 1000 })),
+  ]);
+  assert.equal(line.durationMs, 4000);
+  const faster = createDictationPlaybackTimeline(measures, { beats: 4, beatType: 4 }, 120);
+  assert.equal(faster.durationMs, 2000);
+  assert.deepEqual(faster.notes, line.notes.map(n => ({ startOffsetMs: n.startOffsetMs / 2, endOffsetMs: n.endOffsetMs / 2 })));
+  const silent = createDictationPlaybackTimeline([[{ kind: "rest", noteValue: "whole" }]], { beats: 4, beatType: 4 }, 60);
+  assert.deepEqual(silent.notes, []);
+  assert.equal(silent.durationMs, 4000);
+  assert.deepEqual(createDictationPlaybackTimeline([], { beats: 4, beatType: 4 }, 60).notes, []);
+  assert.throws(() => createDictationPlaybackTimeline([[note("whole"), note("quarter")]], { beats: 4, beatType: 4 }, 60), /超出/);
+  assert.throws(() => createDictationPlaybackTimeline([], { beats: 4, beatType: 4 }, 0), /BPM/);
+});
 
 test("完全相同的记谱通过，不要求对象引用相同", () => {
   assert.equal(isMeasureAnswerCorrect(structuredClone(expected), expected), true);
