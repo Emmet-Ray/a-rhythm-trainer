@@ -191,16 +191,16 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
       />
       <div
         role="group"
-        aria-label="添加音符或休止符"
+        aria-label="添加音符"
         style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 16 }}
       >
-        {answerEventOptions.map((option) => (
+        {answerEventOptions.filter((option) => option.kind === "note").map((option) => (
           <button key={`${option.kind}-${option.noteValue}`} type="button" disabled={!hasSelectedMeasure} onClick={() => addElement({ kind: option.kind, noteValue: option.noteValue })}>
             {option.label}
           </button>
         ))}
 
-        <button type="button" disabled={!hasSelectedMeasure} onClick={() => addElement({
+        <button type="button" style={{ marginInlineStart: 12 }} disabled={!hasSelectedMeasure} onClick={() => addElement({
           kind: "triplet",
           notes: [
             { kind: "note", noteValue: "eighth" },
@@ -210,7 +210,25 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
         })}>
           小三连
         </button>
+      </div>
 
+      <div
+        role="group"
+        aria-label="添加休止符"
+        style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 }}
+      >
+        {answerEventOptions.filter((option) => option.kind === "rest").map((option) => (
+          <button key={`${option.kind}-${option.noteValue}`} type="button" disabled={!hasSelectedMeasure} onClick={() => addElement({ kind: option.kind, noteValue: option.noteValue })}>
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      <div
+        role="group"
+        aria-label="修改当前小节末尾"
+        style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 16 }}
+      >
         <button
           type="button"
           disabled={!canToggleLastDot}
