@@ -211,22 +211,8 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
   }
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-        <div role="group" aria-label="播放范围" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <span>播放范围</span>
-          {(["all", "measure"] as const).map((scope) => (
-            <button
-              key={scope}
-              type="button"
-              aria-pressed={playbackScope === scope}
-              onClick={() => setPlaybackScope(scope)}
-              style={playbackScope === scope ? { backgroundColor: "#efedff", borderColor: "#6558d3" } : undefined}
-            >
-              {scope === "all" ? "整题" : "当前小节"}
-            </button>
-          ))}
-        </div>
+    <div className="rhythm-dictation">
+      <div className="dictation-playbar">
         {/* 只重建播放器：切换范围/小节取消旧排程，草稿和验证结果仍保留。 */}
         <RhythmDictationPlayback
           key={`${bpm}-${playbackScope}-${selectedMeasureIndex}`}
@@ -237,6 +223,16 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
           bpm={bpm}
           answerMeasures={playbackScope === "all" ? answerMeasures : answerMeasures.slice(selectedMeasureIndex, selectedMeasureIndex + 1)}
         />
+        <div className="dictation-scope" role="group" aria-label="播放范围">
+          <span>范围</span>
+          <div className="dictation-scope-options">
+            {(["all", "measure"] as const).map((scope) => (
+              <button key={scope} type="button" aria-pressed={playbackScope === scope} onClick={() => setPlaybackScope(scope)}>
+                {scope === "all" ? "整题" : "当前小节"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <RhythmAnswerScore
@@ -248,18 +244,22 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
           setAddEventMessage("");
         }}
       />
+      <div className="dictation-editor">
+      <p className="dictation-current-measure">当前小节：{selectedMeasureIndex + 1}</p>
       <div
         role="group"
         aria-label="添加音符"
-        style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 16 }}
+        className="dictation-symbol-row"
       >
+        <span className="dictation-row-label">音符</span>
+        <div className="dictation-symbol-buttons">
         {answerEventOptions.filter((option) => option.kind === "note").map((option) => (
           <button key={`${option.kind}-${option.noteValue}`} type="button" disabled={!hasSelectedMeasure} onClick={() => addElement({ kind: option.kind, noteValue: option.noteValue })}>
             {option.label}
           </button>
         ))}
 
-        <button type="button" style={{ marginInlineStart: 12 }} disabled={!hasSelectedMeasure} onClick={() => addElement({
+        <button type="button" disabled={!hasSelectedMeasure} onClick={() => addElement({
           kind: "triplet",
           notes: [
             { kind: "note", noteValue: "eighth" },
@@ -269,24 +269,28 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
         })}>
           小三连
         </button>
+        </div>
       </div>
 
       <div
         role="group"
         aria-label="添加休止符"
-        style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 }}
+        className="dictation-symbol-row"
       >
+        <span className="dictation-row-label">休止符</span>
+        <div className="dictation-symbol-buttons">
         {answerEventOptions.filter((option) => option.kind === "rest").map((option) => (
           <button key={`${option.kind}-${option.noteValue}`} type="button" disabled={!hasSelectedMeasure} onClick={() => addElement({ kind: option.kind, noteValue: option.noteValue })}>
             {option.label}
           </button>
         ))}
+        </div>
       </div>
 
       <div
         role="group"
         aria-label="修改当前小节末尾"
-        style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 16 }}
+        className="dictation-edit-actions"
       >
         <button
           type="button"
@@ -294,7 +298,6 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
           aria-pressed={lastHasDot}
           title="切换当前小节末尾四分或八分音符的附点"
           onClick={toggleLastDot}
-          style={lastHasDot ? { backgroundColor: "#efedff", borderColor: "#6558d3" } : undefined}
         >
           附点
         </button>
@@ -307,11 +310,17 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
           删除末尾
         </button>
       </div>
-      <p role="status">{addEventMessage}</p>
-      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 16 }}>
-        <button type="button" disabled={!hasSelectedMeasure || !expectedMeasure} onClick={verifySelectedMeasure}>
+      <p className="dictation-input-message" role="status">{addEventMessage}</p>
+      </div>
+      <div className="dictation-verification">
+        <div className="dictation-verification-result">
+        <button className="dictation-verify" type="button" disabled={!hasSelectedMeasure || !expectedMeasure} onClick={verifySelectedMeasure}>
           验证当前小节
         </button>
+        <span role="status" aria-label="当前小节验证结果">
+          {selectedVerdict === "correct" ? "正确" : selectedVerdict === "incorrect" ? "有错误" : ""}
+        </span>
+        </div>
         <button
           type="button"
           aria-expanded={isReferenceAnswerVisible}
@@ -320,15 +329,12 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
         >
           {isReferenceAnswerVisible ? "收起答案" : "查看答案"}
         </button>
-        <span role="status" aria-label="当前小节验证结果">
-          {selectedVerdict === "correct" ? "正确" : selectedVerdict === "incorrect" ? "有错误" : ""}
-        </span>
       </div>
       {expectedMeasures.some((measure) => measure === null) && (
         <p role="alert">本题包含当前编辑器暂不支持的节奏，暂时无法完成作答。</p>
       )}
-      <p role="status" aria-label="整题完成状态">{isComplete ? "本题完成" : ""}</p>
-      <section id={referenceAnswerId} aria-label="参考答案" hidden={!isReferenceAnswerVisible}>
+      <p className="dictation-completion" role="status" aria-label="整题完成状态">{isComplete ? "本题完成" : ""}</p>
+      <section className="dictation-reference" id={referenceAnswerId} aria-label="参考答案" hidden={!isReferenceAnswerVisible}>
         {isReferenceAnswerVisible && (
           <>
             <h3>参考答案</h3>
@@ -428,7 +434,8 @@ function RhythmDictationPlayback({ exercise, bpm, answerMeasures }: RhythmDictat
   const text = status === "starting" ? "准备中" : status === "countIn" ? "预备拍"
     : status === "playing" ? "播放中" : status === "finished" ? "播放结束" : "";
   return (
-    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+    <div className="dictation-playback">
+      <div className="dictation-playback-buttons">
       <button type="button" onClick={() => void togglePlayback("question")}>
         {isActive && playbackSource === "question" ? "停止题目" : "播放题目"}
       </button>
@@ -439,7 +446,8 @@ function RhythmDictationPlayback({ exercise, bpm, answerMeasures }: RhythmDictat
       >
         {isActive && playbackSource === "answer" ? "停止答案" : "播放我的答案"}
       </button>
-      <span role="status">{text}</span>
+      </div>
+      <span className="dictation-playback-status" role="status">{text}</span>
       {error && <span role="alert">{error}</span>}
     </div>
   );
