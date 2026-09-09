@@ -15,13 +15,13 @@ import {
   type RhythmElement,
   type RhythmEvent,
   type RhythmExercise,
-} from "./RhythmModel";
+} from "../rhythm/RhythmModel";
 import {
   createRhythmStave,
   rhythmEventToVexFlowStaveNote,
-} from "./RhythmNotation";
-import { getBeatBeamGroups } from "./RhythmScoreLayout";
-import { createCountInTimeline } from "./RhythmTiming";
+} from "../rhythm/notation/RhythmNotation";
+import { getBeatBeamGroups } from "../rhythm/notation/RhythmScoreLayout";
+import { createCountInTimeline } from "../rhythm/RhythmTiming";
 import {
   createPracticeClock,
   createMetronome,
@@ -30,7 +30,7 @@ import {
   scheduleCountIn,
   scheduleTapSound,
   type Metronome,
-} from "./RhythmAudio";
+} from "../rhythm/RhythmAudio";
 
 {
   /*

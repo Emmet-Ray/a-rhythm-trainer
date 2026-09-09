@@ -10,8 +10,8 @@ const server = await createServer({
 let generateExercise;
 let validateRhythmExercise;
 try {
-  ({ generateExercise } = await server.ssrLoadModule("/src/exerciseGenerator.ts"));
-  ({ validateRhythmExercise } = await server.ssrLoadModule("/src/RhythmModel.ts"));
+  ({ generateExercise } = await server.ssrLoadModule("/src/exercises/exerciseGenerator.ts"));
+  ({ validateRhythmExercise } = await server.ssrLoadModule("/src/rhythm/RhythmModel.ts"));
 } finally {
   await server.close();
 }

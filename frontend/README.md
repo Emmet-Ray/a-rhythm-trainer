@@ -10,6 +10,24 @@ npm run lint
 npm run build
 ```
 
+## 源码目录
+
+`src/` 按职责组织，文件名与导出接口保持独立，不通过统一的 `index.ts` 转导出。
+
+```text
+src/
+├── main.tsx、App.tsx、App.css、index.css  # 应用入口、路由与全局样式
+├── pages/                              # 路由页面、题目选择和生成配置
+├── practice/                           # 共用工作区、击拍和听写交互
+├── rhythm/                             # 节奏模型、计时判定和音频
+│   └── notation/                       # 谱面转换、绘制和反馈定位
+└── exercises/                          # 预设题库与题目生成器
+```
+
+页面负责提供题目，`practice/PracticeWorkspace.tsx` 管理 BPM 与节拍器设置，再交给对应练习组件。练习组件使用 `rhythm/` 的共享能力；共享能力不依赖页面或题目来源。听写内部的编辑、判题和答案谱面仍保留在 `practice/RhythmDictation.tsx` 内。
+
+测试继续放在 `tests/`，计时与生命周期说明见 [TIMING.md](TIMING.md)。
+
 ## 页面与内容
 
 - `/`：练习库，在主题内选择训练模式，再列出该模式的预设题目，不另设主题详情页。
@@ -18,13 +36,13 @@ npm run build
 
 使用 React Router 的声明式路由（BrowserRouter、Routes、Link），参考[官方接入说明](https://reactrouter.com/start/declarative/installation)。题目地址可以直接打开、刷新，支持浏览器前进和后退。页面切换后阅读位置回到顶部，焦点移到主要内容。
 
-`data/presetExercises.ts` 是预设内容的唯一来源：主题包含 `modes`，每个模式分组包含自己的 `questions`；题目包含 ID、标题、说明和 RhythmExercise。题目 ID 全站唯一，修改题目名称时保持 ID 不变。本次以正式预设替换演示题目，旧演示题目地址不再保留。查找题目同时返回所属主题和模式，不在练习页切换同一道题的模式。
+`exercises/presetExercises.ts` 是预设内容的唯一来源：主题包含 `modes`，每个模式分组包含自己的 `questions`；题目包含 ID、标题、说明和 RhythmExercise。题目 ID 全站唯一，修改题目名称时保持 ID 不变。本次以正式预设替换演示题目，旧演示题目地址不再保留。查找题目同时返回所属主题和模式，不在练习页切换同一道题的模式。
 
 网站模式是 tapping（击拍练习）、dictation（节奏听写）、geometry（几何游戏）。每个主题的三组题库互相独立；当前十三个主题共有 58 道题（分别为 3、6、5、5、4、4、4、5、4、4、4、5、5 道），都属于 tapping，另外两组为空且未开放。击拍组件内部的 practice/listen 表示练习/辅助试听，不是网站的三种模式。未实现的模式即使添加题目，也不会自动使用击拍组件运行。
 
 随机和自定义仍未实现；后续也采用“主题 → 模式 → 生成/编写题目”的归属关系，不把一份题目自动共享给三种模式。添加预设内容编辑数据文件即可；开放新模式还需要接入对应训练组件。暂时没有后端、账户或进度保存。
 
-`pages/ExerciseLibrary.tsx` 负责列题；`pages/PracticePage.tsx` 负责选择题目和生效 BPM；`RhythmTrainer.tsx` 保留试听、击拍、音频生命周期及结果展示。进入练习页才加载训练和 VexFlow 代码。随机、自定义、听写和几何可视化入口明确标记“未开放”，不会进入空白页面。
+`pages/ExerciseLibrary.tsx` 负责列题；`pages/PracticePage.tsx` 负责选择题目和生效 BPM；`practice/RhythmTrainer.tsx` 保留试听、击拍、音频生命周期及结果展示。进入练习页才加载训练和 VexFlow 代码。随机、自定义、听写和几何可视化入口明确标记“未开放”，不会进入空白页面。
 
 ## 配置与结束规则
 
@@ -45,12 +63,12 @@ BPM 默认 60，允许 40–240 的整数；输入框是草稿，应用或回车
 
 谱面按容器宽度以完整小节换行，每行小节等宽，末行保持相同宽度并左对齐。每行显示谱号，仅全曲开头显示拍号。极窄容器统一缩放谱面与反馈，避免带拍号的密集八分音符被裁切。
 
-`RhythmScoreLayout.ts` 负责行列布局及时间到二维反馈位置的映射；`RhythmScore.tsx` 观察容器宽度并绘制。命中和漏拍跟随目标音符，误敲按时间选择小节；换行边界属于下一小节。宽度变化会重绘并重新定位已有反馈。布局、窄屏缩放和跨行映射由 `npm test` 覆盖。
+`rhythm/notation/RhythmScoreLayout.ts` 负责行列布局及时间到二维反馈位置的映射；`rhythm/notation/RhythmScore.tsx` 观察容器宽度并绘制。命中和漏拍跟随目标音符，误敲按时间选择小节；换行边界属于下一小节。宽度变化会重绘并重新定位已有反馈。布局、窄屏缩放和跨行映射由 `npm test` 覆盖。
 
 当前仍在反馈变化时重绘全谱，尚未添加当前行自动滚动；长谱面可能需要纵向滚动。
 
 
-同一四分拍内的连续八分、十六分音符（含单附点）可混合连梁，支持 EE、SSSS、ESS、SSE、E.S 和 SES（S 为十六分音符）。休止符、长音和跨拍事件断开分组；单个音符保留符尾，不跨小节。`RhythmScoreLayout.ts` 按音乐时值生成小节内分组，渲染层在排版前创建 VexFlow Beam、排版后绘制。每个音符仍独立播放、判定与高亮，共用连梁保持黑色；数据模型和时间线不变。
+同一四分拍内的连续八分、十六分音符（含单附点）可混合连梁，支持 EE、SSSS、ESS、SSE、E.S 和 SES（S 为十六分音符）。休止符、长音和跨拍事件断开分组；单个音符保留符尾，不跨小节。`rhythm/notation/RhythmScoreLayout.ts` 按音乐时值生成小节内分组，渲染层在排版前创建 VexFlow Beam、排版后绘制。每个音符仍独立播放、判定与高亮，共用连梁保持黑色；数据模型和时间线不变。
 
 ## 部署时需要注意
 

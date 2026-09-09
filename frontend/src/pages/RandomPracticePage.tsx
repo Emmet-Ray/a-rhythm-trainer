@@ -1,11 +1,11 @@
 import { lazy, Suspense, useState } from "react";
 import { Link, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
-import { generateExercise, type GenerationConfig } from "../exerciseGenerator";
-import type { RhythmExercise } from "../RhythmModel";
+import { generateExercise, type GenerationConfig } from "../exercises/exerciseGenerator";
+import type { RhythmExercise } from "../rhythm/RhythmModel";
 
 // 进入对应模式后加载完整工作区，尚未生成时显示空状态。
-const PracticeWorkspace = lazy(() => import("../PracticeWorkspace"));
+const PracticeWorkspace = lazy(() => import("../practice/PracticeWorkspace"));
 
 // 随机练习的开放范围独立于预设题库；这里只列出已有子页面的模式。
 const randomModes = [

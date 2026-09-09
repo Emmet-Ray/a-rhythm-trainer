@@ -12,8 +12,8 @@ let isMeasureAnswerCorrect;
 let createDictationPlaybackTimeline;
 let rhythmEventToDurationInQuarterNotes;
 try {
-  ({ isMeasureAnswerCorrect, createDictationPlaybackTimeline } = await server.ssrLoadModule("/src/RhythmDictation.tsx"));
-  ({ rhythmEventToDurationInQuarterNotes } = await server.ssrLoadModule("/src/RhythmModel.ts"));
+  ({ isMeasureAnswerCorrect, createDictationPlaybackTimeline } = await server.ssrLoadModule("/src/practice/RhythmDictation.tsx"));
+  ({ rhythmEventToDurationInQuarterNotes } = await server.ssrLoadModule("/src/rhythm/RhythmModel.ts"));
 } finally {
   await server.close();
 }

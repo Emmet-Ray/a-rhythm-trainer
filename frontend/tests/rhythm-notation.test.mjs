@@ -9,7 +9,7 @@ const server = await createServer({
 });
 let notation;
 try {
-  notation = await server.ssrLoadModule("/src/RhythmNotation.ts");
+  notation = await server.ssrLoadModule("/src/rhythm/notation/RhythmNotation.ts");
 } finally {
   await server.close();
 }

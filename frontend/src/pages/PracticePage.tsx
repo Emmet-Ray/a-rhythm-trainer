@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router";
-import { findPresetQuestion, practiceModes } from "../data/presetExercises";
-import PracticeWorkspace from "../PracticeWorkspace";
+import { findPresetQuestion, practiceModes } from "../exercises/presetExercises";
+import PracticeWorkspace from "../practice/PracticeWorkspace";
 import NotFoundPage from "./NotFoundPage";
 
 export default function PracticePage() {

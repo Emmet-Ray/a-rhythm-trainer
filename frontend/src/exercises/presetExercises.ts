@@ -1,4 +1,4 @@
-import type { RhythmExercise } from "../RhythmModel";
+import type { RhythmExercise } from "../rhythm/RhythmModel";
 
 // 网站训练模式；与击拍组件内部的 practice/listen（练习/试听）不是同一个概念。
 export const practiceModes = [

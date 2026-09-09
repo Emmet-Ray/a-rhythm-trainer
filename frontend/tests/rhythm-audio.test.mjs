@@ -9,7 +9,7 @@ const server = await createServer({
 });
 let audio;
 try {
-  audio = await server.ssrLoadModule("/src/RhythmAudio.ts");
+  audio = await server.ssrLoadModule("/src/rhythm/RhythmAudio.ts");
 } finally {
   await server.close();
 }

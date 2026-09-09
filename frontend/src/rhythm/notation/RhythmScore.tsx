@@ -10,9 +10,9 @@ import {
   type RenderContext,
 } from "vexflow";
 
-import { expandRhythmElements, type RhythmExercise } from "./RhythmModel";
+import { expandRhythmElements, type RhythmExercise } from "../RhythmModel";
 import { createRhythmStave, getRhythmLineY, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
-import type { ExerciseTimeline, TimingEvent } from "./RhythmTiming";
+import type { ExerciseTimeline, TimingEvent } from "../RhythmTiming";
 import {
   createScoreLayout,
   getBeatBeamGroups,

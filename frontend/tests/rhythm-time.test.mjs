@@ -13,10 +13,10 @@ let model;
 let scoreLayout;
 let createPracticeClock;
 try {
-  model = await server.ssrLoadModule("/src/RhythmModel.ts");
-  timing = await server.ssrLoadModule("/src/RhythmTiming.ts");
-  scoreLayout = await server.ssrLoadModule("/src/RhythmScoreLayout.ts");
-  ({ createPracticeClock } = await server.ssrLoadModule("/src/RhythmAudio.ts"));
+  model = await server.ssrLoadModule("/src/rhythm/RhythmModel.ts");
+  timing = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
+  scoreLayout = await server.ssrLoadModule("/src/rhythm/notation/RhythmScoreLayout.ts");
+  ({ createPracticeClock } = await server.ssrLoadModule("/src/rhythm/RhythmAudio.ts"));
 } finally {
   await server.close();
 }

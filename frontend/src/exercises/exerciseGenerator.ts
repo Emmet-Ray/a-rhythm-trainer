@@ -1,4 +1,4 @@
-import { validateRhythmExercise, type RhythmEvent, type RhythmExercise } from "./RhythmModel";
+import { validateRhythmExercise, type RhythmEvent, type RhythmExercise } from "../rhythm/RhythmModel";
 
 export type GenerationConfig = {
   mode: "tapping" | "dictation";

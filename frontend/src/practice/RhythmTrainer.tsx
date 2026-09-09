@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { RhythmExercise } from "./RhythmModel";
-import RhythmScore from "./RhythmScore";
+import type { RhythmExercise } from "../rhythm/RhythmModel";
+import RhythmScore from "../rhythm/notation/RhythmScore";
 import {
   createExerciseTimeline,
   collectExpiredTargets,
@@ -12,7 +12,7 @@ import {
   type PlaybackPosition,
   type TimingEvent,
   type TimingWindows,
-} from "./RhythmTiming";
+} from "../rhythm/RhythmTiming";
 import {
   createPracticeClock,
   createMetronome,
@@ -23,7 +23,7 @@ import {
   prepareTapSound,
   prepareMetronomeSound,
   type PracticeClock,
-} from "./RhythmAudio";
+} from "../rhythm/RhythmAudio";
 
 type PlaybackMode = "practice" | "listen";
 

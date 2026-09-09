@@ -5,7 +5,7 @@ import {
   presetTopics,
   type PracticeMode,
   type PracticeTopic,
-} from "../data/presetExercises";
+} from "../exercises/presetExercises";
 
 export default function ExerciseLibrary() {
   return (

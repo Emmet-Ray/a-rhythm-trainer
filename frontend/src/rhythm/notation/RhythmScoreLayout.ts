@@ -1,4 +1,4 @@
-import { expandRhythmElements, TICKS_PER_QUARTER, type RhythmElement } from "./RhythmModel";
+import { expandRhythmElements, TICKS_PER_QUARTER, type RhythmElement } from "../RhythmModel";
 
 /** 返回小节内的拍内连梁分组。八分、十六分音符（含单附点）可混合；
  * 普通符号遇休止符、长音符或跨拍事件断开分组。

@@ -1,5 +1,5 @@
 import { Dot, Stave, StaveNote, Stem } from "vexflow";
-import type { RhythmEvent } from "./RhythmModel";
+import type { RhythmEvent } from "../RhythmModel";
 
 /** 只显示中线，保留五线坐标供谱号、拍号和休止符定位；隐藏线不代表音高。 */
 export function createRhythmStave(x: number, y: number, width: number, showClef: boolean): Stave {

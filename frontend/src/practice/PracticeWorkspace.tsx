@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { RhythmExercise } from "./RhythmModel";
+import type { RhythmExercise } from "../rhythm/RhythmModel";
 import RhythmTrainer from "./RhythmTrainer";
 import { RhythmDictation } from "./RhythmDictation";
 

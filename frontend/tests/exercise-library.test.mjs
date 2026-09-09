@@ -10,8 +10,8 @@ const server = await createServer({
 let catalog;
 let timing;
 try {
-  catalog = await server.ssrLoadModule("/src/data/presetExercises.ts");
-  timing = await server.ssrLoadModule("/src/RhythmTiming.ts");
+  catalog = await server.ssrLoadModule("/src/exercises/presetExercises.ts");
+  timing = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
 } finally {
   await server.close();
 }
