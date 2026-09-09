@@ -30,6 +30,42 @@ export function createPracticeClock(
 
 export type PracticeClock = ReturnType<typeof createPracticeClock>;
 
+/** 正式阶段的独立节拍器声部。共用练习时钟，拍点位于 [0, durationMs)。
+ * 开启时只安排尚未到来的拍点，不补响、不重置拍位；关闭不影响预备拍或钢琴。
+ * dispose 用于结束本轮，之后不能重新开启。当前 BPM 和重音按四分拍计算。
+ */
+export function createMetronome(
+  context: AudioContext,
+  clock: PracticeClock,
+  bpm: number,
+  beatsPerMeasure: number,
+  durationMs: number,
+) {
+  if (!Number.isFinite(bpm) || bpm <= 0 || !Number.isInteger(beatsPerMeasure) || beatsPerMeasure <= 0
+    || !Number.isFinite(durationMs) || durationMs < 0) throw new Error("节拍器需要有效的 BPM、小节拍数和播放时长。");
+  let enabled = false;
+  let disposed = false;
+  const sources: AudioScheduledSourceNode[] = [];
+  function stop() {
+    sources.splice(0).forEach(source => source.stop());
+  }
+  return {
+    setEnabled(next: boolean) {
+      if (disposed || next === enabled) return;
+      enabled = next;
+      if (!enabled) { stop(); return; }
+      const beatMs = 60000 / bpm;
+      const firstBeat = Math.max(0, Math.floor(clock.nowMs() / beatMs) + 1);
+      for (let beat = firstBeat; beat * beatMs < durationMs; beat++) {
+        scheduleCountIn(context, clock.audioTimeAt(beat * beatMs), beat % beatsPerMeasure === 0, sources);
+      }
+    },
+    dispose() { disposed = true; stop(); },
+  };
+}
+
+export type Metronome = ReturnType<typeof createMetronome>;
+
 /** 提前安排一声预备拍提示音，并保留声源以便中途取消。 */
 export function scheduleCountIn(
   context: AudioContext,

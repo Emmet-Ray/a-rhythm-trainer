@@ -60,6 +60,7 @@ function PracticeWorkspace({
   modeLabel: string;
 }) {
   const [bpm, setBpm] = useState(60);
+  const [metronomeEnabled, setMetronomeEnabled] = useState(true);
   const [bpmInput, setBpmInput] = useState("60");
   const [hasBpmError, setHasBpmError] = useState(false);
   // 未应用状态由草稿与生效值直接得出，不另存一份状态。
@@ -133,17 +134,22 @@ function PracticeWorkspace({
             </p>
           )}
         </form>
+        <label className="metronome-toggle">
+          <input type="checkbox" checked={metronomeEnabled} onChange={event => setMetronomeEnabled(event.target.checked)} />
+          节拍器
+        </label>
       </section>
       <section className={mode === "tapping" ? "training-workspace" : undefined} aria-label={mode === "dictation" ? "节奏听写区" : "击拍训练区"}>
         {mode === "dictation" ? (
           // BPM 改变只重建听写内部播放器，保留草稿、验证结果和参考答案状态。
-          <RhythmDictation exercise={question.exercise} bpm={bpm} />
+          <RhythmDictation exercise={question.exercise} bpm={bpm} metronomeEnabled={metronomeEnabled} />
         ) : (
           // 只在生效配置改变时重建训练；编辑速度输入、应用相同速度不打断。
           <RhythmTrainer
             key={`${question.id}:${bpm}`}
             exercise={question.exercise}
             bpm={bpm}
+            metronomeEnabled={metronomeEnabled}
           />
         )}
       </section>

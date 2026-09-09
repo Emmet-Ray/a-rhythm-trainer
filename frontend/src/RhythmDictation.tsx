@@ -12,7 +12,7 @@ import {
 import { createRhythmStave, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
 import { getBeatBeamGroups } from "./RhythmScoreLayout";
 import { createCountInTimeline } from "./RhythmTiming";
-import { createPracticeClock, prepareTapSound, scheduleCountIn, scheduleTapSound } from "./RhythmAudio";
+import { createPracticeClock, createMetronome, prepareTapSound, scheduleCountIn, scheduleTapSound, type Metronome } from "./RhythmAudio";
 
 {
   /*
@@ -56,6 +56,7 @@ export function isMeasureAnswerCorrect(
 type RhythmDictationProps = {
   exercise: RhythmExercise;
   bpm: number;
+  metronomeEnabled?: boolean;
 };
 
 /** 题目与草稿共用的播放时间线。未填满/空小节保留完整时长，不修改或补写草稿。 */
@@ -111,7 +112,7 @@ function canToggleDot(event: RhythmElement): event is RhythmEvent {
 }
 
 // 一次挂载对应一道题；调用方换题时通过 key 重建，清空答案和交互状态。
-export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
+export function RhythmDictation({ exercise, bpm, metronomeEnabled = true }: RhythmDictationProps) {
   const measureBeats = exercise.timeSignature.beats * (4 / exercise.timeSignature.beatType);
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
   const [playbackScope, setPlaybackScope] = useState<"all" | "measure">("all");
@@ -215,6 +216,7 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
       <div className="dictation-playbar">
         {/* 只重建播放器：切换范围/小节取消旧排程，草稿和验证结果仍保留。 */}
         <RhythmDictationPlayback
+          metronomeEnabled={metronomeEnabled}
           key={`${bpm}-${playbackScope}-${selectedMeasureIndex}`}
           exercise={playbackScope === "all" ? exercise : {
             ...exercise,
@@ -347,19 +349,27 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
 }
 
 // 两个入口共用声源和请求序号，互斥播放；每次点击固定一份时间线，不随草稿编辑改变。
-function RhythmDictationPlayback({ exercise, bpm, answerMeasures }: RhythmDictationProps & {
+function RhythmDictationPlayback({ exercise, bpm, answerMeasures, metronomeEnabled = true }: RhythmDictationProps & {
   answerMeasures: readonly (readonly RhythmElement[])[];
 }) {
   const [status, setStatus] = useState<"idle" | "starting" | "countIn" | "playing" | "finished">("idle");
   const [error, setError] = useState<string | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
   const sourcesRef = useRef<AudioScheduledSourceNode[]>([]);
+  const metronomeRef = useRef<Metronome | null>(null);
+  const metronomeEnabledRef = useRef(metronomeEnabled);
+  useEffect(() => {
+    metronomeEnabledRef.current = metronomeEnabled;
+    metronomeRef.current?.setEnabled(metronomeEnabled);
+  }, [metronomeEnabled]);
   const frameRef = useRef<number | null>(null);
   const requestRef = useRef(0);
   const activeRef = useRef<"question" | "answer" | null>(null);
   const [playbackSource, setPlaybackSource] = useState<"question" | "answer">("question");
 
   const cancelPlayback = useCallback(() => {
+    metronomeRef.current?.dispose();
+    metronomeRef.current = null;
     // resume 尚未完成时也能取消；旧请求恢复后不得再安排声音。
     requestRef.current += 1;
     activeRef.current = null;
@@ -396,6 +406,8 @@ function RhythmDictationPlayback({ exercise, bpm, answerMeasures }: RhythmDictat
       await Promise.all([context.resume(), prepareTapSound(context)]);
       if (request !== requestRef.current) return;
       const clock = createPracticeClock(context, timeline.countInDurationMs);
+      metronomeRef.current = createMetronome(context, clock, bpm, exercise.timeSignature.beats, timeline.durationMs);
+      metronomeRef.current.setEnabled(metronomeEnabledRef.current);
       timeline.countInOffsetsMs.forEach((offset, index) => {
         scheduleCountIn(context, clock.audioTimeAt(offset), index === 0, sourcesRef.current);
       });

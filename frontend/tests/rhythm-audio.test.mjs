@@ -23,6 +23,17 @@ function fakeContext() {
     sources,
     gains,
     decodes: 0,
+    createOscillator() {
+      const source = {
+        frequency: { setValueAtTime(value) { source.frequencyValue = value; } },
+        connect: gain => gain,
+        start(time) { this.started = time; },
+        stop(time) { (this.stops ??= []).push(time); },
+        disconnect() { this.disconnected = true; },
+      };
+      sources.push(source);
+      return source;
+    },
     async decodeAudioData() { this.decodes++; return { duration: 13.32 }; },
     createBufferSource() {
       const source = {
@@ -39,6 +50,7 @@ function fakeContext() {
           changes: [],
           setValueAtTime(value, time) { this.changes.push([value, time]); },
           linearRampToValueAtTime(value, time) { this.changes.push([value, time]); },
+          exponentialRampToValueAtTime(value, time) { this.changes.push([value, time]); },
         },
         connect() {},
         disconnect() { this.disconnected = true; },
@@ -50,6 +62,49 @@ function fakeContext() {
 }
 
 const response = () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(1) });
+
+test("节拍器与预备拍连续，重音按小节，关闭不影响预备拍，重开接原拍点", () => {
+  const context = fakeContext();
+  const clock = audio.createPracticeClock(context, 4000);
+  const countInSources = [];
+  for (let beat = -4; beat < 0; beat++) audio.scheduleCountIn(context, clock.audioTimeAt(beat * 1000), beat === -4, countInSources);
+  const metronome = audio.createMetronome(context, clock, 60, 4, 8000);
+  metronome.setEnabled(true);
+  assert.deepEqual(context.sources.map(s => s.started), Array.from({length:12}, (_, i) => 10.1 + i));
+  assert.deepEqual(context.sources.slice(4).map(s => s.frequencyValue), [1350,900,900,900,1350,900,900,900]);
+  metronome.setEnabled(true);
+  assert.equal(context.sources.length, 12);
+  metronome.setEnabled(false);
+  assert.ok(countInSources.every(s => s.stops.length === 1));
+  assert.ok(context.sources.slice(4).every(s => s.stops.length === 2));
+  context.currentTime = clock.audioTimeAt(1250);
+  metronome.setEnabled(true);
+  assert.deepEqual(context.sources.slice(12).map(s => s.started), [16.1,17.1,18.1,19.1,20.1,21.1]);
+  metronome.dispose();
+  metronome.setEnabled(true);
+  assert.equal(context.sources.length, 18);
+  assert.ok(context.sources.slice(12).every(s => s.stops.length === 2));
+});
+
+test("节拍器按 BPM 缩放，静默小节也计拍，结束后开启不补响", () => {
+  const context = fakeContext();
+  const clock = audio.createPracticeClock(context, 2000);
+  const metronome = audio.createMetronome(context, clock, 120, 4, 2000);
+  metronome.setEnabled(false);
+  assert.equal(context.sources.length, 0);
+  metronome.setEnabled(true);
+  assert.deepEqual(context.sources.map(s => s.started), [12.1,12.6,13.1,13.6]);
+  context.sources[0].onended();
+  assert.equal(context.sources[0].disconnected, true);
+  metronome.setEnabled(false);
+  assert.equal(context.sources[0].stops.length, 1);
+  context.currentTime = clock.audioTimeAt(2000);
+  metronome.setEnabled(true);
+  assert.equal(context.sources.length, 4);
+  for (const args of [[0,4,2000],[60,0,2000],[60,4,-1]]) {
+    assert.throws(() => audio.createMetronome(context, clock, ...args), /节拍器/);
+  }
+});
 
 test("钢琴采样并发和重复准备只下载解码一次", async (t) => {
   const fetch = t.mock.method(globalThis, "fetch", async () => response());

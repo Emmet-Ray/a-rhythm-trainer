@@ -37,6 +37,8 @@ main:focus { outline: none; }
 .tempo-settings { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
 .tempo-settings input { width: 80px; }
 .unit { color: var(--muted); font-size: 12px; margin-left: 3px; }
+.metronome-toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.metronome-toggle input { width: 16px; height: 16px; accent-color: var(--accent); }
 .bpm-pending { color: var(--muted); font-size: 12px; }
 .bpm-error { flex-basis: 100%; color: #b33131; font-size: 13px; }
 .training-workspace { padding-top: 16px; text-align: center; min-width: 0; }

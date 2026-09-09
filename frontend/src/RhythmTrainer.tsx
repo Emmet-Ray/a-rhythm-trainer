@@ -15,6 +15,8 @@ import {
 } from "./RhythmTiming";
 import {
   createPracticeClock,
+  createMetronome,
+  type Metronome,
   scheduleCountIn,
   scheduleTapSound,
   playTapSound,
@@ -39,6 +41,7 @@ export type RhythmTrainerProps = {
   timingWindows?: TimingWindows;
   /** 默认一小节的预备拍；显式传入 0 可关闭。 */
   countInBeatCount?: number;
+  metronomeEnabled?: boolean;
 };
 
 const DEFAULT_TIMING_WINDOWS: TimingWindows = {
@@ -76,6 +79,7 @@ function RhythmTrainer({
   bpm,
   timingWindows = DEFAULT_TIMING_WINDOWS,
   countInBeatCount,
+  metronomeEnabled = true,
 }: RhythmTrainerProps) {
   const { perfectMs, hitMs } = timingWindows;
   // 按数值稳定判定配置，避免父组件传入等值新对象时重建回调和时间线。
@@ -103,6 +107,12 @@ function RhythmTrainer({
   const [audioError, setAudioError] = useState<string | null>(null);
 
   const clockRef = useRef<PracticeClock | null>(null);
+  const metronomeRef = useRef<Metronome | null>(null);
+  const metronomeEnabledRef = useRef(metronomeEnabled);
+  useEffect(() => {
+    metronomeEnabledRef.current = metronomeEnabled;
+    metronomeRef.current?.setEnabled(metronomeEnabled);
+  }, [metronomeEnabled]);
   // 匹配游标只供事件处理使用，不直接决定画面；同步推进可避免连续敲击重复命中。
   const nextTargetIndexRef = useRef(0);
   const tapOffsetsRef = useRef<number[]>([]);
@@ -122,6 +132,8 @@ function RhythmTrainer({
       : null;
 
   const stopScheduledSounds = useCallback(() => {
+    metronomeRef.current?.dispose();
+    metronomeRef.current = null;
     for (const source of scheduledSourcesRef.current) {
       source.stop();
     }
@@ -178,6 +190,8 @@ function RhythmTrainer({
       );
 
       if (position.phase === "finished") {
+        metronomeRef.current?.dispose();
+        metronomeRef.current = null;
         // 已先收齐过期目标，不依赖“结束”和“漏拍”两个定时器的先后顺序。
         clockRef.current = null;
         console.log("最终敲击时间: ", [...tapOffsetsRef.current]);
@@ -227,6 +241,8 @@ function RhythmTrainer({
       stopScheduledSounds();
       const clock = createPracticeClock(context, timeline.countInDurationMs);
       clockRef.current = clock;
+      metronomeRef.current = createMetronome(context, clock, bpm, exercise.timeSignature.beats, timeline.eventEndOffsetsMs.at(-1) ?? 0);
+      metronomeRef.current.setEnabled(metronomeEnabledRef.current);
       setMode(requestedMode);
 
       timeline.countInOffsetsMs.forEach((offsetMs, index) => {
