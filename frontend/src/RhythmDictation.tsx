@@ -11,6 +11,7 @@ import {
 } from "./RhythmModel";
 import { createRhythmStave, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
 import { getBeatBeamGroups } from "./RhythmScoreLayout";
+import { createCountInTimeline } from "./RhythmTiming";
 import { createPracticeClock, prepareTapSound, scheduleCountIn, scheduleTapSound } from "./RhythmAudio";
 
 {
@@ -83,8 +84,7 @@ export function createDictationPlaybackTimeline(
   return {
     notes,
     durationMs: measures.length * measureTicks / TICKS_PER_QUARTER * beatMs,
-    countInDurationMs: 3 * beatMs,
-    countInOffsetsMs: [-3, -2, -1].map((beat) => beat * beatMs),
+    ...createCountInTimeline(timeSignature, bpm),
   };
 }
 

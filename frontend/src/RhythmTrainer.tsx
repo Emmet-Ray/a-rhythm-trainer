@@ -37,6 +37,7 @@ export type RhythmTrainerProps = {
   exercise: RhythmExercise;
   bpm: number;
   timingWindows?: TimingWindows;
+  /** 默认一小节的预备拍；显式传入 0 可关闭。 */
   countInBeatCount?: number;
 };
 
@@ -44,7 +45,6 @@ const DEFAULT_TIMING_WINDOWS: TimingWindows = {
   perfectMs: 50,
   hitMs: 150,
 };
-const DEFAULT_COUNT_IN_BEAT_COUNT = 3;
 
 function formatTimingEvent(timingEvent: TimingEvent): string {
   if (timingEvent.kind === "miss") {
@@ -75,7 +75,7 @@ function RhythmTrainer({
   exercise,
   bpm,
   timingWindows = DEFAULT_TIMING_WINDOWS,
-  countInBeatCount = DEFAULT_COUNT_IN_BEAT_COUNT,
+  countInBeatCount,
 }: RhythmTrainerProps) {
   const { perfectMs, hitMs } = timingWindows;
   // 按数值稳定判定配置，避免父组件传入等值新对象时重建回调和时间线。

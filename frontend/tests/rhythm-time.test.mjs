@@ -30,6 +30,27 @@ const exercise = {
 };
 const timeline = timing.createExerciseTimeline(exercise, 60, 3, windows);
 
+test("默认预备拍占一个 4/4 小节，覆盖值及正式起点保持一致", () => {
+  const normal = timing.createExerciseTimeline(exercise, 60, undefined, windows);
+  assert.equal(normal.countInDurationMs, 4000);
+  assert.deepEqual(normal.countInOffsetsMs, [-4000, -3000, -2000, -1000]);
+  const fast = timing.createExerciseTimeline(exercise, 120, undefined, windows);
+  assert.equal(fast.countInDurationMs, 2000);
+  assert.deepEqual(fast.countInOffsetsMs, [-2000, -1500, -1000, -500]);
+  assert.deepEqual(normal.targetTaps, timeline.targetTaps);
+  assert.equal(timing.getPlaybackPosition(normal, -4001).countInBeat, -1);
+  for (let index = 0; index < 4; index++) {
+    assert.equal(timing.getPlaybackPosition(normal, -4000 + index * 1000).countInBeat, index);
+  }
+  assert.equal(timing.getPlaybackPosition(normal, 0).phase, "playing");
+  assert.equal(timing.createExerciseTimeline(exercise, 60, 0, windows).countInDurationMs, 0);
+  assert.equal(timing.createExerciseTimeline(exercise, 60, 2, windows).countInDurationMs, 2000);
+  const context = { currentTime: 10 };
+  const clock = createPracticeClock(context, normal.countInDurationMs);
+  approximately(clock.audioTimeAt(-4000), 10.1);
+  approximately(clock.audioTimeAt(0), 14.1);
+});
+
 test("八分音符按四分拍连梁，长音与休止符占时但不参与连梁", () => {
   const values = { E: "eighth", Q: "quarter", H: "half", W: "whole", r: "eighth", R: "quarter" };
   for (const [pattern, expected] of [

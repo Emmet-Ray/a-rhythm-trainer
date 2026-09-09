@@ -114,15 +114,13 @@ export type PlaybackPosition = {
 export function createExerciseTimeline(
   exercise: RhythmExercise,
   bpm: number,
-  countInBeatCount: number,
+  countInBeatCount: number | undefined,
   windows: TimingWindows,
 ) {
   if (!Number.isFinite(bpm) || bpm <= 0) {
     throw new Error("BPM 必须是大于 0 的有限数字。");
   }
-  if (!Number.isInteger(countInBeatCount) || countInBeatCount < 0) {
-    throw new Error("预备拍数必须为非负整数。");
-  }
+  const countIn = createCountInTimeline(exercise.timeSignature, bpm, countInBeatCount);
   validateTimingWindows(windows);
 
   validateRhythmExercise(exercise);
@@ -154,11 +152,6 @@ export function createExerciseTimeline(
     return { startOffsetMs, endOffsetMs: offsetMs, firstEventIndex };
   });
 
-  const countInDurationMs = countInBeatCount * quarterNoteDurationMs;
-  const countInOffsetsMs = Array.from(
-    { length: countInBeatCount },
-    (_, index) => -countInDurationMs + index * quarterNoteDurationMs,
-  );
   const lastTarget = targetTaps.at(-1);
   const finishOffsetMs = Math.max(
     offsetMs,
@@ -170,13 +163,31 @@ export function createExerciseTimeline(
     measures,
     eventStartOffsetsMs,
     eventEndOffsetsMs,
-    countInDurationMs,
-    countInOffsetsMs,
+    ...countIn,
     finishOffsetMs,
   };
 }
 
 export type ExerciseTimeline = ReturnType<typeof createExerciseTimeline>;
+
+/** 预备拍默认一小节；目前以四分音符数拍。显式指定非负整数可覆盖默认值，0 表示不预备。
+ * 返回正式起点之前的负偏移和总时长，声音排程与练习时钟必须使用同一份结果。
+ */
+export function createCountInTimeline(
+  timeSignature: RhythmExercise["timeSignature"],
+  bpm: number,
+  countInBeatCount: number = timeSignature.beats,
+) {
+  if (!Number.isFinite(bpm) || bpm <= 0) throw new Error("BPM 必须是大于 0 的有限数字。");
+  if (timeSignature.beatType !== 4) throw new Error("预备拍目前只支持以四分音符为一拍的拍号。");
+  if (!Number.isInteger(countInBeatCount) || countInBeatCount < 0) throw new Error("预备拍数必须为非负整数。");
+  const beatMs = 60000 / bpm;
+  const countInDurationMs = countInBeatCount * beatMs;
+  return {
+    countInDurationMs,
+    countInOffsetsMs: Array.from({ length: countInBeatCount }, (_, index) => (index - countInBeatCount) * beatMs),
+  };
+}
 
 /** 直接从时间定位画面；回调延迟时跳到正确位置，不逐拍补播。 */
 export function getPlaybackPosition(

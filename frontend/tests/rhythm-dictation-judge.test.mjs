@@ -28,7 +28,8 @@ test("草稿播放保留空白与未填满小节的时间，不补写答案", ()
   const line = createDictationPlaybackTimeline(measures, { beats: 4, beatType: 4 }, 60);
   assert.deepEqual(line.notes, [{ startOffsetMs: 4000, endOffsetMs: 5000 }]);
   assert.equal(line.durationMs, 12000);
-  assert.deepEqual(line.countInOffsetsMs, [-3000, -2000, -1000]);
+  assert.deepEqual(line.countInOffsetsMs, [-4000, -3000, -2000, -1000]);
+  assert.equal(line.countInDurationMs, 4000);
   assert.deepEqual(measures, before);
   measures[1].push(note("quarter"));
   assert.equal(line.notes.length, 1); // 排程不随后续草稿修改而改变。
