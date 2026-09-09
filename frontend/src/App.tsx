@@ -7,6 +7,7 @@ import "./App.css";
 // 练习库不需要加载乐谱和音频代码，进入练习页时再加载。
 // todo: 这个lazy是干嘛的？
 const PracticePage = lazy(() => import("./pages/PracticePage"));
+const RandomPracticePage = lazy(() => import("./pages/RandomPracticePage"));
 
 function App() {
   const { pathname } = useLocation();
@@ -45,6 +46,8 @@ function App() {
           <Routes>
             <Route path="/" element={<ExerciseLibrary />} />
             <Route path="/practice/:questionId" element={<PracticePage />} />
+            <Route path="/random" element={<RandomPracticePage />} />
+            <Route path="/random/:mode" element={<RandomPracticePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

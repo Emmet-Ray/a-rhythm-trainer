@@ -88,6 +88,10 @@ main:focus { outline: none; }
 .not-found { padding: 48px 0; }
 .not-found .back-link { margin-top: 20px; }
 .loading-message { color: var(--muted); padding: 40px 0; }
+.random-mode-selection { padding-top: 24px; }
+.random-mode-selection h2 { margin-bottom: 12px; }
+.random-mode-unavailable { padding: 12px; color: var(--muted); }
+.random-mode-unavailable small { margin-left: 8px; }
 .skip-link { position: fixed; top: 8px; left: 12px; padding: 8px 16px; background: white; z-index: 10; transform: translateY(-200%); }
 .skip-link:focus { transform: translateY(0); }
 @media (max-width: 680px) {
