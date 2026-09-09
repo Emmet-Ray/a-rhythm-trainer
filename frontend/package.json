@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/rhythm-time.test.mjs tests/exercise-library.test.mjs tests/rhythm-dictation-judge.test.mjs tests/rhythm-audio.test.mjs tests/rhythm-notation.test.mjs",
+    "test": "node --test tests/rhythm-time.test.mjs tests/exercise-library.test.mjs tests/rhythm-dictation-judge.test.mjs tests/rhythm-audio.test.mjs tests/rhythm-notation.test.mjs tests/exercise-generator.test.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

@@ -1,5 +1,11 @@
+import { lazy, Suspense, useState } from "react";
 import { Link, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
+import { generateExercise, type GenerationConfig } from "../exerciseGenerator";
+import type { RhythmExercise } from "../RhythmModel";
+
+// 进入对应模式后加载完整工作区，尚未生成时显示空状态。
+const PracticeWorkspace = lazy(() => import("../PracticeWorkspace"));
 
 // 随机练习的开放范围独立于预设题库；这里只列出已有子页面的模式。
 const randomModes = [
@@ -21,14 +27,7 @@ export default function RandomPracticePage() {
           <p className="eyebrow">随机练习</p>
           <h1>{selectedMode.label}</h1>
         </header>
-        <section aria-label="生成配置">
-          <div className="practice-settings">
-            <span>生成规则</span>
-            <span>基础节奏（固定示例）</span>
-            <button type="button" disabled aria-describedby="generation-pending">生成题目</button>
-          </div>
-          <p id="generation-pending" className="empty-questions">题目生成尚未接入</p>
-        </section>
+        <RandomExerciseWorkspace key={selectedMode.id} mode={selectedMode.id} />
       </>
     );
   }
@@ -56,6 +55,43 @@ export default function RandomPracticePage() {
           <li className="random-mode-unavailable">几何游戏 <small>未开放</small></li>
         </ul>
       </section>
+    </>
+  );
+}
+
+function RandomExerciseWorkspace({ mode }: { mode: GenerationConfig["mode"] }) {
+  const [config, setConfig] = useState<GenerationConfig>({ mode, rule: "basic" });
+  const [generated, setGenerated] = useState<{ id: number; exercise: RhythmExercise } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function generate() {
+    try {
+      // 生成只在事件中执行，不放进渲染或 state updater，避免重复执行。
+      const exercise = generateExercise(config);
+      setGenerated(previous => ({ id: (previous?.id ?? 0) + 1, exercise }));
+      setError(null);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "生成失败，请重试。");
+    }
+  }
+
+  return (
+    <>
+      <section aria-label="生成配置">
+        <form className="practice-settings" onSubmit={event => { event.preventDefault(); generate(); }}>
+          <label htmlFor="generation-rule">生成规则</label>
+          <select id="generation-rule" value={config.rule} onChange={event => {
+            if (event.target.value === "basic") setConfig(previous => ({ ...previous, rule: "basic" }));
+          }}>
+            <option value="basic">基础节奏（固定示例）</option>
+          </select>
+          <button type="submit">{generated ? "重新生成" : "生成题目"}</button>
+        </form>
+        {error && <p role="alert">{error}</p>}
+      </section>
+        <Suspense fallback={<p className="loading-message" role="status">正在加载练习…</p>}>
+          <PracticeWorkspace exerciseKey={generated?.id ?? 0} exercise={generated?.exercise ?? null} mode={mode} />
+        </Suspense>
     </>
   );
 }

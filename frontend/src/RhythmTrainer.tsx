@@ -400,4 +400,22 @@ function RhythmTrainer({
   );
 }
 
-export default RhythmTrainer;
+/** 未生成时只显示空谱和禁用操作，不建立时间线、键盘监听或音频资源。 */
+export default function RhythmTrainerWorkspace(props: Omit<RhythmTrainerProps, "exercise"> & { exercise: RhythmExercise | null }) {
+  if (props.exercise) return <RhythmTrainer {...props} exercise={props.exercise} />;
+  return (
+    <div className="rhythm-trainer">
+      <div className="empty-practice-score" role="region" aria-label="空白节奏乐谱">
+        <svg width="100%" height="180" aria-hidden="true">
+          <line x1="10%" x2="90%" y1="90" y2="90" stroke="currentColor" />
+        </svg>
+      </div>
+      <div className="trainer-feedback" />
+      <div className="trainer-actions">
+        <button type="button" disabled>击拍练习</button>
+        <button type="button" disabled>试听</button>
+      </div>
+      <p className="keyboard-hint"><kbd>空格</kbd> 键敲击</p>
+    </div>
+  );
+}

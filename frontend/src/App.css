@@ -52,6 +52,7 @@ main:focus { outline: none; }
 .training-workspace [role="status"] { color: var(--accent); font-size: 20px; font-weight: 600; }
 .training-workspace [role="alert"] { color: #b33131; }
 .rhythm-dictation { min-width: 0; padding-top: 20px; }
+.empty-practice-score { height: 180px; display: grid; place-items: center; color: var(--muted); }
 .dictation-playbar { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px 24px; }
 .dictation-playback-buttons, .dictation-scope, .dictation-edit-actions, .dictation-verification-result { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .dictation-playback-status { display: block; min-height: 24px; margin-top: 6px; color: var(--muted); font-size: 13px; }

@@ -78,7 +78,7 @@ export function isMeasureAnswerCorrect(
 }
 
 type RhythmDictationProps = {
-  exercise: RhythmExercise;
+  exercise: RhythmExercise | null;
   bpm: number;
   metronomeEnabled?: boolean;
 };
@@ -147,7 +147,7 @@ export function RhythmDictation({
   metronomeEnabled = true,
 }: RhythmDictationProps) {
   const measureBeats =
-    exercise.timeSignature.beats * (4 / exercise.timeSignature.beatType);
+    exercise ? exercise.timeSignature.beats * (4 / exercise.timeSignature.beatType) : 0;
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
   const [playbackScope, setPlaybackScope] = useState<"all" | "measure">("all");
   const [addEventMessage, setAddEventMessage] = useState("");
@@ -155,12 +155,12 @@ export function RhythmDictation({
     useState(false);
   const referenceAnswerId = useId();
   const referenceMeasures = useMemo(
-    () => exercise.measures.map(({ elements }) => elements),
+    () => exercise?.measures.map(({ elements }) => elements) ?? [],
     [exercise],
   );
   // 只取标准答案的小节数量，绝不把标准答案的音符复制到草稿。
   const [answerMeasures, setAnswerMeasures] = useState<RhythmElement[][]>(() =>
-    exercise.measures.map(() => []),
+    exercise?.measures.map(() => []) ?? [],
   );
   const hasSelectedMeasure = answerMeasures[selectedMeasureIndex] !== undefined;
   const lastEvent = answerMeasures[selectedMeasureIndex]?.at(-1);
@@ -170,12 +170,12 @@ export function RhythmDictation({
     answerMeasures[selectedMeasureIndex] ?? [],
   ).durationTicks;
   const [measureVerdicts, setMeasureVerdicts] = useState<MeasureVerdict[]>(() =>
-    exercise.measures.map(() => "unchecked"),
+    exercise?.measures.map(() => "unchecked") ?? [],
   );
   // 不把编辑器尚不能作答的题判成用户错误。
   const expectedMeasures = useMemo(
     () =>
-      exercise.measures.map(({ elements }) => {
+      exercise?.measures.map(({ elements }) => {
         if (
           elements.every((event) =>
             event.kind === "triplet"
@@ -198,7 +198,7 @@ export function RhythmDictation({
         )
           return elements;
         return null;
-      }),
+      }) ?? [],
     [exercise],
   );
   const expectedMeasure = expectedMeasures[selectedMeasureIndex];
@@ -303,7 +303,7 @@ export function RhythmDictation({
           metronomeEnabled={metronomeEnabled}
           key={`${bpm}-${playbackScope}-${selectedMeasureIndex}`}
           exercise={
-            playbackScope === "all"
+            !exercise || playbackScope === "all"
               ? exercise
               : {
                   ...exercise,
@@ -331,6 +331,7 @@ export function RhythmDictation({
                 key={scope}
                 type="button"
                 aria-pressed={playbackScope === scope}
+                disabled={!exercise}
                 onClick={() => setPlaybackScope(scope)}
               >
                 {scope === "all" ? "整题" : "当前小节"}
@@ -340,7 +341,7 @@ export function RhythmDictation({
         </div>
       </div>
 
-      <RhythmAnswerScore
+      {exercise ? <RhythmAnswerScore
         measures={answerMeasures}
         timeSignature={exercise.timeSignature}
         selectedMeasureIndex={selectedMeasureIndex}
@@ -348,10 +349,10 @@ export function RhythmDictation({
           setSelectedMeasureIndex(index);
           setAddEventMessage("");
         }}
-      />
+      /> : <div className="empty-practice-score" role="status">请先生成题目</div>}
       <div className="dictation-editor">
         <p className="dictation-current-measure">
-          当前小节：{selectedMeasureIndex + 1}
+          当前小节：{hasSelectedMeasure ? selectedMeasureIndex + 1 : "—"}
         </p>
         <div
           role="group"
@@ -475,6 +476,7 @@ export function RhythmDictation({
         <button
           type="button"
           aria-expanded={isReferenceAnswerVisible}
+          disabled={!exercise}
           aria-controls={referenceAnswerId}
           onClick={() => setIsReferenceAnswerVisible((previous) => !previous)}
         >
@@ -497,7 +499,7 @@ export function RhythmDictation({
         aria-label="参考答案"
         hidden={!isReferenceAnswerVisible}
       >
-        {isReferenceAnswerVisible && (
+        {isReferenceAnswerVisible && exercise && (
           <>
             <h3>参考答案</h3>
             <RhythmAnswerScore
@@ -563,6 +565,7 @@ function RhythmDictationPlayback({
   );
 
   async function togglePlayback(source: "question" | "answer") {
+    if (!exercise) return;
     if (activeRef.current === source) {
       cancelPlayback();
       setStatus("idle");
@@ -656,7 +659,7 @@ function RhythmDictationPlayback({
   return (
     <div className="dictation-playback">
       <div className="dictation-playback-buttons">
-        <button type="button" onClick={() => void togglePlayback("question")}>
+        <button type="button" disabled={!exercise} onClick={() => void togglePlayback("question")}>
           {isActive && playbackSource === "question" ? "停止题目" : "播放题目"}
         </button>
         <button
