@@ -114,6 +114,7 @@ function canToggleDot(event: RhythmElement): event is RhythmEvent {
 export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
   const measureBeats = exercise.timeSignature.beats * (4 / exercise.timeSignature.beatType);
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
+  const [playbackScope, setPlaybackScope] = useState<"all" | "measure">("all");
   const [addEventMessage, setAddEventMessage] = useState("");
   // 只取标准答案的小节数量，绝不把标准答案的音符复制到草稿。
   const [answerMeasures, setAnswerMeasures] = useState<RhythmElement[][]>(() =>
@@ -208,7 +209,32 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
 
   return (
     <div>
-      <RhythmDictationPlayback key={bpm} exercise={exercise} bpm={bpm} answerMeasures={answerMeasures} />
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+        <div role="group" aria-label="播放范围" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <span>播放范围</span>
+          {(["all", "measure"] as const).map((scope) => (
+            <button
+              key={scope}
+              type="button"
+              aria-pressed={playbackScope === scope}
+              onClick={() => setPlaybackScope(scope)}
+              style={playbackScope === scope ? { backgroundColor: "#efedff", borderColor: "#6558d3" } : undefined}
+            >
+              {scope === "all" ? "整题" : "当前小节"}
+            </button>
+          ))}
+        </div>
+        {/* 只重建播放器：切换范围/小节取消旧排程，草稿和验证结果仍保留。 */}
+        <RhythmDictationPlayback
+          key={`${bpm}-${playbackScope}-${selectedMeasureIndex}`}
+          exercise={playbackScope === "all" ? exercise : {
+            ...exercise,
+            measures: exercise.measures.slice(selectedMeasureIndex, selectedMeasureIndex + 1),
+          }}
+          bpm={bpm}
+          answerMeasures={playbackScope === "all" ? answerMeasures : answerMeasures.slice(selectedMeasureIndex, selectedMeasureIndex + 1)}
+        />
+      </div>
 
       <RhythmAnswerScore
         measures={answerMeasures}

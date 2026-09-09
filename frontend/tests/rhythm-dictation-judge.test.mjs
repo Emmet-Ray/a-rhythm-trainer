@@ -34,6 +34,22 @@ test("草稿播放保留空白与未填满小节的时间，不补写答案", ()
   assert.equal(line.notes.length, 1); // 排程不随后续草稿修改而改变。
 });
 
+test("当前小节播放从该小节零点开始，保留预备拍和未填满的静默时长", () => {
+  const measures = [[note("whole")], [{ kind: "rest", noteValue: "eighth" }, note("quarter")], []];
+  const before = structuredClone(measures);
+  const signature = { beats: 4, beatType: 4 };
+  const all = createDictationPlaybackTimeline(measures, signature, 60);
+  const current = createDictationPlaybackTimeline(measures.slice(1, 2), signature, 60);
+  assert.deepEqual(current.notes, [{ startOffsetMs: 500, endOffsetMs: 1500 }]);
+  assert.equal(all.notes[1].startOffsetMs, 4500);
+  assert.equal(current.durationMs, 4000);
+  assert.deepEqual(current.countInOffsetsMs, all.countInOffsetsMs);
+  const empty = createDictationPlaybackTimeline(measures.slice(2, 3), signature, 60);
+  assert.deepEqual(empty.notes, []);
+  assert.equal(empty.durationMs, 4000);
+  assert.deepEqual(measures, before);
+});
+
 test("答案播放正确处理附点、非拍头三连音、休止符及 BPM", () => {
   const measures = [[note("eighth", 1), triplet(), { kind: "rest", noteValue: "quarter" }]];
   const line = createDictationPlaybackTimeline(measures, { beats: 4, beatType: 4 }, 60);
