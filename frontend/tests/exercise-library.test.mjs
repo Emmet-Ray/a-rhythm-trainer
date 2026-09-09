@@ -210,9 +210,23 @@ test("每个主题拥有独立的模式题库，未开放模式不复制击拍�
       assert.ok(!lists.has(group.questions));
       lists.add(group.questions);
       if (group.mode === "tapping") assert.ok(group.questions.length > 0);
-      else assert.deepEqual(group.questions, []);
+      else if (!catalog.practiceModes.find((mode) => mode.id === group.mode).available) {
+        assert.deepEqual(group.questions, []);
+      }
     }
   }
+});
+
+test("基础听写题包含两小节三种音符，时间线连续且归属于听写", () => {
+  const { topic, mode, question } = catalog.findPresetQuestion("dictation-basic-values-01");
+  assert.equal(topic.id, "basic-values");
+  assert.equal(mode, "dictation");
+  assert.deepEqual(question.exercise.measures.map(({ elements }) => elements.map((event) => event.noteValue)),
+    [["half", "quarter", "quarter"], ["whole"]]);
+  const timeline = timing.createExerciseTimeline(question.exercise, 60, 3, { perfectMs: 50, hitMs: 150 });
+  assert.deepEqual(timeline.targetTaps.map((target) => target.offsetMs), [0, 2000, 3000, 4000]);
+  assert.deepEqual(timeline.eventEndOffsetsMs, [2000, 3000, 4000, 8000]);
+  assert.equal(timeline.finishOffsetMs, 8000);
 });
 
 test("查找题目按实际所属模式返回，而不是默认当作击拍题", () => {

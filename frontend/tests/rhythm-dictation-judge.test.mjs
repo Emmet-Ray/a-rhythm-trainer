@@ -42,6 +42,15 @@ test("总拍数相同不代表答案相同", () => {
   assert.equal(isMeasureAnswerCorrect(eighths, quarters), false);
 });
 
+test("全音符与二分音符听写按实际记谱验证，不接受同拍数替换", () => {
+  const first = [note("half"), note("quarter"), note("quarter")];
+  const second = [note("whole")];
+  assert.equal(isMeasureAnswerCorrect(structuredClone(first), first), true);
+  assert.equal(isMeasureAnswerCorrect(structuredClone(second), second), true);
+  assert.equal(isMeasureAnswerCorrect([note("half"), note("half")], second), false);
+  assert.equal(isMeasureAnswerCorrect([note("quarter"), note("half"), note("quarter")], first), false);
+});
+
 test("音符和休止符不能互相替代", () => {
   const restAnswer = [{ kind: "rest", noteValue: "quarter" }, ...expected.slice(1)];
   assert.equal(isMeasureAnswerCorrect(restAnswer, expected), false);

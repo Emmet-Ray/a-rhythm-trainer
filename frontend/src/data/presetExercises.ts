@@ -126,7 +126,30 @@ export const presetTopics: PracticeTopic[] = [
           },
         ],
       },
-      { mode: "dictation", questions: [] },
+      {
+        mode: "dictation",
+        questions: [
+          // HQQ | W（听写独立题目）
+          {
+            id: "dictation-basic-values-01",
+            title: "练习 1",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                { elements: [{ kind: "note", noteValue: "whole" }] },
+              ],
+            },
+          },
+        ],
+      },
       { mode: "geometry", questions: [] },
     ],
   },

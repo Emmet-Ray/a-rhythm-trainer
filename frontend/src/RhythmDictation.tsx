@@ -52,6 +52,14 @@ type RhythmDictationProps = {
 
 type MeasureVerdict = "unchecked" | "correct" | "incorrect";
 
+// 输入按钮与题目支持检查共用这一列表，避免出现题目可验证却无法填写的情况。
+const answerNoteOptions = [
+  { noteValue: "whole", label: "全音符" },
+  { noteValue: "half", label: "二分音符" },
+  { noteValue: "quarter", label: "四分音符" },
+  { noteValue: "eighth", label: "八分音符" },
+] as const;
+
 // 一次挂载对应一道题；调用方换题时通过 key 重建，清空答案和交互状态。
 export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
   const measureBeats = exercise.timeSignature.beats * (4 / exercise.timeSignature.beatType);
@@ -65,11 +73,11 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
   const [measureVerdicts, setMeasureVerdicts] = useState<MeasureVerdict[]>(() =>
     exercise.measures.map(() => "unchecked"),
   );
-  // 编辑器目前只能填写无附点的四分、八分音符。不把尚不能作答的题判成用户错误。
+  // 不把编辑器尚不能作答的题判成用户错误。
   const expectedMeasures = useMemo(() => exercise.measures.map(({ elements }) => {
     if (elements.every((event): event is RhythmEvent =>
       event.kind === "note"
-      && (event.noteValue === "quarter" || event.noteValue === "eighth")
+      && answerNoteOptions.some((option) => option.noteValue === event.noteValue)
       && (event.dots ?? 0) === 0,
     )) return elements;
     return null;
@@ -94,7 +102,7 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
     ));
   }
 
-  function addNote(noteValue: "quarter" | "eighth") {
+  function addNote(noteValue: (typeof answerNoteOptions)[number]["noteValue"]) {
     if (!hasSelectedMeasure) return;
     const newEvent: RhythmEvent = {
       kind: "note",
@@ -150,13 +158,11 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
         aria-label="添加音符"
         style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 16 }}
       >
-        <button type="button" disabled={!hasSelectedMeasure} onClick={() => addNote("quarter")}>
-          四分音符
-        </button>
-
-        <button type="button" disabled={!hasSelectedMeasure} onClick={() => addNote("eighth")}>
-          八分音符
-        </button>
+        {answerNoteOptions.map(({ noteValue, label }) => (
+          <button key={noteValue} type="button" disabled={!hasSelectedMeasure} onClick={() => addNote(noteValue)}>
+            {label}
+          </button>
+        ))}
 
         <button
           type="button"
