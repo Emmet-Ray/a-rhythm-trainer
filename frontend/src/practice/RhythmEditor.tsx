@@ -1,0 +1,255 @@
+import { useImperativeHandle, useState, type ReactNode, type Ref } from "react";
+import {
+  expandRhythmElements,
+  rhythmEventToDurationInQuarterNotes,
+  TICKS_PER_QUARTER,
+  type RhythmElement,
+  type RhythmEvent,
+  type RhythmExercise,
+} from "../rhythm/RhythmModel";
+import { RhythmDraftScore } from "../rhythm/notation/RhythmDraftScore";
+
+// 输入按钮与题目支持检查共用这一列表，避免出现题目可验证却无法填写的情况。
+const eventOptions = [
+  { kind: "note", noteValue: "whole", label: "全音符" },
+  { kind: "note", noteValue: "half", label: "二分音符" },
+  { kind: "note", noteValue: "quarter", label: "四分音符" },
+  { kind: "note", noteValue: "eighth", label: "八分音符" },
+  { kind: "note", noteValue: "sixteenth", label: "十六分音符" },
+  { kind: "rest", noteValue: "whole", label: "全休止符" },
+  { kind: "rest", noteValue: "half", label: "二分休止符" },
+  { kind: "rest", noteValue: "quarter", label: "四分休止符" },
+  { kind: "rest", noteValue: "eighth", label: "八分休止符" },
+  { kind: "rest", noteValue: "sixteenth", label: "十六分休止符" },
+] as const;
+
+// 当前编辑器只开放四分、八分音符的附点；输入和能力检查遵守相同规则。
+function canToggleDot(event: RhythmElement): event is RhythmEvent {
+  return (
+    event.kind === "note" &&
+    (event.noteValue === "quarter" || event.noteValue === "eighth")
+  );
+}
+
+/** 仅检查是否能用当前输入工具写出这些元素，不要求草稿已填满小节。 */
+// eslint-disable-next-line react-refresh/only-export-components -- 输入能力与编辑器共置，供题目支持检查和测试使用。
+export function canEditRhythmElements(elements: readonly RhythmElement[]): boolean {
+  return elements.every((event) =>
+    event.kind === "triplet"
+      ? event.notes.length === 3 &&
+        event.notes.every((note) =>
+          note.kind === "note" && note.noteValue === "eighth" && (note.dots ?? 0) === 0,
+        )
+      : (event.kind === "note" || event.kind === "rest") &&
+        eventOptions.some((option) =>
+          option.kind === event.kind && option.noteValue === event.noteValue,
+        ) &&
+        ((event.dots ?? 0) === 0 || (event.dots === 1 && canToggleDot(event))),
+  );
+}
+
+type RhythmEditorProps = {
+  ref?: Ref<RhythmEditorHandle>;
+  emptyContent?: ReactNode;
+  measures: readonly (readonly RhythmElement[])[];
+  timeSignature: RhythmExercise["timeSignature"];
+  selectedMeasureIndex: number;
+  onSelectMeasure: (index: number) => void;
+  onChange: (measureIndex: number, elements: RhythmElement[]) => void;
+};
+
+export type RhythmEditorHandle = {
+  /** 调用方执行验证或保存后，可清除编辑提示，不改变草稿和选择。 */
+  clearMessage: () => void;
+};
+
+/**
+ * 受控的节奏草稿编辑器：允许空小节和欠拍，拒绝超过小节容量的修改。
+ * 每次成功修改只回传对应小节的新元素，不修改输入；三连音按整组添加和删除。
+ * 草稿、选中小节由调用方持有；编辑器不负责播放、判题、持久化或标准答案。
+ */
+export function RhythmEditor({
+  ref,
+  emptyContent,
+  measures,
+  timeSignature,
+  selectedMeasureIndex,
+  onSelectMeasure,
+  onChange,
+}: RhythmEditorProps) {
+  const measureBeats = timeSignature.beats * (4 / timeSignature.beatType);
+  const [addEventMessage, setAddEventMessage] = useState("");
+  useImperativeHandle(ref, () => ({ clearMessage: () => setAddEventMessage("") }), []);
+  const hasSelectedMeasure = measures[selectedMeasureIndex] !== undefined;
+  const lastEvent = measures[selectedMeasureIndex]?.at(-1);
+  const canToggleLastDot = lastEvent !== undefined && canToggleDot(lastEvent);
+  const lastHasDot = lastEvent?.kind !== "triplet" && lastEvent?.dots === 1;
+  const usedTicks = expandRhythmElements(
+    measures[selectedMeasureIndex] ?? [],
+  ).durationTicks;
+
+  function addElement(newElement: RhythmElement) {
+    if (!hasSelectedMeasure) return;
+    const nextElements = [...measures[selectedMeasureIndex], newElement];
+    if (
+      expandRhythmElements(nextElements).durationTicks >
+      measureBeats * TICKS_PER_QUARTER
+    ) {
+      setAddEventMessage("添加这个符号会超出当前小节允许的拍数。");
+      return;
+    }
+
+    setAddEventMessage("");
+    onChange(selectedMeasureIndex, nextElements);
+  }
+
+  function toggleLastDot() {
+    if (!lastEvent || !canToggleDot(lastEvent)) return;
+    const updatedEvent: RhythmEvent = {
+      ...lastEvent,
+      dots: lastEvent.dots === 1 ? 0 : 1,
+    };
+    const usedBeats = usedTicks / TICKS_PER_QUARTER;
+    const updatedBeats =
+      usedBeats -
+      rhythmEventToDurationInQuarterNotes(lastEvent) +
+      rhythmEventToDurationInQuarterNotes(updatedEvent);
+    if (updatedBeats > measureBeats) {
+      setAddEventMessage("添加附点会超出当前小节允许的拍数。");
+      return;
+    }
+
+    setAddEventMessage("");
+    onChange(selectedMeasureIndex, [...measures[selectedMeasureIndex].slice(0, -1), updatedEvent]);
+  }
+
+  function removeLastEvent() {
+    if (
+      !hasSelectedMeasure ||
+      measures[selectedMeasureIndex].length === 0
+    )
+      return;
+    setAddEventMessage("");
+    onChange(selectedMeasureIndex, measures[selectedMeasureIndex].slice(0, -1));
+  }
+
+  return (
+    <div className="rhythm-editor">
+      {measures.length === 0 ? emptyContent : <RhythmDraftScore
+        measures={measures}
+        timeSignature={timeSignature}
+        selectedMeasureIndex={selectedMeasureIndex}
+        onSelectMeasure={(index) => {
+          onSelectMeasure(index);
+          setAddEventMessage("");
+        }}
+      />}
+      <div className="rhythm-editor-controls">
+        <p className="rhythm-editor-current-measure">
+          当前小节：{hasSelectedMeasure ? selectedMeasureIndex + 1 : "—"}
+        </p>
+        <div
+          role="group"
+          aria-label="添加音符"
+          className="rhythm-editor-symbol-row"
+        >
+          <span className="rhythm-editor-row-label">音符</span>
+          <div className="rhythm-editor-symbol-buttons">
+            {eventOptions
+              .filter((option) => option.kind === "note")
+              .map((option) => (
+                <button
+                  key={`${option.kind}-${option.noteValue}`}
+                  type="button"
+                  disabled={!hasSelectedMeasure}
+                  onClick={() =>
+                    addElement({
+                      kind: option.kind,
+                      noteValue: option.noteValue,
+                    })
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
+
+            <button
+              type="button"
+              disabled={!hasSelectedMeasure}
+              onClick={() =>
+                addElement({
+                  kind: "triplet",
+                  notes: [
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                    { kind: "note", noteValue: "eighth" },
+                  ],
+                })
+              }
+            >
+              小三连
+            </button>
+          </div>
+        </div>
+
+        <div
+          role="group"
+          aria-label="添加休止符"
+          className="rhythm-editor-symbol-row"
+        >
+          <span className="rhythm-editor-row-label">休止符</span>
+          <div className="rhythm-editor-symbol-buttons">
+            {eventOptions
+              .filter((option) => option.kind === "rest")
+              .map((option) => (
+                <button
+                  key={`${option.kind}-${option.noteValue}`}
+                  type="button"
+                  disabled={!hasSelectedMeasure}
+                  onClick={() =>
+                    addElement({
+                      kind: option.kind,
+                      noteValue: option.noteValue,
+                    })
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
+          </div>
+        </div>
+
+        <div
+          role="group"
+          aria-label="修改当前小节末尾"
+          className="rhythm-editor-edit-actions"
+        >
+          <button
+            type="button"
+            disabled={!canToggleLastDot}
+            aria-pressed={lastHasDot}
+            title="切换当前小节末尾四分或八分音符的附点"
+            onClick={toggleLastDot}
+          >
+            附点
+          </button>
+
+          <button
+            type="button"
+            disabled={
+              !hasSelectedMeasure ||
+              measures[selectedMeasureIndex].length === 0
+            }
+            onClick={removeLastEvent}
+          >
+            删除末尾
+          </button>
+        </div>
+        <p className="rhythm-editor-input-message" role="status">
+          {addEventMessage}
+        </p>
+      </div>
+
+    </div>
+  );
+}

@@ -24,7 +24,11 @@ src/
 └── exercises/                          # 预设题库与题目生成器
 ```
 
-页面负责提供题目，`practice/PracticeWorkspace.tsx` 管理 BPM 与节拍器设置，再交给对应练习组件。练习组件使用 `rhythm/` 的共享能力；共享能力不依赖页面或题目来源。听写内部的编辑、判题和答案谱面仍保留在 `practice/RhythmDictation.tsx` 内。
+页面负责提供题目，`practice/PracticeWorkspace.tsx` 管理 BPM 与节拍器设置，再交给对应练习组件。练习组件使用 `rhythm/` 的共享能力；共享能力不依赖页面或题目来源。
+
+`practice/RhythmEditor.tsx` 是共用的受控谱面编辑器：调用方持有草稿和选中小节，编辑器负责添加、删除、附点、三连音和容量检查，通过 `onChange(measureIndex, elements)` 返回修改。编辑器只在本地保存输入提示，不负责播放、判题或保存。`canEditRhythmElements()` 与按钮共用支持规则，仅检查输入能力，不校验小节是否填满。
+
+`rhythm/notation/RhythmDraftScore.tsx` 绘制允许空白或欠拍的连续谱面，不补休止符；带选择回调时可选小节，否则只读。听写的草稿编辑与参考答案共用此绘制组件。`practice/RhythmDictation.tsx` 继续持有草稿、播放、判题和参考答案状态；成功编辑只清除对应小节的判定，超拍被拒绝时不修改草稿或判定。当前只完成共用编辑能力抽取，尚未接入自定义编辑页面与持久化。
 
 测试继续放在 `tests/`，计时与生命周期说明见 [TIMING.md](TIMING.md)。
 

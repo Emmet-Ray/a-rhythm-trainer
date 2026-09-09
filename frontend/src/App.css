@@ -54,20 +54,21 @@ main:focus { outline: none; }
 .rhythm-dictation { min-width: 0; padding-top: 20px; }
 .empty-practice-score { height: 180px; display: grid; place-items: center; color: var(--muted); }
 .dictation-playbar { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px 24px; }
-.dictation-playback-buttons, .dictation-scope, .dictation-edit-actions, .dictation-verification-result { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.dictation-playback-buttons, .dictation-scope, .rhythm-editor-edit-actions, .dictation-verification-result { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .dictation-playback-status { display: block; min-height: 24px; margin-top: 6px; color: var(--muted); font-size: 13px; }
 .dictation-scope { font-size: 13px; color: var(--muted); }
 .dictation-scope-options { display: flex; gap: 2px; padding: 3px; background: #f5f4f8; border-radius: 6px; }
 .dictation-scope-options button { border-color: transparent; background: transparent; padding: 7px 12px; font-size: 13px; }
-.rhythm-dictation button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
-.dictation-editor { margin-top: 12px; }
-.dictation-current-measure { margin: 0 0 14px; font-size: 14px; font-weight: 600; }
-.dictation-symbol-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: start; gap: 12px; margin-top: 10px; }
-.dictation-row-label { padding-top: 10px; color: var(--muted); font-size: 13px; }
-.dictation-symbol-buttons { display: grid; grid-template-columns: repeat(6, 108px); gap: 8px; }
-.dictation-symbol-buttons button { padding: 9px 6px; font-size: 14px; }
-.dictation-edit-actions { margin: 14px 0 0 68px; }
-.dictation-input-message { min-height: 22px; margin: 8px 0 0 68px; color: #b33131; font-size: 13px; }
+.rhythm-dictation button[aria-pressed="true"], .rhythm-editor button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.rhythm-editor { min-width: 0; }
+.rhythm-editor-controls { margin-top: 12px; }
+.rhythm-editor-current-measure { margin: 0 0 14px; font-size: 14px; font-weight: 600; }
+.rhythm-editor-symbol-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: start; gap: 12px; margin-top: 10px; }
+.rhythm-editor-row-label { padding-top: 10px; color: var(--muted); font-size: 13px; }
+.rhythm-editor-symbol-buttons { display: grid; grid-template-columns: repeat(6, 108px); gap: 8px; }
+.rhythm-editor-symbol-buttons button { padding: 9px 6px; font-size: 14px; }
+.rhythm-editor-edit-actions { margin: 14px 0 0 68px; }
+.rhythm-editor-input-message { min-height: 22px; margin: 8px 0 0 68px; color: #b33131; font-size: 13px; }
 .dictation-verification { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
 .dictation-verification-result [role="status"] { font-size: 14px; }
 .dictation-verify { background: var(--accent); color: white; border-color: var(--accent); }
@@ -78,13 +79,13 @@ main:focus { outline: none; }
 .dictation-reference h3 { margin: 0 0 8px; font-size: 16px; }
 .dictation-playback [role="alert"] { color: #b33131; font-size: 13px; }
 @media (max-width: 900px) {
-  .dictation-symbol-buttons { grid-template-columns: repeat(3, minmax(0, 108px)); }
+  .rhythm-editor-symbol-buttons { grid-template-columns: repeat(3, minmax(0, 108px)); }
 }
 @media (max-width: 480px) {
-  .dictation-symbol-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  .dictation-row-label { padding-top: 0; }
-  .dictation-symbol-buttons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .dictation-edit-actions, .dictation-input-message { margin-left: 0; }
+  .rhythm-editor-symbol-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .rhythm-editor-row-label { padding-top: 0; }
+  .rhythm-editor-symbol-buttons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rhythm-editor-edit-actions, .rhythm-editor-input-message { margin-left: 0; }
 }
 .not-found { padding: 48px 0; }
 .not-found .back-link { margin-top: 20px; }
