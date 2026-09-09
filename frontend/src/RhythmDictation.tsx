@@ -53,18 +53,22 @@ type RhythmDictationProps = {
 type MeasureVerdict = "unchecked" | "correct" | "incorrect";
 
 // 输入按钮与题目支持检查共用这一列表，避免出现题目可验证却无法填写的情况。
-const answerNoteOptions = [
-  { noteValue: "whole", label: "全音符" },
-  { noteValue: "half", label: "二分音符" },
-  { noteValue: "quarter", label: "四分音符" },
-  { noteValue: "eighth", label: "八分音符" },
+const answerEventOptions = [
+  { kind: "note", noteValue: "whole", label: "全音符" },
+  { kind: "note", noteValue: "half", label: "二分音符" },
+  { kind: "note", noteValue: "quarter", label: "四分音符" },
+  { kind: "note", noteValue: "eighth", label: "八分音符" },
+  { kind: "rest", noteValue: "whole", label: "全休止符" },
+  { kind: "rest", noteValue: "half", label: "二分休止符" },
+  { kind: "rest", noteValue: "quarter", label: "四分休止符" },
+  { kind: "rest", noteValue: "eighth", label: "八分休止符" },
 ] as const;
 
 // 一次挂载对应一道题；调用方换题时通过 key 重建，清空答案和交互状态。
 export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
   const measureBeats = exercise.timeSignature.beats * (4 / exercise.timeSignature.beatType);
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
-  const [addNoteMessage, setAddNoteMessage] = useState("");
+  const [addEventMessage, setAddEventMessage] = useState("");
   // 只取标准答案的小节数量，绝不把标准答案的音符复制到草稿。
   const [answerMeasures, setAnswerMeasures] = useState<RhythmEvent[][]>(() =>
     exercise.measures.map(() => []),
@@ -76,8 +80,8 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
   // 不把编辑器尚不能作答的题判成用户错误。
   const expectedMeasures = useMemo(() => exercise.measures.map(({ elements }) => {
     if (elements.every((event): event is RhythmEvent =>
-      event.kind === "note"
-      && answerNoteOptions.some((option) => option.noteValue === event.noteValue)
+      (event.kind === "note" || event.kind === "rest")
+      && answerEventOptions.some((option) => option.kind === event.kind && option.noteValue === event.noteValue)
       && (event.dots ?? 0) === 0,
     )) return elements;
     return null;
@@ -96,16 +100,16 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
   function verifySelectedMeasure() {
     if (!hasSelectedMeasure || !expectedMeasure) return;
     const correct = isMeasureAnswerCorrect(answerMeasures[selectedMeasureIndex], expectedMeasure);
-    setAddNoteMessage("");
+    setAddEventMessage("");
     setMeasureVerdicts((previous) => previous.map((verdict, index) =>
       index === selectedMeasureIndex ? (correct ? "correct" : "incorrect") : verdict,
     ));
   }
 
-  function addNote(noteValue: (typeof answerNoteOptions)[number]["noteValue"]) {
+  function addEvent({ kind, noteValue }: (typeof answerEventOptions)[number]) {
     if (!hasSelectedMeasure) return;
     const newEvent: RhythmEvent = {
-      kind: "note",
+      kind,
       noteValue,
     };
 
@@ -116,11 +120,11 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
     const excessBeats =
       usedBeats + rhythmEventToDurationInQuarterNotes(newEvent) - measureBeats;
     if (excessBeats > 0) {
-      setAddNoteMessage("添加这个音符会超出当前小节允许的拍数。");
+      setAddEventMessage("添加这个符号会超出当前小节允许的拍数。");
       return;
     }
 
-    setAddNoteMessage("");
+    setAddEventMessage("");
     clearSelectedVerdict();
     setAnswerMeasures((previous) =>
       previous.map((events, index) =>
@@ -129,9 +133,9 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
     );
   }
 
-  function removeLastNote() {
+  function removeLastEvent() {
     if (!hasSelectedMeasure || answerMeasures[selectedMeasureIndex].length === 0) return;
-    setAddNoteMessage("");
+    setAddEventMessage("");
     clearSelectedVerdict();
     setAnswerMeasures((previous) =>
       previous.map((events, index) =>
@@ -150,29 +154,29 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
         selectedMeasureIndex={selectedMeasureIndex}
         onSelectMeasure={(index) => {
           setSelectedMeasureIndex(index);
-          setAddNoteMessage("");
+          setAddEventMessage("");
         }}
       />
       <div
         role="group"
-        aria-label="添加音符"
+        aria-label="添加音符或休止符"
         style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 16 }}
       >
-        {answerNoteOptions.map(({ noteValue, label }) => (
-          <button key={noteValue} type="button" disabled={!hasSelectedMeasure} onClick={() => addNote(noteValue)}>
-            {label}
+        {answerEventOptions.map((option) => (
+          <button key={`${option.kind}-${option.noteValue}`} type="button" disabled={!hasSelectedMeasure} onClick={() => addEvent(option)}>
+            {option.label}
           </button>
         ))}
 
         <button
           type="button"
           disabled={!hasSelectedMeasure || answerMeasures[selectedMeasureIndex].length === 0}
-          onClick={removeLastNote}
+          onClick={removeLastEvent}
         >
           删除末尾
         </button>
       </div>
-      <p role="status">{addNoteMessage}</p>
+      <p role="status">{addEventMessage}</p>
       <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 16 }}>
         <button type="button" disabled={!hasSelectedMeasure || !expectedMeasure} onClick={verifySelectedMeasure}>
           验证当前小节

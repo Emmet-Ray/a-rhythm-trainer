@@ -9,8 +9,10 @@ const server = await createServer({
   optimizeDeps: { noDiscovery: true, include: [] },
 });
 let isMeasureAnswerCorrect;
+let rhythmEventToDurationInQuarterNotes;
 try {
   ({ isMeasureAnswerCorrect } = await server.ssrLoadModule("/src/RhythmDictation.tsx"));
+  ({ rhythmEventToDurationInQuarterNotes } = await server.ssrLoadModule("/src/RhythmModel.ts"));
 } finally {
   await server.close();
 }
@@ -55,6 +57,21 @@ test("音符和休止符不能互相替代", () => {
   const restAnswer = [{ kind: "rest", noteValue: "quarter" }, ...expected.slice(1)];
   assert.equal(isMeasureAnswerCorrect(restAnswer, expected), false);
   assert.equal(isMeasureAnswerCorrect(expected, restAnswer), false);
+});
+
+test("四种休止符按对应时值占拍，正确答案通过，同长度音符不能替代", () => {
+  for (const [noteValue, beats] of [["whole", 4], ["half", 2], ["quarter", 1], ["eighth", 0.5]]) {
+    const rest = { kind: "rest", noteValue };
+    assert.equal(rhythmEventToDurationInQuarterNotes(rest), beats);
+    const target = Array.from({ length: 4 / beats }, () => ({ ...rest }));
+    assert.equal(isMeasureAnswerCorrect(structuredClone(target), target), true);
+    assert.equal(isMeasureAnswerCorrect([note(noteValue), ...target.slice(1)], target), false);
+    assert.equal(isMeasureAnswerCorrect([], target), false);
+  }
+  assert.equal(isMeasureAnswerCorrect(
+    [{ kind: "rest", noteValue: "half" }, { kind: "rest", noteValue: "half" }],
+    [{ kind: "rest", noteValue: "whole" }],
+  ), false);
 });
 
 test("附点不同不通过；相同附点通过", () => {
