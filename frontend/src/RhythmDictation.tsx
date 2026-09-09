@@ -64,6 +64,11 @@ const answerEventOptions = [
   { kind: "rest", noteValue: "eighth", label: "八分休止符" },
 ] as const;
 
+// 按主题逐步开放附点范围；按钮和标准答案检查遵守相同规则。
+function canToggleDot(event: RhythmEvent): boolean {
+  return event.kind === "note" && event.noteValue === "quarter";
+}
+
 // 一次挂载对应一道题；调用方换题时通过 key 重建，清空答案和交互状态。
 export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
   const measureBeats = exercise.timeSignature.beats * (4 / exercise.timeSignature.beatType);
@@ -74,6 +79,8 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
     exercise.measures.map(() => []),
   );
   const hasSelectedMeasure = answerMeasures[selectedMeasureIndex] !== undefined;
+  const lastEvent = answerMeasures[selectedMeasureIndex]?.at(-1);
+  const canToggleLastDot = lastEvent !== undefined && canToggleDot(lastEvent);
   const [measureVerdicts, setMeasureVerdicts] = useState<MeasureVerdict[]>(() =>
     exercise.measures.map(() => "unchecked"),
   );
@@ -82,7 +89,7 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
     if (elements.every((event): event is RhythmEvent =>
       (event.kind === "note" || event.kind === "rest")
       && answerEventOptions.some((option) => option.kind === event.kind && option.noteValue === event.noteValue)
-      && (event.dots ?? 0) === 0,
+      && ((event.dots ?? 0) === 0 || (event.dots === 1 && canToggleDot(event))),
     )) return elements;
     return null;
   }), [exercise]);
@@ -133,6 +140,29 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
     );
   }
 
+  function toggleLastDot() {
+    if (!lastEvent || !canToggleLastDot) return;
+    const updatedEvent: RhythmEvent = { ...lastEvent, dots: lastEvent.dots === 1 ? 0 : 1 };
+    const usedBeats = answerMeasures[selectedMeasureIndex].reduce(
+      (total, event) => total + rhythmEventToDurationInQuarterNotes(event),
+      0,
+    );
+    const updatedBeats = usedBeats - rhythmEventToDurationInQuarterNotes(lastEvent)
+      + rhythmEventToDurationInQuarterNotes(updatedEvent);
+    if (updatedBeats > measureBeats) {
+      setAddEventMessage("添加附点会超出当前小节允许的拍数。");
+      return;
+    }
+
+    setAddEventMessage("");
+    clearSelectedVerdict();
+    setAnswerMeasures((previous) => previous.map((events, index) =>
+      index === selectedMeasureIndex
+        ? [...events.slice(0, -1), updatedEvent]
+        : events,
+    ));
+  }
+
   function removeLastEvent() {
     if (!hasSelectedMeasure || answerMeasures[selectedMeasureIndex].length === 0) return;
     setAddEventMessage("");
@@ -167,6 +197,17 @@ export function RhythmDictation({ exercise, bpm }: RhythmDictationProps) {
             {option.label}
           </button>
         ))}
+
+        <button
+          type="button"
+          disabled={!canToggleLastDot}
+          aria-pressed={lastEvent?.dots === 1}
+          title="切换当前小节末尾四分音符的附点"
+          onClick={toggleLastDot}
+          style={lastEvent?.dots === 1 ? { backgroundColor: "#efedff", borderColor: "#6558d3" } : undefined}
+        >
+          附点
+        </button>
 
         <button
           type="button"
