@@ -1,13 +1,21 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import { lazy, Suspense, useState } from "react";
+import { Link, useParams } from "react-router";
 import {
   practiceModes,
   presetTopics,
+  findPresetQuestion,
   type PracticeMode,
   type PracticeTopic,
 } from "../exercises/presetExercises";
+import NotFoundPage from "./NotFoundPage";
 
-export default function ExerciseLibrary() {
+// 预设列表不加载训练组件及 VexFlow，进入具体题目后才加载。
+const PracticeWorkspace = lazy(() => import("../practice/PracticeWorkspace"));
+
+export default function PresetPracticePage() {
+  const { questionId } = useParams();
+  if (questionId !== undefined) return <PresetExercisePage questionId={questionId} />;
+
   return (
     <>
       <title>练习库 · 节奏训练</title>
@@ -24,6 +32,29 @@ export default function ExerciseLibrary() {
           <TopicQuestions key={topic.id} topic={topic} index={index} />
         ))}
       </div>
+    </>
+  );
+}
+
+function PresetExercisePage({ questionId }: { questionId: string }) {
+  const selected = findPresetQuestion(questionId);
+  if (!selected) return <NotFoundPage isQuestion />;
+  const modeLabel = practiceModes.find(mode => mode.id === selected.mode)!.label;
+
+  return (
+    <>
+      <title>{selected.question.title} · {modeLabel}</title>
+      <Link className="back-link" to="/">← 返回练习库</Link>
+      <header className="page-heading practice-heading">
+        <p className="eyebrow">{selected.topic.title} / {modeLabel}</p>
+        <h1>{selected.question.title}</h1>
+      </header>
+      {selected.mode === "tapping" || selected.mode === "dictation" ? (
+        <Suspense fallback={<p className="loading-message" role="status">正在加载练习…</p>}>
+          {/* 路由参数变化不一定卸载页面，题目 key 明确结束旧题并重置配置。 */}
+          <PracticeWorkspace key={selected.question.id} exercise={selected.question.exercise} mode={selected.mode} />
+        </Suspense>
+      ) : <p>该训练模式尚未开放</p>}
     </>
   );
 }

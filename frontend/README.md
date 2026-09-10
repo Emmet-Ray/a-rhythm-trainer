@@ -51,7 +51,7 @@ src/
 
 随机和自定义均先选择训练方式，不把一份题目自动共享给三种模式。添加预设内容编辑数据文件即可；开放新模式还需要接入对应训练组件。暂时没有后端、账户或进度保存。
 
-`pages/ExerciseLibrary.tsx` 负责列题；`pages/PracticePage.tsx` 负责选择题目；`practice/RhythmTrainer.tsx` 保留试听、击拍、音频生命周期及结果展示。进入练习页或自定义编辑页才加载 VexFlow 代码，内容来源和模式选择页不加载编辑器。
+`pages/PresetPracticePage.tsx` 负责预设列表和题目训练两个路由分支；文件内的私有组件 `PresetExercisePage` 根据题目 ID 选择内容，再懒加载公共训练工作区。`practice/RhythmTrainer.tsx` 保留试听、击拍、音频生命周期及结果展示。进入练习页或自定义编辑页才加载 VexFlow 代码，内容来源和模式选择页不加载编辑器。
 
 ## 自定义草稿
 

@@ -1,12 +1,11 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
 import { Link, Route, Routes, useLocation } from "react-router";
-import ExerciseLibrary from "./pages/ExerciseLibrary";
+import PresetPracticePage from "./pages/PresetPracticePage";
 import NotFoundPage from "./pages/NotFoundPage";
 import "./App.css";
 
 // 练习库不需要加载乐谱和音频代码，进入练习页时再加载。
 // todo: 这个lazy是干嘛的？
-const PracticePage = lazy(() => import("./pages/PracticePage"));
 const RandomPracticePage = lazy(() => import("./pages/RandomPracticePage"));
 const CustomPracticePage = lazy(() => import("./pages/CustomPracticePage"));
 
@@ -45,8 +44,8 @@ function App() {
           }
         >
           <Routes>
-            <Route path="/" element={<ExerciseLibrary />} />
-            <Route path="/practice/:questionId" element={<PracticePage />} />
+            <Route path="/" element={<PresetPracticePage />} />
+            <Route path="/practice/:questionId" element={<PresetPracticePage />} />
             <Route path="/random" element={<RandomPracticePage />} />
             <Route path="/random/:mode" element={<RandomPracticePage />} />
             <Route path="/custom" element={<CustomPracticePage />} />
