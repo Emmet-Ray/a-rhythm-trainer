@@ -25,6 +25,60 @@ async function renderPage(path, route) {
   return new Response(stream).text();
 }
 
+function mockSavedExercises(t, raw) {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { getItem: () => raw } });
+  t.after(() => previous ? Object.defineProperty(globalThis, "localStorage", previous) : delete globalThis.localStorage);
+}
+
+const savedQuestions = ["tapping", "dictation"].map((mode) => ({
+  id: `saved-${mode}`, name: `${mode}题目`, mode,
+  exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [
+    { elements: [{ kind: "note", noteValue: "whole" }] },
+  ] },
+}));
+
+test("已保存列表链接到所属模式的题目", async (t) => {
+  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
+  for (const mode of ["tapping", "dictation"]) {
+    const html = await renderPage(`/custom/${mode}`, "/custom/:mode");
+    assert.ok(html.includes(`href="/custom/${mode}/saved-${mode}"`));
+    assert.match(html, /开始练习/);
+  }
+});
+
+test("保存题目可按地址直接进入相应训练，共用 BPM 和节拍器", async (t) => {
+  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
+  for (const mode of ["tapping", "dictation"]) {
+    const html = await renderPage(`/custom/${mode}/saved-${mode}`, "/custom/:mode/:exerciseId");
+    assert.ok(html.includes(`<h1>${mode}题目</h1>`));
+    assert.ok(html.includes(`href="/custom/${mode}"`));
+    assert.match(html, /应用速度/);
+    assert.match(html, /value="60"/);
+    assert.match(html, /type="checkbox" checked=""/);
+    assert.ok(html.includes(mode === "tapping" ? 'aria-label="击拍训练区"' : 'aria-label="节奏听写区"'));
+    assert.doesNotMatch(html, /编辑自定义练习|保存练习/);
+  }
+});
+
+test("题目不存在或模式不匹配不启动训练", async (t) => {
+  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
+  for (const id of ["missing", "saved-dictation"]) {
+    const html = await renderPage(`/custom/tapping/${id}`, "/custom/:mode/:exerciseId");
+    assert.match(html, /未找到该练习/);
+    assert.match(html, /返回题目列表/);
+    assert.doesNotMatch(html, /击拍训练区|节奏听写区|应用速度/);
+  }
+});
+
+test("题目页读取损坏数据时显示错误与重试，不冒充题目不存在", async (t) => {
+  mockSavedExercises(t, "broken-json");
+  const html = await renderPage("/custom/tapping/saved-tapping", "/custom/:mode/:exerciseId");
+  assert.match(html, /无法读取练习/);
+  assert.match(html, /重试读取/);
+  assert.doesNotMatch(html, /未找到该练习|击拍训练区/);
+});
+
 test("自定义入口分别提供击拍和听写的列表地址，几何游戏不开放", async () => {
   const html = await renderPage("/custom", "/custom");
   assert.match(html, /href="\/custom\/tapping"/);

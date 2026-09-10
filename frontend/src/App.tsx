@@ -52,6 +52,7 @@ function App() {
             <Route path="/custom" element={<CustomPracticePage />} />
             <Route path="/custom/:mode" element={<CustomPracticePage />} />
             <Route path="/custom/:mode/new" element={<CustomPracticePage />} />
+            <Route path="/custom/:mode/:exerciseId" element={<CustomPracticePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

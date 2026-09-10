@@ -9,6 +9,7 @@ import { listCustomExercises, saveCustomExercise, type CustomMode } from "../exe
 
 // 选择训练方式时不加载 VexFlow；进入新建页面后才加载编辑器。
 const RhythmEditor = lazy(() => import("../practice/RhythmEditor").then((module) => ({ default: module.RhythmEditor })));
+const PracticeWorkspace = lazy(() => import("../practice/PracticeWorkspace"));
 
 // 自定义的开放范围不依赖预设题库；每个模式的草稿独立创建。
 const customModes = [
@@ -17,7 +18,7 @@ const customModes = [
 ] as const;
 
 export default function CustomPracticePage() {
-  const { mode } = useParams();
+  const { mode, exerciseId } = useParams();
   const isNew = useMatch("/custom/:mode/new") !== null;
   const selectedMode = customModes.find((item) => item.id === mode);
   if (mode !== undefined && !selectedMode) return <NotFoundPage />;
@@ -37,6 +38,11 @@ export default function CustomPracticePage() {
         </Suspense>
       </>
     );
+  }
+
+  if (selectedMode && exerciseId) {
+    // 路由参数改变时重新读取题目，并卸载旧训练及其音频、草稿和设置。
+    return <CustomExercisePractice key={`${selectedMode.id}:${exerciseId}`} mode={selectedMode.id} label={selectedMode.label} exerciseId={exerciseId} />;
   }
 
   if (selectedMode) return <CustomExerciseList key={selectedMode.id} mode={selectedMode.id} label={selectedMode.label} />;
@@ -97,12 +103,49 @@ function CustomExerciseList({ mode, label }: { mode: CustomMode; label: string }
         <ul className="question-list" aria-label="已保存的自定义练习">
           {result.items.map((item) => (
             <li className="custom-saved-question" key={item.id}>
-              <h2>{item.name}</h2>
-              <span className="question-meta">4/4 拍 · {item.exercise.measures.length} 小节</span>
+              <Link className="question-link" to={`/custom/${mode}/${encodeURIComponent(item.id)}`}>
+                <div>
+                  <h2>{item.name}</h2>
+                  <span className="question-meta">4/4 拍 · {item.exercise.measures.length} 小节</span>
+                </div>
+                <span className="question-action">开始练习 <span aria-hidden="true">→</span></span>
+              </Link>
             </li>
           ))}
         </ul>
       )}
+    </>
+  );
+}
+
+function CustomExercisePractice({ mode, label, exerciseId }: { mode: CustomMode; label: string; exerciseId: string }) {
+  function readExercise() {
+    try {
+      // 只在所属模式中查找，不能修改 URL 把听写题作为击拍题打开。
+      return { item: listCustomExercises(mode).find((item) => item.id === exerciseId), error: null };
+    } catch (error) {
+      return { item: undefined, error: error instanceof Error ? error.message : "读取失败，请重试。" };
+    }
+  }
+  const [result, setResult] = useState(readExercise);
+  return (
+    <>
+      <title>{`${result.item?.name ?? "自定义练习"} · ${label}`}</title>
+      <Link className="back-link" to={`/custom/${mode}`}>← 返回题目列表</Link>
+      <header className="page-heading practice-heading">
+        <p className="eyebrow">自定义练习 / {label}</p>
+        <h1>{result.item?.name ?? (result.error ? "无法读取练习" : "未找到该练习")}</h1>
+      </header>
+      {result.error ? (
+        <div className="custom-storage-error">
+          <p role="alert">{result.error}</p>
+          <button type="button" onClick={() => setResult(readExercise())}>重试读取</button>
+        </div>
+      ) : result.item ? (
+        <Suspense fallback={<p className="loading-message" role="status">正在加载练习…</p>}>
+          <PracticeWorkspace exercise={result.item.exercise} mode={mode} exerciseKey={result.item.id} />
+        </Suspense>
+      ) : <p>当前浏览器中没有该模式的这道练习。</p>}
     </>
   );
 }
