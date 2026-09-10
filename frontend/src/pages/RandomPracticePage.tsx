@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { Link, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
-import { generateExercise, type GenerationConfig } from "../exercises/randomExercises";
+import { generateRandomExercise, randomTopics, randomMeasureCounts, DEFAULT_RANDOM_MEASURE_COUNT, type RandomGenerationConfig } from "../exercises/randomExercises";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 
 // 进入对应模式后加载完整工作区，尚未生成时显示空状态。
@@ -59,15 +59,15 @@ export default function RandomPracticePage() {
   );
 }
 
-function RandomExerciseWorkspace({ mode }: { mode: GenerationConfig["mode"] }) {
-  const [config, setConfig] = useState<GenerationConfig>({ mode, rule: "basic" });
+function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"] }) {
+  const [config, setConfig] = useState<RandomGenerationConfig>({ mode, topics: ["basic-notes"], measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
   const [generated, setGenerated] = useState<{ id: number; exercise: RhythmExercise } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function generate() {
     try {
       // 生成只在事件中执行，不放进渲染或 state updater，避免重复执行。
-      const exercise = generateExercise(config);
+      const exercise = generateRandomExercise(config);
       setGenerated(previous => ({ id: (previous?.id ?? 0) + 1, exercise }));
       setError(null);
     } catch (error) {
@@ -78,14 +78,34 @@ function RandomExerciseWorkspace({ mode }: { mode: GenerationConfig["mode"] }) {
   return (
     <>
       <section aria-label="生成配置">
-        <form className="practice-settings" onSubmit={event => { event.preventDefault(); generate(); }}>
-          <label htmlFor="generation-rule">生成规则</label>
-          <select id="generation-rule" value={config.rule} onChange={event => {
-            if (event.target.value === "basic") setConfig(previous => ({ ...previous, rule: "basic" }));
-          }}>
-            <option value="basic">基础节奏（固定示例）</option>
-          </select>
-          <button type="submit">{generated ? "重新生成" : "生成题目"}</button>
+        <form className="random-config" onSubmit={event => { event.preventDefault(); generate(); }}>
+          <fieldset className="random-topics">
+            <legend>练习范围</legend>
+            {randomTopics.map(topic => (
+              <label key={topic.id}>
+                <input type="checkbox" checked={config.topics.includes(topic.id)} onChange={event => {
+                  const checked = event.target.checked;
+                  setConfig(previous => ({ ...previous, topics: checked
+                    ? [...previous.topics, topic.id]
+                    : previous.topics.filter(id => id !== topic.id) }));
+                  setError(null);
+                }} />
+                {topic.label}
+              </label>
+            ))}
+          </fieldset>
+          <div className="practice-settings">
+            <label>小节数 <select value={config.measureCount} onChange={event => {
+              const count = randomMeasureCounts.find(value => value === Number(event.target.value));
+              if (count !== undefined) {
+                setConfig(previous => ({ ...previous, measureCount: count }));
+                setError(null);
+              }
+            }}>
+              {randomMeasureCounts.map(count => <option key={count} value={count}>{count} 小节</option>)}
+            </select></label>
+            <button type="submit">{generated ? "重新生成" : "生成题目"}</button>
+          </div>
         </form>
         {error && <p role="alert">{error}</p>}
       </section>

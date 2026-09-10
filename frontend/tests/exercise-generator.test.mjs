@@ -1,63 +1,25 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createServer } from "vite";
+import { createElement } from "react";
+import { renderToReadableStream } from "react-dom/server";
+import { MemoryRouter, Route, Routes } from "react-router";
 
 const server = await createServer({
   configFile: false,
   server: { middlewareMode: true, watch: null, ws: false },
   optimizeDeps: { noDiscovery: true, include: [] },
 });
-let generateExercise;
 let generateRandomExercise;
 let resolveRandomPatterns;
 let randomTopics;
 let validateRhythmExercise;
 try {
-  ({ generateExercise, generateRandomExercise, resolveRandomPatterns, randomTopics } = await server.ssrLoadModule("/src/exercises/randomExercises.ts"));
+  ({ generateRandomExercise, resolveRandomPatterns, randomTopics } = await server.ssrLoadModule("/src/exercises/randomExercises.ts"));
   ({ validateRhythmExercise } = await server.ssrLoadModule("/src/rhythm/RhythmModel.ts"));
 } finally {
   await server.close();
 }
-
-for (const [mode, expected] of [
-  ["tapping", [["quarter", "quarter", "quarter", "quarter"], ["half", "quarter", "quarter"]]],
-  ["dictation", [["half", "quarter", "quarter"], ["whole"]]],
-]) {
-  test(`${mode} 基础规则返回固定的合法两小节练习，不修改配置`, () => {
-    const config = Object.freeze({ mode, rule: "basic" });
-    const exercise = generateExercise(config);
-    assert.deepEqual(exercise.timeSignature, { beats: 4, beatType: 4 });
-    assert.deepEqual(exercise.measures.map(m => m.elements.map(e => e.noteValue)), expected);
-    assert.ok(exercise.measures.every(m => m.elements.every(e => e.kind === "note")));
-    assert.doesNotThrow(() => validateRhythmExercise(exercise));
-    assert.deepEqual(config, { mode, rule: "basic" });
-  });
-
-  test(`${mode} 重复生成内容一致，修改结果不影响其他或后续生成`, () => {
-    const config = { mode, rule: "basic" };
-    const first = generateExercise(config);
-    const second = generateExercise(config);
-    const original = structuredClone(second);
-    assert.deepEqual(first, second);
-    assert.notEqual(first, second);
-    assert.notEqual(first.timeSignature, second.timeSignature);
-    first.timeSignature.beats = 3;
-    first.measures[0].elements[0].dots = 1;
-    first.measures[0].elements.pop();
-    first.measures.pop();
-    assert.deepEqual(second, original);
-    assert.deepEqual(generateExercise(config), original);
-  });
-}
-
-test("不支持的生成配置明确报错，不回退到固定题目", () => {
-  for (const config of [undefined, null, {}, { mode: "geometry", rule: "basic" }, { mode: "unknown", rule: "basic" }]) {
-    assert.throws(() => generateExercise(config), /只支持击拍或节奏听写/);
-  }
-  for (const config of [{ mode: "tapping" }, { mode: "dictation", rule: "unknown" }]) {
-    assert.throws(() => generateExercise(config), /只支持 basic/);
-  }
-});
 
 test("主题材料严格按选择启用，跨主题组合要求双方同时选中", () => {
   const get = (topics) => resolveRandomPatterns({ mode: "tapping", topics, measureCount: 2 });
@@ -162,4 +124,27 @@ test("配置先校验，随机源返回非法值时明确报错", () => {
   for (const value of [-0.1, 1, NaN, Infinity, undefined, "0"]) {
     assert.throws(() => generateRandomExercise(config, () => value), /随机数必须/);
   }
+});
+
+test("随机页面默认基础主题与两小节，主题选项来自目录，生成前保留空训练区", async () => {
+  const pageServer = await createServer({ configFile: false,
+    server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+  try {
+    const { default: RandomPracticePage } = await pageServer.ssrLoadModule("/src/pages/RandomPracticePage.tsx");
+    for (const mode of ["tapping", "dictation"]) {
+      const stream = await renderToReadableStream(createElement(MemoryRouter, { initialEntries: [`/random/${mode}`] },
+        createElement(Routes, null, createElement(Route, { path: "/random/:mode", element: createElement(RandomPracticePage) }))));
+      await stream.allReady;
+      const html = await new Response(stream).text();
+      for (const topic of randomTopics) assert.ok(html.includes(topic.label));
+      const fieldset = html.match(/<fieldset[\s\S]*?<\/fieldset>/)[0];
+      assert.equal((fieldset.match(/checked=""/g) ?? []).length, 1);
+      assert.match(fieldset, /checked=""[^>]*\/>全音符、二分音符、四分音符/);
+      assert.match(html, /value="2" selected=""/);
+      assert.match(html, /生成题目/);
+      assert.match(html, /应用速度/);
+      assert.match(html, /节拍器/);
+      assert.doesNotMatch(html, /固定示例|重新生成/);
+    }
+  } finally { await pageServer.close(); }
 });
