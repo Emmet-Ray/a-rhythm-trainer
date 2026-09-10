@@ -132,4 +132,7 @@ main:focus { outline: none; }
 .custom-save-button { background: var(--accent); color: white; border-color: var(--accent); }
 .custom-save-button:hover:not(:disabled) { background: #45409e; }
 .custom-save-actions [role="alert"] { color: #b33131; font-size: 13px; }
-.custom-save-actions [role="status"] { color: var(--muted); font-size: 13px; }
+.custom-saved-question { padding: 16px 0; overflow-wrap: anywhere; }
+.custom-saved-question h2 { font-size: 16px; }
+.custom-storage-error { color: #b33131; font-size: 13px; }
+.custom-storage-error button { margin-top: 12px; }

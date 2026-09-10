@@ -1,10 +1,11 @@
 import { lazy, Suspense, useRef, useState } from "react";
-import { Link, useMatch, useParams } from "react-router";
+import { Link, useLocation, useMatch, useNavigate, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
-import { validateRhythmExercise, type RhythmElement, type RhythmExercise } from "../rhythm/RhythmModel";
+import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
 import type { RhythmEditorHandle } from "../practice/RhythmEditor";
 import PracticeSettings from "../practice/PracticeSettings";
 import RhythmPlayback from "../practice/RhythmPlayback";
+import { listCustomExercises, saveCustomExercise, type CustomMode } from "../exercises/customExercises";
 
 // 选择训练方式时不加载 VexFlow；进入新建页面后才加载编辑器。
 const RhythmEditor = lazy(() => import("../practice/RhythmEditor").then((module) => ({ default: module.RhythmEditor })));
@@ -14,7 +15,6 @@ const customModes = [
   { id: "tapping", label: "击拍练习" },
   { id: "dictation", label: "节奏听写" },
 ] as const;
-type CustomMode = (typeof customModes)[number]["id"];
 
 export default function CustomPracticePage() {
   const { mode } = useParams();
@@ -69,6 +69,15 @@ export default function CustomPracticePage() {
 }
 
 function CustomExerciseList({ mode, label }: { mode: CustomMode; label: string }) {
+  const { state } = useLocation();
+  function readExercises() {
+    try {
+      return { items: listCustomExercises(mode), error: null };
+    } catch (error) {
+      return { items: [], error: error instanceof Error ? error.message : "读取失败，请重试。" };
+    }
+  }
+  const [result, setResult] = useState(readExercises);
   return (
     <>
       <title>{`自定义${label} · 节奏训练`}</title>
@@ -77,8 +86,23 @@ function CustomExerciseList({ mode, label }: { mode: CustomMode; label: string }
         <div><p className="eyebrow">自定义练习</p><h1>{label}</h1></div>
         <Link className="custom-new-link" to={`/custom/${mode}/new`}>新建练习</Link>
       </header>
-      {/* TODO：接入持久化后，读取并列出当前模式的已保存题目。 */}
-      <p className="empty-questions">保存功能暂未开放，可以先新建并编辑练习。</p>
+      <p className="custom-draft-notice">保存在当前浏览器，清除网站数据后会丢失。</p>
+      {result.items.some((item) => item.id === state?.savedExerciseId) && <p role="status">已保存</p>}
+      {result.error ? (
+        <div className="custom-storage-error">
+          <p role="alert">{result.error}</p>
+          <button type="button" onClick={() => setResult(readExercises())}>重试读取</button>
+        </div>
+      ) : result.items.length === 0 ? <p className="empty-questions">暂无题目</p> : (
+        <ul className="question-list" aria-label="已保存的自定义练习">
+          {result.items.map((item) => (
+            <li className="custom-saved-question" key={item.id}>
+              <h2>{item.name}</h2>
+              <span className="question-meta">4/4 拍 · {item.exercise.measures.length} 小节</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </>
   );
 }
@@ -88,11 +112,11 @@ const timeSignature: RhythmExercise["timeSignature"] = { beats: 4, beatType: 4 }
 /**
  * 一次挂载对应一份未保存草稿。允许小节未填满，试听保留完整小节时长，不做判题。
  * 小节只从末尾增减，删除有内容的小节需确认；至少保留一节，选择始终在有效范围内。
- * 草稿只在本页内存中持有；保存目前仅做校验，不写入存储或跳转。
+ * 草稿只在本页内存中持有；显式保存成功后返回所属模式列表，失败时保留草稿。
  */
 function CustomExerciseEditor({ mode }: { mode: CustomMode }) {
+  const navigate = useNavigate();
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveMessage, setSaveMessage] = useState("");
   const [name, setName] = useState("");
   const [measures, setMeasures] = useState<RhythmElement[][]>(() => [[], []]);
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
@@ -100,7 +124,6 @@ function CustomExerciseEditor({ mode }: { mode: CustomMode }) {
 
   function addMeasure() {
     setSaveError(null);
-    setSaveMessage("");
     setMeasures((previous) => [...previous, []]);
     editorRef.current?.clearMessage();
   }
@@ -115,23 +138,19 @@ function CustomExerciseEditor({ mode }: { mode: CustomMode }) {
 
     setMeasures((previous) => previous.slice(0, -1));
     setSaveError(null);
-    setSaveMessage("");
     setSelectedMeasureIndex((previous) => Math.min(previous, measures.length - 2));
     editorRef.current?.clearMessage();
   }
 
   function save() {
     setSaveError(null);
-    setSaveMessage("");
     try {
-      if (!name.trim()) throw new Error("请输入练习名称。");
       const candidate = { name: name.trim(), mode, exercise: {
         timeSignature, measures: measures.map((elements) => ({ elements })),
       } };
-      validateRhythmExercise(candidate.exercise);
-      // TODO：将 candidate 持久化；成功后才提示保存成功并返回当前模式的列表。
-      // 当前不调用浏览器存储，不将候选题目加入列表，也不清空草稿。
-      setSaveMessage("校验通过，保存功能尚未接入，草稿仍未保存。");
+      const saved = saveCustomExercise(candidate);
+      // 写入成功才离开编辑页，卸载播放器会取消旧声音和异步启动。
+      navigate(`/custom/${mode}`, { replace: true, state: { savedExerciseId: saved.id } });
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "保存失败，请重试。");
     }
@@ -142,7 +161,7 @@ function CustomExerciseEditor({ mode }: { mode: CustomMode }) {
       <div className="practice-settings custom-settings">
         <label className="custom-name">
           <span>练习名称</span>
-          <input value={name} onChange={(event) => { setName(event.target.value); setSaveError(null); setSaveMessage(""); }} />
+          <input value={name} onChange={(event) => { setName(event.target.value); setSaveError(null); }} />
         </label>
         <div className="custom-measure-count" role="group" aria-label="小节数量">
           <span>小节数量</span>
@@ -152,7 +171,7 @@ function CustomExerciseEditor({ mode }: { mode: CustomMode }) {
         </div>
         <span className="custom-time-signature">4/4 拍</span>
       </div>
-      <p className="custom-draft-notice">暂未提供保存，离开或刷新页面后草稿会丢失。</p>
+      <p className="custom-draft-notice">保存到当前浏览器；未保存时，离开或刷新页面后草稿会丢失。</p>
       <PracticeSettings>
         {({ bpm, metronomeEnabled }) => (
           <div className="custom-playback">
@@ -175,7 +194,6 @@ function CustomExerciseEditor({ mode }: { mode: CustomMode }) {
         onSelectMeasure={setSelectedMeasureIndex}
         onChange={(measureIndex, elements) => {
           setSaveError(null);
-          setSaveMessage("");
           setMeasures((previous) => previous.map((measure, index) =>
             index === measureIndex ? elements : measure,
           ));
@@ -184,7 +202,6 @@ function CustomExerciseEditor({ mode }: { mode: CustomMode }) {
       <div className="custom-save-actions">
         <button className="custom-save-button" type="button" onClick={save}>保存练习</button>
         {saveError && <p role="alert">{saveError}</p>}
-        {saveMessage && <p role="status">{saveMessage}</p>}
       </div>
     </section>
   );

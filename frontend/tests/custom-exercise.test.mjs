@@ -33,13 +33,26 @@ test("自定义入口分别提供击拍和听写的列表地址，几何游戏�
   assert.match(html, /aria-current="page"[^>]*>自定义练习/);
 });
 
-test("模式列表保留新建入口，持久化未接入时不伪造已保存题目", async () => {
+test("模式列表保留新建入口，空存储显示暂无题目", async (t) => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { getItem: () => null } });
+  t.after(() => previous ? Object.defineProperty(globalThis, "localStorage", previous) : delete globalThis.localStorage);
   for (const mode of ["tapping", "dictation"]) {
     const html = await renderPage(`/custom/${mode}`, "/custom/:mode");
     assert.ok(html.includes(`href="/custom/${mode}/new"`));
-    assert.match(html, /保存功能暂未开放/);
+    assert.match(html, /暂无题目/);
     assert.doesNotMatch(html, /已保存的自定义练习|编辑自定义练习/);
   }
+});
+
+test("存储访问失败时列表显示错误与重试，不显示空题库", async (t) => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, get() { throw new Error("blocked"); } });
+  t.after(() => previous ? Object.defineProperty(globalThis, "localStorage", previous) : delete globalThis.localStorage);
+  const html = await renderPage("/custom/tapping", "/custom/:mode");
+  assert.match(html, /无法访问本地练习/);
+  assert.match(html, /重试读取/);
+  assert.doesNotMatch(html, /暂无题目/);
 });
 
 test("未知模式和未开放的几何模式不回退到默认编辑器", async () => {
