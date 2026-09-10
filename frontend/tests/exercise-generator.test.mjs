@@ -40,7 +40,7 @@ test("材料提供精确时值与拍位，每次解析返回独立快照且不�
   const first = resolveRandomPatterns(config);
   const expected = structuredClone(first);
   assert.equal(new Set(first.map(p => p.id)).size, first.length);
-  assert.deepEqual(first.map(p => p.durationTicks), [96, 48, 24, 24, 96, 48, 24, 12, 24, 24]);
+  assert.deepEqual(first.map(p => p.durationTicks), [96, 48, 24, 24, 96, 48, 24, 12, 24, 24, 48, 48, 24, 24, 24, 24, 24, 24]);
   assert.deepEqual(first.find(p => p.id === "half-note").startTicks, [0, 48]);
   assert.deepEqual(first.find(p => p.id === "eighth-rest").startTicks, [0, 12, 24, 36, 48, 60, 72, 84]);
   assert.ok(first.every(p => p.startTicks.every(t => Number.isInteger(t) && t + p.durationTicks <= 96)));
@@ -59,6 +59,34 @@ test("随机规则拒绝空主题、未知主题、非法模式与小节数", ()
   for (const measureCount of [1, 2, 4]) assert.doesNotThrow(() => resolveRandomPatterns({ ...valid, measureCount }));
 });
 
+test("新增主题提供完整节奏型，音符顺序、附点和三连音组均准确", () => {
+  const expected = {
+    "dotted-quarters": [["quarter.", "eighth"]],
+    "syncopation": [["eighth", "quarter", "eighth"]],
+    "sixteenth-notes": [["sixteenth", "sixteenth", "sixteenth", "sixteenth"], ["eighth", "sixteenth", "sixteenth"], ["sixteenth", "sixteenth", "eighth"]],
+    "dotted-eighths": [["eighth.", "sixteenth"]],
+    "small-syncopation": [["sixteenth", "eighth", "sixteenth"]],
+    "eighth-triplets": [["T"]],
+  };
+  for (const [topic, content] of Object.entries(expected)) {
+    const config = { mode: "tapping", topics: [topic], measureCount: 2 };
+    const materials = resolveRandomPatterns(config);
+    assert.deepEqual(materials.map(p => p.elements.map(e => e.kind === "triplet" ? "T" : e.noteValue + (e.dots ? "." : ""))), content);
+    assert.ok(materials.every(p => p.elements.every(e => e.kind === "note" || e.kind === "triplet")));
+    for (const p of materials) assert.deepEqual(p.startTicks, p.durationTicks === 48 ? [0, 48] : [0, 24, 48, 72]);
+    const withRests = resolveRandomPatterns({ ...config, topics: [topic, "rests"] });
+    assert.deepEqual(withRests.filter(p => !p.elements.every(e => e.kind === "rest")), materials);
+  }
+  const config = { mode: "dictation", topics: ["eighth-triplets"], measureCount: 2 };
+  const exercise = generateRandomExercise(config, () => 0);
+  assert.equal(exercise.measures[0].elements.length, 4);
+  assert.deepEqual(exercise.measures[0].elements[0], { kind: "triplet", notes: Array.from({ length: 3 }, () => ({ kind: "note", noteValue: "eighth" })) });
+  exercise.measures[0].elements[0].notes[0].noteValue = "quarter";
+  assert.equal(exercise.measures[0].elements[1].notes[0].noteValue, "eighth");
+  assert.equal(exercise.measures[1].elements[0].notes[0].noteValue, "eighth");
+  assert.doesNotThrow(() => validateRhythmExercise(generateRandomExercise(config, () => 0)));
+});
+
 function seededRandom(seed) {
   let state = seed;
   return () => {
@@ -68,12 +96,12 @@ function seededRandom(seed) {
 }
 
 test("所有主题组合、模式和长度均生成满拍且由合法拍位材料组成的题目", () => {
-  for (let mask = 1; mask < 8; mask++) {
+  for (let mask = 1; mask < 2 ** randomTopics.length; mask++) {
     const topics = randomTopics.filter((_, i) => mask & (1 << i)).map(t => t.id);
     for (const mode of ["tapping", "dictation"]) for (const measureCount of [1, 2, 4]) {
       const config = { mode, topics, measureCount };
       const materials = resolveRandomPatterns(config);
-      for (let seed = 0; seed < 20; seed++) {
+      for (let seed = 0; seed < 3; seed++) {
         const result = generateRandomExercise(config, seededRandom(seed));
         assert.equal(result.measures.length, measureCount);
         assert.doesNotThrow(() => validateRhythmExercise(result));

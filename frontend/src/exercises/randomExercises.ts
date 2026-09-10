@@ -5,6 +5,12 @@ export const randomTopics = [
   { id: "basic-notes", label: "全音符、二分音符、四分音符" },
   { id: "eighth-notes", label: "八分音符、二平均节奏" },
   { id: "rests", label: "四种休止符" },
+  { id: "dotted-quarters", label: "附点四分音符、大附点节奏" },
+  { id: "syncopation", label: "大切分节奏" },
+  { id: "sixteenth-notes", label: "十六分音符、四平均节奏、前八后十六节奏、前十六后八节奏" },
+  { id: "dotted-eighths", label: "附点八分音符、小附点节奏" },
+  { id: "small-syncopation", label: "小切分节奏" },
+  { id: "eighth-triplets", label: "小三连节奏" },
 ] as const;
 export type RandomTopicId = typeof randomTopics[number]["id"];
 export const randomMeasureCounts = [1, 2, 4] as const;
@@ -39,6 +45,17 @@ const patterns: readonly PatternDefinition[] = [
   { id: "eighth-rest", requires: ["rests"], elements: [{ kind: "rest", noteValue: "eighth" }], startBeats: [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5] },
   { id: "eighth-note-rest", requires: ["eighth-notes", "rests"], elements: [{ kind: "note", noteValue: "eighth" }, { kind: "rest", noteValue: "eighth" }], startBeats: [0, 1, 2, 3] },
   { id: "eighth-rest-note", requires: ["eighth-notes", "rests"], elements: [{ kind: "rest", noteValue: "eighth" }, { kind: "note", noteValue: "eighth" }], startBeats: [0, 1, 2, 3] },
+  // 长节奏型整体占两拍，先限定在第 1、3 拍；不任意拆分或替换其中音符。
+  { id: "dotted-quarter-eighth", requires: ["dotted-quarters"], elements: [{ kind: "note", noteValue: "quarter", dots: 1 }, { kind: "note", noteValue: "eighth" }], startBeats: [0, 2] },
+  { id: "large-syncopation", requires: ["syncopation"], elements: [{ kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "quarter" }, { kind: "note", noteValue: "eighth" }], startBeats: [0, 2] },
+  { id: "four-sixteenths", requires: ["sixteenth-notes"], elements: Array.from({ length: 4 }, () => ({ kind: "note", noteValue: "sixteenth" })), startBeats: [0, 1, 2, 3] },
+  { id: "eighth-two-sixteenths", requires: ["sixteenth-notes"], elements: [{ kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "sixteenth" }, { kind: "note", noteValue: "sixteenth" }], startBeats: [0, 1, 2, 3] },
+  { id: "two-sixteenths-eighth", requires: ["sixteenth-notes"], elements: [{ kind: "note", noteValue: "sixteenth" }, { kind: "note", noteValue: "sixteenth" }, { kind: "note", noteValue: "eighth" }], startBeats: [0, 1, 2, 3] },
+  { id: "dotted-eighth-sixteenth", requires: ["dotted-eighths"], elements: [{ kind: "note", noteValue: "eighth", dots: 1 }, { kind: "note", noteValue: "sixteenth" }], startBeats: [0, 1, 2, 3] },
+  { id: "small-syncopation", requires: ["small-syncopation"], elements: [{ kind: "note", noteValue: "sixteenth" }, { kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "sixteenth" }], startBeats: [0, 1, 2, 3] },
+  { id: "eighth-triplet", requires: ["eighth-triplets"], elements: [{ kind: "triplet", notes: [
+    { kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "eighth" },
+  ] }], startBeats: [0, 1, 2, 3] },
 ];
 
 /** 校验配置并解析候选材料快照，不随机、不填小节、不修改输入。
