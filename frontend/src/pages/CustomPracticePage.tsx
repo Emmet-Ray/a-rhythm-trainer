@@ -110,6 +110,8 @@ function CustomExerciseList({ mode, label }: { mode: CustomMode; label: string }
                 </div>
                 <span className="question-action">开始练习 <span aria-hidden="true">→</span></span>
               </Link>
+              {/* TODO: 接入该题目的编辑入口，载入草稿并按原 ID 保存修改。 */}
+              <button type="button" disabled>编辑 <small>未开放</small></button>
             </li>
           ))}
         </ul>

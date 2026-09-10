@@ -44,6 +44,8 @@ test("已保存列表链接到所属模式的题目", async (t) => {
     const html = await renderPage(`/custom/${mode}`, "/custom/:mode");
     assert.ok(html.includes(`href="/custom/${mode}/saved-${mode}"`));
     assert.match(html, /开始练习/);
+    assert.match(html, /<button type="button" disabled="">编辑 <small>未开放<\/small><\/button>/);
+    assert.doesNotMatch(html, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
   }
 });
 
