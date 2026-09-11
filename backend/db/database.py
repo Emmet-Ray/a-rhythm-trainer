@@ -7,6 +7,11 @@ from pathlib import Path
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.exc import ArgumentError
+from sqlalchemy.orm import DeclarativeBase
+
+
+class Base(DeclarativeBase):
+    """业务表共享的模型基类；metadata 供 Alembic 比较表结构，不自动建表。"""
 
 
 def create_database_engine(database_url: str | None = None) -> Engine:

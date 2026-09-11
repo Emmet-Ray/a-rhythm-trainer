@@ -1,10 +1,12 @@
-import importlib
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-import database
+from db import database
 
 
 @pytest.fixture
@@ -17,7 +19,10 @@ def engine(tmp_path):
 def test_import_does_not_read_config_or_create_files(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("DATABASE_URL", "invalid")
-    importlib.reload(database)
+    # 独立进程验证导入，避免 reload 重建 Base，破坏其他测试已注册的模型。
+    backend_path = str(Path(__file__).resolve().parents[1])
+    monkeypatch.setenv("PYTHONPATH", backend_path)
+    subprocess.run([sys.executable, "-c", "import db.database; import db.users"], check=True)
     assert list(tmp_path.iterdir()) == []
 
 

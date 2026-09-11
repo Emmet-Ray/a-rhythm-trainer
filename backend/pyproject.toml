@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "节奏训练网站的 FastAPI 后端"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.16,<2",
     "alibabacloud-dypnsapi20170525",
     "alibabacloud-tea-openapi",
     "alibabacloud-tea-util",
