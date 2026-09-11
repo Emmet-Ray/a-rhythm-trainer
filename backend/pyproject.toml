@@ -1,0 +1,19 @@
+[project]
+name = "rhythm-trainer-backend"
+version = "0.1.0"
+description = "节奏训练网站的 FastAPI 后端"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+]
+
+[dependency-groups]
+dev = [
+    "httpx",
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
