@@ -8,6 +8,7 @@ dependencies = [
     "alibabacloud-tea-openapi",
     "alibabacloud-tea-util",
     "fastapi",
+    "sqlalchemy>=2.0,<3",
     "uvicorn[standard]",
 ]
 

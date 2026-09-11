@@ -1,7 +1,7 @@
 # 后端
 
 Python 3.12+、FastAPI，使用 uv 管理独立依赖和虚拟环境。
-目前对外只有健康检查；短信认证模块已实现，但没有开放短信 HTTP 接口，也不包含数据库、用户或登录会话。前端已配置本地 `/api` 代理，见 [前后端联调说明](../联调.md)。
+目前对外只有健康检查；短信认证模块和 SQLite 连接配置已实现，但没有开放短信 HTTP 接口，也没有业务表、用户或登录会话。前端已配置本地 `/api` 代理，见 [前后端联调说明](../联调.md)。
 
 ## 本地启动
 
@@ -23,6 +23,45 @@ uv run uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
 健康检查仅证明后端能够响应请求，不检查尚未接入的服务。
 健康检查不需要密钥，短信模块不会在应用启动或导入时读取配置、发送请求。
+
+## 数据库连接
+
+第一版使用 SQLite 文件数据库，通过 SQLAlchemy 和 Python 标准库 `sqlite3` 访问，无需安装数据库服务器。当前只完成连接配置，不创建业务表，也未接入 HTTP 请求。
+
+在本地 `.env` 中添加以下配置（已有文件时只补充这一项，不覆盖短信配置）：
+
+```dotenv
+DATABASE_URL=sqlite:///./data/rhythm_trainer.db
+```
+
+从 `backend/` 运行时，数据位于 `backend/data/rhythm_trainer.db`。`data/` 已忽略，不提交 Git。线上使用持久化目录的绝对路径，例如 `sqlite:////var/lib/rhythm-trainer/rhythm_trainer.db`；不要将本地测试库覆盖到线上。
+
+`database.create_database_engine()` 显式读取进程环境中的 `DATABASE_URL`；也可传入地址，用于隔离测试。它会准备父目录，但直到首次连接才打开或创建数据库文件。导入模块不会读取配置或创建文件；健康检查仍不依赖数据库。仅支持普通 SQLite 文件地址，不支持内存库、网络数据库或 URL 查询参数。
+
+使用示例（在已加载配置的 Python 进程中执行）：
+
+```python
+from sqlalchemy import text
+from database import create_database_engine
+
+engine = create_database_engine()
+try:
+    with engine.connect() as connection:
+        print(connection.scalar(text("SELECT 1")))
+finally:
+    engine.dispose()
+```
+
+可从 `backend/` 执行 `uv run --locked --env-file .env python`，进入交互环境后运行上面的示例；这会创建配置所指向的数据库文件，但不会建表。
+
+连接行为：
+
+- 每条连接启用外键约束，并设置 5 秒锁等待时间；超时仍会报错，不会无限等待。
+- 使用 Python 3.12+ 的非旧式事务模式。写入使用 `with engine.begin()`：正常退出提交，异常退出回滚；仅使用 `connect()` 不会自动提交写入。
+- 引擎可复用，不要每条查询重建；调用方在使用结束时释放连接，应用结束时释放引擎。
+- 这是同步连接入口，后续接 HTTP 时不能直接在 `async def` 中执行阻塞数据库操作。
+
+事务和外键配置依据 [SQLAlchemy SQLite 文档](https://docs.sqlalchemy.org/en/20/dialects/sqlite.html)。本步不引入 Alembic、用户表、WAL 或备份流程；上线前仍需落实持久化与备份恢复。
 
 ## 短信验证码模块
 
@@ -67,5 +106,5 @@ uv run --locked --env-file .env python verify_sms.py
 uv run pytest
 ```
 
-测试使用内存中的测试客户端，不启动监听端口，也不调用短信服务。
+HTTP 测试使用内存中的测试客户端；数据库测试只使用临时目录中的文件，验证连接、提交后重新打开、回滚、外键和配置边界，不读取真实 `.env` 或操作正式数据库。不启动监听端口，也不调用短信服务。
 后续按实际业务增加模块，暂不预建空的用户、认证和数据库目录。
