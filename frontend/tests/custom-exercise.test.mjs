@@ -110,8 +110,19 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
   for (const path of ["/login"]) {
     const html = await renderApp(path);
     assert.match(html, /class="site-header design-system"/);
-    assert.doesNotMatch(html.match(/<main[\s\S]*?<\/main>/)?.[0], /class="design-system/);
+    assert.match(html, /class="design-system login-page"/);
   }
+});
+
+test("登录表单保留标签、自动填充和反馈语义，未发送验证码时不能登录", async () => {
+  const html = await renderApp("/login");
+  assert.match(html, /aria-labelledby="login-heading"/);
+  assert.match(html, /for="login-phone"/);
+  assert.match(html, /type="tel"[^>]*autoComplete="tel-national"/);
+  assert.match(html, /for="login-code"/);
+  assert.match(html, /autoComplete="one-time-code"/);
+  assert.match(html, /class="login-feedback"><p role="status"/);
+  assert.match(html, /<button type="submit" disabled="">登录/);
 });
 
 async function renderPage(path, route, auth = { state: { status: "guest" }, busy: false }) {

@@ -272,6 +272,23 @@
 }
 /* 自定义列表：题目链接与编辑操作分开，来源和读取状态由列表负责。 */
 .custom-index { margin: 0 auto; }
+/* 登录沿用基础控件；固定发送按钮宽度和反馈区高度，避免状态切换挤动表单。 */
+.login-page.design-system { max-width: 400px; }
+.login-page .back-link { color: var(--ds-muted); font-size: var(--ds-text-sm); font-weight: 650; }
+.login-page h1 { margin: var(--ds-space-4) 0 var(--ds-space-8); }
+.login-page .login-form { gap: var(--ds-space-2); }
+.login-page .login-form > label { font-weight: 650; }
+.login-page .login-form > label:not(:first-child) { margin-top: var(--ds-space-4); }
+.login-page .login-form input { min-height: 48px; padding: 10px 12px; border: 2px solid var(--ds-line); border-radius: var(--ds-radius-sm); color: var(--ds-ink); background: var(--ds-surface); font-size: var(--ds-text); font-variant-numeric: tabular-nums; }
+.login-page .login-form input:disabled { color: var(--ds-muted); background: var(--ds-disabled); }
+.login-page .login-code-row { grid-template-columns: minmax(0, 1fr) 140px; gap: var(--ds-space-3); }
+.login-page .login-code-row button { padding-inline: var(--ds-space-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.login-page .login-feedback { min-height: 80px; padding: var(--ds-space-3) 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.login-page .login-feedback p { margin: 0; overflow-wrap: anywhere; }
+.login-page .auth-error { color: var(--ds-error); font-size: inherit; }
+.login-page .login-form > button[type="submit"]:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 4px 0 var(--ds-primary-base); }
+.login-page .login-form > button[type="submit"]:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
+.login-page .login-form > button[type="submit"]:active:not(:disabled) { box-shadow: none; }
 /* 新建页只负责外层表单；谱面、设置和播放仍由共享组件负责。 */
 .custom-create .custom-settings { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-4) var(--ds-space-6); margin-bottom: var(--ds-space-6); }
 .custom-create .custom-name { flex: 1 1 300px; flex-wrap: wrap; gap: var(--ds-space-3); font-weight: 650; }
