@@ -8,6 +8,7 @@ from db.database import Base, create_database_engine
 from db.users import User  # noqa: F401 -- 注册用户表到 Base.metadata，供自动差异检查。
 from db.sessions import LoginSession  # noqa: F401 -- 注册登录会话表。
 from db.sms_logins import SmsLoginRequest  # noqa: F401 -- 注册登录前短信请求表。
+from db.custom_exercises import CustomExercise  # noqa: F401 -- 注册账号自定义练习表。
 
 
 config = context.config
