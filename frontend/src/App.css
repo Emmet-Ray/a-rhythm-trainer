@@ -1,7 +1,22 @@
 .site-shell { max-width: 1080px; padding: 0 40px; margin: 0 auto; min-height: 100svh; display: flex; flex-direction: column; }
 .site-header { display: flex; justify-content: space-between; align-items: center; min-height: 76px; border-bottom: 1px solid var(--line); }
 .brand { font-size: 21px; font-weight: 700; letter-spacing: .03em; }
-.site-header nav a { padding: 10px 0 10px 20px; color: var(--accent); }
+.site-header nav a { color: var(--accent); }
+.site-header nav { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px 16px; }
+.site-header nav a { padding: 10px 0; }
+.site-header { gap: 16px; }
+.brand { flex-shrink: 0; }
+.auth-status { color: var(--muted); font-size: 13px; }
+.nav-button { padding: 8px 0; border: 0; color: var(--accent); background: transparent; }
+.auth-error { color: #b33131; font-size: 13px; }
+.login-page { width: 100%; max-width: 400px; margin: 0 auto; }
+.login-page h1 { margin: 12px 0 24px; }
+.login-form { display: grid; gap: 8px; }
+.login-form > label:not(:first-child) { margin-top: 12px; }
+.login-form input { width: 100%; min-width: 0; }
+.login-code-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.login-feedback { min-height: 36px; padding: 4px 0; color: var(--muted); font-size: 13px; }
+.login-form > button[type="submit"]:not(:disabled) { background: var(--accent); border-color: var(--accent); color: white; }
 main { flex: 1; min-width: 0; padding: 28px 0 48px; }
 main:focus { outline: none; }
 .page-heading { margin-bottom: 20px; }
