@@ -125,3 +125,39 @@ function noteValueToDurationInQuarterNotes(noteValue: NoteValue): number {
       throw new Error("暂不支持该时值。");
   }
 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** 解析外部完整练习：复制模型字段并校验结构与时值；拒绝零小节，不修改输入。 */
+export function parseRhythmExercise(value: unknown): RhythmExercise {
+  if (!isRecord(value) || !isRecord(value.timeSignature) || !Array.isArray(value.measures)
+    || value.measures.length === 0) throw new Error("练习至少需要一个小节。");
+
+  function parseEvent(event: unknown) {
+    if (!isRecord(event)) throw new Error("节奏符号格式无效。");
+    return {
+      kind: event.kind,
+      noteValue: event.noteValue,
+      ...(event.dots === undefined ? {} : { dots: event.dots }),
+    };
+  }
+
+  const exercise = {
+    timeSignature: { beats: value.timeSignature.beats, beatType: value.timeSignature.beatType },
+    measures: value.measures.map((measure) => {
+      if (!isRecord(measure) || !Array.isArray(measure.elements)) throw new Error("小节格式无效。");
+      return { elements: measure.elements.map((element: unknown) => {
+        if (isRecord(element) && element.kind === "triplet") {
+          if (!Array.isArray(element.notes)) throw new Error("小三连格式无效。");
+          return { kind: "triplet", notes: element.notes.map(parseEvent) };
+        }
+        return parseEvent(element);
+      }) as RhythmElement[] };
+    }),
+  } as RhythmExercise;
+  // 此时仅保证结构；模型校验成功前不能作为合法练习返回。
+  validateRhythmExercise(exercise);
+  return exercise;
+}

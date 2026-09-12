@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
-import { AuthApiError, authErrorMessage, sendLoginCode } from "../auth/authApi";
+import { AuthApiError, authErrorMessage, sendLoginCode } from "../api/auth";
 import type { useAuth } from "../auth/useAuth";
 
 export default function LoginPage({ auth }: { auth: ReturnType<typeof useAuth> }) {

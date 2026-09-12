@@ -30,6 +30,24 @@ const exercise = {
 };
 const timeline = timing.createExerciseTimeline(exercise, 60, 3, windows);
 
+test("外部练习解析只复制模型字段，返回独立快照", () => {
+  const input = structuredClone(exercise);
+  input.name = "不属于节奏模型的字段";
+  const parsed = model.parseRhythmExercise(input);
+  assert.deepEqual(parsed, exercise);
+  parsed.measures[0].elements[0].noteValue = "half";
+  assert.equal(input.measures[0].elements[0].noteValue, "quarter");
+});
+
+test("外部完整练习拒绝零小节、非法结构和不足拍数，模型仍允许页面空白占位", () => {
+  const empty = { timeSignature: { beats: 4, beatType: 4 }, measures: [] };
+  assert.doesNotThrow(() => model.validateRhythmExercise(empty));
+  for (const input of [null, empty, { ...empty, measures: [null] },
+    { ...empty, measures: [{ elements: [{ kind: "note", noteValue: "quarter" }] }] }]) {
+    assert.throws(() => model.parseRhythmExercise(input));
+  }
+});
+
 test("默认预备拍占一个 4/4 小节，覆盖值及正式起点保持一致", () => {
   const normal = timing.createExerciseTimeline(exercise, 60, undefined, windows);
   assert.equal(normal.countInDurationMs, 4000);

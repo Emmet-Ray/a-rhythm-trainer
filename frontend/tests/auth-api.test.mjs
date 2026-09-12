@@ -9,7 +9,7 @@ const server = await createServer({
 });
 let api;
 try {
-  api = await server.ssrLoadModule("/src/auth/authApi.ts");
+  api = await server.ssrLoadModule("/src/api/auth.ts");
 } finally {
   await server.close();
 }

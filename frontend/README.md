@@ -42,15 +42,18 @@ npm run preview
 - 练习结果尚未持久保存，刷新或重新进入页面不会恢复旧成绩。
 - 登录凭证由后端设置为 HttpOnly Cookie，前端不读取或写入 localStorage；登录、退出不会迁移或删除本地练习。
 
+账号练习 API 已封装在 `src/api/customExercises.ts`，提供保存、分页摘要和完整题目读取，尚未接入页面。失败不回退本地存储、不自动重试；读取支持 AbortSignal。响应中的 `created_at` 转为 `createdAt`，完整节奏复用现有解析校验。
+
 ## 代码导航
 
 ```text
 src/
 ├── main.tsx、App.tsx、App.css、index.css  # 入口、路由与全局样式
 ├── pages/                              # 路由页面与题目来源入口
-├── auth/                               # 登录 API 与共享登录状态
+├── api/                                # 登录与账号练习的 HTTP 请求
+├── auth/                               # 共享登录状态
 ├── practice/                           # 共用工作区、练习交互和编辑器
-├── rhythm/                             # 节奏模型、计时判定与音频
+├── rhythm/                             # 节奏模型与解析、计时判定与音频
 │   └── notation/                       # 谱面绘制与反馈定位
 └── exercises/                          # 预设题库、随机生成与自定义存储
 ```

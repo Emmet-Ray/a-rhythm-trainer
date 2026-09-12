@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AuthApiError, authErrorMessage, getCurrentUser, loginWithCode, logoutSession, type CurrentUser } from "./authApi";
+import { AuthApiError, authErrorMessage, getCurrentUser, loginWithCode, logoutSession, type CurrentUser } from "../api/auth";
 
 type AuthState =
   | { status: "checking" | "guest" | "unavailable" }
