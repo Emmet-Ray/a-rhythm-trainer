@@ -10,15 +10,18 @@ export default function PracticeWorkspace({
   exercise,
   mode,
   exerciseKey = 0,
+  designSystem = false,
 }: {
   exercise: RhythmExercise | null;
   exerciseKey?: string | number;
+  /** 分区启用新样式；听写编辑器暂不迁移。 */
+  designSystem?: boolean;
   mode: "tapping" | "dictation";
 }) {
   return (
-    <PracticeSettings>
+    <PracticeSettings settingsClassName={designSystem ? "design-v1 settings-v1" : undefined}>
       {({ bpm, metronomeEnabled }) => (
-        <section className={mode === "tapping" ? "training-workspace" : undefined} aria-label={mode === "dictation" ? "节奏听写区" : "击拍训练区"}>
+        <section className={mode === "tapping" ? `training-workspace${designSystem ? " design-v1 tapping-v1" : ""}` : undefined} aria-label={mode === "dictation" ? "节奏听写区" : "击拍训练区"}>
           {mode === "dictation" ? (
             // BPM 改变只重建听写内部播放器，保留草稿、验证结果和参考答案状态。
             <RhythmDictation key={exerciseKey} exercise={exercise} bpm={bpm} metronomeEnabled={metronomeEnabled} />

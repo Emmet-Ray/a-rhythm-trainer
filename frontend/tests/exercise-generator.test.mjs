@@ -168,7 +168,10 @@ test("随机页面默认基础主题与两小节，主题选项来自目录，�
       const fieldset = html.match(/<fieldset[\s\S]*?<\/fieldset>/)[0];
       assert.equal((fieldset.match(/checked=""/g) ?? []).length, 1);
       assert.match(fieldset, /checked=""[^>]*\/>全音符、二分音符、四分音符/);
-      assert.match(html, /value="2" selected=""/);
+      const counts = html.match(/<fieldset class="measure-count"[\s\S]*?<\/fieldset>/)[0];
+      assert.equal((counts.match(/type="radio"/g) ?? []).length, 3);
+      assert.equal((counts.match(/checked=""/g) ?? []).length, 1);
+      assert.match(counts, /checked="" value="2"/);
       assert.match(html, /生成题目/);
       assert.match(html, /应用速度/);
       assert.match(html, /节拍器/);

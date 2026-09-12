@@ -31,6 +31,14 @@ test("首页独立展示三个平等入口，不显示预设主题或训练区",
   assert.doesNotMatch(html, /topic-section|击拍训练区|节奏听写区/);
 });
 
+test("随机练习三种方式同级展示，几何游戏未开放且没有跳转入口", async () => {
+  const html = await renderApp("/random");
+  assert.match(html, /href="\/random\/tapping"/);
+  assert.match(html, /href="\/random\/dictation"/);
+  assert.match(html, /<div class="question-link random-mode-unavailable" aria-disabled="true"><h3>几何游戏<\/h3><span class="question-action">未开放<\/span><\/div>/);
+  assert.doesNotMatch(html, /href="\/random\/geometry"/);
+});
+
 test("预设列表与详情都在 preset 下，旧 practice 地址不再兼容", async () => {
   const list = await renderApp("/preset");
   assert.match(list, /<h1>预设练习<\/h1>/);
@@ -82,7 +90,15 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
   assert.match(tapping, /data-feedback="neutral"/);
   assert.match(tapping, /data-action="start"/);
   assert.match(tapping, /data-action="listen"/);
-  for (const path of ["/preset/dictation-basic-values-01", "/random", "/custom", "/login"]) {
+  assert.match(await renderApp("/random"), /class="design-v1 random-v1 random-index-v1"/);
+  for (const mode of ["tapping", "dictation"]) {
+    const html = await renderApp(`/random/${mode}`);
+    assert.match(html, /class="design-v1 random-generation"/);
+    assert.match(html, /class="practice-settings design-v1 settings-v1"/);
+    if (mode === "tapping") assert.match(html, /training-workspace design-v1 tapping-v1/);
+    else assert.match(html, /<section aria-label="节奏听写区">/);
+  }
+  for (const path of ["/preset/dictation-basic-values-01", "/custom", "/login"]) {
     const html = await renderApp(path);
     assert.match(html, /class="site-header design-v1"/);
     assert.doesNotMatch(html.match(/<main[\s\S]*?<\/main>/)?.[0], /class="design-v1/);

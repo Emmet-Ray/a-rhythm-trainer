@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useId, useState } from "react";
 import { Link, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
 import { generateRandomExercise, randomTopics, randomMeasureCounts, DEFAULT_RANDOM_MEASURE_COUNT, type RandomGenerationConfig } from "../exercises/randomExercises";
@@ -20,20 +20,22 @@ export default function RandomPracticePage() {
 
   if (selectedMode) {
     return (
-      <>
+      <div className="random-v1">
         <title>{`随机${selectedMode.label} · 节奏训练`}</title>
+        <div className="design-v1 tapping-v1">
         <Link className="back-link" to="/random">← 返回随机练习</Link>
         <header className="page-heading practice-heading">
           <p className="eyebrow">随机练习</p>
           <h1>{selectedMode.label}</h1>
         </header>
+        </div>
         <RandomExerciseWorkspace key={selectedMode.id} mode={selectedMode.id} />
-      </>
+      </div>
     );
   }
 
   return (
-    <>
+    <div className="design-v1 random-v1 random-index-v1">
       <title>随机练习 · 节奏训练</title>
       <header className="page-heading"><h1>随机练习</h1></header>
       <section className="random-mode-selection" aria-labelledby="random-mode-heading">
@@ -47,14 +49,20 @@ export default function RandomPracticePage() {
               </Link>
             </li>
           ))}
-          <li className="random-mode-unavailable">几何游戏 <small>未开放</small></li>
+          <li>
+            <div className="question-link random-mode-unavailable" aria-disabled="true">
+              <h3>几何游戏</h3>
+              <span className="question-action">未开放</span>
+            </div>
+          </li>
         </ul>
       </section>
-    </>
+    </div>
   );
 }
 
 function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"] }) {
+  const measureCountName = useId();
   const [config, setConfig] = useState<RandomGenerationConfig>({ mode, topics: ["basic-notes"], measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
   const [generated, setGenerated] = useState<{ id: number; exercise: RhythmExercise } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +80,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
 
   return (
     <>
-      <section aria-label="生成配置">
+      <section className="design-v1 random-generation" aria-label="生成配置">
         <form className="random-config" onSubmit={event => { event.preventDefault(); generate(); }}>
           <fieldset className="random-topics">
             <legend>练习范围</legend>
@@ -89,23 +97,30 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
               </label>
             ))}
           </fieldset>
-          <div className="practice-settings">
-            <label>小节数 <select value={config.measureCount} onChange={event => {
-              const count = randomMeasureCounts.find(value => value === Number(event.target.value));
-              if (count !== undefined) {
-                setConfig(previous => ({ ...previous, measureCount: count }));
-                setError(null);
-              }
-            }}>
-              {randomMeasureCounts.map(count => <option key={count} value={count}>{count} 小节</option>)}
-            </select></label>
-            <button type="submit">{generated ? "重新生成" : "生成题目"}</button>
+          <div className="random-generation-actions">
+            <fieldset className="measure-count">
+              <legend>小节数</legend>
+              <div className="measure-count-options">
+                {randomMeasureCounts.map(count => (
+                  <label key={count}>
+                    <input type="radio" name={measureCountName} value={count}
+                      checked={config.measureCount === count}
+                      onChange={() => {
+                        setConfig(previous => ({ ...previous, measureCount: count }));
+                        setError(null);
+                      }} />
+                    <span>{count} 小节</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <button className="generate-button" type="submit">{generated ? "重新生成" : "生成题目"}</button>
           </div>
         </form>
         {error && <p role="alert">{error}</p>}
       </section>
         <Suspense fallback={<p className="loading-message" role="status">正在加载练习…</p>}>
-          <PracticeWorkspace exerciseKey={generated?.id ?? 0} exercise={generated?.exercise ?? null} mode={mode} />
+          <PracticeWorkspace designSystem exerciseKey={generated?.id ?? 0} exercise={generated?.exercise ?? null} mode={mode} />
         </Suspense>
     </>
   );

@@ -10,7 +10,8 @@ const MAX_BPM = 240;
  * 调用方不维护第二份设置状态；重建此组件才重置设置，子级换题不重置。
  * 生效 BPM 默认 60、范围 40–240；只编辑或提交相同值不打断播放。
  */
-export default function PracticeSettings({ children }: {
+export default function PracticeSettings({ children, settingsClassName = "" }: {
+  settingsClassName?: string;
   children: (settings: PracticeSettingsValue) => ReactNode;
 }) {
   const inputId = useId();
@@ -25,7 +26,7 @@ export default function PracticeSettings({ children }: {
 
   return (
     <>
-      <section className="practice-settings" aria-label="练习设置">
+      <section className={`practice-settings ${settingsClassName}`.trim()} aria-label="练习设置">
         <form
           className="tempo-settings"
           noValidate
