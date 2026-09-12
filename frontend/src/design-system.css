@@ -1,0 +1,120 @@
+/* 第一版仅由 .design-v1 显式启用；规则确认后再推广，不覆盖其他页面。 */
+.design-v1 {
+  --ds-ink: #343044;
+  --ds-muted: #716b80;
+  --ds-primary: #7052d6;
+  --ds-primary-hover: #6344c8;
+  --ds-primary-base: #4b329e;
+  --ds-tint: #f4efff;
+  --ds-line: #e2ddea;
+  --ds-base: #c8c1d5;
+  --ds-surface: #fff;
+  --ds-disabled: #f0edf4;
+  --ds-success: #287343;
+  --ds-success-bg: #edf8ef;
+  --ds-error: #ad3838;
+  --ds-error-bg: #fff0ef;
+  --ds-radius-sm: 12px;
+  --ds-radius-lg: 20px;
+  --ds-border: 2px;
+  --ds-depth: 4px;
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-6: 24px;
+  --ds-space-8: 32px;
+  --ds-space-12: 48px;
+  --ds-text-sm: 14px;
+  --ds-text: 16px;
+  --ds-title: clamp(28px, 4vw, 36px);
+  --ds-motion: 140ms;
+  color: var(--ds-ink);
+  font-family: ui-rounded, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-size: var(--ds-text);
+  line-height: 1.6;
+}
+.design-v1 h1 { font-size: var(--ds-title); font-weight: 800; letter-spacing: -.025em; }
+.design-v1 h2 { font-weight: 750; font-size: 21px; }
+.design-v1 :focus-visible { outline: 3px solid var(--ds-primary); outline-offset: 4px; }
+.design-v1 button {
+  min-height: 48px;
+  padding: 10px var(--ds-space-6);
+  border: var(--ds-border) solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface);
+  color: var(--ds-primary);
+  box-shadow: 0 var(--ds-depth) 0 var(--ds-base);
+  font-weight: 750;
+  transition: background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion);
+}
+.design-v1 button:hover:not(:disabled) { border-color: var(--ds-primary); background: var(--ds-tint); }
+.design-v1 button:active:not(:disabled) { transform: translateY(var(--ds-depth)); box-shadow: 0 0 0 var(--ds-base); }
+.design-v1 button:disabled { color: var(--ds-muted); background: var(--ds-disabled); border-color: var(--ds-line); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); }
+.design-v1 input[type="number"] { width: 88px; min-height: 48px; border: var(--ds-border) solid var(--ds-line); border-radius: var(--ds-radius-sm); background: #faf9fc; color: var(--ds-ink); font-weight: 750; text-align: center; font-variant-numeric: tabular-nums; }
+.design-v1 input[aria-invalid="true"] { border-color: var(--ds-error); background: var(--ds-error-bg); }
+.design-v1 .bpm-error { color: var(--ds-error); }
+.design-v1 .bpm-pending { color: var(--ds-muted); }
+
+/* 首页：三个同等权重的可点击入口，描边和底部厚度表达可操作性。 */
+.home-v1 { max-width: 760px; margin: var(--ds-space-4) auto var(--ds-space-8); }
+.home-v1 .page-heading { text-align: center; margin-bottom: var(--ds-space-8); }
+.home-rhythm-mark { color: var(--ds-primary); margin-bottom: var(--ds-space-2); }
+.home-v1 .home-sources { display: grid; gap: var(--ds-space-4); }
+.home-v1 .home-sources li + li { border: 0; }
+.home-v1 .question-link { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: var(--ds-space-6); min-height: 116px; padding: var(--ds-space-6); border: var(--ds-border) solid var(--ds-line); border-radius: var(--ds-radius-lg); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); background: var(--ds-surface); transition: border-color var(--ds-motion), background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
+.home-v1 .question-link:hover { background: var(--ds-tint); border-color: var(--ds-primary); }
+.home-v1 .question-link:active { transform: translateY(var(--ds-depth)); box-shadow: none; }
+.home-v1 .question-meta { color: var(--ds-muted); font-size: var(--ds-text-sm); margin-top: var(--ds-space-1); }
+.home-v1 .question-action { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 750; }
+.home-v1 .source-symbol { width: 64px; height: 64px; display: grid; place-items: center; color: var(--ds-primary); background: var(--ds-tint); border-radius: var(--ds-radius-lg); }
+
+/* 击拍样板：谱面固定在操作与反馈上方，不对谱面或时钟做动画。 */
+.tapping-v1 { max-width: 920px; margin: 0 auto; }
+.tapping-v1 .back-link { font-size: var(--ds-text-sm); font-weight: 650; color: var(--ds-muted); }
+.tapping-v1 .practice-heading { margin: var(--ds-space-4) 0 var(--ds-space-8); }
+.tapping-v1 .practice-heading .eyebrow { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 650; margin-bottom: var(--ds-space-2); }
+.tapping-v1 .practice-settings { padding: var(--ds-space-4) 0 var(--ds-space-6); gap: var(--ds-space-4) var(--ds-space-8); border-top: var(--ds-border) solid var(--ds-line); border-bottom: var(--ds-border) solid var(--ds-line); justify-content: space-between; }
+.tapping-v1 .tempo-settings { gap: var(--ds-space-3); }
+.tapping-v1 .tempo-settings label { font-weight: 750; }
+.tapping-v1 .unit { color: var(--ds-muted); font-size: 12px; }
+.tapping-v1 .metronome-toggle { font-weight: 650; gap: var(--ds-space-3); min-height: 48px; }
+.tapping-v1 .metronome-toggle input { appearance: none; width: 48px; height: 28px; min-height: 28px; padding: 0; border: 2px solid var(--ds-base); border-radius: 999px; background: var(--ds-disabled); cursor: pointer; position: relative; transition: background-color var(--ds-motion); }
+.tapping-v1 .metronome-toggle input::after { content: ""; position: absolute; width: 18px; height: 18px; top: 3px; left: 3px; border-radius: 50%; background: var(--ds-muted); transition: transform var(--ds-motion); }
+.tapping-v1 .metronome-toggle input:checked { background: var(--ds-primary); border-color: var(--ds-primary); }
+.tapping-v1 .metronome-toggle input:checked::after { transform: translateX(20px); background: white; }
+.tapping-v1 .training-workspace { padding-top: var(--ds-space-8); }
+.tapping-v1 .rhythm-trainer { gap: var(--ds-space-4); }
+.tapping-v1 .trainer-feedback { min-height: 96px; padding: var(--ds-space-3) var(--ds-space-4); border: 2px solid transparent; border-radius: var(--ds-radius-sm); color: var(--ds-muted); font-weight: 650; }
+.tapping-v1 .trainer-feedback[data-feedback="success"] { color: var(--ds-success); background: var(--ds-success-bg); }
+.tapping-v1 .trainer-feedback[data-feedback="error"] { color: var(--ds-error); background: var(--ds-error-bg); }
+.tapping-v1 .trainer-feedback [role="status"], .tapping-v1 .trainer-feedback [role="alert"] { color: inherit; }
+.tapping-v1 .trainer-actions { gap: var(--ds-space-4); margin-top: 0; }
+.tapping-v1 .trainer-actions button { min-width: 156px; min-height: 52px; }
+.tapping-v1 .trainer-actions button:first-child:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 var(--ds-depth) 0 var(--ds-primary-base); }
+.tapping-v1 .trainer-actions button:first-child:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
+.tapping-v1 .trainer-actions button:disabled { color: var(--ds-muted); background: var(--ds-disabled); border-color: var(--ds-line); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); }
+.tapping-v1 .trainer-actions button[data-action="stop"]:not(:disabled) { background: var(--ds-surface); color: var(--ds-error); border-color: var(--ds-error); box-shadow: 0 var(--ds-depth) 0 var(--ds-error); }
+.tapping-v1 .trainer-actions button[data-action="stop"]:hover:not(:disabled) { background: var(--ds-error-bg); }
+.tapping-v1 .trainer-actions button:active:not(:disabled) { box-shadow: none; }
+.tapping-v1 .keyboard-hint { margin: var(--ds-space-2) 0 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.tapping-v1 kbd { border: 2px solid var(--ds-line); border-bottom-width: 4px; border-radius: 8px; padding: 3px 12px; color: var(--ds-ink); background: var(--ds-surface); }
+
+@media (max-width: 600px) {
+  .home-v1 { margin-top: 0; }
+  .home-v1 .question-link { grid-template-columns: 48px minmax(0, 1fr) auto; gap: var(--ds-space-3); padding: var(--ds-space-4); min-height: 106px; }
+  .home-v1 .source-symbol { width: 48px; height: 48px; border-radius: var(--ds-radius-sm); }
+  .home-v1 h2 { font-size: 18px; }
+  .home-v1 .question-meta { font-size: 13px; }
+  .home-v1 .question-action { font-size: 0; }
+  .home-v1 .question-action > span { font-size: 20px; }
+  .tapping-v1 .practice-heading { margin-bottom: var(--ds-space-6); }
+  .tapping-v1 .tempo-settings { gap: var(--ds-space-2); }
+  .tapping-v1 .tempo-settings button { padding-inline: var(--ds-space-3); }
+  .tapping-v1 .trainer-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .tapping-v1 .trainer-actions button { min-width: 0; padding-inline: var(--ds-space-3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .design-v1 *, .design-v1 *::after { transition: none; }
+  .design-v1 button:active:not(:disabled), .home-v1 .question-link:active { transform: none; }
+}

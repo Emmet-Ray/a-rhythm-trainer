@@ -4,6 +4,7 @@ import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useAuth } from "./auth/useAuth";
 import "./App.css";
+import "./design-system.css";
 
 // 首页只展示入口；题库和训练代码进入对应页面后再加载。
 // todo: 这个lazy是干嘛的？

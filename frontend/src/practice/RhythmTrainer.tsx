@@ -360,7 +360,7 @@ function RhythmTrainer({
         timeline={timeline}
         timingEvents={timingEvents}
       />
-      <div className="trainer-feedback">
+      <div className="trainer-feedback" data-feedback={audioError ? "error" : result ? (result.passed ? "success" : "error") : isRunning && mode === "practice" && latestTimingEvent ? (latestTimingEvent.kind === "hit" ? "success" : "error") : "neutral"}>
         {beatText !== null && <div>{beatText}</div>}
         {mode === "practice" && isRunning && latestTimingEvent !== null && (
           <div>{formatTimingEvent(latestTimingEvent)}</div>
@@ -375,6 +375,7 @@ function RhythmTrainer({
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
         <button
           type="button"
+          data-action={isRunning && mode === "practice" ? "stop" : "start"}
           disabled={isStarting || (isRunning && mode !== "practice")}
           onClick={(event) => {
             event.currentTarget.blur();
@@ -386,6 +387,7 @@ function RhythmTrainer({
         {/* 点击试听之后，该按钮变为停止状态，先播放预备拍，然后系统自动播放击拍，高亮当前击拍音符，播放声音 */}
         <button
           type="button"
+          data-action={isRunning && mode === "listen" ? "stop" : "listen"}
           disabled={isStarting || (isRunning && mode !== "listen")}
           onClick={(event) => {
             event.currentTarget.blur();
