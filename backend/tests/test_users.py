@@ -1,6 +1,8 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from io import StringIO
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 from alembic import command
@@ -10,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from db.database import create_database_engine
-from db.users import User
+from db.users import User, get_or_create_user
 
 
 @pytest.fixture
@@ -113,3 +115,75 @@ def test_offline_sql_needs_no_database(migration_config, monkeypatch, tmp_path):
     command.upgrade(migration_config, "head", sql=True)
     assert "CREATE TABLE users" in output.getvalue()
     assert list(tmp_path.iterdir()) == []
+
+
+def test_get_or_create_first_and_repeat(migrated_db):
+    with Session(migrated_db) as session, session.begin():
+        first = get_or_create_user(session, "13800000000")
+        original = (first.id, first.created_at)
+        assert first.phone_number == "13800000000"
+        assert isinstance(first.created_at, datetime)
+        assert get_or_create_user(session, "13800000000") is first
+    with Session(migrated_db) as session, session.begin():
+        repeated = get_or_create_user(session, "13800000000")
+        assert (repeated.id, repeated.created_at) == original
+        assert len(session.scalars(select(User)).all()) == 1
+
+
+def test_get_or_create_different_phones(migrated_db):
+    with Session(migrated_db) as session, session.begin():
+        first = get_or_create_user(session, "13800000000")
+        second = get_or_create_user(session, "13900000000")
+        assert first.id != second.id
+    with Session(migrated_db) as session:
+        assert len(session.scalars(select(User)).all()) == 2
+
+
+def test_get_or_create_leaves_commit_to_caller(migrated_db):
+    with Session(migrated_db) as session:
+        get_or_create_user(session, "13800000000")
+        # 不提交就关闭：新增账号不应持久化。
+    with Session(migrated_db) as session:
+        assert session.scalars(select(User)).all() == []
+
+
+def test_existing_user_does_not_commit_other_pending_changes(migrated_db):
+    with Session(migrated_db) as session, session.begin():
+        original_id = get_or_create_user(session, "13800000000").id
+    with Session(migrated_db) as session:
+        session.add(User(phone_number="13900000000"))
+        assert get_or_create_user(session, "13800000000").id == original_id
+        # 冲突不应触发整个事务的 rollback，调用者仍能看见自己的修改。
+        assert session.scalar(select(User.id).where(User.phone_number == "13900000000")) is not None
+        session.rollback()
+    with Session(migrated_db) as session:
+        assert session.scalars(select(User.phone_number)).all() == ["13800000000"]
+
+
+def test_get_or_create_does_not_hide_other_constraint_errors(migrated_db):
+    with Session(migrated_db) as session:
+        with pytest.raises(IntegrityError):
+            get_or_create_user(session, None)
+        session.rollback()
+        assert session.scalars(select(User)).all() == []
+
+
+@pytest.mark.parametrize("already_exists", [False, True])
+def test_concurrent_get_or_create_returns_same_user(migrated_db, already_exists):
+    if already_exists:
+        with Session(migrated_db) as session, session.begin():
+            get_or_create_user(session, "13800000000")
+    start = Barrier(2)
+
+    def login():
+        # 每个请求有独立 Session/连接，在同一时刻开始，事务内不等待另一个线程。
+        with Session(migrated_db) as session, session.begin():
+            start.wait(timeout=5)
+            user = get_or_create_user(session, "13800000000")
+            return user.id, user.created_at
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = [pool.submit(login), pool.submit(login)]
+        assert results[0].result(timeout=10) == results[1].result(timeout=10)
+    with Session(migrated_db) as session:
+        assert len(session.scalars(select(User)).all()) == 1

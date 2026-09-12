@@ -2,8 +2,9 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, UniqueConstraint, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import DateTime, Integer, String, UniqueConstraint, select, text
+from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from .database import Base
 
@@ -23,3 +24,23 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
+
+
+def get_or_create_user(session: Session, phone_number: str) -> User:
+    """获取或创建已验证手机号对应的用户，不提交、不回滚、不关闭 session。
+
+    输入必须是已规范化且通过验证的手机号；本函数不验证号码归属。
+    短信核验完成后，在新的短事务中优先调用本函数，避免 SQLite 先读后写
+    升级锁的竞争。手机号冲突只复用原账号，不更新其 ID 或创建时间。
+    其他数据库错误（包括锁超时）原样抛出，由调用方回滚/处理整个事务。
+    """
+    # 先写后读：数据库唯一约束仲裁并发创建，不用查询结果推断能否插入。
+    # 仅忽略手机号唯一冲突，不能用宽泛的 OR IGNORE 掩盖其他约束错误。
+    session.execute(
+        insert(User)
+        .values(phone_number=phone_number)
+        .on_conflict_do_nothing(index_elements=[User.phone_number])
+    )
+    return session.scalars(
+        select(User).where(User.phone_number == phone_number)
+    ).one()
