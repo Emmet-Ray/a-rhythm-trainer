@@ -1,39 +1,21 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from io import StringIO
-from pathlib import Path
 from threading import Barrier
 
 import pytest
 from alembic import command
-from alembic.config import Config
 from sqlalchemy import inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from db.database import create_database_engine
 from db.users import User, get_or_create_user
-
-
-@pytest.fixture
-def migration_config():
-    return Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
-
-
-@pytest.fixture
-def migrated_db(tmp_path, monkeypatch, migration_config):
-    # 真实执行迁移，但只指向临时数据库；不读 .env、不操作正式用户。
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'users.db'}")
-    command.upgrade(migration_config, "head")
-    engine = create_database_engine()
-    yield engine
-    engine.dispose()
 
 
 def test_upgrade_version_and_model_match(migrated_db, migration_config):
     assert "users" in inspect(migrated_db).get_table_names()
     with migrated_db.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0001_create_users"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0002_create_login_sessions"
     # 自动生成迁移时不应再发现 User 模型与迁移结果不一致。
     command.check(migration_config)
 

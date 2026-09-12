@@ -22,7 +22,7 @@ def test_import_does_not_read_config_or_create_files(tmp_path, monkeypatch):
     # 独立进程验证导入，避免 reload 重建 Base，破坏其他测试已注册的模型。
     backend_path = str(Path(__file__).resolve().parents[1])
     monkeypatch.setenv("PYTHONPATH", backend_path)
-    subprocess.run([sys.executable, "-c", "import db.database; import db.users"], check=True)
+    subprocess.run([sys.executable, "-c", "import db.database; import db.users; import db.sessions"], check=True)
     assert list(tmp_path.iterdir()) == []
 
 
