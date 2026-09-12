@@ -4,7 +4,7 @@ Python 3.12+、FastAPI，使用 uv 管理依赖，SQLite 存储数据，SQLAlche
 
 已提供健康检查、短信登录、当前用户查询及退出接口，使用服务端会话和 HttpOnly Cookie，并接入前端登录页面。登录接口默认关闭；公开接入前仍需补齐 IP 限流、短信发送预算等反滥用保护。
 
-账号自定义练习已完成数据库表与存取函数，尚未接入 HTTP 和前端，本地练习不会自动导入。保存上限为名称 100 字符、64 个完整 4/4 小节；查询强制按用户范围执行，列表按模式分页。具体约定见 [db/custom_exercises.py](db/custom_exercises.py)。
+账号自定义练习已提供保存、分页列表和单题读取接口，尚未接入前端，本地练习不会自动导入。保存上限为名称 100 字符、64 个完整 4/4 小节；三个接口都要求有效会话，并强制按用户范围执行。列表只返回摘要，完整节奏通过单题接口读取。具体存储约定见 [db/custom_exercises.py](db/custom_exercises.py)，接口示例见 [联调说明](../联调.md)。
 
 ## 本地运行
 
@@ -76,13 +76,35 @@ uv run --locked --no-env-file pytest
 
 ## 代码导航
 
-- [main.py](main.py)：FastAPI 入口。
-- [auth.py](auth.py)：发送验证码与完成登录的业务流程，负责事务边界。
-- [auth_routes.py](auth_routes.py)：登录路由、参数、Cookie、来源检查和错误响应。
-- [db/](db/)：数据库连接、用户、会话和短信登录请求；函数契约与事务顺序见对应 docstring。
-- [migrations/](migrations/)：表结构变更历史；[alembic.ini](alembic.ini) 为迁移工具配置。
-- [sms_auth.py](sms_auth.py)：阿里云号码认证服务接入。
-- [tests/](tests/)：后端测试。
+```text
+backend/
+├── main.py                    # 应用装配、资源生命周期与路由注册
+├── settings.py                # HTTP 环境配置与校验
+├── api/                       # HTTP 层
+│   ├── auth.py                # 登录接口与 Cookie
+│   ├── custom_exercises.py    # 自定义练习接口
+│   ├── dependencies.py        # 当前用户、数据库等公共依赖
+│   └── http_policy.py         # 来源检查、安全错误响应与缓存规则
+├── domain/                    # 业务流程与规则，不依赖 HTTP
+│   ├── auth.py                # 登录流程与事务编排
+│   └── rhythm.py              # 节奏解析与校验
+├── integrations/
+│   └── sms.py                 # 阿里云短信接入与供应商配置
+├── db/                        # 表定义与存取，由调用方提交事务
+│   ├── database.py            # 数据库引擎与连接配置
+│   ├── users.py               # 用户
+│   ├── sessions.py            # 登录会话
+│   ├── sms_logins.py          # 短信请求状态与限制
+│   └── custom_exercises.py    # 账号自定义练习
+├── migrations/                # 数据库表结构迁移
+├── alembic.ini                # 迁移工具配置
+├── tests/                     # 接口、业务规则、外部服务与持久化测试
+├── data/                      # 运行时数据，不提交 Git
+├── pyproject.toml             # 项目依赖与测试配置
+└── uv.lock                    # 锁定依赖版本
+```
+
+登录调用链为 `api/auth.py → domain/auth.py → db/、integrations/sms.py`；练习存取为 `api/custom_exercises.py → db/custom_exercises.py → domain/rhythm.py`。业务简单时不强制增加转发层。
 
 `data/` 为运行时数据目录，不提交 Git；`uv.lock` 和迁移脚本应提交。
 

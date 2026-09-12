@@ -20,7 +20,7 @@ from db.sms_logins import (
     reserve_sms_login, VerificationAttempt,
 )
 from db.users import get_or_create_user
-from sms_auth import SmsAuth, SmsSendRejected, SmsServiceError
+from integrations.sms import SmsAuth, SmsSendRejected, SmsServiceError
 
 
 class LoginRequestBlocked(RuntimeError):

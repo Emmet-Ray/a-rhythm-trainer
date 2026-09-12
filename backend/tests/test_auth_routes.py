@@ -8,12 +8,13 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from auth import Auth
-from auth_routes import AuthHttpSettings, AuthRuntime, SESSION_LIFETIME
+from domain.auth import Auth
+from api.dependencies import AppResources
+from settings import AuthHttpSettings, SESSION_LIFETIME
 from db.sessions import LoginSession, create_login_session
 from db.users import User
 from main import create_app
-from sms_auth import SmsSendRejected, SmsServiceError
+from integrations.sms import SmsSendRejected, SmsServiceError
 
 
 ORIGIN = "https://testserver"
@@ -24,11 +25,11 @@ COOKIE = "__Host-rhythm_session"
 @pytest.fixture
 def http(migrated_db):
     sms = SimpleNamespace(send_code=AsyncMock(), verify_code=AsyncMock(return_value=True))
-    runtime = AuthRuntime(
+    runtime = AppResources(
         migrated_db, Auth(migrated_db, sms, session_lifetime=SESSION_LIFETIME),
         AuthHttpSettings((ORIGIN,)),
     )
-    with TestClient(create_app(auth_runtime=runtime), base_url=ORIGIN, headers={"Origin": ORIGIN}) as client:
+    with TestClient(create_app(resources=runtime), base_url=ORIGIN, headers={"Origin": ORIGIN}) as client:
         yield client, sms, migrated_db
 
 
@@ -151,7 +152,7 @@ def test_database_failure_does_not_issue_cookie(http, monkeypatch):
     def fail(*args, **kwargs):
         raise OperationalError("secret-sql", {"secret": PHONE}, Exception("secret-db-error"))
 
-    monkeypatch.setattr("auth.create_login_session", fail)
+    monkeypatch.setattr("domain.auth.create_login_session", fail)
     response = client.post("/api/auth/login", json={"request_id": request_id, "code": "012345"})
     assert response.status_code == 503
     assert "secret" not in response.text and "set-cookie" not in response.headers
@@ -192,8 +193,8 @@ def test_disabled_auth_keeps_health_available(monkeypatch):
 def test_local_http_cookie(migrated_db):
     origin = "http://localhost:5173"
     sms = SimpleNamespace(send_code=AsyncMock(), verify_code=AsyncMock(return_value=True))
-    runtime = AuthRuntime(migrated_db, Auth(migrated_db, sms, session_lifetime=SESSION_LIFETIME), AuthHttpSettings((origin,), False))
-    with TestClient(create_app(auth_runtime=runtime), base_url=origin, headers={"Origin": origin}) as client:
+    runtime = AppResources(migrated_db, Auth(migrated_db, sms, session_lifetime=SESSION_LIFETIME), AuthHttpSettings((origin,), False))
+    with TestClient(create_app(resources=runtime), base_url=origin, headers={"Origin": origin}) as client:
         response = login(client)
         assert "Secure" not in response.headers["set-cookie"]
         assert client.cookies.get("rhythm_session")
@@ -249,4 +250,4 @@ def test_lifespan_loads_and_disposes_owned_resources(migrated_db, monkeypatch):
         assert login(client).status_code == 200
         dispose.assert_not_called()
     dispose.assert_called_once()
-    assert app.state.auth_runtime is None
+    assert app.state.resources is None

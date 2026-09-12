@@ -85,40 +85,10 @@ def test_no_implicit_commit_and_no_query_autoflush(migrated_db, owners):
         assert get_custom_exercise(session, owners[0], item_id) is None
 
 
-@pytest.mark.parametrize("value", ["whole", "half", "quarter", "eighth", "sixteenth"])
-@pytest.mark.parametrize("kind", ["note", "rest"])
-def test_all_note_and_rest_values(migrated_db, owners, value, kind):
-    count = {"whole": 1, "half": 2, "quarter": 4, "eighth": 8, "sixteenth": 16}[value]
-    with Session(migrated_db) as session:
-        create(session, owners[0], exercise(*[note(value, kind=kind) for _ in range(count)]))
-
-
-def test_dotted_rest_and_offbeat_triplet(migrated_db, owners):
-    content = exercise(note("eighth"), triplet(), note("eighth"), note("quarter", kind="rest", dots=1), note("eighth"))
-    with Session(migrated_db) as session:
-        assert create(session, owners[0], content).exercise == content
-
-
-@pytest.mark.parametrize("content", [
-    {}, [], {"timeSignature": {"beats": 4, "beatType": 4}, "measures": []},
-    {**exercise(), "user_id": 1},
-    {**exercise(), "timeSignature": {"beats": 4.0, "beatType": 4}},
-    {**exercise(), "timeSignature": {"beats": 3, "beatType": 4}},
-    {**exercise(), "measures": [{"elements": []}]},
-    exercise(note()), exercise(note("whole"), note()),
-    exercise(note("whole", dots=True)), exercise(note("whole", dots=2)),
-    exercise(note("unknown")), exercise(note("whole", unexpected=1)),
-    exercise(note("whole", kind="unknown")), exercise(None),
-    exercise({"kind": "triplet", "notes": [note("eighth")] }),
-    exercise({"kind": "triplet", "notes": [note("eighth", dots=1)] * 3}, note("half"), note()),
-    exercise({"kind": "triplet", "notes": [note("eighth", kind="rest")] * 3}, note("half"), note()),
-    exercise({"kind": "triplet", "notes": [triplet()] * 3}, note("half"), note()),
-    {**exercise(), "measures": exercise()["measures"] * 65},
-])
-def test_invalid_content_rejected_before_write(migrated_db, owners, content):
+def test_invalid_rhythm_is_rejected_before_write(migrated_db, owners):
     with Session(migrated_db) as session:
         with pytest.raises(ValueError):
-            create(session, owners[0], content)
+            create(session, owners[0], exercise(note()))
         assert session.scalars(select(CustomExercise)).all() == []
 
 

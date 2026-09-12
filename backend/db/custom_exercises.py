@@ -2,6 +2,7 @@
 
 调用方必须从已认证会话取得 user_id，不能采用请求体中的用户 ID。
 本模块提供新建及用户范围内的查询，暂无更新、删除或本地数据导入。
+节奏规则由 domain.rhythm 负责，保存函数调用它校验，不要求调用方预先校验。
 节奏内容整体保存为 JSON；将来更新时应重新校验并整体赋值，不原地修改嵌套 JSON。
 """
 
@@ -11,14 +12,13 @@ from uuid import uuid4
 from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, Index, String, select, text
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
+from domain.rhythm import parse_rhythm_exercise
+
 from .database import Base
 from .users import User
 
 
 MAX_NAME_LENGTH = 100
-MAX_MEASURES = 64
-# 与前端相同的音乐时间单位：四分音符 24 tick，三连音中每音 8 tick。
-_NOTE_TICKS = {"whole": 96, "half": 48, "quarter": 24, "eighth": 12, "sixteenth": 6}
 
 
 class CustomExercise(Base):
@@ -56,7 +56,7 @@ def create_custom_exercise(
     _require_mode(mode)
     if not isinstance(name, str) or not 1 <= len(name.strip()) <= MAX_NAME_LENGTH:
         raise ValueError("练习名称须为 1–100 个字符。")
-    normalized = _parse_exercise(exercise)
+    normalized = parse_rhythm_exercise(exercise)
     item = CustomExercise(
         id=f"custom-{uuid4()}", user_id=user_id, name=name.strip(), mode=mode, exercise=normalized,
     )
@@ -105,60 +105,3 @@ def _require_user(user_id):
 def _require_mode(mode):
     if mode not in ("tapping", "dictation"):
         raise ValueError("练习模式仅支持 tapping 或 dictation。")
-
-
-def _object(value, required, optional=()):
-    if not isinstance(value, dict) or not set(required) <= value.keys() or value.keys() - set(required) - set(optional):
-        raise ValueError("练习结构存在缺失、额外字段或错误的对象类型。")
-    return value
-
-
-def _event(value, *, triplet=False):
-    event = _object(value, ("kind", "noteValue"), ("dots",))
-    kind, note_value, dots = event["kind"], event["noteValue"], event.get("dots", 0)
-    if kind not in ("note", "rest") or not isinstance(note_value, str) or note_value not in _NOTE_TICKS:
-        raise ValueError("不支持的音符或休止符类型。")
-    if type(dots) is not int or dots not in (0, 1):
-        raise ValueError("附点数只支持 0 或 1。")
-    if triplet and (kind != "note" or note_value != "eighth" or dots != 0):
-        raise ValueError("小三连只能包含三个无附点八分音符。")
-    copied = {"kind": kind, "noteValue": note_value}
-    if "dots" in event:
-        copied["dots"] = dots
-    ticks = 8 if triplet else _NOTE_TICKS[note_value] * (3 if dots else 2) // 2
-    return copied, ticks
-
-
-def _parse_exercise(value):
-    exercise = _object(value, ("timeSignature", "measures"))
-    signature = _object(exercise["timeSignature"], ("beats", "beatType"))
-    if any(type(signature[key]) is not int or signature[key] != 4 for key in ("beats", "beatType")):
-        raise ValueError("目前只支持 4/4 拍。")
-    measures = exercise["measures"]
-    if not isinstance(measures, list) or not 1 <= len(measures) <= MAX_MEASURES:
-        raise ValueError("练习须包含 1–64 个小节。")
-    result = []
-    for index, measure in enumerate(measures, 1):
-        try:
-            elements = _object(measure, ("elements",))["elements"]
-            # 最短普通音符为十六分音符，合法四拍最多 16 个顶层元素。
-            if not isinstance(elements, list) or not 1 <= len(elements) <= 16:
-                raise ValueError("小节须包含 1–16 个节奏元素。")
-            copied, total = [], 0
-            for element in elements:
-                if isinstance(element, dict) and element.get("kind") == "triplet":
-                    notes = _object(element, ("kind", "notes"))["notes"]
-                    if not isinstance(notes, list) or len(notes) != 3:
-                        raise ValueError("小三连必须恰好包含三个音符。")
-                    copied.append({"kind": "triplet", "notes": [_event(note, triplet=True)[0] for note in notes]})
-                    total += 24
-                else:
-                    event, ticks = _event(element)
-                    copied.append(event)
-                    total += ticks
-            if total != 96:
-                raise ValueError("小节必须恰好四拍。")
-            result.append({"elements": copied})
-        except ValueError as error:
-            raise ValueError(f"第 {index} 小节：{error}") from None
-    return {"timeSignature": {"beats": 4, "beatType": 4}, "measures": result}

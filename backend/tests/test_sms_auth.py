@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 from alibabacloud_dypnsapi20170525 import models
 
-from sms_auth import SmsAuth, SmsConfigurationError, SmsSendRejected, SmsServiceError, SmsSettings
+from integrations.sms import SmsAuth, SmsConfigurationError, SmsSendRejected, SmsServiceError, SmsSettings
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def sdk(monkeypatch):
         configs.append(config)
         return client
 
-    monkeypatch.setattr("sms_auth.Client", create)
+    monkeypatch.setattr("integrations.sms.Client", create)
     return client, configs
 
 

@@ -7,12 +7,12 @@ import pytest
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-import auth
-from auth import Auth, InvalidVerificationCode, LoginRequestBlocked, LoginRequestUnavailable
+from domain import auth
+from domain.auth import Auth, InvalidVerificationCode, LoginRequestBlocked, LoginRequestUnavailable
 from db.sessions import LoginSession, get_login_session
 from db.sms_logins import SmsLoginRequest
 from db.users import User
-from sms_auth import SmsSendRejected, SmsServiceError
+from integrations.sms import SmsSendRejected, SmsServiceError
 
 
 PHONE = "13800138000"
