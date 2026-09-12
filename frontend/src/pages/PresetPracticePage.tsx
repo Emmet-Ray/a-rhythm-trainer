@@ -37,7 +37,7 @@ function PresetExercisePage({ questionId }: { questionId: string }) {
   const modeLabel = practiceModes.find(mode => mode.id === selected.mode)!.label;
 
   return (
-    <div className={selected.mode === "tapping" ? "design-v1 tapping-v1" : undefined}>
+    <div className="design-v1 tapping-v1">
       <title>{`${selected.question.title} · ${modeLabel}`}</title>
       <Link className="back-link" to="/preset">← 返回预设练习</Link>
       <header className="page-heading practice-heading">

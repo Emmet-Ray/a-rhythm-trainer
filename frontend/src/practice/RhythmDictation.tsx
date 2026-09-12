@@ -123,7 +123,7 @@ export function RhythmDictation({
 
 
   return (
-    <div className="rhythm-dictation">
+    <div className="rhythm-dictation design-v1 dictation-v1">
       <div className="dictation-playbar">
         {/* 只重建播放器：切换范围/小节取消旧排程，草稿和验证结果仍保留。 */}
         <RhythmPlayback
@@ -190,7 +190,7 @@ export function RhythmDictation({
           >
             验证当前小节
           </button>
-          <span role="status" aria-label="当前小节验证结果">
+          <span role="status" aria-label="当前小节验证结果" data-verdict={selectedVerdict ?? "unchecked"}>
             {selectedVerdict === "correct"
               ? "正确"
               : selectedVerdict === "incorrect"

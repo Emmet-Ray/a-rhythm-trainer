@@ -98,7 +98,13 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
     if (mode === "tapping") assert.match(html, /training-workspace design-v1 tapping-v1/);
     else assert.match(html, /<section aria-label="节奏听写区">/);
   }
-  for (const path of ["/preset/dictation-basic-values-01", "/custom", "/login"]) {
+  for (const path of ["/preset/dictation-basic-values-01", "/random/dictation"]) {
+    const html = await renderApp(path);
+    assert.match(html, /class="rhythm-dictation design-v1 dictation-v1"/);
+    assert.match(html, /data-verdict="unchecked"/);
+    assert.match(html, /data-action="play" data-source="question"/);
+  }
+  for (const path of ["/custom", "/login"]) {
     const html = await renderApp(path);
     assert.match(html, /class="site-header design-v1"/);
     assert.doesNotMatch(html.match(/<main[\s\S]*?<\/main>/)?.[0], /class="design-v1/);

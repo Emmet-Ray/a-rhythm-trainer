@@ -14,7 +14,7 @@ export default function PracticeWorkspace({
 }: {
   exercise: RhythmExercise | null;
   exerciseKey?: string | number;
-  /** 分区启用新样式；听写编辑器暂不迁移。 */
+  /** 分区启用公共设置和击拍样式；听写组件自身维护样式。 */
   designSystem?: boolean;
   mode: "tapping" | "dictation";
 }) {

@@ -169,6 +169,8 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
             <button
               key={option.id}
               type="button"
+              data-action={playing ? "stop" : "play"}
+              data-source={option.id}
               disabled={!playing && (!timeSignature || !option.measures?.some((elements) => elements.length > 0))}
               onClick={() => void togglePlayback(option)}
             >

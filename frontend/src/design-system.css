@@ -191,6 +191,54 @@
 .tapping-v1 .keyboard-hint { margin: var(--ds-space-2) 0 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .tapping-v1 kbd { border: 2px solid var(--ds-line); border-bottom-width: 4px; border-radius: 8px; padding: 3px 12px; color: var(--ds-ink); background: var(--ds-surface); }
 
+/* 听写：共享工具只在此作用域换皮；谱面选择不是按压按钮。 */
+.dictation-v1 { --rhythm-selected-measure: var(--ds-tint); padding-top: var(--ds-space-6); }
+.dictation-v1 .dictation-playbar { gap: var(--ds-space-4) var(--ds-space-6); }
+.dictation-v1 .rhythm-playback-buttons { gap: var(--ds-space-3); }
+.dictation-v1 .rhythm-playback-buttons button { min-width: 144px; }
+.dictation-v1 .rhythm-playback-status { min-height: 28px; margin-top: var(--ds-space-2); color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.dictation-v1 .rhythm-playback-buttons button[data-source="question"]:not(:disabled), .dictation-v1 .dictation-verify:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 4px 0 var(--ds-primary-base); }
+.dictation-v1 .rhythm-playback-buttons button[data-source="question"]:hover:not(:disabled), .dictation-v1 .dictation-verify:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
+.dictation-v1 .rhythm-playback-buttons button[data-action="stop"]:not(:disabled) { background: var(--ds-surface); color: var(--ds-error); border-color: var(--ds-error); box-shadow: 0 4px 0 var(--ds-error); }
+.dictation-v1 .rhythm-playback-buttons button[data-action="stop"]:hover:not(:disabled) { background: var(--ds-error-bg); }
+.dictation-v1 .rhythm-playback-buttons button:active:not(:disabled), .dictation-v1 .dictation-verify:active:not(:disabled) { box-shadow: none; }
+.dictation-v1 .dictation-scope { min-height: 48px; color: var(--ds-muted); font-size: var(--ds-text-sm); gap: var(--ds-space-3); }
+.dictation-v1 .dictation-scope-options { gap: var(--ds-space-1); padding: var(--ds-space-1); border-radius: var(--ds-radius-sm); background: #f6f4f9; }
+.dictation-v1 .dictation-scope-options button { min-height: 40px; padding: 6px 12px; border: 2px solid transparent; border-radius: 8px; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; }
+.dictation-v1 .dictation-scope-options button[aria-pressed="true"]:not(:disabled) { border-color: var(--ds-line); background: var(--ds-surface); color: var(--ds-primary); }
+.dictation-v1 .dictation-scope-options button:hover:not(:disabled) { background: var(--ds-tint); }
+.dictation-v1 button.rhythm-measure-selection { box-shadow: none; transform: none; transition: none; }
+.dictation-v1 button.rhythm-measure-selection:active:not(:disabled) { transform: none; box-shadow: none; }
+.dictation-v1 button.rhythm-measure-selection[aria-pressed="true"] { box-shadow: inset 0 -2px 0 var(--ds-primary); }
+.dictation-v1 .dictation-scope-options button:active:not(:disabled) { transform: none; box-shadow: none; }
+.dictation-v1 .rhythm-editor-controls { margin-top: var(--ds-space-4); }
+.dictation-v1 .rhythm-editor-current-measure { margin-bottom: var(--ds-space-4); font-size: var(--ds-text-sm); font-weight: 750; }
+.dictation-v1 .rhythm-editor-symbol-row { grid-template-columns: 56px minmax(0, 1fr); gap: var(--ds-space-3); margin-top: var(--ds-space-3); }
+.dictation-v1 .rhythm-editor-row-label { color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.dictation-v1 .rhythm-editor-symbol-buttons { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--ds-space-2); }
+.dictation-v1 .rhythm-editor-symbol-buttons button { padding: 8px 6px; font-size: var(--ds-text-sm); }
+.dictation-v1 .rhythm-editor-edit-actions { margin-top: var(--ds-space-4); gap: var(--ds-space-3); }
+.dictation-v1 .rhythm-editor-edit-actions button[aria-pressed="true"]:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); border-color: var(--ds-primary); }
+.dictation-v1 .rhythm-editor-input-message { min-height: 28px; margin-top: var(--ds-space-3); color: var(--ds-error); }
+.dictation-v1 .dictation-verification { margin-top: var(--ds-space-4); padding-top: var(--ds-space-6); border-top: 2px solid var(--ds-line); gap: var(--ds-space-4); }
+.dictation-v1 .dictation-verification-result { gap: var(--ds-space-3); }
+.dictation-v1 .dictation-verification-result [role="status"] { display: inline-flex; align-items: center; min-width: 76px; min-height: 40px; padding: 8px 12px; border-radius: var(--ds-radius-sm); font-size: var(--ds-text-sm); font-weight: 750; }
+.dictation-v1 [data-verdict="correct"] { color: var(--ds-success); background: var(--ds-success-bg); }
+.dictation-v1 [data-verdict="incorrect"] { color: var(--ds-error); background: var(--ds-error-bg); }
+.dictation-v1 .dictation-completion { min-height: 28px; margin: var(--ds-space-3) 0 0; color: var(--ds-success); font-weight: 750; }
+.dictation-v1 .dictation-reference { margin-top: var(--ds-space-6); padding-top: var(--ds-space-6); border-top: 2px solid var(--ds-line); }
+.dictation-v1 [role="alert"] { color: var(--ds-error); font-size: var(--ds-text-sm); }
+@media (max-width: 760px) {
+  .dictation-v1 .rhythm-editor-symbol-buttons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .dictation-v1 .rhythm-editor-symbol-row { grid-template-columns: minmax(0, 1fr); gap: var(--ds-space-2); }
+  .dictation-v1 .rhythm-editor-edit-actions, .dictation-v1 .rhythm-editor-input-message { margin-left: 0; }
+  .dictation-v1 .rhythm-playback { width: 100%; }
+  .dictation-v1 .rhythm-playback-buttons { display: grid; grid-template-columns: 1fr 1fr; }
+  .dictation-v1 .rhythm-playback-buttons button { min-width: 0; padding-inline: 8px; font-size: var(--ds-text-sm); }
+}
+
 @media (max-width: 680px) {
   .site-header.design-v1 { min-height: 80px; padding: var(--ds-space-3) 0; flex-wrap: wrap; gap: var(--ds-space-2); }
   .site-header.design-v1 .brand { font-size: 21px; }

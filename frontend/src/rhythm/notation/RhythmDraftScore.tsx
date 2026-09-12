@@ -105,6 +105,7 @@ export function RhythmDraftScore({
               <button
                 key={index}
                 type="button"
+                className="rhythm-measure-selection"
                 aria-label={`小节 ${index + 1}`}
                 aria-pressed={index === selectedMeasureIndex}
                 onClick={() => onSelectMeasure(index)}
@@ -119,7 +120,7 @@ export function RhythmDraftScore({
                   borderRadius: 0,
                   outlineOffset: -3,
                   backgroundColor:
-                    index === selectedMeasureIndex ? "#f0efff" : "transparent",
+                    index === selectedMeasureIndex ? "var(--rhythm-selected-measure, #f0efff)" : "transparent",
                 }}
               />
             ))}
