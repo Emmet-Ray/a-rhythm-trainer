@@ -16,7 +16,7 @@ const sources = [
 
 export default function HomePage() {
   return (
-    <div className="design-v1 home-v1">
+    <div className="design-system home-page">
       <title>首页 · 节奏训练</title>
       <header className="page-heading">
         <svg className="home-rhythm-mark" width="116" height="64" viewBox="0 0 116 64" aria-hidden="true">

@@ -17,7 +17,7 @@ export default function PresetPracticePage() {
   if (questionId !== undefined) return <PresetExercisePage questionId={questionId} />;
 
   return (
-    <div className="design-v1 preset-v1">
+    <div className="design-system preset-library">
       <title>预设练习 · 节奏训练</title>
       <header className="page-heading">
         <h1>预设练习</h1>
@@ -37,7 +37,7 @@ function PresetExercisePage({ questionId }: { questionId: string }) {
   const modeLabel = practiceModes.find(mode => mode.id === selected.mode)!.label;
 
   return (
-    <div className="design-v1 tapping-v1">
+    <div className="design-system practice-page">
       <title>{`${selected.question.title} · ${modeLabel}`}</title>
       <Link className="back-link" to="/preset">← 返回预设练习</Link>
       <header className="page-heading practice-heading">

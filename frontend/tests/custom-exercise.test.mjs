@@ -83,31 +83,31 @@ test("顶部练习下拉默认收起，在列表和题目页标识所属栏目",
 });
 
 test("设计系统覆盖公共页头、首页、预设列表与击拍页，其他主体不受影响", async () => {
-  assert.match(await renderApp("/"), /class="design-v1 home-v1"/);
-  assert.match(await renderApp("/preset"), /class="design-v1 preset-v1"/);
+  assert.match(await renderApp("/"), /class="design-system home-page"/);
+  assert.match(await renderApp("/preset"), /class="design-system preset-library"/);
   const tapping = await renderApp("/preset/basic-values-01");
-  assert.match(tapping, /class="design-v1 tapping-v1"/);
+  assert.match(tapping, /class="design-system practice-page"/);
   assert.match(tapping, /data-feedback="neutral"/);
   assert.match(tapping, /data-action="start"/);
   assert.match(tapping, /data-action="listen"/);
-  assert.match(await renderApp("/random"), /class="design-v1 random-v1 random-index-v1"/);
+  assert.match(await renderApp("/random"), /class="design-system random-page random-index"/);
   for (const mode of ["tapping", "dictation"]) {
     const html = await renderApp(`/random/${mode}`);
-    assert.match(html, /class="design-v1 random-generation"/);
-    assert.match(html, /class="practice-settings design-v1 settings-v1"/);
-    if (mode === "tapping") assert.match(html, /training-workspace design-v1 tapping-v1/);
+    assert.match(html, /class="design-system random-generation"/);
+    assert.match(html, /class="practice-settings design-system"/);
+    if (mode === "tapping") assert.match(html, /rhythm-trainer design-system/);
     else assert.match(html, /<section aria-label="节奏听写区">/);
   }
   for (const path of ["/preset/dictation-basic-values-01", "/random/dictation"]) {
     const html = await renderApp(path);
-    assert.match(html, /class="rhythm-dictation design-v1 dictation-v1"/);
+    assert.match(html, /class="rhythm-dictation design-system"/);
     assert.match(html, /data-verdict="unchecked"/);
     assert.match(html, /data-action="play" data-source="question"/);
   }
   for (const path of ["/custom", "/login"]) {
     const html = await renderApp(path);
-    assert.match(html, /class="site-header design-v1"/);
-    assert.doesNotMatch(html.match(/<main[\s\S]*?<\/main>/)?.[0], /class="design-v1/);
+    assert.match(html, /class="site-header design-system"/);
+    assert.doesNotMatch(html.match(/<main[\s\S]*?<\/main>/)?.[0], /class="design-system/);
   }
 });
 
@@ -133,6 +133,17 @@ const savedQuestions = ["tapping", "dictation"].map((mode) => ({
     { elements: [{ kind: "note", noteValue: "whole" }] },
   ] },
 }));
+
+test("自定义练习复用组件自身样式，不需要页面开启设计开关", async (t) => {
+  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
+  for (const mode of ["tapping", "dictation"]) {
+    const html = await renderPage(`/custom/${mode}/saved-${mode}`, "/custom/:mode/:exerciseId");
+    assert.match(html, /class="practice-settings design-system"/);
+    assert.match(html, mode === "tapping"
+      ? /class="rhythm-trainer design-system"/
+      : /class="rhythm-dictation design-system"/);
+  }
+});
 
 test("已保存列表链接到所属模式的题目", async (t) => {
   mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
@@ -259,6 +270,15 @@ test("未知模式和未开放的几何模式不回退到默认编辑器", async
     const html = await renderPage(`/custom/${mode}/new`, "/custom/:mode/new");
     assert.match(html, /未找到/);
     assert.doesNotMatch(html, /编辑自定义练习/);
+  }
+});
+
+test("听写与自定义新建页共用编辑器自身样式", async () => {
+  const dictation = await renderApp("/preset/dictation-basic-values-01");
+  const custom = await renderPage("/custom/tapping/new", "/custom/:mode/new");
+  for (const html of [dictation, custom]) {
+    assert.match(html, /class="rhythm-editor design-system"/);
+    assert.match(html, /class="rhythm-measure-selection"/);
   }
 });
 

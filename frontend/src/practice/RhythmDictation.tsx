@@ -123,7 +123,7 @@ export function RhythmDictation({
 
 
   return (
-    <div className="rhythm-dictation design-v1 dictation-v1">
+    <div className="rhythm-dictation design-system">
       <div className="dictation-playbar">
         {/* 只重建播放器：切换范围/小节取消旧排程，草稿和验证结果仍保留。 */}
         <RhythmPlayback

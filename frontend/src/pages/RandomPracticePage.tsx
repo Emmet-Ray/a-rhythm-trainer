@@ -20,9 +20,9 @@ export default function RandomPracticePage() {
 
   if (selectedMode) {
     return (
-      <div className="random-v1">
+      <div className="random-page">
         <title>{`随机${selectedMode.label} · 节奏训练`}</title>
-        <div className="design-v1 tapping-v1">
+        <div className="design-system practice-page">
         <Link className="back-link" to="/random">← 返回随机练习</Link>
         <header className="page-heading practice-heading">
           <p className="eyebrow">随机练习</p>
@@ -35,7 +35,7 @@ export default function RandomPracticePage() {
   }
 
   return (
-    <div className="design-v1 random-v1 random-index-v1">
+    <div className="design-system random-page random-index">
       <title>随机练习 · 节奏训练</title>
       <header className="page-heading"><h1>随机练习</h1></header>
       <section className="random-mode-selection" aria-labelledby="random-mode-heading">
@@ -80,7 +80,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
 
   return (
     <>
-      <section className="design-v1 random-generation" aria-label="生成配置">
+      <section className="design-system random-generation" aria-label="生成配置">
         <form className="random-config" onSubmit={event => { event.preventDefault(); generate(); }}>
           <fieldset className="random-topics">
             <legend>练习范围</legend>
@@ -120,7 +120,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
         {error && <p role="alert">{error}</p>}
       </section>
         <Suspense fallback={<p className="loading-message" role="status">正在加载练习…</p>}>
-          <PracticeWorkspace designSystem exerciseKey={generated?.id ?? 0} exercise={generated?.exercise ?? null} mode={mode} />
+          <PracticeWorkspace exerciseKey={generated?.id ?? 0} exercise={generated?.exercise ?? null} mode={mode} />
         </Suspense>
     </>
   );

@@ -29,7 +29,7 @@ function App() {
       <a className="skip-link" href="#main-content">
         跳到主要内容
       </a>
-      <header className="site-header design-v1">
+      <header className="site-header design-system">
         <Link to="/" className="brand">
           节奏训练
         </Link>

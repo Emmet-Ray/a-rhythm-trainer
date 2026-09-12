@@ -134,7 +134,7 @@ export function RhythmEditor({
   }
 
   return (
-    <div className="rhythm-editor">
+    <div className="rhythm-editor design-system">
       {measures.length === 0 ? emptyContent : <RhythmDraftScore
         measures={measures}
         timeSignature={timeSignature}

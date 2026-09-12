@@ -1,5 +1,5 @@
-/* 由 .design-v1 显式启用；页头与页面主体分别应用，避免未迁移页面被全局覆盖。 */
-.design-v1 {
+/* 由 .design-system 显式启用；页头与页面主体分别应用，避免未迁移页面被全局覆盖。 */
+.design-system {
   --ds-ink: #343044;
   --ds-muted: #716b80;
   --ds-primary: #7052d6;
@@ -34,10 +34,10 @@
   font-size: var(--ds-text);
   line-height: 1.6;
 }
-.design-v1 h1 { font-size: var(--ds-title); font-weight: 800; letter-spacing: -.025em; }
-.design-v1 h2 { font-weight: 750; font-size: 21px; }
-.design-v1 :focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; }
-.design-v1 button {
+.design-system h1 { font-size: var(--ds-title); font-weight: 800; letter-spacing: -.025em; }
+.design-system h2 { font-weight: 750; font-size: 21px; }
+.design-system :focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; }
+.design-system button {
   min-height: 48px;
   padding: 10px var(--ds-space-6);
   border: var(--ds-border) solid var(--ds-line);
@@ -48,78 +48,78 @@
   font-weight: 750;
   transition: background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion);
 }
-.design-v1 button:hover:not(:disabled) { border-color: var(--ds-primary); background: var(--ds-tint); }
-.design-v1 button:active:not(:disabled) { transform: translateY(var(--ds-depth)); box-shadow: 0 0 0 var(--ds-base); }
-.design-v1 button:disabled { color: var(--ds-muted); background: var(--ds-disabled); border-color: var(--ds-line); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); }
-.design-v1 input[type="number"] { width: 88px; min-height: 48px; border: var(--ds-border) solid var(--ds-line); border-radius: var(--ds-radius-sm); background: #faf9fc; color: var(--ds-ink); font-weight: 750; text-align: center; font-variant-numeric: tabular-nums; }
-.design-v1 input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
-.design-v1 input[type="number"]::-webkit-inner-spin-button, .design-v1 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.design-v1 input[aria-invalid="true"] { border-color: var(--ds-error); background: var(--ds-error-bg); }
-.design-v1 .bpm-error { color: var(--ds-error); }
-.design-v1 .bpm-pending { color: var(--ds-muted); }
+.design-system button:hover:not(:disabled) { border-color: var(--ds-primary); background: var(--ds-tint); }
+.design-system button:active:not(:disabled) { transform: translateY(var(--ds-depth)); box-shadow: 0 0 0 var(--ds-base); }
+.design-system button:disabled { color: var(--ds-muted); background: var(--ds-disabled); border-color: var(--ds-line); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); }
+.design-system input[type="number"] { width: 88px; min-height: 48px; border: var(--ds-border) solid var(--ds-line); border-radius: var(--ds-radius-sm); background: #faf9fc; color: var(--ds-ink); font-weight: 750; text-align: center; font-variant-numeric: tabular-nums; }
+.design-system input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+.design-system input[type="number"]::-webkit-inner-spin-button, .design-system input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.design-system input[aria-invalid="true"] { border-color: var(--ds-error); background: var(--ds-error-bg); }
+.design-system .bpm-error { color: var(--ds-error); }
+.design-system .bpm-pending { color: var(--ds-muted); }
 
 /* 公共页头：导航不使用主操作按钮的厚度，始终保留清楚的焦点和栏目状态。 */
-.site-header.design-v1 { min-height: 88px; border-bottom: var(--ds-border) solid var(--ds-line); gap: var(--ds-space-4); }
-.site-header.design-v1 .brand { color: var(--ds-primary); font-size: 24px; font-weight: 800; letter-spacing: -.025em; }
-.site-header.design-v1 nav { gap: var(--ds-space-2); }
-.site-header.design-v1 nav > a, .site-header.design-v1 summary { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; border: 2px solid transparent; border-radius: var(--ds-radius-sm); color: var(--ds-muted); font-weight: 650; transition: background-color var(--ds-motion); }
-.site-header.design-v1 nav > a:hover, .site-header.design-v1 summary:hover, .site-header.design-v1 details[open] summary { background: #f6f4f9; }
-.site-header.design-v1 nav > a[aria-current], .site-header.design-v1 details:has(a[aria-current]) summary { color: var(--ds-primary); font-weight: 750; }
-.site-header.design-v1 summary { cursor: pointer; list-style: none; gap: var(--ds-space-2); }
-.site-header.design-v1 summary::-webkit-details-marker { display: none; }
-.site-header.design-v1 summary::after { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); }
-.site-header.design-v1 details[open] summary::after { transform: translateY(2px) rotate(225deg); }
-.site-header.design-v1 .practice-navigation-links { top: calc(100% + 8px); min-width: 192px; padding: var(--ds-space-2); border: var(--ds-border) solid var(--ds-line); border-radius: var(--ds-radius-sm); background: var(--ds-surface); box-shadow: 0 8px 24px #34304412; }
+.site-header.design-system { min-height: 88px; border-bottom: var(--ds-border) solid var(--ds-line); gap: var(--ds-space-4); }
+.site-header.design-system .brand { color: var(--ds-primary); font-size: 24px; font-weight: 800; letter-spacing: -.025em; }
+.site-header.design-system nav { gap: var(--ds-space-2); }
+.site-header.design-system nav > a, .site-header.design-system summary { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; border: 2px solid transparent; border-radius: var(--ds-radius-sm); color: var(--ds-muted); font-weight: 650; transition: background-color var(--ds-motion); }
+.site-header.design-system nav > a:hover, .site-header.design-system summary:hover, .site-header.design-system details[open] summary { background: #f6f4f9; }
+.site-header.design-system nav > a[aria-current], .site-header.design-system details:has(a[aria-current]) summary { color: var(--ds-primary); font-weight: 750; }
+.site-header.design-system summary { cursor: pointer; list-style: none; gap: var(--ds-space-2); }
+.site-header.design-system summary::-webkit-details-marker { display: none; }
+.site-header.design-system summary::after { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); }
+.site-header.design-system details[open] summary::after { transform: translateY(2px) rotate(225deg); }
+.site-header.design-system .practice-navigation-links { top: calc(100% + 8px); min-width: 192px; padding: var(--ds-space-2); border: var(--ds-border) solid var(--ds-line); border-radius: var(--ds-radius-sm); background: var(--ds-surface); box-shadow: 0 8px 24px #34304412; }
 /* 透明区域桥接面板间距，鼠标经过时仍处于 details 内，不触发关闭。 */
-.site-header.design-v1 .practice-navigation-links::before { content: ""; position: absolute; left: -2px; right: -2px; top: -10px; height: 10px; }
-.site-header.design-v1 .practice-navigation-links li + li { margin-top: var(--ds-space-1); }
-.site-header.design-v1 .practice-navigation-links a { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-4); min-height: 44px; border-radius: 8px; color: var(--ds-muted); background: transparent; font-size: var(--ds-text-sm); font-weight: 650; }
-.site-header.design-v1 .practice-navigation-links a:hover, .site-header.design-v1 .practice-navigation-links a:focus-visible { background: #f6f4f9; }
-.site-header.design-v1 .practice-navigation-links a[aria-current] { color: var(--ds-primary); font-weight: 750; }
-.site-header.design-v1 .practice-navigation-links a[aria-current]::after { content: ""; width: 6px; height: 11px; flex-shrink: 0; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); }
-.site-header.design-v1 summary:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; }
-.site-header.design-v1 .nav-button { min-height: 44px; padding: 8px 12px; box-shadow: none; }
-.site-header.design-v1 .nav-button:active:not(:disabled) { transform: none; }
-.site-header.design-v1 .auth-status { color: var(--ds-muted); padding: 0 var(--ds-space-2); }
+.site-header.design-system .practice-navigation-links::before { content: ""; position: absolute; left: -2px; right: -2px; top: -10px; height: 10px; }
+.site-header.design-system .practice-navigation-links li + li { margin-top: var(--ds-space-1); }
+.site-header.design-system .practice-navigation-links a { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-4); min-height: 44px; border-radius: 8px; color: var(--ds-muted); background: transparent; font-size: var(--ds-text-sm); font-weight: 650; }
+.site-header.design-system .practice-navigation-links a:hover, .site-header.design-system .practice-navigation-links a:focus-visible { background: #f6f4f9; }
+.site-header.design-system .practice-navigation-links a[aria-current] { color: var(--ds-primary); font-weight: 750; }
+.site-header.design-system .practice-navigation-links a[aria-current]::after { content: ""; width: 6px; height: 11px; flex-shrink: 0; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); }
+.site-header.design-system summary:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; }
+.site-header.design-system .nav-button { min-height: 44px; padding: 8px 12px; box-shadow: none; }
+.site-header.design-system .nav-button:active:not(:disabled) { transform: none; }
+.site-header.design-system .auth-status { color: var(--ds-muted); padding: 0 var(--ds-space-2); }
 
 /* 预设列表：无外框的主题分组，平面的分段选择，以及紧凑的可按压题目入口。 */
-.preset-v1 .page-heading { margin: var(--ds-space-4) 0 var(--ds-space-8); }
-.preset-v1 .topic-section { grid-template-columns: 220px minmax(0, 1fr); gap: var(--ds-space-8); padding: var(--ds-space-8) 0; border-bottom: var(--ds-border) solid var(--ds-line); }
-.preset-v1 .topic-section:first-child { padding-top: 0; }
-.preset-v1 .topic-heading { padding-top: var(--ds-space-2); }
-.preset-v1 .topic-number { display: inline-grid; place-items: center; min-width: 36px; height: 32px; padding: 0 var(--ds-space-2); margin-bottom: var(--ds-space-3); border-radius: 10px; background: var(--ds-tint); color: var(--ds-primary); font-weight: 750; font-size: var(--ds-text-sm); }
-.preset-v1 .topic-heading h2 { font-size: 19px; line-height: 1.6; overflow-wrap: anywhere; }
-.preset-v1 .topic-modes { display: flex; flex-wrap: wrap; gap: var(--ds-space-1); padding: var(--ds-space-1); margin-bottom: var(--ds-space-4); border: 0; border-radius: var(--ds-radius-sm); background: #f6f4f9; }
-.preset-v1 .topic-modes button { flex: 1 1 auto; min-height: 44px; padding: 8px 10px; border: 2px solid transparent; border-radius: 8px; background: transparent; box-shadow: none; color: var(--ds-muted); font-size: var(--ds-text-sm); }
-.preset-v1 .topic-modes button:hover:not(:disabled) { background: var(--ds-tint); border-color: var(--ds-line); color: var(--ds-primary); }
-.preset-v1 .topic-modes button[aria-pressed="true"] { background: var(--ds-surface); color: var(--ds-primary); border-color: var(--ds-line); box-shadow: 0 2px 0 var(--ds-line); }
-.preset-v1 .topic-modes button:active:not(:disabled) { transform: none; box-shadow: none; }
-.preset-v1 .topic-modes button:disabled { color: var(--ds-muted); background: transparent; box-shadow: none; }
-.preset-v1 .topic-modes small { display: inline; font-size: 10px; color: var(--ds-muted); margin-left: 4px; }
-.preset-v1 .question-list { display: grid; gap: var(--ds-space-3); }
-.preset-v1 .question-list li + li { border: 0; }
-.preset-v1 .question-link { min-height: 64px; padding: var(--ds-space-4); gap: var(--ds-space-4); border: var(--ds-border) solid var(--ds-line); border-radius: var(--ds-radius-sm); background: var(--ds-surface); box-shadow: 0 3px 0 var(--ds-line); transition: background-color var(--ds-motion), border-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
-.preset-v1 .question-link:hover { background: var(--ds-tint); border-color: var(--ds-primary); }
-.preset-v1 .question-link:active { transform: translateY(3px); box-shadow: none; }
-.preset-v1 .question-link h3 { font-size: var(--ds-text); font-weight: 700; overflow-wrap: anywhere; }
-.preset-v1 .question-action { font-weight: 750; color: var(--ds-primary); font-size: var(--ds-text-sm); }
-.preset-v1 .empty-questions { padding: var(--ds-space-6) var(--ds-space-4); color: var(--ds-muted); }
+.preset-library .page-heading { margin: var(--ds-space-4) 0 var(--ds-space-8); }
+.preset-library .topic-section { grid-template-columns: 220px minmax(0, 1fr); gap: var(--ds-space-8); padding: var(--ds-space-8) 0; border-bottom: var(--ds-border) solid var(--ds-line); }
+.preset-library .topic-section:first-child { padding-top: 0; }
+.preset-library .topic-heading { padding-top: var(--ds-space-2); }
+.preset-library .topic-number { display: inline-grid; place-items: center; min-width: 36px; height: 32px; padding: 0 var(--ds-space-2); margin-bottom: var(--ds-space-3); border-radius: 10px; background: var(--ds-tint); color: var(--ds-primary); font-weight: 750; font-size: var(--ds-text-sm); }
+.preset-library .topic-heading h2 { font-size: 19px; line-height: 1.6; overflow-wrap: anywhere; }
+.preset-library .topic-modes { display: flex; flex-wrap: wrap; gap: var(--ds-space-1); padding: var(--ds-space-1); margin-bottom: var(--ds-space-4); border: 0; border-radius: var(--ds-radius-sm); background: #f6f4f9; }
+.preset-library .topic-modes button { flex: 1 1 auto; min-height: 44px; padding: 8px 10px; border: 2px solid transparent; border-radius: 8px; background: transparent; box-shadow: none; color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.preset-library .topic-modes button:hover:not(:disabled) { background: var(--ds-tint); border-color: var(--ds-line); color: var(--ds-primary); }
+.preset-library .topic-modes button[aria-pressed="true"] { background: var(--ds-surface); color: var(--ds-primary); border-color: var(--ds-line); box-shadow: 0 2px 0 var(--ds-line); }
+.preset-library .topic-modes button:active:not(:disabled) { transform: none; box-shadow: none; }
+.preset-library .topic-modes button:disabled { color: var(--ds-muted); background: transparent; box-shadow: none; }
+.preset-library .topic-modes small { display: inline; font-size: 10px; color: var(--ds-muted); margin-left: 4px; }
+.preset-library .question-list { display: grid; gap: var(--ds-space-3); }
+.preset-library .question-list li + li { border: 0; }
+.preset-library .question-link { min-height: 64px; padding: var(--ds-space-4); gap: var(--ds-space-4); border: var(--ds-border) solid var(--ds-line); border-radius: var(--ds-radius-sm); background: var(--ds-surface); box-shadow: 0 3px 0 var(--ds-line); transition: background-color var(--ds-motion), border-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
+.preset-library .question-link:hover { background: var(--ds-tint); border-color: var(--ds-primary); }
+.preset-library .question-link:active { transform: translateY(3px); box-shadow: none; }
+.preset-library .question-link h3 { font-size: var(--ds-text); font-weight: 700; overflow-wrap: anywhere; }
+.preset-library .question-action { font-weight: 750; color: var(--ds-primary); font-size: var(--ds-text-sm); }
+.preset-library .empty-questions { padding: var(--ds-space-6) var(--ds-space-4); color: var(--ds-muted); }
 
 /* 随机配置：多选保留原生语义，平面选中状态与按压操作区分。 */
-.random-v1 { max-width: 920px; margin: 0 auto; }
-.random-index-v1 { max-width: 760px; }
-.random-index-v1 .page-heading { margin: var(--ds-space-4) 0 var(--ds-space-8); }
-.random-index-v1 .random-mode-selection { padding-top: 0; }
-.random-index-v1 .random-mode-selection h2 { font-size: var(--ds-text); color: var(--ds-muted); margin-bottom: var(--ds-space-4); }
-.random-index-v1 .question-list { display: grid; gap: var(--ds-space-4); }
-.random-index-v1 .question-list li + li { border: 0; }
-.random-index-v1 .question-link { min-height: 88px; padding: var(--ds-space-6); border: 2px solid var(--ds-line); border-radius: var(--ds-radius-lg); box-shadow: 0 4px 0 var(--ds-line); gap: var(--ds-space-4); transition: background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
-.random-index-v1 a.question-link:hover { border-color: var(--ds-primary); background: var(--ds-tint); }
-.random-index-v1 a.question-link:active { transform: translateY(4px); box-shadow: none; }
-.random-index-v1 .question-link h3 { font-size: 19px; font-weight: 750; }
-.random-index-v1 .question-action { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 650; }
-.random-index-v1 .random-mode-unavailable { background: var(--ds-disabled); color: var(--ds-muted); box-shadow: none; cursor: default; }
-.random-index-v1 .random-mode-unavailable .question-action { color: var(--ds-muted); }
+.random-page { max-width: 920px; margin: 0 auto; }
+.random-index { max-width: 760px; }
+.random-index .page-heading { margin: var(--ds-space-4) 0 var(--ds-space-8); }
+.random-index .random-mode-selection { padding-top: 0; }
+.random-index .random-mode-selection h2 { font-size: var(--ds-text); color: var(--ds-muted); margin-bottom: var(--ds-space-4); }
+.random-index .question-list { display: grid; gap: var(--ds-space-4); }
+.random-index .question-list li + li { border: 0; }
+.random-index .question-link { min-height: 88px; padding: var(--ds-space-6); border: 2px solid var(--ds-line); border-radius: var(--ds-radius-lg); box-shadow: 0 4px 0 var(--ds-line); gap: var(--ds-space-4); transition: background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
+.random-index a.question-link:hover { border-color: var(--ds-primary); background: var(--ds-tint); }
+.random-index a.question-link:active { transform: translateY(4px); box-shadow: none; }
+.random-index .question-link h3 { font-size: 19px; font-weight: 750; }
+.random-index .question-action { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 650; }
+.random-index .random-mode-unavailable { background: var(--ds-disabled); color: var(--ds-muted); box-shadow: none; cursor: default; }
+.random-index .random-mode-unavailable .question-action { color: var(--ds-muted); }
 .random-generation { margin-bottom: var(--ds-space-6); }
 .random-generation .random-topics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ds-space-2); }
 .random-generation .random-topics legend { font-weight: 750; margin-bottom: var(--ds-space-4); }
@@ -144,128 +144,129 @@
 .random-generation [role="alert"] { color: var(--ds-error); margin-top: var(--ds-space-4); }
 @media (max-width: 600px) {
   .random-generation .random-topics { grid-template-columns: minmax(0, 1fr); }
-  .random-index-v1 .question-link { padding: var(--ds-space-4); }
+  .random-index .question-link { padding: var(--ds-space-4); }
 }
 
 /* 首页：三个同等权重的可点击入口，描边和底部厚度表达可操作性。 */
-.home-v1 { max-width: 760px; margin: var(--ds-space-4) auto var(--ds-space-8); }
-.home-v1 .page-heading { text-align: center; margin-bottom: var(--ds-space-8); }
+.home-page { max-width: 760px; margin: var(--ds-space-4) auto var(--ds-space-8); }
+.home-page .page-heading { text-align: center; margin-bottom: var(--ds-space-8); }
 .home-rhythm-mark { color: var(--ds-primary); margin-bottom: var(--ds-space-2); }
-.home-v1 .home-sources { display: grid; gap: var(--ds-space-4); }
-.home-v1 .home-sources li + li { border: 0; }
-.home-v1 .question-link { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: var(--ds-space-6); min-height: 116px; padding: var(--ds-space-6); border: var(--ds-border) solid var(--ds-line); border-radius: var(--ds-radius-lg); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); background: var(--ds-surface); transition: border-color var(--ds-motion), background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
-.home-v1 .question-link:hover { background: var(--ds-tint); border-color: var(--ds-primary); }
-.home-v1 .question-link:active { transform: translateY(var(--ds-depth)); box-shadow: none; }
-.home-v1 .question-meta { color: var(--ds-muted); font-size: var(--ds-text-sm); margin-top: var(--ds-space-1); }
-.home-v1 .question-action { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 750; }
-.home-v1 .source-symbol { width: 64px; height: 64px; display: grid; place-items: center; color: var(--ds-primary); background: var(--ds-tint); border-radius: var(--ds-radius-lg); }
+.home-page .home-sources { display: grid; gap: var(--ds-space-4); }
+.home-page .home-sources li + li { border: 0; }
+.home-page .question-link { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: var(--ds-space-6); min-height: 116px; padding: var(--ds-space-6); border: var(--ds-border) solid var(--ds-line); border-radius: var(--ds-radius-lg); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); background: var(--ds-surface); transition: border-color var(--ds-motion), background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
+.home-page .question-link:hover { background: var(--ds-tint); border-color: var(--ds-primary); }
+.home-page .question-link:active { transform: translateY(var(--ds-depth)); box-shadow: none; }
+.home-page .question-meta { color: var(--ds-muted); font-size: var(--ds-text-sm); margin-top: var(--ds-space-1); }
+.home-page .question-action { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 750; }
+.home-page .source-symbol { width: 64px; height: 64px; display: grid; place-items: center; color: var(--ds-primary); background: var(--ds-tint); border-radius: var(--ds-radius-lg); }
 
 /* 击拍样板：谱面固定在操作与反馈上方，不对谱面或时钟做动画。 */
-.tapping-v1 { max-width: 920px; margin: 0 auto; }
-.tapping-v1 .back-link { font-size: var(--ds-text-sm); font-weight: 650; color: var(--ds-muted); }
-.tapping-v1 .practice-heading { margin: var(--ds-space-4) 0 var(--ds-space-8); }
-.tapping-v1 .practice-heading .eyebrow { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 650; margin-bottom: var(--ds-space-2); }
-:is(.tapping-v1 .practice-settings, .settings-v1.practice-settings) { padding: var(--ds-space-4) 0 var(--ds-space-6); gap: var(--ds-space-4) var(--ds-space-8); border-top: var(--ds-border) solid var(--ds-line); border-bottom: var(--ds-border) solid var(--ds-line); justify-content: space-between; }
-:is(.tapping-v1, .settings-v1) .tempo-settings { gap: var(--ds-space-3); }
-:is(.tapping-v1, .settings-v1) .tempo-settings label { font-weight: 750; }
-:is(.tapping-v1, .settings-v1) .unit { color: var(--ds-muted); font-size: 12px; }
-:is(.tapping-v1, .settings-v1) .metronome-toggle { font-weight: 650; gap: var(--ds-space-3); min-height: 48px; }
-:is(.tapping-v1, .settings-v1) .metronome-toggle input { appearance: none; width: 48px; height: 28px; min-height: 28px; padding: 0; border: 2px solid var(--ds-base); border-radius: 999px; background: var(--ds-disabled); cursor: pointer; position: relative; transition: background-color var(--ds-motion); }
-:is(.tapping-v1, .settings-v1) .metronome-toggle input::after { content: ""; position: absolute; width: 18px; height: 18px; top: 3px; left: 3px; border-radius: 50%; background: var(--ds-muted); transition: transform var(--ds-motion); }
-:is(.tapping-v1, .settings-v1) .metronome-toggle input:checked { background: var(--ds-primary); border-color: var(--ds-primary); }
-:is(.tapping-v1, .settings-v1) .metronome-toggle input:checked::after { transform: translateX(20px); background: white; }
-.tapping-v1 .training-workspace { padding-top: var(--ds-space-8); }
-.tapping-v1 .rhythm-trainer { gap: var(--ds-space-4); }
-.tapping-v1 .trainer-feedback { min-height: 96px; padding: var(--ds-space-3) var(--ds-space-4); border: 2px solid transparent; border-radius: var(--ds-radius-sm); color: var(--ds-muted); font-weight: 650; }
-.tapping-v1 .trainer-feedback[data-feedback="success"] { color: var(--ds-success); background: var(--ds-success-bg); }
-.tapping-v1 .trainer-feedback[data-feedback="error"] { color: var(--ds-error); background: var(--ds-error-bg); }
-.tapping-v1 .trainer-feedback [role="status"], .tapping-v1 .trainer-feedback [role="alert"] { color: inherit; }
-.tapping-v1 .trainer-actions { gap: var(--ds-space-4); margin-top: 0; }
-.tapping-v1 .trainer-actions button { min-width: 156px; min-height: 52px; }
-.tapping-v1 .trainer-actions button:first-child:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 var(--ds-depth) 0 var(--ds-primary-base); }
-.tapping-v1 .trainer-actions button:first-child:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
-.tapping-v1 .trainer-actions button:disabled { color: var(--ds-muted); background: var(--ds-disabled); border-color: var(--ds-line); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); }
-.tapping-v1 .trainer-actions button[data-action="stop"]:not(:disabled) { background: var(--ds-surface); color: var(--ds-error); border-color: var(--ds-error); box-shadow: 0 var(--ds-depth) 0 var(--ds-error); }
-.tapping-v1 .trainer-actions button[data-action="stop"]:hover:not(:disabled) { background: var(--ds-error-bg); }
-.tapping-v1 .trainer-actions button:active:not(:disabled) { box-shadow: none; }
-.tapping-v1 .keyboard-hint { margin: var(--ds-space-2) 0 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
-.tapping-v1 kbd { border: 2px solid var(--ds-line); border-bottom-width: 4px; border-radius: 8px; padding: 3px 12px; color: var(--ds-ink); background: var(--ds-surface); }
+.practice-page { max-width: 920px; margin: 0 auto; }
+.practice-page .back-link { font-size: var(--ds-text-sm); font-weight: 650; color: var(--ds-muted); }
+.practice-page .practice-heading { margin: var(--ds-space-4) 0 var(--ds-space-8); }
+.practice-page .practice-heading .eyebrow { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 650; margin-bottom: var(--ds-space-2); }
+.design-system.practice-settings { padding: var(--ds-space-4) 0 var(--ds-space-6); gap: var(--ds-space-4) var(--ds-space-8); border-top: var(--ds-border) solid var(--ds-line); border-bottom: var(--ds-border) solid var(--ds-line); justify-content: space-between; }
+.practice-settings .tempo-settings { gap: var(--ds-space-3); }
+.practice-settings .tempo-settings label { font-weight: 750; }
+.practice-settings .unit { color: var(--ds-muted); font-size: 12px; }
+.practice-settings .metronome-toggle { font-weight: 650; gap: var(--ds-space-3); min-height: 48px; }
+.practice-settings .metronome-toggle input { appearance: none; width: 48px; height: 28px; min-height: 28px; padding: 0; border: 2px solid var(--ds-base); border-radius: 999px; background: var(--ds-disabled); cursor: pointer; position: relative; transition: background-color var(--ds-motion); }
+.practice-settings .metronome-toggle input::after { content: ""; position: absolute; width: 18px; height: 18px; top: 3px; left: 3px; border-radius: 50%; background: var(--ds-muted); transition: transform var(--ds-motion); }
+.practice-settings .metronome-toggle input:checked { background: var(--ds-primary); border-color: var(--ds-primary); }
+.practice-settings .metronome-toggle input:checked::after { transform: translateX(20px); background: white; }
 
-/* 听写：共享工具只在此作用域换皮；谱面选择不是按压按钮。 */
-.dictation-v1 { --rhythm-selected-measure: var(--ds-tint); padding-top: var(--ds-space-6); }
-.dictation-v1 .dictation-playbar { gap: var(--ds-space-4) var(--ds-space-6); }
-.dictation-v1 .rhythm-playback-buttons { gap: var(--ds-space-3); }
-.dictation-v1 .rhythm-playback-buttons button { min-width: 144px; }
-.dictation-v1 .rhythm-playback-status { min-height: 28px; margin-top: var(--ds-space-2); color: var(--ds-muted); font-size: var(--ds-text-sm); }
-.dictation-v1 .rhythm-playback-buttons button[data-source="question"]:not(:disabled), .dictation-v1 .dictation-verify:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 4px 0 var(--ds-primary-base); }
-.dictation-v1 .rhythm-playback-buttons button[data-source="question"]:hover:not(:disabled), .dictation-v1 .dictation-verify:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
-.dictation-v1 .rhythm-playback-buttons button[data-action="stop"]:not(:disabled) { background: var(--ds-surface); color: var(--ds-error); border-color: var(--ds-error); box-shadow: 0 4px 0 var(--ds-error); }
-.dictation-v1 .rhythm-playback-buttons button[data-action="stop"]:hover:not(:disabled) { background: var(--ds-error-bg); }
-.dictation-v1 .rhythm-playback-buttons button:active:not(:disabled), .dictation-v1 .dictation-verify:active:not(:disabled) { box-shadow: none; }
-.dictation-v1 .dictation-scope { min-height: 48px; color: var(--ds-muted); font-size: var(--ds-text-sm); gap: var(--ds-space-3); }
-.dictation-v1 .dictation-scope-options { gap: var(--ds-space-1); padding: var(--ds-space-1); border-radius: var(--ds-radius-sm); background: #f6f4f9; }
-.dictation-v1 .dictation-scope-options button { min-height: 40px; padding: 6px 12px; border: 2px solid transparent; border-radius: 8px; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; }
-.dictation-v1 .dictation-scope-options button[aria-pressed="true"]:not(:disabled) { border-color: var(--ds-line); background: var(--ds-surface); color: var(--ds-primary); }
-.dictation-v1 .dictation-scope-options button:hover:not(:disabled) { background: var(--ds-tint); }
-.dictation-v1 button.rhythm-measure-selection { box-shadow: none; transform: none; transition: none; }
-.dictation-v1 button.rhythm-measure-selection:active:not(:disabled) { transform: none; box-shadow: none; }
-.dictation-v1 button.rhythm-measure-selection[aria-pressed="true"] { box-shadow: inset 0 -2px 0 var(--ds-primary); }
-.dictation-v1 .dictation-scope-options button:active:not(:disabled) { transform: none; box-shadow: none; }
-.dictation-v1 .rhythm-editor-controls { margin-top: var(--ds-space-4); }
-.dictation-v1 .rhythm-editor-current-measure { margin-bottom: var(--ds-space-4); font-size: var(--ds-text-sm); font-weight: 750; }
-.dictation-v1 .rhythm-editor-symbol-row { grid-template-columns: 56px minmax(0, 1fr); gap: var(--ds-space-3); margin-top: var(--ds-space-3); }
-.dictation-v1 .rhythm-editor-row-label { color: var(--ds-muted); font-size: var(--ds-text-sm); }
-.dictation-v1 .rhythm-editor-symbol-buttons { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--ds-space-2); }
-.dictation-v1 .rhythm-editor-symbol-buttons button { padding: 8px 6px; font-size: var(--ds-text-sm); }
-.dictation-v1 .rhythm-editor-edit-actions { margin-top: var(--ds-space-4); gap: var(--ds-space-3); }
-.dictation-v1 .rhythm-editor-edit-actions button[aria-pressed="true"]:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); border-color: var(--ds-primary); }
-.dictation-v1 .rhythm-editor-input-message { min-height: 28px; margin-top: var(--ds-space-3); color: var(--ds-error); }
-.dictation-v1 .dictation-verification { margin-top: var(--ds-space-4); padding-top: var(--ds-space-6); border-top: 2px solid var(--ds-line); gap: var(--ds-space-4); }
-.dictation-v1 .dictation-verification-result { gap: var(--ds-space-3); }
-.dictation-v1 .dictation-verification-result [role="status"] { display: inline-flex; align-items: center; min-width: 76px; min-height: 40px; padding: 8px 12px; border-radius: var(--ds-radius-sm); font-size: var(--ds-text-sm); font-weight: 750; }
-.dictation-v1 [data-verdict="correct"] { color: var(--ds-success); background: var(--ds-success-bg); }
-.dictation-v1 [data-verdict="incorrect"] { color: var(--ds-error); background: var(--ds-error-bg); }
-.dictation-v1 .dictation-completion { min-height: 28px; margin: var(--ds-space-3) 0 0; color: var(--ds-success); font-weight: 750; }
-.dictation-v1 .dictation-reference { margin-top: var(--ds-space-6); padding-top: var(--ds-space-6); border-top: 2px solid var(--ds-line); }
-.dictation-v1 [role="alert"] { color: var(--ds-error); font-size: var(--ds-text-sm); }
+.design-system.rhythm-trainer { gap: var(--ds-space-4); padding-top: var(--ds-space-8); text-align: center; }
+.rhythm-trainer .trainer-feedback { min-height: 96px; padding: var(--ds-space-3) var(--ds-space-4); border: 2px solid transparent; border-radius: var(--ds-radius-sm); color: var(--ds-muted); font-weight: 650; }
+.rhythm-trainer .trainer-feedback[data-feedback="success"] { color: var(--ds-success); background: var(--ds-success-bg); }
+.rhythm-trainer .trainer-feedback[data-feedback="error"] { color: var(--ds-error); background: var(--ds-error-bg); }
+.rhythm-trainer .trainer-feedback [role="status"], .rhythm-trainer .trainer-feedback [role="alert"] { color: inherit; }
+.rhythm-trainer .trainer-actions { gap: var(--ds-space-4); margin-top: 0; }
+.rhythm-trainer .trainer-actions button { min-width: 156px; min-height: 52px; }
+.rhythm-trainer .trainer-actions button:first-child:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 var(--ds-depth) 0 var(--ds-primary-base); }
+.rhythm-trainer .trainer-actions button:first-child:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
+.rhythm-trainer .trainer-actions button:disabled { color: var(--ds-muted); background: var(--ds-disabled); border-color: var(--ds-line); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); }
+.rhythm-trainer .trainer-actions button[data-action="stop"]:not(:disabled) { background: var(--ds-surface); color: var(--ds-error); border-color: var(--ds-error); box-shadow: 0 var(--ds-depth) 0 var(--ds-error); }
+.rhythm-trainer .trainer-actions button[data-action="stop"]:hover:not(:disabled) { background: var(--ds-error-bg); }
+.rhythm-trainer .trainer-actions button:active:not(:disabled) { box-shadow: none; }
+.rhythm-trainer .keyboard-hint { margin: var(--ds-space-2) 0 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.rhythm-trainer kbd { border: 2px solid var(--ds-line); border-bottom-width: 4px; border-radius: 8px; padding: 3px 12px; color: var(--ds-ink); background: var(--ds-surface); }
+
+/* 听写负责播放与验证；rhythm-editor 独立负责共享编辑工具和小节选择。 */
+.rhythm-dictation { padding-top: var(--ds-space-6); }
+.rhythm-editor.design-system { --rhythm-selected-measure: var(--ds-tint); }
+.rhythm-dictation .dictation-playbar { gap: var(--ds-space-4) var(--ds-space-6); }
+.rhythm-dictation .rhythm-playback-buttons { gap: var(--ds-space-3); }
+.rhythm-dictation .rhythm-playback-buttons button { min-width: 144px; }
+.rhythm-dictation .rhythm-playback-status { min-height: 28px; margin-top: var(--ds-space-2); color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.rhythm-dictation .rhythm-playback-buttons button[data-source="question"]:not(:disabled), .rhythm-dictation .dictation-verify:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 4px 0 var(--ds-primary-base); }
+.rhythm-dictation .rhythm-playback-buttons button[data-source="question"]:hover:not(:disabled), .rhythm-dictation .dictation-verify:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
+.rhythm-dictation .rhythm-playback-buttons button[data-action="stop"]:not(:disabled) { background: var(--ds-surface); color: var(--ds-error); border-color: var(--ds-error); box-shadow: 0 4px 0 var(--ds-error); }
+.rhythm-dictation .rhythm-playback-buttons button[data-action="stop"]:hover:not(:disabled) { background: var(--ds-error-bg); }
+.rhythm-dictation .rhythm-playback-buttons button:active:not(:disabled), .rhythm-dictation .dictation-verify:active:not(:disabled) { box-shadow: none; }
+.rhythm-dictation .dictation-scope { min-height: 48px; color: var(--ds-muted); font-size: var(--ds-text-sm); gap: var(--ds-space-3); }
+.rhythm-dictation .dictation-scope-options { gap: var(--ds-space-1); padding: var(--ds-space-1); border-radius: var(--ds-radius-sm); background: #f6f4f9; }
+.rhythm-dictation .dictation-scope-options button { min-height: 40px; padding: 6px 12px; border: 2px solid transparent; border-radius: 8px; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; }
+.rhythm-dictation .dictation-scope-options button[aria-pressed="true"]:not(:disabled) { border-color: var(--ds-line); background: var(--ds-surface); color: var(--ds-primary); }
+.rhythm-dictation .dictation-scope-options button:hover:not(:disabled) { background: var(--ds-tint); }
+.rhythm-editor button.rhythm-measure-selection { box-shadow: none; transform: none; transition: none; }
+.rhythm-editor button.rhythm-measure-selection:active:not(:disabled) { transform: none; box-shadow: none; }
+.rhythm-editor button.rhythm-measure-selection[aria-pressed="true"] { box-shadow: inset 0 -2px 0 var(--ds-primary); }
+.rhythm-dictation .dictation-scope-options button:active:not(:disabled) { transform: none; box-shadow: none; }
+.rhythm-editor .rhythm-editor-controls { margin-top: var(--ds-space-4); }
+.rhythm-editor .rhythm-editor-current-measure { margin-bottom: var(--ds-space-4); font-size: var(--ds-text-sm); font-weight: 750; }
+.rhythm-editor .rhythm-editor-symbol-row { grid-template-columns: 56px minmax(0, 1fr); gap: var(--ds-space-3); margin-top: var(--ds-space-3); }
+.rhythm-editor .rhythm-editor-row-label { color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.rhythm-editor .rhythm-editor-symbol-buttons { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--ds-space-2); }
+.rhythm-editor .rhythm-editor-symbol-buttons button { padding: 8px 6px; font-size: var(--ds-text-sm); }
+.rhythm-editor .rhythm-editor-edit-actions { margin-top: var(--ds-space-4); gap: var(--ds-space-3); }
+.rhythm-editor .rhythm-editor-edit-actions button[aria-pressed="true"]:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); border-color: var(--ds-primary); }
+.rhythm-editor .rhythm-editor-input-message { min-height: 28px; margin-top: var(--ds-space-3); color: var(--ds-error); }
+.rhythm-dictation .dictation-verification { margin-top: var(--ds-space-4); padding-top: var(--ds-space-6); border-top: 2px solid var(--ds-line); gap: var(--ds-space-4); }
+.rhythm-dictation .dictation-verification-result { gap: var(--ds-space-3); }
+.rhythm-dictation .dictation-verification-result [role="status"] { display: inline-flex; align-items: center; min-width: 76px; min-height: 40px; padding: 8px 12px; border-radius: var(--ds-radius-sm); font-size: var(--ds-text-sm); font-weight: 750; }
+.rhythm-dictation [data-verdict="correct"] { color: var(--ds-success); background: var(--ds-success-bg); }
+.rhythm-dictation [data-verdict="incorrect"] { color: var(--ds-error); background: var(--ds-error-bg); }
+.rhythm-dictation .dictation-completion { min-height: 28px; margin: var(--ds-space-3) 0 0; color: var(--ds-success); font-weight: 750; }
+.rhythm-dictation .dictation-reference { margin-top: var(--ds-space-6); padding-top: var(--ds-space-6); border-top: 2px solid var(--ds-line); }
+.rhythm-dictation [role="alert"] { color: var(--ds-error); font-size: var(--ds-text-sm); }
 @media (max-width: 760px) {
-  .dictation-v1 .rhythm-editor-symbol-buttons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rhythm-editor .rhythm-editor-symbol-buttons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {
-  .dictation-v1 .rhythm-editor-symbol-row { grid-template-columns: minmax(0, 1fr); gap: var(--ds-space-2); }
-  .dictation-v1 .rhythm-editor-edit-actions, .dictation-v1 .rhythm-editor-input-message { margin-left: 0; }
-  .dictation-v1 .rhythm-playback { width: 100%; }
-  .dictation-v1 .rhythm-playback-buttons { display: grid; grid-template-columns: 1fr 1fr; }
-  .dictation-v1 .rhythm-playback-buttons button { min-width: 0; padding-inline: 8px; font-size: var(--ds-text-sm); }
+  .rhythm-editor .rhythm-editor-symbol-row { grid-template-columns: minmax(0, 1fr); gap: var(--ds-space-2); }
+  .rhythm-editor .rhythm-editor-edit-actions, .rhythm-editor .rhythm-editor-input-message { margin-left: 0; }
+  .rhythm-dictation .rhythm-playback { width: 100%; }
+  .rhythm-dictation .rhythm-playback-buttons { display: grid; grid-template-columns: 1fr 1fr; }
+  .rhythm-dictation .rhythm-playback-buttons button { min-width: 0; padding-inline: 8px; font-size: var(--ds-text-sm); }
 }
 
 @media (max-width: 680px) {
-  .site-header.design-v1 { min-height: 80px; padding: var(--ds-space-3) 0; flex-wrap: wrap; gap: var(--ds-space-2); }
-  .site-header.design-v1 .brand { font-size: 21px; }
-  .site-header.design-v1 nav { margin-left: auto; gap: var(--ds-space-1); }
-  .site-header.design-v1 nav > a, .site-header.design-v1 summary { padding-inline: 8px; font-size: var(--ds-text-sm); }
-  .preset-v1 .topic-section { grid-template-columns: minmax(0, 1fr); gap: var(--ds-space-4); padding: var(--ds-space-6) 0; }
-  .preset-v1 .topic-heading { display: flex; gap: var(--ds-space-3); align-items: flex-start; }
-  .preset-v1 .topic-number { flex-shrink: 0; margin: 0; }
-  .preset-v1 .topic-modes button { padding-inline: 6px; font-size: 13px; }
-  .preset-v1 .topic-modes small { display: block; margin-left: 0; }
-  .preset-v1 .question-action { font-size: 12px; }
+  .site-header.design-system { min-height: 80px; padding: var(--ds-space-3) 0; flex-wrap: wrap; gap: var(--ds-space-2); }
+  .site-header.design-system .brand { font-size: 21px; }
+  .site-header.design-system nav { margin-left: auto; gap: var(--ds-space-1); }
+  .site-header.design-system nav > a, .site-header.design-system summary { padding-inline: 8px; font-size: var(--ds-text-sm); }
+  .preset-library .topic-section { grid-template-columns: minmax(0, 1fr); gap: var(--ds-space-4); padding: var(--ds-space-6) 0; }
+  .preset-library .topic-heading { display: flex; gap: var(--ds-space-3); align-items: flex-start; }
+  .preset-library .topic-number { flex-shrink: 0; margin: 0; }
+  .preset-library .topic-modes button { padding-inline: 6px; font-size: 13px; }
+  .preset-library .topic-modes small { display: block; margin-left: 0; }
+  .preset-library .question-action { font-size: 12px; }
 }
 @media (max-width: 600px) {
-  .home-v1 { margin-top: 0; }
-  .home-v1 .question-link { grid-template-columns: 48px minmax(0, 1fr) auto; gap: var(--ds-space-3); padding: var(--ds-space-4); min-height: 106px; }
-  .home-v1 .source-symbol { width: 48px; height: 48px; border-radius: var(--ds-radius-sm); }
-  .home-v1 h2 { font-size: 18px; }
-  .home-v1 .question-meta { font-size: 13px; }
-  .home-v1 .question-action { font-size: 0; }
-  .home-v1 .question-action > span { font-size: 20px; }
-  .tapping-v1 .practice-heading { margin-bottom: var(--ds-space-6); }
-  :is(.tapping-v1, .settings-v1) .tempo-settings { gap: var(--ds-space-2); }
-  :is(.tapping-v1, .settings-v1) .tempo-settings button { padding-inline: var(--ds-space-3); }
-  .tapping-v1 .trainer-actions { display: grid; grid-template-columns: 1fr 1fr; }
-  .tapping-v1 .trainer-actions button { min-width: 0; padding-inline: var(--ds-space-3); }
+  .home-page { margin-top: 0; }
+  .home-page .question-link { grid-template-columns: 48px minmax(0, 1fr) auto; gap: var(--ds-space-3); padding: var(--ds-space-4); min-height: 106px; }
+  .home-page .source-symbol { width: 48px; height: 48px; border-radius: var(--ds-radius-sm); }
+  .home-page h2 { font-size: 18px; }
+  .home-page .question-meta { font-size: 13px; }
+  .home-page .question-action { font-size: 0; }
+  .home-page .question-action > span { font-size: 20px; }
+  .practice-page .practice-heading { margin-bottom: var(--ds-space-6); }
+  .practice-settings .tempo-settings { gap: var(--ds-space-2); }
+  .practice-settings .tempo-settings button { padding-inline: var(--ds-space-3); }
+  .rhythm-trainer .trainer-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .rhythm-trainer .trainer-actions button { min-width: 0; padding-inline: var(--ds-space-3); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .design-v1 *, .design-v1 *::after { transition: none; }
-  .design-v1 button:active:not(:disabled), .home-v1 .question-link:active, .preset-v1 .question-link:active, .random-index-v1 .question-link:active { transform: none; }
+  .design-system *, .design-system *::after { transition: none; }
+  .design-system button:active:not(:disabled), .home-page .question-link:active, .preset-library .question-link:active, .random-index .question-link:active { transform: none; }
 }

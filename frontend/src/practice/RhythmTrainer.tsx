@@ -353,7 +353,7 @@ function RhythmTrainer({
   ]);
 
   return (
-    <div className="rhythm-trainer">
+    <div className="rhythm-trainer design-system">
       <RhythmScore
         exercise={exercise}
         activeEventIndex={activeEventIndex}
@@ -406,7 +406,7 @@ function RhythmTrainer({
 export default function RhythmTrainerWorkspace(props: Omit<RhythmTrainerProps, "exercise"> & { exercise: RhythmExercise | null }) {
   if (props.exercise) return <RhythmTrainer {...props} exercise={props.exercise} />;
   return (
-    <div className="rhythm-trainer">
+    <div className="rhythm-trainer design-system">
       <div className="empty-practice-score" role="region" aria-label="空白节奏乐谱">
         <svg width="100%" height="180" aria-hidden="true">
           <line x1="10%" x2="90%" y1="90" y2="90" stroke="currentColor" />
