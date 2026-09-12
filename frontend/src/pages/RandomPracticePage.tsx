@@ -36,11 +36,6 @@ export default function RandomPracticePage() {
     <>
       <title>随机练习 · 节奏训练</title>
       <header className="page-heading"><h1>随机练习</h1></header>
-      <nav className="option-strip" aria-label="内容来源">
-        <Link to="/">预设练习</Link>
-        <Link to="/random" className="option-current" aria-current="page">随机练习</Link>
-        <Link to="/custom">自定义练习</Link>
-      </nav>
       <section className="random-mode-selection" aria-labelledby="random-mode-heading">
         <h2 id="random-mode-heading">选择训练方式</h2>
         <ul className="question-list">

@@ -4,6 +4,13 @@
 .site-header nav a { color: var(--accent); }
 .site-header nav { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px 16px; }
 .site-header nav a { padding: 10px 0; }
+.practice-navigation { position: relative; }
+.practice-navigation summary { padding: 10px 0; color: var(--accent); cursor: pointer; }
+.practice-navigation summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 2px; }
+.practice-navigation-links { position: absolute; right: 0; top: 100%; z-index: 20; min-width: 156px; margin: 0; padding: 6px; list-style: none; border: 1px solid var(--line); border-radius: 6px; background: #fff; box-shadow: 0 6px 18px #00000012; }
+.site-header .practice-navigation-links a { display: block; padding: 10px 12px; white-space: nowrap; border-radius: 3px; color: inherit; }
+.practice-navigation-links a:hover, .practice-navigation-links a:focus-visible, .practice-navigation-links a[aria-current] { background: var(--accent-soft); color: var(--accent); }
+.practice-navigation-links a[aria-current] { font-weight: 600; }
 .site-header { gap: 16px; }
 .brand { flex-shrink: 0; }
 .auth-status { color: var(--muted); font-size: 13px; }
@@ -37,6 +44,7 @@ main:focus { outline: none; }
 .question-list li + li { border-top: 1px solid var(--line); }
 .question-link { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 12px; border-radius: 4px; transition: background-color 140ms ease; }
 .question-link:hover { background: var(--accent-soft); }
+.home-sources .question-link { padding: 24px 12px; }
 .question-copy { min-width: 0; }
 .question-meta { display: block; margin-top: 3px; font-size: 12px; color: var(--muted); }
 .question-action { color: var(--accent); font-size: 13px; white-space: nowrap; }

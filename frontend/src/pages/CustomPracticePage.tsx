@@ -67,11 +67,6 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
     <>
       <title>自定义练习 · 节奏训练</title>
       <header className="page-heading"><h1>自定义练习</h1></header>
-      <nav className="option-strip" aria-label="内容来源">
-        <Link to="/">预设练习</Link>
-        <Link to="/random">随机练习</Link>
-        <Link to="/custom" className="option-current" aria-current="page">自定义练习</Link>
-      </nav>
       <section className="custom-mode-selection" aria-labelledby="custom-mode-heading">
         <h2 id="custom-mode-heading">选择训练方式</h2>
         <ul className="question-list">

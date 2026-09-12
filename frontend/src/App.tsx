@@ -1,13 +1,14 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
 import { Link, Route, Routes, useLocation } from "react-router";
-import PresetPracticePage from "./pages/PresetPracticePage";
+import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useAuth } from "./auth/useAuth";
 import "./App.css";
 
-// 练习库不需要加载乐谱和音频代码，进入练习页时再加载。
+// 首页只展示入口；题库和训练代码进入对应页面后再加载。
 // todo: 这个lazy是干嘛的？
 const RandomPracticePage = lazy(() => import("./pages/RandomPracticePage"));
+const PresetPracticePage = lazy(() => import("./pages/PresetPracticePage"));
 const CustomPracticePage = lazy(() => import("./pages/CustomPracticePage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 
@@ -32,6 +33,8 @@ function App() {
           节奏训练
         </Link>
         <nav aria-label="主导航">
+          <Link to="/" aria-current={pathname === "/" ? "page" : undefined}>首页</Link>
+          <PracticeNavigation key={pathname} pathname={pathname} />
           {auth.state.status === "checking" ? (
             <span className="auth-status" role="status">
               正在确认登录…
@@ -89,9 +92,10 @@ function App() {
         >
           <Routes>
             <Route path="/login" element={<LoginPage auth={auth} />} />
-            <Route path="/" element={<PresetPracticePage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/preset" element={<PresetPracticePage />} />
             <Route
-              path="/practice/:questionId"
+              path="/preset/:questionId"
               element={<PresetPracticePage />}
             />
             <Route path="/random" element={<RandomPracticePage />} />
@@ -125,3 +129,49 @@ function App() {
 }
 
 export default App;
+
+function PracticeNavigation({ pathname }: { pathname: string }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    function closeOutside(event: PointerEvent) {
+      if (ref.current && event.target instanceof Node && !ref.current.contains(event.target)) ref.current.open = false;
+    }
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, []);
+
+  return (
+    <details className="practice-navigation" ref={ref}
+      onPointerEnter={(event) => {
+        // 只对鼠标启用悬停；触屏仍由 summary 的原生点击行为控制。
+        if (event.pointerType === "mouse") event.currentTarget.open = true;
+      }}
+      onPointerLeave={(event) => {
+        if (event.pointerType === "mouse") event.currentTarget.open = false;
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && event.currentTarget.open) {
+          event.preventDefault();
+          event.currentTarget.open = false;
+          event.currentTarget.querySelector("summary")?.focus();
+        }
+      }}>
+      <summary>练习</summary>
+      <ul className="practice-navigation-links" aria-label="练习来源">
+        {[
+          { path: "/preset", label: "预设练习" },
+          { path: "/random", label: "随机练习" },
+          { path: "/custom", label: "自定义练习" },
+        ].map(({ path, label }) => (
+          <li key={path}>
+            <Link to={path} aria-current={pathname === path ? "page" : pathname.startsWith(`${path}/`) ? "location" : undefined}
+              onClick={() => { if (ref.current) ref.current.open = false; }}>{label}</Link>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}

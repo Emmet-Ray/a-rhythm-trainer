@@ -14,6 +14,65 @@ after(() => server.close());
 const { default: CustomPracticePage } = await server.ssrLoadModule("/src/pages/CustomPracticePage.tsx");
 const { default: PracticeSettings } = await server.ssrLoadModule("/src/practice/PracticeSettings.tsx");
 const { default: RhythmPlayback } = await server.ssrLoadModule("/src/practice/RhythmPlayback.tsx");
+const { default: App } = await server.ssrLoadModule("/src/App.tsx");
+
+async function renderApp(path) {
+  const stream = await renderToReadableStream(createElement(MemoryRouter, { initialEntries: [path] }, createElement(App)));
+  await stream.allReady;
+  return (await new Response(stream).text()).replaceAll("<!-- -->", "");
+}
+
+test("首页独立展示三个平等入口，不显示预设主题或训练区", async () => {
+  const html = await renderApp("/");
+  assert.match(html, /<title>首页 · 节奏训练<\/title>/);
+  assert.match(html, /aria-label="练习入口"/);
+  for (const path of ["preset", "random", "custom"]) assert.ok(html.includes(`href="/${path}"`));
+  assert.match(html, /aria-current="page"[^>]*>首页/);
+  assert.doesNotMatch(html, /topic-section|击拍训练区|节奏听写区/);
+});
+
+test("预设列表与详情都在 preset 下，旧 practice 地址不再兼容", async () => {
+  const list = await renderApp("/preset");
+  assert.match(list, /<h1>预设练习<\/h1>/);
+  assert.match(list, /href="\/preset\/basic-values-01"/);
+  assert.doesNotMatch(list, /href="\/practice\//);
+  const detail = await renderApp("/preset/basic-values-01");
+  assert.match(detail, /href="\/preset"[^>]*>← 返回预设练习/);
+  assert.match(detail, /击拍训练区/);
+  const missing = await renderApp("/preset/nonexistent");
+  assert.match(missing, /未找到该练习/);
+  assert.match(missing, /返回预设练习/);
+  const old = await renderApp("/practice/basic-values-01");
+  assert.match(old, /未找到该页面/);
+  assert.match(old, /返回首页/);
+  assert.doesNotMatch(old, /击拍训练区/);
+});
+
+test("三个来源页面不再展示来源切换栏，保留首页返回入口及训练方式选择", async () => {
+  for (const path of ["/preset", "/random", "/custom"]) {
+    const html = await renderApp(path);
+    assert.doesNotMatch(html, /aria-label="内容来源"/);
+    assert.match(html, /href="\/"[^>]*>首页/);
+    assert.match(html, /击拍练习/);
+    assert.match(html, /节奏听写/);
+    if (path === "/preset") assert.match(html, /class="option-strip topic-modes"/);
+  }
+  assert.match(await renderApp("/login"), /href="\/"[^>]*>← 返回首页/);
+});
+
+test("顶部练习下拉默认收起，在列表和题目页标识所属栏目", async () => {
+  for (const [path, active, current] of [["/", null, null], ["/preset", "/preset", "page"],
+    ["/preset/basic-values-01", "/preset", "location"], ["/random/tapping", "/random", "location"],
+    ["/custom/dictation", "/custom", "location"]]) {
+    const html = await renderApp(path);
+    const dropdown = html.match(/<details class="practice-navigation"[\s\S]*?<\/details>/)?.[0];
+    assert.ok(dropdown);
+    assert.doesNotMatch(dropdown, /<details[^>]*\bopen/);
+    for (const target of ["/preset", "/random", "/custom"]) assert.ok(dropdown.includes(`href="${target}"`));
+    if (active) assert.match(dropdown, new RegExp(`<a(?=[^>]*href="${active}")(?=[^>]*aria-current="${current}")[^>]*>`));
+    else assert.doesNotMatch(dropdown, /aria-current/);
+  }
+});
 
 async function renderPage(path, route, auth = { state: { status: "guest" }, busy: false }) {
   const stream = await renderToReadableStream(createElement(MemoryRouter, { initialEntries: [path] },
@@ -133,7 +192,7 @@ test("自定义入口分别提供击拍和听写的列表地址，几何游戏�
   assert.match(html, /href="\/custom\/tapping"/);
   assert.match(html, /href="\/custom\/dictation"/);
   assert.doesNotMatch(html, /href="[^\"]*geometry/);
-  assert.match(html, /aria-current="page"[^>]*>自定义练习/);
+  assert.doesNotMatch(html, /aria-label="内容来源"/);
 });
 
 test("模式列表保留新建入口，空存储显示暂无题目", async (t) => {

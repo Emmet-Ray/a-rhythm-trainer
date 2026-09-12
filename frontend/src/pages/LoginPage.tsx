@@ -84,7 +84,7 @@ export default function LoginPage({ auth }: { auth: ReturnType<typeof useAuth> }
 
   return (
     <section className="login-page" aria-labelledby="login-heading">
-      <Link className="back-link" to="/">← 返回练习库</Link>
+      <Link className="back-link" to="/">← 返回首页</Link>
       <h1 id="login-heading">登录</h1>
       <form className="login-form" onSubmit={submit} noValidate aria-busy={disabled}>
         <label htmlFor="login-phone">手机号</label>

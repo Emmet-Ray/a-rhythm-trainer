@@ -18,15 +18,10 @@ export default function PresetPracticePage() {
 
   return (
     <>
-      <title>练习库 · 节奏训练</title>
+      <title>预设练习 · 节奏训练</title>
       <header className="page-heading">
-        <h1>练习库</h1>
+        <h1>预设练习</h1>
       </header>
-      <div className="option-strip" role="group" aria-label="内容来源">
-        <span className="option-current">预设练习</span>
-        <Link to="/random">随机练习</Link>
-        <Link to="/custom">自定义练习</Link>
-      </div>
       <div className="topic-list">
         {presetTopics.map((topic, index) => (
           <TopicQuestions key={topic.id} topic={topic} index={index} />
@@ -43,8 +38,8 @@ function PresetExercisePage({ questionId }: { questionId: string }) {
 
   return (
     <>
-      <title>{selected.question.title} · {modeLabel}</title>
-      <Link className="back-link" to="/">← 返回练习库</Link>
+      <title>{`${selected.question.title} · ${modeLabel}`}</title>
+      <Link className="back-link" to="/preset">← 返回预设练习</Link>
       <header className="page-heading practice-heading">
         <p className="eyebrow">{selected.topic.title} / {modeLabel}</p>
         <h1>{selected.question.title}</h1>
@@ -105,7 +100,7 @@ function TopicQuestions({
         <ul id={`questions-${topic.id}`} className="question-list">
           {questions.map((question) => (
             <li key={question.id}>
-              <Link className="question-link" to={`/practice/${question.id}`}>
+              <Link className="question-link" to={`/preset/${question.id}`}>
                 <div className="question-copy">
                   <h3>{question.title}</h3>
                 </div>
