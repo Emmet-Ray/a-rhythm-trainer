@@ -162,6 +162,19 @@
 
 /* 击拍样板：谱面固定在操作与反馈上方，不对谱面或时钟做动画。 */
 .practice-page { max-width: 920px; margin: 0 auto; }
+.practice-page h1 { overflow-wrap: anywhere; }
+.custom-status > p { margin: var(--ds-space-4) 0; color: var(--ds-muted); }
+.custom-status > a:not(.back-link) { display: inline-flex; align-items: center; min-height: 44px; color: var(--ds-primary); font-weight: 650; }
+.custom-detail > p { color: var(--ds-muted); }
+.not-found { display: flex; flex-direction: column; align-items: center; max-width: 520px; margin: 0 auto; padding: clamp(32px, 10svh, 96px) 0 var(--ds-space-12); text-align: center; }
+.not-found .not-found-code { margin-bottom: var(--ds-space-6); color: var(--ds-primary); font-size: clamp(72px, 12vw, 104px); font-weight: 800; line-height: 1; letter-spacing: .04em; }
+.not-found h1 { font-size: clamp(26px, 4vw, 32px); text-wrap: balance; }
+.not-found .not-found-action { display: inline-flex; justify-content: center; align-items: center; min-height: 48px; min-width: 180px; max-width: 100%; margin-top: var(--ds-space-8); padding: 10px var(--ds-space-6); border: 2px solid var(--ds-primary); border-radius: var(--ds-radius-sm); background: var(--ds-primary); color: white; font-weight: 750; box-shadow: 0 4px 0 var(--ds-primary-base); transition: background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
+.not-found .not-found-action:hover { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
+.not-found .not-found-action:active { transform: translateY(4px); box-shadow: none; }
+@media (prefers-reduced-motion: reduce) {
+  .not-found .not-found-action:active { transform: none; }
+}
 .practice-page .back-link { font-size: var(--ds-text-sm); font-weight: 650; color: var(--ds-muted); }
 .practice-page .practice-heading { margin: var(--ds-space-4) 0 var(--ds-space-8); }
 .practice-page .practice-heading .eyebrow { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 650; margin-bottom: var(--ds-space-2); }
@@ -244,6 +257,7 @@
   .site-header.design-system { min-height: 80px; padding: var(--ds-space-3) 0; flex-wrap: wrap; gap: var(--ds-space-2); }
   .site-header.design-system .brand { font-size: 21px; }
   .site-header.design-system nav { margin-left: auto; gap: var(--ds-space-1); }
+  .site-header.design-system .practice-navigation-links { left: 50%; right: auto; transform: translateX(-50%); }
   .site-header.design-system nav > a, .site-header.design-system summary { padding-inline: 8px; font-size: var(--ds-text-sm); }
   .preset-library .topic-section { grid-template-columns: minmax(0, 1fr); gap: var(--ds-space-4); padding: var(--ds-space-6) 0; }
   .preset-library .topic-heading { display: flex; gap: var(--ds-space-3); align-items: flex-start; }
@@ -325,8 +339,8 @@
 .custom-library .question-action { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 650; }
 .custom-library .custom-saved-question > button:disabled { box-shadow: none; padding: 10px 16px; }
 .custom-library .custom-saved-question > button small { display: block; font-size: 12px; font-weight: 400; }
-.custom-library .custom-storage-error { padding: var(--ds-space-4); border-radius: var(--ds-radius-sm); background: var(--ds-error-bg); color: var(--ds-error); }
-.custom-library .custom-storage-error p { margin: 0 0 var(--ds-space-4); }
+.design-system .custom-storage-error { padding: var(--ds-space-4); border-radius: var(--ds-radius-sm); background: var(--ds-error-bg); color: var(--ds-error); font-size: var(--ds-text-sm); }
+.design-system .custom-storage-error p { margin: 0 0 var(--ds-space-4); }
 .custom-library > [role="status"], .custom-library .empty-questions { min-height: 48px; padding: var(--ds-space-3) 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .custom-library > .custom-saved-notice { color: var(--ds-success); }
 .custom-library nav[aria-label="题目分页"] { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--ds-space-4); margin-top: var(--ds-space-8); color: var(--ds-muted); font-size: var(--ds-text-sm); }

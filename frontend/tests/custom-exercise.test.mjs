@@ -65,7 +65,7 @@ test("三个来源页面不再展示来源切换栏，保留首页返回入口�
     assert.match(html, /节奏听写/);
     if (path === "/preset") assert.match(html, /class="option-strip topic-modes"/);
   }
-  assert.match(await renderApp("/login"), /href="\/"[^>]*>← 返回首页/);
+  assert.match(await renderApp("/login"), /href="\/"[^>]*>首页/);
 });
 
 test("顶部练习下拉默认收起，在列表和题目页标识所属栏目", async () => {
@@ -114,6 +114,17 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
   }
 });
 
+test("404 状态页提供与错误类型对应的主要返回入口", async () => {
+  for (const path of ["/missing", "/preset/missing"]) {
+    const html = await renderApp(path);
+    assert.match(html, /class="design-system not-found" aria-labelledby="not-found-heading"/);
+    assert.match(html, /id="not-found-heading"/);
+    assert.match(html, /class="not-found-code">404/);
+    assert.ok(html.includes(`class="not-found-action" href="${path === "/missing" ? "/" : "/preset"}"`));
+    assert.match(html, /未找到/);
+  }
+});
+
 test("登录表单保留标签、自动填充和反馈语义，未发送验证码时不能登录", async () => {
   const html = await renderApp("/login");
   assert.match(html, /aria-labelledby="login-heading"/);
@@ -152,6 +163,7 @@ test("自定义练习复用组件自身样式，不需要页面开启设计开�
   mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
   for (const mode of ["tapping", "dictation"]) {
     const html = await renderPage(`/custom/${mode}/saved-${mode}`, "/custom/:mode/:exerciseId");
+    assert.match(html, /class="design-system practice-page custom-detail"/);
     assert.match(html, /class="practice-settings design-system"/);
     assert.match(html, mode === "tapping"
       ? /class="rhythm-trainer design-system"/
@@ -187,6 +199,7 @@ test("登录未知或正在切换身份时不读取本地题库", async (t) => {
     { state: { status: "authenticated", user: { id: 1 } }, busy: true },
   ]) {
     const html = await renderPage("/custom/tapping", "/custom/:mode", auth);
+    assert.match(html, /class="design-system practice-page custom-status"/);
     assert.doesNotMatch(html, /saved-tapping|暂无题目/);
     assert.match(html, /登录/);
   }
@@ -196,7 +209,9 @@ test("账号详情未登录时要求登录，已登录也不会用同 ID 的本�
   mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
   const path = "/custom/tapping/account/saved-tapping";
   const route = "/custom/:mode/account/:exerciseId";
-  assert.match(await renderPage(path, route), /请登录后查看账号练习/);
+  const guest = await renderPage(path, route);
+  assert.match(guest, /请登录后查看账号练习/);
+  assert.match(guest, /class="design-system practice-page custom-status"/);
   const html = await renderPage(path, route, { state: { status: "authenticated", user: { id: 1 } }, busy: false });
   assert.match(html, /正在读取练习/);
   assert.doesNotMatch(html, /tapping题目|击拍训练区/);
@@ -246,6 +261,7 @@ test("题目页读取损坏数据时显示错误与重试，不冒充题目不�
   mockSavedExercises(t, "broken-json");
   const html = await renderPage("/custom/tapping/saved-tapping", "/custom/:mode/:exerciseId");
   assert.match(html, /无法读取练习/);
+  assert.match(html, /class="design-system practice-page custom-detail"/);
   assert.match(html, /重试读取/);
   assert.doesNotMatch(html, /未找到该练习|击拍训练区/);
 });

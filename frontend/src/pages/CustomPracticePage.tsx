@@ -95,11 +95,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
       auth.busy)
   ) {
     return (
-      <div
-        className={
-          !exerciseId ? "design-system practice-page custom-library" : undefined
-        }
-      >
+      <div className="design-system practice-page custom-status">
         <Link className="back-link" to="/custom">
           ← 返回自定义练习
         </Link>
@@ -120,11 +116,11 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
   if (selectedMode && exerciseId) {
     if (isAccount && source !== "account")
       return (
-        <>
+        <div className="design-system practice-page custom-status">
           <p>请登录后查看账号练习。</p>
           <Link to="/login">登录</Link> ·{" "}
           <Link to={`/custom/${selectedMode.id}`}>返回题目列表</Link>
-        </>
+        </div>
       );
     // 路由参数改变时重新读取题目，并卸载旧训练及其音频、草稿和设置。
     return (
@@ -387,7 +383,7 @@ function CustomExercisePractice({
     return () => controller.abort();
   }, [source, exerciseId, mode, revision]);
   return (
-    <>
+    <div className="design-system practice-page custom-detail">
       <title>{`${result.item?.name ?? "自定义练习"} · ${label}`}</title>
       <Link className="back-link" to={`/custom/${mode}`}>
         ← 返回题目列表
@@ -441,7 +437,7 @@ function CustomExercisePractice({
             : "当前浏览器中没有该模式的这道练习。"}
         </p>
       )}
-    </>
+    </div>
   );
 }
 
