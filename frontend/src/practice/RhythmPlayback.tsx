@@ -161,7 +161,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
             : "";
 
   return (
-    <div className="rhythm-playback">
+    <div className="rhythm-playback design-system">
       <div className="rhythm-playback-buttons">
         {options.map((option) => {
           const playing = isActive && playbackSource === option.id;

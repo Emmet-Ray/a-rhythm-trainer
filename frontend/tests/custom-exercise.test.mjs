@@ -104,7 +104,10 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
     assert.match(html, /data-verdict="unchecked"/);
     assert.match(html, /data-action="play" data-source="question"/);
   }
-  for (const path of ["/custom", "/login"]) {
+  const customIndex = await renderApp("/custom");
+  assert.match(customIndex, /class="design-system custom-index"/);
+  assert.match(customIndex, /class="question-link custom-mode-unavailable" aria-disabled="true"/);
+  for (const path of ["/login"]) {
     const html = await renderApp(path);
     assert.match(html, /class="site-header design-system"/);
     assert.doesNotMatch(html.match(/<main[\s\S]*?<\/main>/)?.[0], /class="design-system/);
@@ -149,6 +152,7 @@ test("已保存列表链接到所属模式的题目", async (t) => {
   mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
   for (const mode of ["tapping", "dictation"]) {
     const html = await renderPage(`/custom/${mode}`, "/custom/:mode");
+    assert.match(html, /class="design-system practice-page custom-library"/);
     assert.ok(html.includes(`href="/custom/${mode}/saved-${mode}"`));
     assert.match(html, /开始练习/);
     assert.match(html, /<button type="button" disabled="">编辑 <small>未开放<\/small><\/button>/);
@@ -194,11 +198,11 @@ test("已登录打开旧本地链接仍读取本地题目，不隐式改为账�
   assert.match(html, /tapping题目/);
 });
 
-test("编辑器标记保存位置，登录状态未知时不能保存但保留编辑界面", async () => {
+test("编辑器不显示存储提示，登录状态未知时不能保存但保留编辑界面", async () => {
   for (const status of ["authenticated", "checking", "unavailable"]) {
     const html = await renderPage("/custom/tapping/new", "/custom/:mode/new", { state: { status, user: { id: 1 } }, busy: false });
     assert.match(html, /编辑自定义练习/);
-    assert.match(html, status === "authenticated" ? /保存到当前账号/ : /登录状态未确认，暂不能保存/);
+    assert.doesNotMatch(html, /class="custom-draft-notice"/);
     if (status !== "authenticated") assert.match(html, /<button[^>]*disabled=""[^>]*>保存练习/);
   }
 });
@@ -284,12 +288,14 @@ test("听写与自定义新建页共用编辑器自身样式", async () => {
 
 test("新建草稿默认两节、空名称、4/4，提供公共设置但全空草稿不可试听", async () => {
   const html = await renderPage("/custom/tapping/new", "/custom/:mode/new");
+  assert.match(html, /class="design-system practice-page custom-create"/);
+  assert.match(html, /class="rhythm-playback design-system"/);
   assert.match(html, /aria-label="当前小节数量">2/);
   assert.match(html, /aria-label="小节 1"/);
   assert.match(html, /aria-label="小节 2"/);
   assert.match(html, /value=""/);
   assert.match(html, /4\/4 拍/);
-  assert.match(html, /离开或刷新页面后草稿会丢失/);
+  assert.doesNotMatch(html, /class="custom-draft-notice"/);
   assert.match(html, /添加休止符/);
   assert.match(html, /保存练习/);
   assert.match(html, /应用速度/);
