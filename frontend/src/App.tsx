@@ -32,25 +32,52 @@ function App() {
           节奏训练
         </Link>
         <nav aria-label="主导航">
-          <Link to="/" aria-current={pathname === "/" ? "page" : undefined}>
-            练习库
-          </Link>
-          {auth.state.status === "checking" ? <span className="auth-status" role="status">正在确认登录…</span>
-            : auth.state.status === "authenticated" ? <>
+          {auth.state.status === "checking" ? (
+            <span className="auth-status" role="status">
+              正在确认登录…
+            </span>
+          ) : auth.state.status === "authenticated" ? (
+            <>
               <span className="auth-status">已登录</span>
-              <button className="nav-button" disabled={auth.busy} onClick={() => void auth.logout()}>
+              <button
+                className="nav-button"
+                disabled={auth.busy}
+                onClick={() => void auth.logout()}
+              >
                 {auth.busy ? "正在退出…" : "退出"}
               </button>
-            </> : <>
-              {auth.state.status === "unavailable" ? <>
-                <span className="auth-status" role="status">登录状态暂不可用</span>
-                <button className="nav-button" disabled={auth.busy} onClick={auth.refresh}>重试</button>
-              </> : null}
-              <Link to="/login" aria-current={pathname === "/login" ? "page" : undefined}>登录</Link>
-            </>}
+            </>
+          ) : (
+            <>
+              {auth.state.status === "unavailable" ? (
+                <>
+                  <span className="auth-status" role="status">
+                    登录状态暂不可用
+                  </span>
+                  <button
+                    className="nav-button"
+                    disabled={auth.busy}
+                    onClick={auth.refresh}
+                  >
+                    重试
+                  </button>
+                </>
+              ) : null}
+              <Link
+                to="/login"
+                aria-current={pathname === "/login" ? "page" : undefined}
+              >
+                登录
+              </Link>
+            </>
+          )}
         </nav>
       </header>
-      {auth.error ? <p role="alert" className="auth-error">{auth.error}</p> : null}
+      {auth.error ? (
+        <p role="alert" className="auth-error">
+          {auth.error}
+        </p>
+      ) : null}
       <main id="main-content" ref={mainRef} tabIndex={-1}>
         {/* todo: 这个suspense是干嘛的 */}
         <Suspense
@@ -63,14 +90,32 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage auth={auth} />} />
             <Route path="/" element={<PresetPracticePage />} />
-            <Route path="/practice/:questionId" element={<PresetPracticePage />} />
+            <Route
+              path="/practice/:questionId"
+              element={<PresetPracticePage />}
+            />
             <Route path="/random" element={<RandomPracticePage />} />
             <Route path="/random/:mode" element={<RandomPracticePage />} />
-            <Route path="/custom" element={<CustomPracticePage auth={auth} />} />
-            <Route path="/custom/:mode" element={<CustomPracticePage auth={auth} />} />
-            <Route path="/custom/:mode/new" element={<CustomPracticePage auth={auth} />} />
-            <Route path="/custom/:mode/:exerciseId" element={<CustomPracticePage auth={auth} />} />
-            <Route path="/custom/:mode/account/:exerciseId" element={<CustomPracticePage auth={auth} />} />
+            <Route
+              path="/custom"
+              element={<CustomPracticePage auth={auth} />}
+            />
+            <Route
+              path="/custom/:mode"
+              element={<CustomPracticePage auth={auth} />}
+            />
+            <Route
+              path="/custom/:mode/new"
+              element={<CustomPracticePage auth={auth} />}
+            />
+            <Route
+              path="/custom/:mode/:exerciseId"
+              element={<CustomPracticePage auth={auth} />}
+            />
+            <Route
+              path="/custom/:mode/account/:exerciseId"
+              element={<CustomPracticePage auth={auth} />}
+            />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
