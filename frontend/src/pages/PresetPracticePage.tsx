@@ -17,7 +17,7 @@ export default function PresetPracticePage() {
   if (questionId !== undefined) return <PresetExercisePage questionId={questionId} />;
 
   return (
-    <>
+    <div className="design-v1 preset-v1">
       <title>预设练习 · 节奏训练</title>
       <header className="page-heading">
         <h1>预设练习</h1>
@@ -27,7 +27,7 @@ export default function PresetPracticePage() {
           <TopicQuestions key={topic.id} topic={topic} index={index} />
         ))}
       </div>
-    </>
+    </div>
   );
 }
 

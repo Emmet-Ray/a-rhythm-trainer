@@ -74,15 +74,18 @@ test("顶部练习下拉默认收起，在列表和题目页标识所属栏目",
   }
 });
 
-test("第一版设计只启用首页和预设击拍页，其他页面仍使用原样式", async () => {
+test("设计系统覆盖公共页头、首页、预设列表与击拍页，其他主体不受影响", async () => {
   assert.match(await renderApp("/"), /class="design-v1 home-v1"/);
+  assert.match(await renderApp("/preset"), /class="design-v1 preset-v1"/);
   const tapping = await renderApp("/preset/basic-values-01");
   assert.match(tapping, /class="design-v1 tapping-v1"/);
   assert.match(tapping, /data-feedback="neutral"/);
   assert.match(tapping, /data-action="start"/);
   assert.match(tapping, /data-action="listen"/);
-  for (const path of ["/preset", "/preset/dictation-basic-values-01", "/random", "/custom", "/login"]) {
-    assert.doesNotMatch(await renderApp(path), /class="design-v1/);
+  for (const path of ["/preset/dictation-basic-values-01", "/random", "/custom", "/login"]) {
+    const html = await renderApp(path);
+    assert.match(html, /class="site-header design-v1"/);
+    assert.doesNotMatch(html.match(/<main[\s\S]*?<\/main>/)?.[0], /class="design-v1/);
   }
 });
 
