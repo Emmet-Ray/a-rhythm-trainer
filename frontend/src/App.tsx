@@ -66,10 +66,11 @@ function App() {
             <Route path="/practice/:questionId" element={<PresetPracticePage />} />
             <Route path="/random" element={<RandomPracticePage />} />
             <Route path="/random/:mode" element={<RandomPracticePage />} />
-            <Route path="/custom" element={<CustomPracticePage />} />
-            <Route path="/custom/:mode" element={<CustomPracticePage />} />
-            <Route path="/custom/:mode/new" element={<CustomPracticePage />} />
-            <Route path="/custom/:mode/:exerciseId" element={<CustomPracticePage />} />
+            <Route path="/custom" element={<CustomPracticePage auth={auth} />} />
+            <Route path="/custom/:mode" element={<CustomPracticePage auth={auth} />} />
+            <Route path="/custom/:mode/new" element={<CustomPracticePage auth={auth} />} />
+            <Route path="/custom/:mode/:exerciseId" element={<CustomPracticePage auth={auth} />} />
+            <Route path="/custom/:mode/account/:exerciseId" element={<CustomPracticePage auth={auth} />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

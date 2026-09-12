@@ -15,10 +15,10 @@ const { default: CustomPracticePage } = await server.ssrLoadModule("/src/pages/C
 const { default: PracticeSettings } = await server.ssrLoadModule("/src/practice/PracticeSettings.tsx");
 const { default: RhythmPlayback } = await server.ssrLoadModule("/src/practice/RhythmPlayback.tsx");
 
-async function renderPage(path, route) {
+async function renderPage(path, route, auth = { state: { status: "guest" }, busy: false }) {
   const stream = await renderToReadableStream(createElement(MemoryRouter, { initialEntries: [path] },
     createElement(Routes, null,
-      createElement(Route, { path: route, element: createElement(CustomPracticePage) }),
+      createElement(Route, { path: route, element: createElement(CustomPracticePage, { auth }) }),
     ),
   ));
   await stream.allReady;
@@ -46,6 +46,53 @@ test("已保存列表链接到所属模式的题目", async (t) => {
     assert.match(html, /开始练习/);
     assert.match(html, /<button type="button" disabled="">编辑 <small>未开放<\/small><\/button>/);
     assert.doesNotMatch(html, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
+  }
+});
+
+test("账号列表等待远程响应，不读取本地题库", async (t) => {
+  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
+  const html = await renderPage("/custom/tapping", "/custom/:mode", { state: { status: "authenticated", user: { id: 1 } }, busy: false });
+  assert.match(html, /我的练习/);
+  assert.match(html, /正在读取练习/);
+  assert.doesNotMatch(html, /saved-tapping|暂无题目/);
+});
+
+test("登录未知或正在切换身份时不读取本地题库", async (t) => {
+  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
+  for (const auth of [
+    { state: { status: "checking" }, busy: false },
+    { state: { status: "unavailable" }, busy: false },
+    { state: { status: "authenticated", user: { id: 1 } }, busy: true },
+  ]) {
+    const html = await renderPage("/custom/tapping", "/custom/:mode", auth);
+    assert.doesNotMatch(html, /saved-tapping|暂无题目/);
+    assert.match(html, /登录/);
+  }
+});
+
+test("账号详情未登录时要求登录，已登录也不会用同 ID 的本地题目兜底", async (t) => {
+  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
+  const path = "/custom/tapping/account/saved-tapping";
+  const route = "/custom/:mode/account/:exerciseId";
+  assert.match(await renderPage(path, route), /请登录后查看账号练习/);
+  const html = await renderPage(path, route, { state: { status: "authenticated", user: { id: 1 } }, busy: false });
+  assert.match(html, /正在读取练习/);
+  assert.doesNotMatch(html, /tapping题目|击拍训练区/);
+});
+
+test("已登录打开旧本地链接仍读取本地题目，不隐式改为账号来源", async (t) => {
+  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
+  const html = await renderPage("/custom/tapping/saved-tapping", "/custom/:mode/:exerciseId", { state: { status: "authenticated", user: { id: 1 } }, busy: false });
+  assert.match(html, /本地练习/);
+  assert.match(html, /tapping题目/);
+});
+
+test("编辑器标记保存位置，登录状态未知时不能保存但保留编辑界面", async () => {
+  for (const status of ["authenticated", "checking", "unavailable"]) {
+    const html = await renderPage("/custom/tapping/new", "/custom/:mode/new", { state: { status, user: { id: 1 } }, busy: false });
+    assert.match(html, /编辑自定义练习/);
+    assert.match(html, status === "authenticated" ? /保存到当前账号/ : /登录状态未确认，暂不能保存/);
+    if (status !== "authenticated") assert.match(html, /<button[^>]*disabled=""[^>]*>保存练习/);
   }
 });
 

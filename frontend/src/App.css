@@ -110,6 +110,7 @@ main:focus { outline: none; }
 .random-mode-unavailable, .custom-mode-unavailable { padding: 12px; color: var(--muted); }
 .random-mode-unavailable small, .custom-mode-unavailable small { margin-left: 8px; }
 .custom-exercise-editor { min-width: 0; }
+.custom-exercise-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
 .custom-name { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .custom-name input { width: 240px; min-width: 0; }
 .custom-measure-count { display: flex; align-items: center; gap: 12px; }
