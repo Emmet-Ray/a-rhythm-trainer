@@ -16,7 +16,11 @@ class SmsConfigurationError(ValueError):
 
 
 class SmsServiceError(RuntimeError):
-    """无法确认服务结果，不等同于验证码错误；不携带 SDK 原始响应。"""
+    """短信服务异常，不等同于验证码错误；不携带 SDK 原始响应。"""
+
+
+class SmsSendRejected(SmsServiceError):
+    """服务明确拒绝发送；其他服务异常均保守视为结果不确定。"""
 
 
 @dataclass(frozen=True)
@@ -96,11 +100,13 @@ class SmsAuth:
             response = await self._client.send_sms_verify_code_with_options_async(request, _runtime())
             body = response.body
             accepted = body is not None and body.code == "OK" and body.success is True
-        except Exception as e:
+        except Exception:
             # 不透传可能含手机号、验证码或凭证的 SDK 错误信息。
             raise SmsServiceError("短信服务调用失败，发送结果无法确认，请稍后再试。") from None
         if not accepted:
-            raise SmsServiceError("短信发送请求未被接受，请稍后重试或检查服务配置。")
+            if body is not None and isinstance(body.code, str) and body.code and body.success is False:
+                raise SmsSendRejected("短信发送请求未被接受，请稍后重试或检查服务配置。")
+            raise SmsServiceError("短信发送结果无法确认，请稍后再试。")
 
     async def verify_code(self, phone: str, code: str) -> bool:
         phone = _phone_number(phone)

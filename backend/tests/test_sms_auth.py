@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 from alibabacloud_dypnsapi20170525 import models
 
-from sms_auth import SmsAuth, SmsConfigurationError, SmsServiceError, SmsSettings
+from sms_auth import SmsAuth, SmsConfigurationError, SmsSendRejected, SmsServiceError, SmsSettings
 
 
 @pytest.fixture
@@ -88,6 +88,20 @@ def test_send_rejection(settings, sdk, body):
     sdk[0].send_sms_verify_code_with_options_async.return_value = models.SendSmsVerifyCodeResponse().from_map({"body": body})
     with pytest.raises(SmsServiceError):
         asyncio.run(SmsAuth(settings).send_code("13800000000"))
+
+
+@pytest.mark.parametrize("body,expected", [
+    ({"Code": "ERROR", "Success": False}, SmsSendRejected),
+    ({"Code": "OK", "Success": False}, SmsSendRejected),
+    ({"Code": "ERROR", "Success": True}, SmsServiceError),
+    ({"Success": False}, SmsServiceError),
+    (None, SmsServiceError),
+])
+def test_send_failure_classification(settings, sdk, body, expected):
+    sdk[0].send_sms_verify_code_with_options_async.return_value = models.SendSmsVerifyCodeResponse().from_map({"body": body})
+    with pytest.raises(SmsServiceError) as caught:
+        asyncio.run(SmsAuth(settings).send_code("13800000000"))
+    assert type(caught.value) is expected
 
 
 @pytest.mark.parametrize("operation", ["send", "verify"])
