@@ -2,7 +2,7 @@
 
 Python 3.12+、FastAPI，使用 uv 管理依赖，SQLite 存储数据，SQLAlchemy 访问数据库，Alembic 管理表结构迁移。
 
-当前对外只有健康检查；已实现短信验证码、用户存取和服务端会话的创建、有效性查询与撤销，尚未接通登录流程、Cookie 或前端。短信模块不能直接作为公开登录接口，公开接入前需要补齐限流和防重放等保护。
+当前对外只有健康检查；已实现短信验证码、用户存取、服务端会话，以及短信登录请求的手机号冷却、核验次数限制和一次性消费。尚未接通登录流程、Cookie 或前端；公开接入前仍需补齐 IP 限流、发送预算和请求来源等保护。
 
 ## 本地运行
 
@@ -70,7 +70,7 @@ uv run --locked --no-env-file pytest
 ## 代码导航
 
 - [main.py](main.py)：FastAPI 入口。
-- [db/](db/)：数据库连接、表模型及用户、会话存取；函数契约见对应 docstring。
+- [db/](db/)：数据库连接、用户、会话和短信登录请求；函数契约与事务顺序见对应 docstring。
 - [migrations/](migrations/)：表结构变更历史；[alembic.ini](alembic.ini) 为迁移工具配置。
 - [sms_auth.py](sms_auth.py)：阿里云号码认证服务接入。
 - [tests/](tests/)：后端测试。

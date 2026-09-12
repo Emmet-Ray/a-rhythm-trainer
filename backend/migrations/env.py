@@ -7,6 +7,7 @@ from alembic import context
 from db.database import Base, create_database_engine
 from db.users import User  # noqa: F401 -- 注册用户表到 Base.metadata，供自动差异检查。
 from db.sessions import LoginSession  # noqa: F401 -- 注册登录会话表。
+from db.sms_logins import SmsLoginRequest  # noqa: F401 -- 注册登录前短信请求表。
 
 
 config = context.config

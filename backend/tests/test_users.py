@@ -15,7 +15,7 @@ from db.users import User, get_or_create_user
 def test_upgrade_version_and_model_match(migrated_db, migration_config):
     assert "users" in inspect(migrated_db).get_table_names()
     with migrated_db.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0002_create_login_sessions"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0003_create_sms_login_requests"
     # 自动生成迁移时不应再发现 User 模型与迁移结果不一致。
     command.check(migration_config)
 
