@@ -1,4 +1,5 @@
 import { expandRhythmElements, TICKS_PER_QUARTER, type RhythmElement } from "../RhythmModel";
+import type { ExerciseTimeline } from "../RhythmTiming";
 
 /** 返回小节内的拍内连梁分组。八分、十六分音符（含单附点）可混合；
  * 普通符号遇休止符、长音符或跨拍事件断开分组。
@@ -94,6 +95,32 @@ export type MeasureLayout = {
   markerY: number;
   anchors: { offsetMs: number; x: number }[];
 };
+
+export type MeasureGeometry = {
+  minimumX: number;
+  maximumX: number;
+  markerY: number;
+  eventXs: readonly number[];
+};
+
+/** 将已绘制的小节坐标关联到当前时间线，不重新排版。
+ * geometry 与 timeline 必须来自同一题目；调速只改变锚点的时间，不能改变坐标。
+ * 空小节及仅一个全音符/休止符的小节也保留起点、终点，供误敲位置插值。
+ */
+export function createTimingFeedbackLayout(
+  timeline: ExerciseTimeline,
+  geometry: readonly MeasureGeometry[],
+): MeasureLayout[] {
+  return geometry.map((measure, index) => {
+    const time = timeline.measures[index];
+    const anchors = measure.eventXs.map((x, eventIndex) => ({
+      offsetMs: timeline.eventStartOffsetsMs[time.firstEventIndex + eventIndex], x,
+    }));
+    if (anchors.length === 0) anchors.push({ offsetMs: time.startOffsetMs, x: measure.minimumX });
+    anchors.push({ offsetMs: time.endOffsetMs, x: measure.maximumX });
+    return { ...time, minimumX: measure.minimumX, maximumX: measure.maximumX, markerY: measure.markerY, anchors };
+  });
+}
 
 /**
  * 先按时间选择小节，再在事件起点（含休止符）与小节结束锚点之间插值。

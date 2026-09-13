@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import { DEFAULT_TAPPING_PRECISION, getTappingTimingWindows } from "../settings/tappingPrecision";
@@ -70,7 +70,8 @@ function formatTimingEvent(timingEvent: TimingEvent): string {
 
 /**
  * 展示并运行一份节奏练习，内部管理击拍/试听、声音与判定。
- * 每轮固定判定窗口；题目和 BPM 的切换由父级 key 重建，节拍器可即时切换。
+ * 每轮固定判定窗口；题目、BPM 或预备拍数变化时停止并清空旧轮次，保留谱面组件。
+ * 节拍器可即时切换，精度偏好仍仅在新轮开始时读取。
  */
 function RhythmTrainer({
   exercise,
@@ -106,6 +107,17 @@ function RhythmTrainer({
   const [timingEvents, setTimingEvents] = useState<TimingEvent[]>([]);
   const [isStarting, setIsStarting] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [configuration, setConfiguration] = useState({ exercise, bpm, countInBeatCount });
+  if (configuration.exercise !== exercise || configuration.bpm !== bpm || configuration.countInBeatCount !== countInBeatCount) {
+    // 在渲染子级前重置画面，不能把旧判定记录交给新速度的时间线。
+    // 音频等外部资源在下方 layout effect 的清理中释放，不在 render 中操作。
+    setConfiguration({ exercise, bpm, countInBeatCount });
+    setPlayback(IDLE_PLAYBACK);
+    setTimingEvents([]);
+    setMode("practice");
+    setIsStarting(false);
+    setAudioError(null);
+  }
 
   const clockRef = useRef<PracticeClock | null>(null);
   const finishedRef = useRef(false);
@@ -207,18 +219,22 @@ function RhythmTrainer({
     return () => window.cancelAnimationFrame(frameId);
   }, [isRunning, recordExpiredTargets, timeline]);
 
-  useEffect(() => {
-    // 结束时清理音频资源
+  useLayoutEffect(() => {
+    // 配置变更或卸载时同步废弃旧时钟与异步启动，在下一次输入/RAF 前完成。
     return () => {
       startRequestRef.current += 1;
       clockRef.current = null;
+      startingRef.current = false;
+      finishedRef.current = false;
+      nextTargetIndexRef.current = 0;
+      tapOffsetsRef.current = [];
       stopScheduledSounds();
       const context = audioContextRef.current;
       audioContextRef.current = null;
       context?.removeEventListener("statechange", resetInputTime);
       if (context && context.state !== "closed") void context.close();
     };
-  }, [stopScheduledSounds, resetInputTime]);
+  }, [exercise, bpm, countInBeatCount, stopScheduledSounds, resetInputTime]);
 
   async function handlePlay(requestedMode: PlaybackMode) {
     if (clockRef.current !== null && !finishedRef.current) {

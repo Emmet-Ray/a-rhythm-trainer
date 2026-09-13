@@ -23,9 +23,9 @@ export default function PracticeWorkspace({
             // BPM 改变只重建听写内部播放器，保留草稿、验证结果和参考答案状态。
             <RhythmDictation key={exerciseKey} exercise={exercise} bpm={bpm} metronomeEnabled={metronomeEnabled} />
           ) : (
-            // 只在生效配置改变时重建训练；编辑速度输入、应用相同速度不打断。
+            // 换题重建；调速由训练组件原地停止旧轮次，保留谱面。
             <RhythmTrainer
-              key={`${exerciseKey}:${bpm}`}
+              key={exerciseKey}
               exercise={exercise}
               bpm={bpm}
               metronomeEnabled={metronomeEnabled}

@@ -8,8 +8,12 @@ const server = await createServer({
   optimizeDeps: { noDiscovery: true, include: [] },
 });
 let notation;
+let layout;
+let timing;
 try {
   notation = await server.ssrLoadModule("/src/rhythm/notation/RhythmNotation.ts");
+  layout = await server.ssrLoadModule("/src/rhythm/notation/RhythmScoreLayout.ts");
+  timing = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
 } finally {
   await server.close();
 }
@@ -22,6 +26,39 @@ test("节奏谱只显示中线，首小节使用打击乐谱号，后续小节�
   assert.equal(next.getModifiers(undefined, "Clef").length, 0);
   assert.equal(notation.getRhythmLineY(first), notation.getRhythmLineY(next));
   assert.equal(notation.getRhythmLineY(first), first.getYForLine(2));
+});
+
+test("调速只重映射反馈时间，保持已排版坐标、换行与小节边界", () => {
+  const exercise = {
+    timeSignature: { beats: 4, beatType: 4 },
+    measures: [
+      { elements: [{ kind: "note", noteValue: "half" }, { kind: "note", noteValue: "half" }] },
+      { elements: [{ kind: "rest", noteValue: "whole" }] },
+    ],
+  };
+  const geometry = [
+    { minimumX: 80, maximumX: 400, markerY: 132, eventXs: [100, 250] },
+    { minimumX: 60, maximumX: 400, markerY: 312, eventXs: [90] },
+  ];
+  const before = structuredClone(geometry);
+  const windows = { perfectMs: 50, hitMs: 150 };
+  const slow = layout.createTimingFeedbackLayout(timing.createExerciseTimeline(exercise, 60, undefined, windows), geometry);
+  const fast = layout.createTimingFeedbackLayout(timing.createExerciseTimeline(exercise, 120, undefined, windows), geometry);
+  assert.deepEqual(geometry, before);
+  for (let i = 0; i < slow.length; i++) {
+    assert.deepEqual(fast[i].anchors, slow[i].anchors.map(anchor => ({ ...anchor, offsetMs: anchor.offsetMs / 2 })));
+  }
+  for (const offset of [-100, 0, 1000, 3999, 4000, 6000, 8000, 9000]) {
+    assert.deepEqual(layout.timingOffsetToScorePosition(offset / 2, fast), layout.timingOffsetToScorePosition(offset, slow));
+  }
+  assert.equal(layout.timingOffsetToScorePosition(2000, fast).y, 312);
+});
+
+test("无事件坐标的小节也能用两端锚点定位反馈", () => {
+  const timeline = { measures: [{ firstEventIndex: 0, startOffsetMs: 0, endOffsetMs: 4000 }], eventStartOffsetsMs: [] };
+  const measures = layout.createTimingFeedbackLayout(timeline, [{ minimumX: 80, maximumX: 400, markerY: 132, eventXs: [] }]);
+  assert.deepEqual(measures[0].anchors, [{ offsetMs: 0, x: 80 }, { offsetMs: 4000, x: 400 }]);
+  assert.deepEqual(layout.timingOffsetToScorePosition(2000, measures), { x: 240, y: 132 });
 });
 
 test("所有普通时值及休止符保持记谱时值、落在中线，无音高差异", () => {

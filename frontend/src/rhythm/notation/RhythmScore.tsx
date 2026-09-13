@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   BarlineType,
   Beam,
@@ -15,9 +15,10 @@ import { createRhythmStave, getRhythmLineY, rhythmEventToVexFlowStaveNote } from
 import type { ExerciseTimeline, TimingEvent } from "../RhythmTiming";
 import {
   createScoreLayout,
+  createTimingFeedbackLayout,
   getBeatBeamGroups,
   timingOffsetToScorePosition,
-  type MeasureLayout,
+  type MeasureGeometry,
   type ScorePosition,
 } from "./RhythmScoreLayout";
 
@@ -33,8 +34,14 @@ type RhythmScoreProps = {
   timingEvents: readonly TimingEvent[];
 };
 
-// 按完整小节换行；反馈位置按时间线的全局 eventIndex 保存。
-// todo: 增量渲染优化留待后续。
+type RenderedScore = {
+  context: RenderContext;
+  notes: StaveNote[];
+  eventPositions: ScorePosition[];
+  measures: MeasureGeometry[];
+};
+
+// 排版仅依赖题目和容器宽度；时间线、高亮和判定只更新反馈，不重建基础 SVG。
 function RhythmScore({
   exercise,
   activeEventIndex,
@@ -44,6 +51,7 @@ function RhythmScore({
   const viewportRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const renderedRef = useRef<RenderedScore | null>(null);
   const { measures, timeSignature } = exercise;
 
   useEffect(() => {
@@ -57,7 +65,7 @@ function RhythmScore({
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     container.replaceChildren();
@@ -87,8 +95,7 @@ function RhythmScore({
     renderer.resize(containerWidth, scoreLayout.height * scoreLayout.scale);
     const context = renderer.getContext();
     context.scale(scoreLayout.scale, scoreLayout.scale);
-    const eventPositions: ScorePosition[] = [];
-    const layouts: MeasureLayout[] = [];
+    const rendered: RenderedScore = { context, notes: [], eventPositions: [], measures: [] };
 
     preparedMeasures.forEach(({ notes: measureNotes, beams, tuplets }, measureIndex) => {
       const placement = scoreLayout.measures[measureIndex];
@@ -103,39 +110,44 @@ function RhythmScore({
       if (measureIndex === measures.length - 1) stave.setEndBarType(BarlineType.END);
       stave.setContext(context).draw();
       const markerY = getRhythmLineY(stave) + MARKER_Y_OFFSET;
-      const measureTime = timeline.measures[measureIndex];
-      measureNotes.forEach((note, index) => {
-        if (measureTime.firstEventIndex + index === activeEventIndex) {
-          note.setStyle({ fillStyle: ACTIVE_NOTE_COLOR, strokeStyle: ACTIVE_NOTE_COLOR });
-        }
-      });
       if (measureNotes.length > 0) Formatter.FormatAndDraw(context, stave, measureNotes);
       beams.forEach((beam) => beam.setContext(context).draw());
       tuplets.forEach((tuplet) => tuplet.setContext(context).draw());
-      measureNotes.forEach((note, index) => {
-        eventPositions[measureTime.firstEventIndex + index] = {
+      rendered.notes.push(...measureNotes);
+      measureNotes.forEach((note) => {
+        rendered.eventPositions.push({
           x: getNoteCenterX(note),
           y: markerY,
-        };
+        });
       });
-      const anchors = measureNotes.map((note, index) => ({
-        offsetMs: timeline.eventStartOffsetsMs[measureTime.firstEventIndex + index],
-        x: getNoteCenterX(note),
-      }));
-      // 单个全音符/全休止符也有起点和终点，误敲不再固定在同一个位置。
-      if (anchors.length === 0) {
-        anchors.push({ offsetMs: measureTime.startOffsetMs, x: stave.getNoteStartX() });
-      }
-      anchors.push({ offsetMs: measureTime.endOffsetMs, x: stave.getNoteEndX() });
-      layouts.push({
-        ...measureTime,
+      rendered.measures.push({
+        eventXs: measureNotes.map(getNoteCenterX),
         markerY,
         minimumX: stave.getNoteStartX(),
         maximumX: stave.getNoteEndX(),
-        anchors,
       });
     });
+    renderedRef.current = rendered;
 
+    return () => {
+      renderedRef.current = null;
+      container.replaceChildren();
+    };
+  }, [containerWidth, measures, timeSignature.beats, timeSignature.beatType]);
+
+  useLayoutEffect(() => {
+    const rendered = renderedRef.current;
+    if (!rendered) return;
+    const { context, eventPositions } = rendered;
+    const activeNote = activeEventIndex === null ? undefined : rendered.notes[activeEventIndex]?.getSVGElement();
+    if (activeNote) {
+      activeNote.style.fill = ACTIVE_NOTE_COLOR;
+      activeNote.style.stroke = ACTIVE_NOTE_COLOR;
+    }
+    // 复用音符实际排版坐标，只有误敲的位置插值需要当前 BPM 的时间线。
+    const layouts = createTimingFeedbackLayout(timeline, rendered.measures);
+
+    const feedback = context.openGroup("timing-feedback") as SVGGElement;
     timingEvents.forEach((event) => {
       if (event.kind === "wrongTap") {
         const position = timingOffsetToScorePosition(event.tapOffsetMs, layouts);
@@ -147,8 +159,13 @@ function RhythmScore({
       drawTimingMarker(context, position.x, position.y, event.kind);
     });
 
-    return () => container.replaceChildren();
-  }, [containerWidth, activeEventIndex, measures, timeline, timingEvents, timeSignature.beats, timeSignature.beatType]);
+    context.closeGroup();
+    return () => {
+      feedback.remove();
+      activeNote?.style.removeProperty("fill");
+      activeNote?.style.removeProperty("stroke");
+    };
+  }, [containerWidth, measures, timeSignature.beats, timeSignature.beatType, activeEventIndex, timeline, timingEvents]);
 
   return (
     <div ref={viewportRef} style={{ width: "100%", minWidth: 0 }} role="region" aria-label="节奏乐谱" tabIndex={0}>

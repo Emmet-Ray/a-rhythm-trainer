@@ -266,7 +266,8 @@ test("保存题目可按地址直接进入相应训练，共用 BPM 和节拍器
     const html = await renderPage(`/custom/${mode}/saved-${mode}`, "/custom/:mode/:exerciseId");
     assert.ok(html.includes(`<h1>${mode}题目</h1>`));
     assert.ok(html.includes(`href="/custom/${mode}"`));
-    assert.match(html, /应用速度/);
+    assert.match(html, /aria-label="速度滑块"/);
+    assert.doesNotMatch(html, /应用速度|未应用/);
     assert.match(html, /value="60"/);
     assert.match(html, /type="checkbox" checked=""/);
     assert.ok(html.includes(mode === "tapping" ? 'aria-label="击拍训练区"' : 'aria-label="节奏听写区"'));
@@ -280,7 +281,7 @@ test("题目不存在或模式不匹配不启动训练", async (t) => {
     const html = await renderPage(`/custom/tapping/${id}`, "/custom/:mode/:exerciseId");
     assert.match(html, /未找到该练习/);
     assert.match(html, /返回题目列表/);
-    assert.doesNotMatch(html, /击拍训练区|节奏听写区|应用速度/);
+    assert.doesNotMatch(html, /击拍训练区|节奏听写区|速度滑块/);
   }
 });
 
@@ -352,11 +353,24 @@ test("新建草稿默认两节、空名称、4/4，提供公共设置但全空�
   assert.doesNotMatch(html, /class="custom-draft-notice"/);
   assert.match(html, /添加休止符/);
   assert.match(html, /保存练习/);
-  assert.match(html, /应用速度/);
+  assert.match(html, /aria-label="速度滑块"/);
+  assert.doesNotMatch(html, /应用速度|未应用/);
   assert.match(html, /value="60"/);
   assert.match(html, /type="checkbox" checked=""/);
   assert.match(html, /<button[^>]*disabled=""[^>]*>试听<\/button>/);
   assert.doesNotMatch(html, /验证当前小节|播放题目|播放我的答案|查看答案/);
+});
+
+test("公共速度控件提供整数滑块与数值输入，不再要求点击应用", () => {
+  const html = renderToStaticMarkup(createElement(PracticeSettings, { children: () => null }));
+  assert.match(html, /type="range" min="40" max="240" step="1" aria-label="速度滑块" aria-valuetext="60 BPM"/);
+  assert.match(html, /type="number" min="40" max="240" step="1"/);
+  assert.match(html, /aria-hidden="true" title="慢">🐢/);
+  assert.match(html, /aria-hidden="true" title="快">🐇/);
+  assert.match(html, /class="tempo-value"><input[^>]*aria-label="速度 BPM"[^>]*\/><label[^>]*class="unit">BPM<\/label><\/div>/);
+  assert.equal((html.match(/>BPM<\/label>/g) ?? []).length, 1);
+  assert.doesNotMatch(html, />速度\s/);
+  assert.doesNotMatch(html, /应用速度|未应用|aria-invalid="true"/);
 });
 
 test("公共设置提供一致默认值，多实例的标签和输入 ID 不冲突", () => {

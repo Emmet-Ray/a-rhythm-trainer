@@ -90,7 +90,6 @@
 .design-system input[type="number"]::-webkit-inner-spin-button, .design-system input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .design-system input[aria-invalid="true"] { border-color: var(--ds-error); background: var(--ds-error-bg); }
 .design-system .bpm-error { color: var(--ds-error); }
-.design-system .bpm-pending { color: var(--ds-muted); }
 
 /* 公共页头：导航不使用主操作按钮的厚度，始终保留清楚的焦点和栏目状态。 */
 .site-header.design-system { min-height: 88px; border-bottom: var(--ds-border) solid var(--ds-line); gap: var(--ds-space-4); }
@@ -213,9 +212,20 @@
 .practice-page .practice-heading { margin: var(--ds-space-4) 0 var(--ds-space-8); }
 .practice-page .practice-heading .eyebrow { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 650; margin-bottom: var(--ds-space-2); }
 .design-system.practice-settings { padding: var(--ds-space-4) 0 var(--ds-space-6); gap: var(--ds-space-4) var(--ds-space-8); border-top: var(--ds-border) solid var(--ds-line); border-bottom: var(--ds-border) solid var(--ds-line); justify-content: space-between; }
-.practice-settings .tempo-settings { gap: var(--ds-space-3); }
-.practice-settings .tempo-settings label { font-weight: 750; }
-.practice-settings .unit { color: var(--ds-muted); font-size: 12px; }
+.practice-settings .tempo-settings { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: min(100%, 420px); gap: var(--ds-space-3); min-width: 0; }
+.tempo-value { display: flex; align-items: center; gap: var(--ds-space-2); white-space: nowrap; }
+.practice-settings .tempo-value input[type="number"] { width: 72px; min-height: 44px; padding: 8px 10px; }
+.tempo-slider { display: flex; align-items: center; gap: var(--ds-space-2); min-width: 0; }
+.tempo-endpoint { flex-shrink: 0; font-size: 24px; line-height: 1; }
+.practice-settings .tempo-slider input[type="range"] { appearance: none; -webkit-appearance: none; flex: 1; width: 100%; min-width: 0; min-height: 44px; margin: 0; padding: 0; border: 0; border-radius: var(--ds-radius-sm); background: transparent; cursor: pointer; touch-action: none; }
+.tempo-slider input::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; background: linear-gradient(to right, var(--ds-primary) var(--tempo-progress), var(--ds-line) var(--tempo-progress)); }
+.tempo-slider input::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 24px; height: 24px; margin-top: -8px; border: 3px solid var(--ds-primary); border-radius: 50%; background: var(--ds-surface); box-shadow: 0 2px 0 var(--ds-base); }
+.tempo-slider input::-moz-range-track { height: 8px; border-radius: 999px; background: var(--ds-line); }
+.tempo-slider input::-moz-range-progress { height: 8px; border-radius: 999px; background: var(--ds-primary); }
+.tempo-slider input::-moz-range-thumb { box-sizing: border-box; width: 24px; height: 24px; border: 3px solid var(--ds-primary); border-radius: 50%; background: var(--ds-surface); box-shadow: 0 2px 0 var(--ds-base); }
+.tempo-slider input:active { cursor: grabbing; }
+.tempo-settings .bpm-error { grid-column: 1 / -1; margin: 0; }
+.practice-settings .unit { margin: 0; color: var(--ds-muted); font-size: 14px; font-weight: 650; }
 .practice-settings .metronome-toggle { font-weight: 650; gap: var(--ds-space-3); min-height: 48px; }
 .practice-settings .metronome-toggle input { appearance: none; width: 48px; height: 28px; min-height: 28px; padding: 0; border: 2px solid var(--ds-base); border-radius: 999px; background: var(--ds-disabled); cursor: pointer; position: relative; transition: background-color var(--ds-motion); }
 .practice-settings .metronome-toggle input::after { content: ""; position: absolute; width: 18px; height: 18px; top: 3px; left: 3px; border-radius: 50%; background: var(--ds-muted); transition: transform var(--ds-motion); }
@@ -309,8 +319,7 @@
   .home-page .question-action { font-size: 0; }
   .home-page .question-action > span { font-size: 20px; }
   .practice-page .practice-heading { margin-bottom: var(--ds-space-6); }
-  .practice-settings .tempo-settings { gap: var(--ds-space-2); }
-  .practice-settings .tempo-settings button { padding-inline: var(--ds-space-3); }
+  .practice-settings .tempo-settings { width: 100%; gap: var(--ds-space-2); }
   .rhythm-trainer .trainer-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .rhythm-trainer .trainer-actions button { min-width: 0; padding-inline: var(--ds-space-3); }
 }
