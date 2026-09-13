@@ -3,6 +3,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import { RhythmEditor, canEditRhythmElements, type RhythmEditorHandle } from "./RhythmEditor";
 import { RhythmDraftScore } from "../rhythm/notation/RhythmDraftScore";
@@ -59,6 +60,7 @@ type RhythmDictationProps = {
   exercise: RhythmExercise | null;
   bpm: number;
   metronomeEnabled?: boolean;
+  extraActions?: (busy: boolean) => ReactNode;
 };
 
 type MeasureVerdict = "unchecked" | "correct" | "incorrect";
@@ -69,6 +71,7 @@ export function RhythmDictation({
   exercise,
   bpm,
   metronomeEnabled = true,
+  extraActions,
 }: RhythmDictationProps) {
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
   const editorRef = useRef<RhythmEditorHandle>(null);
@@ -130,6 +133,7 @@ export function RhythmDictation({
           key={[bpm, playbackScope, selectedMeasureIndex].join("-")}
           bpm={bpm}
           metronomeEnabled={metronomeEnabled}
+          extraActions={extraActions}
           timeSignature={exercise?.timeSignature ?? null}
           options={[
             {

@@ -66,7 +66,6 @@ main:focus { outline: none; }
 .unit { color: var(--muted); font-size: 12px; margin-left: 3px; }
 .bpm-error { flex-basis: 100%; color: #b33131; font-size: 13px; }
 .training-workspace { padding-top: 16px; text-align: center; min-width: 0; }
-.keyboard-hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
 .rhythm-trainer { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .trainer-actions { display: flex; justify-content: center; gap: 12px; margin-top: 10px; }
 .trainer-actions button:first-child { color: #fff; background: var(--accent); border-color: var(--accent); }

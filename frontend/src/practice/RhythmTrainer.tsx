@@ -48,6 +48,7 @@ export type RhythmTrainerProps = {
   metronomeEnabled?: boolean;
   /** 公共设置提供的面板，仅负责放置，不拥有第二份设置状态。 */
   settingsPanel?: ReactNode;
+  extraActions?: (busy: boolean) => ReactNode;
 };
 
 /**
@@ -62,6 +63,7 @@ function RhythmTrainer({
   countInBeatCount,
   metronomeEnabled = true,
   settingsPanel,
+  extraActions,
 }: RhythmTrainerProps) {
   const metronomePlayback = useContext(MetronomePlaybackContext);
   const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
@@ -383,7 +385,7 @@ function RhythmTrainer({
   ]);
 
   return (
-    <TrainerFrame settingsPanel={settingsPanel} error={audioError} actions={
+    <TrainerFrame settingsPanel={settingsPanel} error={audioError} extraActions={extraActions?.(isStarting || isRunning)} actions={
       <div className="trainer-actions">
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
         <button
@@ -446,7 +448,7 @@ function RhythmTrainer({
 export default function RhythmTrainerWorkspace(props: Omit<RhythmTrainerProps, "exercise"> & { exercise: RhythmExercise | null }) {
   if (props.exercise) return <RhythmTrainer {...props} exercise={props.exercise} />;
   return (
-    <TrainerFrame settingsPanel={props.settingsPanel} actions={
+    <TrainerFrame settingsPanel={props.settingsPanel} extraActions={props.extraActions?.(false)} actions={
       <div className="trainer-actions">
         <button type="button" disabled>击拍练习</button>
         <button type="button" disabled>试听</button>
@@ -462,8 +464,9 @@ export default function RhythmTrainerWorkspace(props: Omit<RhythmTrainerProps, "
 }
 
 /** 空态与真实练习共用：整行操作栏，下方才分成谱面和设置两栏。 */
-function TrainerFrame({ actions, settingsPanel, error, children }: {
+function TrainerFrame({ actions, extraActions, settingsPanel, error, children }: {
   actions: ReactNode;
+  extraActions?: ReactNode;
   settingsPanel?: ReactNode;
   error?: string | null;
   children: ReactNode;
@@ -472,7 +475,7 @@ function TrainerFrame({ actions, settingsPanel, error, children }: {
     <div className="practice-layout practice-layout--sidebar">
       <div className="trainer-toolbar">
         {actions}
-        <p className="keyboard-hint"><kbd>空格</kbd> 键敲击</p>
+        {extraActions}
         {error && <p className="trainer-audio-error" role="alert">{error}</p>}
       </div>
       <div className="trainer-body">

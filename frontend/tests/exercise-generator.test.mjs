@@ -173,6 +173,11 @@ test("随机页面默认基础主题与两小节，主题选项来自目录，�
       assert.equal((counts.match(/checked=""/g) ?? []).length, 1);
       assert.match(counts, /checked="" value="2"/);
       assert.match(html, /生成题目/);
+      assert.match(html, /<dialog[^>]*class="design-system random-settings-drawer"[^>]*aria-labelledby=/);
+      assert.match(html, /aria-label="关闭生成设置"/);
+      assert.match(html, /class="random-toolbar-actions"/);
+      assert.match(html, /aria-haspopup="dialog"/);
+      assert.ok(html.indexOf("</dialog>") < html.indexOf('class="random-toolbar-actions"'));
       assert.match(html, /aria-label="速度滑块"/);
       assert.doesNotMatch(html, /应用速度|未应用/);
       assert.match(html, /节拍器/);

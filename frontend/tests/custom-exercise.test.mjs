@@ -88,6 +88,8 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
   assert.match(await renderApp("/"), /class="design-system home-page"/);
   assert.match(await renderApp("/preset"), /class="design-system preset-library"/);
   const tapping = await renderApp("/preset/basic-values-01");
+  assert.doesNotMatch(tapping, /random-toolbar-actions|random-settings-drawer/);
+  assert.doesNotMatch(await renderApp("/preset/dictation-basic-values-01"), /random-toolbar-actions|random-settings-drawer/);
   assert.match(tapping, /class="design-system practice-page"/);
   assert.doesNotMatch(tapping, /trainer-feedback|rhythm-score-overlay/);
   assert.match(tapping, /data-action="start"/);
@@ -392,7 +394,7 @@ test("击拍使用侧栏布局，空态与真实题目均将操作按钮放在�
     const toolbar = html.indexOf('class="trainer-toolbar"');
     const body = html.indexOf('class="trainer-body"');
     assert.ok(toolbar < actions && actions < body);
-    assert.ok(html.indexOf('class="keyboard-hint"') < body);
+    assert.doesNotMatch(html, /keyboard-hint|键敲击/);
     assert.ok(html.indexOf('aria-label="练习设置"') > body);
     assert.equal((html.match(/aria-label="速度 BPM"/g) ?? []).length, 1);
     assert.equal((html.match(/aria-label="节拍器"/g) ?? []).length, 1);

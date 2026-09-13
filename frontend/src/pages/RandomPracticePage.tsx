@@ -1,4 +1,4 @@
-import { lazy, Suspense, useId, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
 import { generateRandomExercise, randomTopics, randomMeasureCounts, DEFAULT_RANDOM_MEASURE_COUNT, type RandomGenerationConfig } from "../exercises/randomExercises";
@@ -63,9 +63,36 @@ export default function RandomPracticePage() {
 
 function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"] }) {
   const measureCountName = useId();
+  const drawerTitleId = useId();
+  const drawerRef = useRef<HTMLDialogElement>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const [settingsOpen, setSettingsOpen] = useState(true);
   const [config, setConfig] = useState<RandomGenerationConfig>({ mode, topics: ["basic-notes"], measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
   const [generated, setGenerated] = useState<{ id: number; exercise: RhythmExercise } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!settingsOpen) {
+      // 生成会重建操作栏，提交后的焦点应落到新按钮，而非已卸载的旧节点。
+      settingsButtonRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    const dialog = drawerRef.current;
+    if (!dialog) return;
+    dialog.showModal();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [settingsOpen, generated?.id]);
+
+  function closeSettings() {
+    drawerRef.current?.close();
+    setSettingsOpen(false);
+    settingsButtonRef.current?.focus({ preventScroll: true });
+  }
 
   function generate() {
     try {
@@ -73,13 +100,26 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
       const exercise = generateRandomExercise(config);
       setGenerated(previous => ({ id: (previous?.id ?? 0) + 1, exercise }));
       setError(null);
+      closeSettings();
     } catch (error) {
       setError(error instanceof Error ? error.message : "生成失败，请重试。");
+      setSettingsOpen(true);
     }
   }
 
   return (
     <>
+      <dialog ref={drawerRef} className="design-system random-settings-drawer" aria-labelledby={drawerTitleId}
+        onCancel={event => { event.preventDefault(); closeSettings(); }}
+        onClick={event => {
+          if (event.target !== event.currentTarget) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeSettings();
+        }}>
+      <header className="random-settings-heading">
+        <h2 id={drawerTitleId}>生成设置</h2>
+        <button type="button" aria-label="关闭生成设置" onClick={closeSettings}>×</button>
+      </header>
       <section className="design-system random-generation" aria-label="生成配置">
         <form className="random-config" onSubmit={event => { event.preventDefault(); generate(); }}>
           <fieldset className="random-topics">
@@ -114,13 +154,21 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
                 ))}
               </div>
             </fieldset>
-            <button className="generate-button" type="submit">{generated ? "重新生成" : "生成题目"}</button>
+            <button className="generate-button" type="submit">生成题目</button>
           </div>
         </form>
         {error && <p role="alert">{error}</p>}
       </section>
+      </dialog>
         <Suspense fallback={<p className="loading-message" role="status">正在加载练习…</p>}>
-          <PracticeWorkspace exerciseKey={generated?.id ?? 0} exercise={generated?.exercise ?? null} mode={mode} />
+          <PracticeWorkspace exerciseKey={generated?.id ?? 0} exercise={generated?.exercise ?? null} mode={mode}
+            extraActions={busy => (
+              <div className="random-toolbar-actions">
+                <button type="button" disabled={busy} onClick={generate}>{generated ? "换一题" : "生成题目"}</button>
+                <button ref={settingsButtonRef} className="random-settings-trigger" type="button" disabled={busy}
+                  aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}>生成设置</button>
+              </div>
+            )} />
         </Suspense>
     </>
   );

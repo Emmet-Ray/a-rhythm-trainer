@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { MetronomePlaybackContext } from "./MetronomePlayback";
 import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
 import { createRhythmPlaybackTimeline } from "../rhythm/RhythmTiming";
@@ -25,11 +25,12 @@ type PlaybackOption = {
  * BPM、播放范围或小节数量改变时，调用方用 key 重建；卸载取消排程、RAF 和异步启动并关闭音频。
  * 节拍器开关实时生效，不参与 key，也不影响预备拍和钢琴。
  */
-export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true }: {
+export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, extraActions }: {
   options: readonly PlaybackOption[];
   timeSignature: RhythmExercise["timeSignature"] | null;
   bpm: number;
   metronomeEnabled?: boolean;
+  extraActions?: (busy: boolean) => ReactNode;
 }) {
   const metronomePlayback = useContext(MetronomePlaybackContext);
   const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
@@ -188,6 +189,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
             </button>
           );
         })}
+        {extraActions?.(isActive)}
       </div>
       <span className="rhythm-playback-status" role="status">{text}</span>
       {error && <span role="alert">{error}</span>}
