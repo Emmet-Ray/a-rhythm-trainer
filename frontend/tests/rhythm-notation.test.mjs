@@ -28,6 +28,20 @@ test("节奏谱只显示中线，首小节使用打击乐谱号，后续小节�
   assert.equal(notation.getRhythmLineY(first), first.getYForLine(2));
 });
 
+test("内置小节号靠近单线谱，编号不改变谱表宽度与音符起点", () => {
+  for (const [index, y] of [40, 190, 340].entries()) {
+    const stave = notation.createRhythmStave(10, y, 300, true);
+    const startX = stave.getNoteStartX();
+    stave.setMeasure(index + 1);
+    assert.equal(stave.getMeasure(), index + 1);
+    assert.equal(stave.getWidth(), 300);
+    assert.equal(stave.getNoteStartX(), startX);
+    // VexFlow 的编号基线为顶部文字位置 + 3，而非布局起点上方。
+    const distance = notation.getRhythmLineY(stave) - (stave.getYForTopText() + 3);
+    assert.ok(distance >= 20 && distance <= 35);
+  }
+});
+
 test("调速只重映射反馈时间，保持已排版坐标、换行与小节边界", () => {
   const exercise = {
     timeSignature: { beats: 4, beatType: 4 },

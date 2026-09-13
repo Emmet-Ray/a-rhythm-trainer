@@ -125,12 +125,9 @@ function RhythmScore({
 
     preparedMeasures.forEach(({ notes: measureNotes, beams, tuplets }, measureIndex) => {
       const placement = scoreLayout.measures[measureIndex];
-      context.openGroup("measure-number");
-      context.save().setFillStyle("var(--ds-muted)").setFont("sans-serif", 12);
-      context.fillText(String(measureIndex + 1), placement.x + 4, placement.y - 22);
-      context.restore();
-      context.closeGroup();
       const stave = createRhythmStave(placement.x, placement.y, placement.width, placement.isRowStart);
+      // 使用谱表内置编号定位，避免把布局起点误当作可见谱线的位置。
+      stave.setMeasure(measureIndex + 1);
       if (!placement.isRowStart) {
         // 左侧小节已画右边界，避免重复描画同一根线。
         stave.setBegBarType(BarlineType.NONE);
@@ -139,7 +136,9 @@ function RhythmScore({
         stave.addTimeSignature(`${timeSignature.beats}/${timeSignature.beatType}`);
       }
       if (measureIndex === measures.length - 1) stave.setEndBarType(BarlineType.END);
+      context.save();
       stave.setContext(context).draw();
+      context.restore();
       const markerY = getRhythmLineY(stave) + MARKER_Y_OFFSET;
       if (measureNotes.length > 0) Formatter.FormatAndDraw(context, stave, measureNotes);
       beams.forEach((beam) => beam.setContext(context).draw());
