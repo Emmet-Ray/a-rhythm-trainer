@@ -8,6 +8,7 @@ import {
   type RhythmExercise,
 } from "../rhythm/RhythmModel";
 import { RhythmDraftScore } from "../rhythm/notation/RhythmDraftScore";
+import { RhythmSymbol } from "../rhythm/notation/RhythmSymbol";
 
 // 输入按钮与题目支持检查共用这一列表，避免出现题目可验证却无法填写的情况。
 const eventOptions = [
@@ -33,16 +34,22 @@ function canToggleDot(event: RhythmElement): event is RhythmEvent {
 
 /** 仅检查是否能用当前输入工具写出这些元素，不要求草稿已填满小节。 */
 // eslint-disable-next-line react-refresh/only-export-components -- 输入能力与编辑器共置，供题目支持检查和测试使用。
-export function canEditRhythmElements(elements: readonly RhythmElement[]): boolean {
+export function canEditRhythmElements(
+  elements: readonly RhythmElement[],
+): boolean {
   return elements.every((event) =>
     event.kind === "triplet"
       ? event.notes.length === 3 &&
-        event.notes.every((note) =>
-          note.kind === "note" && note.noteValue === "eighth" && (note.dots ?? 0) === 0,
+        event.notes.every(
+          (note) =>
+            note.kind === "note" &&
+            note.noteValue === "eighth" &&
+            (note.dots ?? 0) === 0,
         )
       : (event.kind === "note" || event.kind === "rest") &&
-        eventOptions.some((option) =>
-          option.kind === event.kind && option.noteValue === event.noteValue,
+        eventOptions.some(
+          (option) =>
+            option.kind === event.kind && option.noteValue === event.noteValue,
         ) &&
         ((event.dots ?? 0) === 0 || (event.dots === 1 && canToggleDot(event))),
   );
@@ -79,7 +86,11 @@ export function RhythmEditor({
 }: RhythmEditorProps) {
   const measureBeats = timeSignature.beats * (4 / timeSignature.beatType);
   const [addEventMessage, setAddEventMessage] = useState("");
-  useImperativeHandle(ref, () => ({ clearMessage: () => setAddEventMessage("") }), []);
+  useImperativeHandle(
+    ref,
+    () => ({ clearMessage: () => setAddEventMessage("") }),
+    [],
+  );
   const hasSelectedMeasure = measures[selectedMeasureIndex] !== undefined;
   const lastEvent = measures[selectedMeasureIndex]?.at(-1);
   const canToggleLastDot = lastEvent !== undefined && canToggleDot(lastEvent);
@@ -120,40 +131,47 @@ export function RhythmEditor({
     }
 
     setAddEventMessage("");
-    onChange(selectedMeasureIndex, [...measures[selectedMeasureIndex].slice(0, -1), updatedEvent]);
+    onChange(selectedMeasureIndex, [
+      ...measures[selectedMeasureIndex].slice(0, -1),
+      updatedEvent,
+    ]);
   }
 
   function removeLastEvent() {
-    if (
-      !hasSelectedMeasure ||
-      measures[selectedMeasureIndex].length === 0
-    )
+    if (!hasSelectedMeasure || measures[selectedMeasureIndex].length === 0)
       return;
     setAddEventMessage("");
     onChange(selectedMeasureIndex, measures[selectedMeasureIndex].slice(0, -1));
   }
 
+  function clearSelectedMeasure() {
+    if (!hasSelectedMeasure || measures[selectedMeasureIndex].length === 0)
+      return;
+    setAddEventMessage("");
+    onChange(selectedMeasureIndex, []);
+  }
+
   return (
     <div className="rhythm-editor design-system">
-      {measures.length === 0 ? emptyContent : <RhythmDraftScore
-        measures={measures}
-        timeSignature={timeSignature}
-        selectedMeasureIndex={selectedMeasureIndex}
-        onSelectMeasure={(index) => {
-          onSelectMeasure(index);
-          setAddEventMessage("");
-        }}
-      />}
+      {measures.length === 0 ? (
+        emptyContent
+      ) : (
+        <RhythmDraftScore
+          measures={measures}
+          timeSignature={timeSignature}
+          selectedMeasureIndex={selectedMeasureIndex}
+          onSelectMeasure={(index) => {
+            onSelectMeasure(index);
+            setAddEventMessage("");
+          }}
+        />
+      )}
       <div className="rhythm-editor-controls">
-        <p className="rhythm-editor-current-measure">
-          当前小节：{hasSelectedMeasure ? selectedMeasureIndex + 1 : "—"}
-        </p>
         <div
           role="group"
           aria-label="添加音符"
           className="rhythm-editor-symbol-row"
         >
-          <span className="rhythm-editor-row-label">音符</span>
           <div className="rhythm-editor-symbol-buttons">
             {eventOptions
               .filter((option) => option.kind === "note")
@@ -161,6 +179,8 @@ export function RhythmEditor({
                 <button
                   key={`${option.kind}-${option.noteValue}`}
                   type="button"
+                  aria-label={option.label}
+                  title={option.label}
                   disabled={!hasSelectedMeasure}
                   onClick={() =>
                     addElement({
@@ -169,12 +189,18 @@ export function RhythmEditor({
                     })
                   }
                 >
-                  {option.label}
+                  <RhythmSymbol
+                    kind={option.kind}
+                    noteValue={option.noteValue}
+                  />
                 </button>
               ))}
 
             <button
               type="button"
+              className="rhythm-editor-triplet"
+              aria-label="小三连"
+              title="小三连"
               disabled={!hasSelectedMeasure}
               onClick={() =>
                 addElement({
@@ -187,7 +213,7 @@ export function RhythmEditor({
                 })
               }
             >
-              小三连
+              <RhythmSymbol kind="triplet" />
             </button>
           </div>
         </div>
@@ -197,7 +223,6 @@ export function RhythmEditor({
           aria-label="添加休止符"
           className="rhythm-editor-symbol-row"
         >
-          <span className="rhythm-editor-row-label">休止符</span>
           <div className="rhythm-editor-symbol-buttons">
             {eventOptions
               .filter((option) => option.kind === "rest")
@@ -205,6 +230,8 @@ export function RhythmEditor({
                 <button
                   key={`${option.kind}-${option.noteValue}`}
                   type="button"
+                  aria-label={option.label}
+                  title={option.label}
                   disabled={!hasSelectedMeasure}
                   onClick={() =>
                     addElement({
@@ -213,7 +240,10 @@ export function RhythmEditor({
                     })
                   }
                 >
-                  {option.label}
+                  <RhythmSymbol
+                    kind={option.kind}
+                    noteValue={option.noteValue}
+                  />
                 </button>
               ))}
           </div>
@@ -221,35 +251,44 @@ export function RhythmEditor({
 
         <div
           role="group"
-          aria-label="修改当前小节末尾"
+          aria-label="编辑当前小节"
           className="rhythm-editor-edit-actions"
         >
           <button
             type="button"
+            className="rhythm-editor-dot"
+            aria-label="附点"
             disabled={!canToggleLastDot}
             aria-pressed={lastHasDot}
             title="切换当前小节末尾四分或八分音符的附点"
             onClick={toggleLastDot}
           >
-            附点
+            <RhythmSymbol kind="dot" />
           </button>
 
           <button
             type="button"
             disabled={
-              !hasSelectedMeasure ||
-              measures[selectedMeasureIndex].length === 0
+              !hasSelectedMeasure || measures[selectedMeasureIndex].length === 0
             }
             onClick={removeLastEvent}
           >
             删除末尾
+          </button>
+          <button
+            type="button"
+            disabled={
+              !hasSelectedMeasure || measures[selectedMeasureIndex].length === 0
+            }
+            onClick={clearSelectedMeasure}
+          >
+            清空当前小节
           </button>
         </div>
         <p className="rhythm-editor-input-message" role="status">
           {addEventMessage}
         </p>
       </div>
-
     </div>
   );
 }

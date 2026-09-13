@@ -281,10 +281,13 @@
 .rhythm-dictation .dictation-scope-options button:active:not(:disabled) { transform: none; box-shadow: none; }
 .rhythm-editor .rhythm-editor-controls { margin-top: var(--ds-space-4); }
 .rhythm-editor .rhythm-editor-current-measure { margin-bottom: var(--ds-space-4); font-size: var(--ds-text-sm); font-weight: 750; }
-.rhythm-editor .rhythm-editor-symbol-row { grid-template-columns: 56px minmax(0, 1fr); gap: var(--ds-space-3); margin-top: var(--ds-space-3); }
-.rhythm-editor .rhythm-editor-row-label { color: var(--ds-muted); font-size: var(--ds-text-sm); }
-.rhythm-editor .rhythm-editor-symbol-buttons { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--ds-space-2); }
-.rhythm-editor .rhythm-editor-symbol-buttons button { padding: 8px 6px; font-size: var(--ds-text-sm); }
+.rhythm-editor .rhythm-editor-symbol-row { margin-top: var(--ds-space-3); }
+.rhythm-editor .rhythm-editor-symbol-buttons { display: flex; flex-wrap: wrap; gap: var(--ds-space-2); }
+.rhythm-editor .rhythm-editor-symbol-buttons button, .rhythm-editor button.rhythm-editor-dot { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 52px; height: 52px; padding: 2px; }
+.rhythm-editor .rhythm-editor-symbol-buttons .rhythm-editor-triplet { width: 84px; }
+.rhythm-symbol { display: block; width: 44px; height: 44px; pointer-events: none; }
+.rhythm-editor-triplet .rhythm-symbol { width: 76px; }
+.rhythm-symbol svg { display: block; width: 100%; height: 100%; }
 .rhythm-editor .rhythm-editor-edit-actions { margin-top: var(--ds-space-4); gap: var(--ds-space-3); }
 .rhythm-editor .rhythm-editor-edit-actions button[aria-pressed="true"]:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); border-color: var(--ds-primary); }
 .rhythm-editor .rhythm-editor-input-message { min-height: 28px; margin-top: var(--ds-space-3); color: var(--ds-error); }
@@ -296,12 +299,7 @@
 .rhythm-dictation .dictation-completion { min-height: 28px; margin: var(--ds-space-3) 0 0; color: var(--ds-success); font-weight: 750; }
 .rhythm-dictation .dictation-reference { margin-top: var(--ds-space-6); padding-top: var(--ds-space-6); border-top: 2px solid var(--ds-line); }
 .rhythm-dictation [role="alert"] { color: var(--ds-error); font-size: var(--ds-text-sm); }
-@media (max-width: 760px) {
-  .rhythm-editor .rhythm-editor-symbol-buttons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
 @media (max-width: 600px) {
-  .rhythm-editor .rhythm-editor-symbol-row { grid-template-columns: minmax(0, 1fr); gap: var(--ds-space-2); }
-  .rhythm-editor .rhythm-editor-edit-actions, .rhythm-editor .rhythm-editor-input-message { margin-left: 0; }
   .rhythm-dictation .rhythm-playback { width: 100%; }
   .rhythm-playback .rhythm-playback-buttons { display: grid; grid-template-columns: 1fr 1fr; }
   .rhythm-playback .rhythm-playback-buttons button { min-width: 0; padding-inline: 8px; font-size: var(--ds-text-sm); }

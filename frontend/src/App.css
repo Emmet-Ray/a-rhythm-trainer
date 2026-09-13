@@ -83,12 +83,9 @@ main:focus { outline: none; }
 .rhythm-editor { min-width: 0; }
 .rhythm-editor-controls { margin-top: 12px; }
 .rhythm-editor-current-measure { margin: 0 0 14px; font-size: 14px; font-weight: 600; }
-.rhythm-editor-symbol-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: start; gap: 12px; margin-top: 10px; }
-.rhythm-editor-row-label { padding-top: 10px; color: var(--muted); font-size: 13px; }
-.rhythm-editor-symbol-buttons { display: grid; grid-template-columns: repeat(6, 108px); gap: 8px; }
-.rhythm-editor-symbol-buttons button { padding: 9px 6px; font-size: 14px; }
-.rhythm-editor-edit-actions { margin: 14px 0 0 68px; }
-.rhythm-editor-input-message { min-height: 22px; margin: 8px 0 0 68px; color: #b33131; font-size: 13px; }
+.rhythm-editor-symbol-row { margin-top: 10px; }
+.rhythm-editor-edit-actions { margin: 14px 0 0; }
+.rhythm-editor-input-message { min-height: 22px; margin: 8px 0 0; color: #b33131; font-size: 13px; }
 .dictation-verification { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
 .dictation-verification-result [role="status"] { font-size: 14px; }
 .dictation-verify { background: var(--accent); color: white; border-color: var(--accent); }
@@ -98,15 +95,6 @@ main:focus { outline: none; }
 .dictation-reference { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 20px; }
 .dictation-reference h3 { margin: 0 0 8px; font-size: 16px; }
 .rhythm-playback [role="alert"] { color: #b33131; font-size: 13px; }
-@media (max-width: 900px) {
-  .rhythm-editor-symbol-buttons { grid-template-columns: repeat(3, minmax(0, 108px)); }
-}
-@media (max-width: 480px) {
-  .rhythm-editor-symbol-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  .rhythm-editor-row-label { padding-top: 0; }
-  .rhythm-editor-symbol-buttons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .rhythm-editor-edit-actions, .rhythm-editor-input-message { margin-left: 0; }
-}
 .loading-message { color: var(--muted); padding: 40px 0; }
 .random-mode-selection, .custom-mode-selection { padding-top: 24px; }
 .random-mode-selection h2, .custom-mode-selection h2 { margin-bottom: 12px; }
