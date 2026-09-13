@@ -269,7 +269,7 @@ test("保存题目可按地址直接进入相应训练，共用 BPM 和节拍器
     assert.match(html, /aria-label="速度滑块"/);
     assert.doesNotMatch(html, /应用速度|未应用/);
     assert.match(html, /value="60"/);
-    assert.match(html, /type="checkbox" checked=""/);
+    assert.match(html, /aria-label="节拍器" aria-pressed="true"/);
     assert.ok(html.includes(mode === "tapping" ? 'aria-label="击拍训练区"' : 'aria-label="节奏听写区"'));
     assert.doesNotMatch(html, /编辑自定义练习|保存练习/);
   }
@@ -356,7 +356,7 @@ test("新建草稿默认两节、空名称、4/4，提供公共设置但全空�
   assert.match(html, /aria-label="速度滑块"/);
   assert.doesNotMatch(html, /应用速度|未应用/);
   assert.match(html, /value="60"/);
-  assert.match(html, /type="checkbox" checked=""/);
+  assert.match(html, /aria-label="节拍器" aria-pressed="true"/);
   assert.match(html, /<button[^>]*disabled=""[^>]*>试听<\/button>/);
   assert.doesNotMatch(html, /验证当前小节|播放题目|播放我的答案|查看答案/);
 });
@@ -371,6 +371,9 @@ test("公共速度控件提供整数滑块与数值输入，不再要求点击�
   assert.equal((html.match(/>BPM<\/label>/g) ?? []).length, 1);
   assert.doesNotMatch(html, />速度\s/);
   assert.doesNotMatch(html, /应用速度|未应用|aria-invalid="true"/);
+  assert.match(html, /<button[^>]*aria-label="节拍器" aria-pressed="true"/);
+  assert.match(html, /class="metronome-pendulum" transform="rotate\(0 40 76\)"/);
+  assert.doesNotMatch(html, /metronome-toggle|type="checkbox"/);
 });
 
 test("公共设置提供一致默认值，多实例的标签和输入 ID 不冲突", () => {

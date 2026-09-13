@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { MetronomePlaybackContext } from "./MetronomePlayback";
 
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import { DEFAULT_TAPPING_PRECISION, getTappingTimingWindows } from "../settings/tappingPrecision";
@@ -80,6 +81,8 @@ function RhythmTrainer({
   countInBeatCount,
   metronomeEnabled = true,
 }: RhythmTrainerProps) {
+  const metronomePlayback = useContext(MetronomePlaybackContext);
+  const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
   const [roundTimingWindows, setRoundTimingWindows] = useState<TimingWindows>(
     () => ({ ...(timingWindows ?? getTappingTimingWindows(DEFAULT_TAPPING_PRECISION)) }),
   );
@@ -148,6 +151,8 @@ function RhythmTrainer({
       : null;
 
   const stopScheduledSounds = useCallback(() => {
+    clearMetronomePlaybackRef.current?.();
+    clearMetronomePlaybackRef.current = null;
     metronomeRef.current?.dispose();
     metronomeRef.current = null;
     for (const source of scheduledSourcesRef.current) {
@@ -206,6 +211,8 @@ function RhythmTrainer({
       );
 
       if (position.phase === "finished") {
+        clearMetronomePlaybackRef.current?.();
+        clearMetronomePlaybackRef.current = null;
         metronomeRef.current?.dispose();
         metronomeRef.current = null;
         // 保留本轮时钟，接受发生在终点前、却在结束帧之后才送达的输入。
@@ -298,6 +305,12 @@ function RhythmTrainer({
           );
         });
       }
+
+      clearMetronomePlaybackRef.current = metronomePlayback?.start({
+        readTimeMs: clock.readTimeMs, bpm,
+        countInDurationMs: nextTimeline.countInDurationMs,
+        durationMs: nextTimeline.eventEndOffsetsMs.at(-1) ?? 0,
+      }) ?? null;
 
       nextTargetIndexRef.current = 0;
       tapOffsetsRef.current = [];

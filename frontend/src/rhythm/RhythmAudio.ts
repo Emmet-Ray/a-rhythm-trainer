@@ -46,6 +46,8 @@ export function createPracticeClock(
 
   return {
     nowMs: () => sample().audioMs - practiceStartsAtSeconds * 1000,
+    /** 仅供可视化读时，不采样、不重置输入 epoch；动画帧不得改变击拍判定。 */
+    readTimeMs: () => context.currentTime * 1000 - practiceStartsAtSeconds * 1000,
     /** 将浏览器事件创建时间映射到本轮音频时间；无效、跨轮或跨暂停输入返回 null。
      * 兼容旧浏览器的 epoch 毫秒；不以处理时间兜底，以免将旧输入误算成新敲击。
      * 这是事件分发延迟修正，不是硬件/输出延迟校准。

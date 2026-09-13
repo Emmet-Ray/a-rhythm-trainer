@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { MetronomePlaybackContext } from "./MetronomePlayback";
 import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
 import { createRhythmPlaybackTimeline } from "../rhythm/RhythmTiming";
 import {
@@ -30,6 +31,8 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
   bpm: number;
   metronomeEnabled?: boolean;
 }) {
+  const metronomePlayback = useContext(MetronomePlaybackContext);
+  const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
   const [status, setStatus] = useState<
     "idle" | "starting" | "countIn" | "playing" | "finished"
   >("idle");
@@ -48,6 +51,8 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
   const [playbackSource, setPlaybackSource] = useState<string | null>(null);
 
   const cancelPlayback = useCallback(() => {
+    clearMetronomePlaybackRef.current?.();
+    clearMetronomePlaybackRef.current = null;
     metronomeRef.current?.dispose();
     metronomeRef.current = null;
     // resume 尚未完成时也能取消；旧请求恢复后不得再安排声音。
@@ -126,6 +131,11 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
       });
       // 末尾休止符同样占时，不能以“最后一声播完”作为整题结束。
       const endsAtMs = timeline.durationMs;
+      clearMetronomePlaybackRef.current = metronomePlayback?.start({
+        readTimeMs: clock.readTimeMs, bpm,
+        countInDurationMs: timeline.countInDurationMs,
+        durationMs: endsAtMs,
+      }) ?? null;
       function update() {
         if (request !== requestRef.current) return;
         const nowMs = clock.nowMs();

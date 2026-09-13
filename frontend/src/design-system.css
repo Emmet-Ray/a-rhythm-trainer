@@ -211,10 +211,14 @@
 .practice-page .back-link { font-size: var(--ds-text-sm); font-weight: 650; color: var(--ds-muted); }
 .practice-page .practice-heading { margin: var(--ds-space-4) 0 var(--ds-space-8); }
 .practice-page .practice-heading .eyebrow { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 650; margin-bottom: var(--ds-space-2); }
-.design-system.practice-settings { padding: var(--ds-space-4) 0 var(--ds-space-6); gap: var(--ds-space-4) var(--ds-space-8); border-top: var(--ds-border) solid var(--ds-line); border-bottom: var(--ds-border) solid var(--ds-line); justify-content: space-between; }
+.design-system.practice-settings { padding: var(--ds-space-4) 0 var(--ds-space-6); gap: var(--ds-space-4) var(--ds-space-6); border-top: var(--ds-border) solid var(--ds-line); border-bottom: var(--ds-border) solid var(--ds-line); justify-content: flex-start; }
 .practice-settings .tempo-settings { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: min(100%, 420px); gap: var(--ds-space-3); min-width: 0; }
 .tempo-value { display: flex; align-items: center; gap: var(--ds-space-2); white-space: nowrap; }
-.practice-settings .tempo-value input[type="number"] { width: 72px; min-height: 44px; padding: 8px 10px; }
+/* 透明边框保留占位，悬停和编辑时显露控件，不改变点击区域或布局。 */
+.practice-settings .tempo-value input[type="number"] { width: 72px; min-height: 44px; padding: 8px 10px; border-color: transparent; background: transparent; }
+.practice-settings .tempo-value input[type="number"]:hover { background: var(--ds-subtle); }
+.practice-settings .tempo-value input[type="number"]:focus { border-color: var(--ds-line); background: var(--ds-input); }
+.practice-settings .tempo-value input[type="number"][aria-invalid="true"] { border-color: var(--ds-error); background: var(--ds-error-bg); }
 .tempo-slider { display: flex; align-items: center; gap: var(--ds-space-2); min-width: 0; }
 .tempo-endpoint { flex-shrink: 0; font-size: 24px; line-height: 1; }
 .practice-settings .tempo-slider input[type="range"] { appearance: none; -webkit-appearance: none; flex: 1; width: 100%; min-width: 0; min-height: 44px; margin: 0; padding: 0; border: 0; border-radius: var(--ds-radius-sm); background: transparent; cursor: pointer; touch-action: none; }
@@ -226,11 +230,17 @@
 .tempo-slider input:active { cursor: grabbing; }
 .tempo-settings .bpm-error { grid-column: 1 / -1; margin: 0; }
 .practice-settings .unit { margin: 0; color: var(--ds-muted); font-size: 14px; font-weight: 650; }
-.practice-settings .metronome-toggle { font-weight: 650; gap: var(--ds-space-3); min-height: 48px; }
-.practice-settings .metronome-toggle input { appearance: none; width: 48px; height: 28px; min-height: 28px; padding: 0; border: 2px solid var(--ds-base); border-radius: 999px; background: var(--ds-disabled); cursor: pointer; position: relative; transition: background-color var(--ds-motion); }
-.practice-settings .metronome-toggle input::after { content: ""; position: absolute; width: 18px; height: 18px; top: 3px; left: 3px; border-radius: 50%; background: var(--ds-muted); transition: transform var(--ds-motion); }
-.practice-settings .metronome-toggle input:checked { background: var(--ds-primary); border-color: var(--ds-primary); }
-.practice-settings .metronome-toggle input:checked::after { transform: translateX(20px); background: white; }
+.practice-settings .mechanical-metronome { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; width: 84px; padding: 8px; color: var(--ds-muted); background: transparent; border-color: transparent; box-shadow: none; }
+.practice-settings .mechanical-metronome[aria-pressed="true"] { color: var(--ds-primary); }
+.practice-settings .mechanical-metronome:hover:not(:disabled) { border-color: transparent; background: var(--ds-subtle); }
+.practice-settings .mechanical-metronome:active:not(:disabled) { transform: none; box-shadow: none; }
+.mechanical-metronome svg { display: block; width: 64px; height: 74px; overflow: visible; }
+.metronome-case { fill: var(--ds-surface); stroke: currentColor; stroke-width: 2; }
+.metronome-scale { fill: none; stroke: var(--ds-line); stroke-width: 2; stroke-linecap: round; }
+.metronome-pendulum path { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; }
+.metronome-pendulum rect, .metronome-pivot { fill: currentColor; }
+.metronome-base { stroke: currentColor; stroke-width: 3; stroke-linecap: round; }
+.metronome-state { font-size: 12px; font-weight: 650; line-height: 1.4; }
 
 .design-system.rhythm-trainer { gap: var(--ds-space-4); padding-top: var(--ds-space-8); text-align: center; }
 .rhythm-trainer .trainer-feedback { min-height: 96px; padding: var(--ds-space-3) var(--ds-space-4); border: 2px solid transparent; border-radius: var(--ds-radius-sm); color: var(--ds-muted); font-weight: 650; }

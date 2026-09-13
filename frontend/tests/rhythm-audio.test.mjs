@@ -8,8 +8,10 @@ const server = await createServer({
   optimizeDeps: { noDiscovery: true, include: [] },
 });
 let audio;
+let metronomePlayback;
 try {
   audio = await server.ssrLoadModule("/src/rhythm/RhythmAudio.ts");
+  metronomePlayback = await server.ssrLoadModule("/src/practice/MetronomePlayback.ts");
 } finally {
   await server.close();
 }
@@ -53,6 +55,73 @@ function fakeContext() {
 }
 
 const response = () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(1) });
+
+test("摆杆在预备拍和正式阶段共用拍位，每拍到达左右端点，一个来回两拍", () => {
+  for (const bpm of [40, 60, 120, 240]) {
+    const beat = 60000 / bpm;
+    for (const count of [0, 3, 4]) {
+      const playback = { bpm, countInDurationMs: count * beat, durationMs: beat * 8 };
+      for (let i = 0; i < count + 8; i++) {
+        const time = -playback.countInDurationMs + i * beat;
+        assert.ok(Math.abs(metronomePlayback.getMetronomeAngle(time, playback) - (i % 2 ? 25 : -25)) < 1e-8);
+        assert.ok(Math.abs(metronomePlayback.getMetronomeAngle(time + beat / 2, playback)) < 1e-8);
+      }
+      assert.equal(metronomePlayback.getMetronomeAngle(-playback.countInDurationMs - 1, playback), 0);
+      assert.equal(metronomePlayback.getMetronomeAngle(playback.durationMs, playback), 0);
+      assert.equal(metronomePlayback.getMetronomeAngle(playback.durationMs + 200, playback), 0);
+    }
+  }
+});
+
+test("掉帧与中途重新显示直接读取相位，不从零计时或累计帧间隔", () => {
+  const playback = { bpm: 120, countInDurationMs: 2000, durationMs: 8000 };
+  const expected = metronomePlayback.getMetronomeAngle(1750, playback);
+  for (const time of [-2000, -500, 0, 100, 3000, 1000]) metronomePlayback.getMetronomeAngle(time, playback);
+  assert.equal(metronomePlayback.getMetronomeAngle(1750, playback), expected);
+  assert.equal(metronomePlayback.getMetronomeAngle(1500, playback), 25);
+});
+
+test("可视化只读时钟不会读取浏览器时间或修改输入采样，判定与未显示摆杆时相同", () => {
+  function fixture() {
+    const context = { currentTime: 10, state: "running" };
+    let time = 10000;
+    let reads = 0;
+    const clock = audio.createPracticeClock(context, 0, 100, { now: () => { reads++; return time; }, timeOrigin: 0 });
+    return { context, clock, get reads() { return reads; }, advance(ms) { time += ms; context.currentTime += ms / 1000; } };
+  }
+  const animated = fixture();
+  const control = fixture();
+  for (let i = 0; i < 100; i++) {
+    animated.advance(2); control.advance(2);
+    animated.clock.readTimeMs();
+  }
+  assert.equal(animated.reads, 1);
+  assert.equal(animated.clock.readTimeMs(), control.clock.readTimeMs());
+  assert.equal(animated.clock.inputTimeMs(10100), control.clock.inputTimeMs(10100));
+  assert.equal(animated.reads, control.reads);
+});
+
+test("播放连接按设置区隔离，旧轮清理不得清空新轮，取消订阅不再通知", () => {
+  const a = metronomePlayback.createMetronomePlayback();
+  const b = metronomePlayback.createMetronomePlayback();
+  const source = { readTimeMs: () => 0, bpm: 60, countInDurationMs: 4000, durationMs: 8000 };
+  let notifications = 0;
+  const unsubscribe = a.subscribe(() => notifications++);
+  assert.equal(a.getSnapshot(), null);
+  const clearOld = a.start(source);
+  const clearNew = a.start(source);
+  const snapshot = a.getSnapshot();
+  clearOld();
+  assert.equal(a.getSnapshot(), snapshot);
+  assert.equal(notifications, 2);
+  assert.equal(b.getSnapshot(), null);
+  clearNew(); clearNew();
+  assert.equal(a.getSnapshot(), null);
+  assert.equal(notifications, 3);
+  unsubscribe();
+  a.start(source)();
+  assert.equal(notifications, 3);
+});
 
 test("节拍器采样并发缓存独立于钢琴，发声保留偏移、淡出与清理", async (t) => {
   const fetch = t.mock.method(globalThis, "fetch", async () => response());
