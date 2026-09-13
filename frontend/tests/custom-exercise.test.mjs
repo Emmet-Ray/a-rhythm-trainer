@@ -125,6 +125,18 @@ test("404 状态页提供与错误类型对应的主要返回入口", async () =
   }
 });
 
+test("设置页不要求登录，显示三套配色与恢复默认入口", async () => {
+  const html = await renderApp("/settings");
+  assert.match(html, /class="design-system settings-page"/);
+  assert.match(html, /aria-current="page" href="\/settings"/);
+  assert.equal((html.match(/type="radio"/g) ?? []).length, 3);
+  assert.match(html, /紫色/);
+  assert.match(html, /蓝色/);
+  assert.match(html, /青绿色/);
+  assert.match(html, /恢复默认/);
+  assert.doesNotMatch(html, /未开放|请登录后/);
+});
+
 test("登录表单保留标签、自动填充和反馈语义，未发送验证码时不能登录", async () => {
   const html = await renderApp("/login");
   assert.match(html, /aria-labelledby="login-heading"/);

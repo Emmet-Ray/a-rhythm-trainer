@@ -6,10 +6,10 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   color-scheme: light;
-  --muted: #686773;
-  --line: #e7e6eb;
-  --accent: #5550bb;
-  --accent-soft: #f5f4fb;
+  --muted: var(--ds-muted);
+  --line: var(--ds-line);
+  --accent: var(--ds-primary);
+  --accent-soft: var(--ds-tint);
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; font-size: 15px; line-height: 1.65; }

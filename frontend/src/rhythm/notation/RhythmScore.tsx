@@ -21,7 +21,7 @@ import {
   type ScorePosition,
 } from "./RhythmScoreLayout";
 
-const ACTIVE_NOTE_COLOR = "#646cff";
+const ACTIVE_NOTE_COLOR = "var(--ds-primary, #7052d6)";
 const HIT_MARKER_COLOR = "#65a94b";
 const ERROR_MARKER_COLOR = "#df4438";
 const MARKER_Y_OFFSET = 32;

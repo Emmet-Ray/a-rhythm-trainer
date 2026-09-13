@@ -12,6 +12,7 @@ const RandomPracticePage = lazy(() => import("./pages/RandomPracticePage"));
 const PresetPracticePage = lazy(() => import("./pages/PresetPracticePage"));
 const CustomPracticePage = lazy(() => import("./pages/CustomPracticePage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 
 function App() {
   const auth = useAuth();
@@ -36,6 +37,7 @@ function App() {
         <nav aria-label="主导航">
           <Link to="/" aria-current={pathname === "/" ? "page" : undefined}>首页</Link>
           <PracticeNavigation key={pathname} pathname={pathname} />
+          <Link to="/settings" aria-current={pathname === "/settings" ? "page" : undefined}>设置</Link>
           {auth.state.status === "checking" ? (
             <span className="auth-status" role="status">
               正在确认登录…
@@ -93,6 +95,7 @@ function App() {
         >
           <Routes>
             <Route path="/login" element={<LoginPage auth={auth} />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/" element={<HomePage />} />
             <Route path="/preset" element={<PresetPracticePage />} />
             <Route
