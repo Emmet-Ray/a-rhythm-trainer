@@ -306,6 +306,36 @@ export function evaluateTap(
   return { events, nextTargetIndex: closestIndex + 1 };
 }
 
+/**
+ * 从原始敲击时间重建当前判定，不继承 RAF 产生的漏拍。
+ * 输入可乱序（同时间保持接收顺序），重算不修改输入、不产生声音。
+ * 本轮之外和未来的输入忽略；预备拍仍只允许首次提前命中。
+ * 返回的游标仅供画面增量补漏使用，不可作为下一次输入的匹配起点。
+ */
+export function judgePractice(
+  timeline: Pick<ExerciseTimeline, "targetTaps" | "finishOffsetMs">,
+  tapTimes: readonly number[],
+  nowMs: number,
+  windows: TimingWindows,
+): { events: TimingEvent[]; nextTargetIndex: number } {
+  validateTimingWindows(windows);
+  const { targetTaps, finishOffsetMs } = timeline;
+  const events: TimingEvent[] = [];
+  let nextTargetIndex = 0;
+  const firstOpensAtMs = targetTaps.length > 0
+    ? getTargetTimingWindow(targetTaps[0], windows).opensAtMs : 0;
+  for (const tapTimeMs of tapTimes.filter(Number.isFinite).sort((a, b) => a - b)) {
+    if (tapTimeMs > nowMs || tapTimeMs >= finishOffsetMs) continue;
+    if (tapTimeMs < 0 && (nextTargetIndex !== 0 || tapTimeMs < firstOpensAtMs)) continue;
+    const judgement = evaluateTap(targetTaps, nextTargetIndex, tapTimeMs, windows);
+    events.push(...judgement.events);
+    nextTargetIndex = judgement.nextTargetIndex;
+  }
+  const misses = collectExpiredTargets(targetTaps, nextTargetIndex, nowMs, windows);
+  events.push(...misses);
+  return { events, nextTargetIndex: nextTargetIndex + misses.length };
+}
+
 export function evaluateExpiredTarget(
   targetTaps: readonly TargetTap[],
   nextTargetIndex: number,

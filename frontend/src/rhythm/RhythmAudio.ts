@@ -1,5 +1,5 @@
 /**
- * 为本轮练习固定一个音频时钟上的正式起点，并提供两种时间读法。
+ * 为本轮练习固定一个音频时钟上的正式起点。
  * 正式起点位于“创建时刻 + 调度余量 + 预备拍总时长”之后。
  * leadInMs 只给第一声预留排程时间；声音和判定共用同一起点，不会额外增加敲击误差。
  *
@@ -13,15 +13,52 @@
  * 当音频时间走到 13.15 秒时，nowMs() 约为 50ms。
  */
 export function createPracticeClock(
-  context: Pick<AudioContext, "currentTime">,
+  context: Pick<AudioContext, "currentTime"> & Partial<Pick<AudioContext, "state">>,
   countInDurationMs: number,
   leadInMs = 100,
+  inputClock: Pick<Performance, "now" | "timeOrigin"> = performance,
 ) {
   const practiceStartsAtSeconds =
     context.currentTime + (leadInMs + countInDurationMs) / 1000;
+  let sampledAtMs = inputClock.now();
+  let sampledAudioMs = context.currentTime * 1000;
+  let inputEpochMs = sampledAtMs;
+
+  // 暂停的精确边界无法从 currentTime 恢复；换段后宁可丢弃旧输入，不能跨暂停回推。
+  function resetInputTime() {
+    sampledAtMs = inputClock.now();
+    sampledAudioMs = context.currentTime * 1000;
+    inputEpochMs = sampledAtMs;
+  }
+
+  function sample() {
+    const atMs = inputClock.now();
+    const audioMs = context.currentTime * 1000;
+    // statechange 尚未送达时的保守保护。50ms 是时钟不连续检测容差，非判定窗口。
+    if ((context.state !== undefined && context.state !== "running") ||
+      Math.abs((atMs - sampledAtMs) - (audioMs - sampledAudioMs)) > 50) {
+      inputEpochMs = atMs;
+    }
+    sampledAtMs = atMs;
+    sampledAudioMs = audioMs;
+    return { atMs, audioMs };
+  }
 
   return {
-    nowMs: () => (context.currentTime - practiceStartsAtSeconds) * 1000,
+    nowMs: () => sample().audioMs - practiceStartsAtSeconds * 1000,
+    /** 将浏览器事件创建时间映射到本轮音频时间；无效、跨轮或跨暂停输入返回 null。
+     * 兼容旧浏览器的 epoch 毫秒；不以处理时间兜底，以免将旧输入误算成新敲击。
+     * 这是事件分发延迟修正，不是硬件/输出延迟校准。
+     */
+    inputTimeMs: (timeStamp: number): number | null => {
+      const { atMs, audioMs } = sample();
+      const eventMs = timeStamp > 1e12 ? timeStamp - inputClock.timeOrigin : timeStamp;
+      if (!Number.isFinite(eventMs) || eventMs < inputEpochMs || eventMs > atMs ||
+        (context.state !== undefined && context.state !== "running")) return null;
+      return audioMs - (atMs - eventMs) - practiceStartsAtSeconds * 1000;
+    },
+    /** 音频 statechange 时调用；调用方负责监听和清理。 */
+    resetInputTime,
     // 只有安排声音时，才把练习相对毫秒转换成音频绝对秒数。
     audioTimeAt: (offsetMs: number) =>
       practiceStartsAtSeconds + offsetMs / 1000,

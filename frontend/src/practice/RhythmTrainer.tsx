@@ -5,7 +5,7 @@ import RhythmScore from "../rhythm/notation/RhythmScore";
 import {
   createExerciseTimeline,
   collectExpiredTargets,
-  evaluateTap,
+  judgePractice,
   getPlaybackPosition,
   getTargetTimingWindow,
   summarizePractice,
@@ -108,13 +108,16 @@ function RhythmTrainer({
   const [audioError, setAudioError] = useState<string | null>(null);
 
   const clockRef = useRef<PracticeClock | null>(null);
+  const finishedRef = useRef(false);
+  // 不捕获某一轮的时钟；状态变化只使当前轮的输入映射换段。
+  const resetInputTime = useCallback(() => clockRef.current?.resetInputTime(), []);
   const metronomeRef = useRef<Metronome | null>(null);
   const metronomeEnabledRef = useRef(metronomeEnabled);
   useEffect(() => {
     metronomeEnabledRef.current = metronomeEnabled;
     metronomeRef.current?.setEnabled(metronomeEnabled);
   }, [metronomeEnabled]);
-  // 匹配游标只供事件处理使用，不直接决定画面；同步推进可避免连续敲击重复命中。
+  // 仅缓存画面补漏进度；原始敲击才是判定依据，迟到输入到达时从头重算。
   const nextTargetIndexRef = useRef(0);
   const tapOffsetsRef = useRef<number[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -141,7 +144,7 @@ function RhythmTrainer({
     scheduledSourcesRef.current = [];
   }, []);
 
-  // 更新循环和键盘处理共用这一入口；游标保证每个目标只记一次 miss。
+  // RAF 只增量补漏，不每帧重放全部输入；下一次敲击会替换这些暂定记录。
   const recordExpiredTargets = useCallback((nowMs: number) => {
     if (mode !== "practice") return;
 
@@ -193,9 +196,9 @@ function RhythmTrainer({
       if (position.phase === "finished") {
         metronomeRef.current?.dispose();
         metronomeRef.current = null;
-        // 已先收齐过期目标，不依赖“结束”和“漏拍”两个定时器的先后顺序。
-        clockRef.current = null;
-        console.log("最终敲击时间: ", [...tapOffsetsRef.current]);
+        // 保留本轮时钟，接受发生在终点前、却在结束帧之后才送达的输入。
+        // 只修正结果，不重启播放。手动停止、新一轮和卸载仍立即废弃旧时钟。
+        finishedRef.current = true;
         return;
       }
       frameId = window.requestAnimationFrame(update);
@@ -212,12 +215,13 @@ function RhythmTrainer({
       stopScheduledSounds();
       const context = audioContextRef.current;
       audioContextRef.current = null;
+      context?.removeEventListener("statechange", resetInputTime);
       if (context && context.state !== "closed") void context.close();
     };
-  }, [stopScheduledSounds]);
+  }, [stopScheduledSounds, resetInputTime]);
 
   async function handlePlay(requestedMode: PlaybackMode) {
-    if (clockRef.current !== null) {
+    if (clockRef.current !== null && !finishedRef.current) {
       stopScheduledSounds();
       clockRef.current = null;
       nextTargetIndexRef.current = 0;
@@ -227,15 +231,19 @@ function RhythmTrainer({
     }
     // resume 是异步的；在等待期间阻止重复开始。
     if (startingRef.current) return;
+    clockRef.current = null;
+    finishedRef.current = false;
     startingRef.current = true;
     setIsStarting(true);
     setAudioError(null);
     const request = ++startRequestRef.current;
 
     try {
-      const context =
-        audioContextRef.current ??
-        (audioContextRef.current = new AudioContext());
+      if (audioContextRef.current === null) {
+        audioContextRef.current = new AudioContext();
+        audioContextRef.current.addEventListener("statechange", resetInputTime);
+      }
+      const context = audioContextRef.current;
       await Promise.all([context.resume(), prepareTapSound(context), prepareMetronomeSound(context)]);
       if (request !== startRequestRef.current) return;
 
@@ -305,19 +313,20 @@ function RhythmTrainer({
       event.preventDefault();
       if (mode !== "practice") return;
 
-      const tapOffsetMs = clock.nowMs();
+      const tapOffsetMs = clock.inputTimeMs(event.timeStamp);
+      if (tapOffsetMs === null) return;
 
       if (tapOffsetMs >= timeline.finishOffsetMs) {
-        recordExpiredTargets(tapOffsetMs);
         return;
       }
 
-      // 敲击匹配
       if (tapOffsetMs < 0) {
-        // 如果是在练习开始之前敲击的，要看是否是在第一个目标的开始窗口之后，如果不是就判定为无效
+        // 按发生顺序判断首次提前敲击，不能用 RAF 已推进的画面游标拒绝旧事件。
         const firstTarget = targetTapTimeline[0];
-        if (firstTarget === undefined || nextTargetIndexRef.current !== 0)
-          return;
+        if (
+          firstTarget === undefined ||
+          tapOffsetsRef.current.some(time => time < 0 && time <= tapOffsetMs)
+        ) return;
         const { opensAtMs } = getTargetTimingWindow(
           firstTarget,
           effectiveTimingWindows,
@@ -325,27 +334,29 @@ function RhythmTrainer({
         if (tapOffsetMs < opensAtMs) return;
       }
 
-      // 敲击与判定
+      // 先立即发声，再重算判定；回放原始输入绝不触发声音。
+      // 自然结束后补交的旧输入只纠正结果，不能在结束后再补响。
+      const nowMs = clock.nowMs();
+      if (!finishedRef.current && nowMs < timeline.finishOffsetMs) {
+        playTapSound(audioContext, scheduledSourcesRef.current);
+      }
       tapOffsetsRef.current.push(tapOffsetMs);
-      const judgement = evaluateTap(
-        targetTapTimeline,
-        nextTargetIndexRef.current,
-        tapOffsetMs,
+      const judgement = judgePractice(
+        timeline,
+        tapOffsetsRef.current,
+        nowMs,
         effectiveTimingWindows,
       );
 
-      // 命中与误敲使用相同声音，反馈实际敲击；对错由视觉和统计表达。
-      playTapSound(audioContext, scheduledSourcesRef.current);
       nextTargetIndexRef.current = judgement.nextTargetIndex;
-      setTimingEvents((previous) => [...previous, ...judgement.events]);
+      setTimingEvents(judgement.events);
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     mode,
-    recordExpiredTargets,
-    timeline.finishOffsetMs,
+    timeline,
     targetTapTimeline,
     effectiveTimingWindows,
   ]);

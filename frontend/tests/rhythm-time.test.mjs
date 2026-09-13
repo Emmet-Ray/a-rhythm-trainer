@@ -30,6 +30,138 @@ const exercise = {
 };
 const timeline = timing.createExerciseTimeline(exercise, 60, 3, windows);
 
+function inputClockFixture() {
+  let browserMs = 10000;
+  const context = { currentTime: 10, state: "running" };
+  const browser = { now: () => browserMs, timeOrigin: 1700000000000 };
+  const clock = createPracticeClock(context, 0, 100, browser);
+  return {
+    context, browser, clock,
+    advance(ms, audioMs = ms) { browserMs += ms; context.currentTime += audioMs / 1000; },
+  };
+}
+
+test("输入使用事件创建时间：0/80/200ms 分发延迟不会改变命中目标或误差", () => {
+  const line = { targetTaps: [0, 125, 250].map((offsetMs, eventIndex) => ({ offsetMs, eventIndex })), finishOffsetMs: 400 };
+  for (const delay of [0, 80, 200]) {
+    const { clock, advance } = inputClockFixture();
+    advance(100 + delay);
+    const tap = clock.inputTimeMs(10100);
+    approximately(tap, 0);
+    const result = timing.judgePractice(line, [tap], clock.nowMs(), windows);
+    assert.equal(result.events[0].kind, "hit");
+    assert.equal(result.events[0].targetIndex, 0);
+    approximately(result.events[0].errorMs, 0);
+  }
+});
+
+test("输入时钟兼容 epoch 毫秒，拒绝未知、未来、创建本轮之前的输入", () => {
+  const { clock, browser, advance } = inputClockFixture();
+  advance(300);
+  approximately(clock.inputTimeMs(browser.timeOrigin + 10100), 0);
+  for (const time of [NaN, Infinity, -Infinity, 0, 9999, 10301]) {
+    assert.equal(clock.inputTimeMs(time), null);
+  }
+});
+
+test("暂停恢复建立新输入段，不把挂起时间算作误差或接受挂起期间的输入", () => {
+  const { clock, context, advance } = inputClockFixture();
+  advance(200);
+  clock.nowMs();
+  context.state = "suspended";
+  clock.resetInputTime();
+  advance(2000, 0);
+  assert.equal(clock.inputTimeMs(11000), null);
+  approximately(clock.nowMs(), 100);
+  context.state = "running";
+  clock.resetInputTime();
+  advance(100);
+  assert.equal(clock.inputTimeMs(11000), null);
+  approximately(clock.inputTimeMs(12250), 150);
+});
+
+test("未及时观察到 statechange 时也拒绝跨不连续区间的旧输入", () => {
+  const { clock, advance } = inputClockFixture();
+  advance(1100, 100);
+  assert.equal(clock.inputTimeMs(10100), null);
+  advance(100);
+  approximately(clock.inputTimeMs(11150), 50);
+});
+
+test("新时钟拒绝上一轮排队输入；映射过程不改变音频排程原点", () => {
+  const { clock, context, browser, advance } = inputClockFixture();
+  advance(300);
+  const next = createPracticeClock(context, 0, 100, browser);
+  assert.equal(next.inputTimeMs(10100), null);
+  approximately(clock.audioTimeAt(0), 10.1);
+  approximately(next.audioTimeAt(0), 10.4);
+});
+
+test("RAF 先判漏拍后收到旧输入，与先收到输入的最终结果相同", () => {
+  const line = { targetTaps: [0, 125, 250].map((offsetMs, eventIndex) => ({ offsetMs, eventIndex })), finishOffsetMs: 400 };
+  const before = timing.judgePractice(line, [], 200, windows);
+  assert.equal(before.events[0].kind, "miss");
+  const corrected = timing.judgePractice(line, [0], 200, windows);
+  const immediate = timing.judgePractice(line, [0], 0, windows);
+  const misses = timing.collectExpiredTargets(line.targetTaps, immediate.nextTargetIndex, 200, windows);
+  assert.deepEqual(corrected.events, [...immediate.events, ...misses]);
+  assert.deepEqual(before.events, [{ kind: "miss", targetIndex: 0, eventIndex: 0 }]);
+});
+
+test("自然结束后仍可修正迟到输入，整轮重算保留最近匹配、边界与唯一结算", () => {
+  const line = { targetTaps: [0, 125, 250].map((offsetMs, eventIndex) => ({ offsetMs, eventIndex })), finishOffsetMs: 400 };
+  assert.equal(timing.summarizePractice(3, timing.judgePractice(line, [], 500, windows).events).missCount, 3);
+  const taps = Object.freeze([250, 0, 125]);
+  const result = timing.judgePractice(line, taps, 500, windows);
+  assert.equal(timing.summarizePractice(3, result.events).passed, true);
+  assert.equal(new Set(result.events.map(event => event.targetIndex)).size, 3);
+  const missed = timing.judgePractice(line, [125, 250], 500, windows);
+  assert.deepEqual(missed.events.map(event => event.kind), ["miss", "hit", "hit"]);
+  const left = timing.judgePractice(line, [-150], 0, windows);
+  assert.equal(left.events[0].kind, "hit");
+  const right = timing.judgePractice(line, [400], 500, windows);
+  assert.equal(right.events.filter(event => event.kind === "wrongTap").length, 0);
+});
+
+test("全轮重算过滤预备拍和非法输入，保留重复敲击的误敲，不回补已跳过的目标", () => {
+  const line = { targetTaps: [{ offsetMs: 0, eventIndex: 0 }], finishOffsetMs: 1000 };
+  const result = timing.judgePractice(line, [-200, -100, -50, 0, NaN, Infinity, 1000, 2000], 1000, windows);
+  assert.deepEqual(result.events.map(event => event.kind), ["hit", "wrongTap"]);
+  assert.equal(result.events[0].tapOffsetMs, -100);
+  assert.equal(result.events[1].tapOffsetMs, 0);
+});
+
+test("乱序送达、不同补漏频率在密集混合节奏下均产生相同结果", () => {
+  for (const bpm of [60, 120, 240]) {
+    const exercise = {
+      timeSignature: { beats: 4, beatType: 4 },
+      measures: [{ elements: [
+        { kind: "triplet", notes: Array.from({ length: 3 }, () => ({ kind: "note", noteValue: "eighth" })) },
+        ...Array.from({ length: 4 }, () => ({ kind: "note", noteValue: "sixteenth" })),
+        { kind: "rest", noteValue: "quarter" }, { kind: "note", noteValue: "quarter" },
+      ] }],
+    };
+    const line = timing.createExerciseTimeline(exercise, bpm, 4, windows);
+    const taps = line.targetTaps.map(t => t.offsetMs);
+    const expected = timing.judgePractice(line, taps, line.finishOffsetMs, windows);
+    const received = [];
+    for (const tap of [...taps].reverse()) {
+      timing.judgePractice(line, received, line.finishOffsetMs, windows);
+      received.push(tap);
+    }
+    assert.deepEqual(timing.judgePractice(line, received, line.finishOffsetMs + 200, windows), expected);
+    assert.equal(timing.summarizePractice(line.targetTaps.length, expected.events).passed, true);
+  }
+});
+
+test("相同时间戳不是同一次输入，非法时间戳不会扰乱其他输入的排序", () => {
+  const line = { targetTaps: [0, 1000].map((offsetMs, eventIndex) => ({offsetMs, eventIndex})), finishOffsetMs: 2000 };
+  const result = timing.judgePractice(line, [1000, NaN, 0, 0], 2000, windows);
+  assert.deepEqual(result.events.map(event => event.kind), ["hit", "wrongTap", "hit"]);
+  assert.equal(result.events[0].targetIndex, 0);
+  assert.equal(result.events[2].targetIndex, 1);
+});
+
 test("外部练习解析只复制模型字段，返回独立快照", () => {
   const input = structuredClone(exercise);
   input.name = "不属于节奏模型的字段";
