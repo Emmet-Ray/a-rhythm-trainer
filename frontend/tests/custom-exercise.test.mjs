@@ -137,6 +137,21 @@ test("设置页不要求登录，显示三套配色与恢复默认入口", async
   assert.doesNotMatch(html, /未开放|请登录后/);
 });
 
+test("设置页提供四个分类，默认只展示外观内容", async () => {
+  const html = await renderApp("/settings");
+  for (const [id, title] of [
+    ["appearance", "外观"], ["local-data", "本地数据"],
+    ["sound", "声音"], ["difficulty", "练习难度"],
+  ]) {
+    assert.match(html, new RegExp(`<button[^>]*aria-pressed="${id === "appearance"}"[^>]*>${title}</button>`));
+  }
+  for (const id of ["local-data", "sound", "difficulty"]) {
+    assert.doesNotMatch(html, new RegExp(`id="${id}-heading"`));
+  }
+  assert.match(html, /aria-label="设置分类"/);
+  assert.match(html, /<h2 id="appearance-heading">外观<\/h2>/);
+});
+
 test("登录表单保留标签、自动填充和反馈语义，未发送验证码时不能登录", async () => {
   const html = await renderApp("/login");
   assert.match(html, /aria-labelledby="login-heading"/);

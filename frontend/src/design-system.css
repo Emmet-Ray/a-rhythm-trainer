@@ -320,10 +320,20 @@
 }
 /* 自定义列表：题目链接与编辑操作分开，来源和读取状态由列表负责。 */
 .custom-index { margin: 0 auto; }
-/* 设置只呈现当前可用选项；颜色选择保留原生 radio 与文字标签。 */
-.settings-page { max-width: 640px; margin: var(--ds-space-4) auto 0; }
+/* 分类切换只呈现当前内容；导航使用平面状态，不使用操作按钮的按压厚底。 */
+.settings-page { max-width: 960px; margin: var(--ds-space-4) auto 0; }
 .settings-page .page-heading { margin-bottom: var(--ds-space-8); }
 .settings-page h2 { margin-bottom: var(--ds-space-6); }
+.settings-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: var(--ds-space-8); }
+.settings-navigation { display: flex; flex-direction: column; gap: var(--ds-space-2); border-right: 2px solid var(--ds-line); padding-right: var(--ds-space-4); }
+.design-system .settings-navigation button { text-align: left; white-space: nowrap; border-color: transparent; box-shadow: none; background: transparent; color: var(--ds-muted); transform: none; }
+.design-system .settings-navigation button:hover { background: var(--ds-subtle); color: var(--ds-ink); }
+.design-system .settings-navigation button[aria-pressed="true"] { background: var(--ds-tint); color: var(--ds-primary); }
+.settings-content { min-width: 0; min-height: 360px; }
+.settings-section-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-4); flex-wrap: wrap; margin-bottom: var(--ds-space-3); }
+.settings-section-heading h2 { margin: 0; }
+.settings-section-heading span { color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.settings-section > p:not(.settings-message) { margin: 0; color: var(--ds-muted); }
 .theme-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ds-space-3); border: 0; padding: 0; margin: 0; min-width: 0; }
 .theme-options legend { margin-bottom: var(--ds-space-3); color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .theme-options label { display: flex; align-items: center; gap: var(--ds-space-3); min-height: 64px; padding: var(--ds-space-3); border: 2px solid var(--ds-line); border-radius: var(--ds-radius-sm); cursor: pointer; font-weight: 650; }
@@ -334,6 +344,9 @@
 .settings-actions { margin-top: var(--ds-space-8); }
 .settings-message { min-height: 48px; margin-top: var(--ds-space-4); color: var(--ds-error); font-size: var(--ds-text-sm); }
 @media (max-width: 600px) {
+  .settings-layout { grid-template-columns: minmax(0, 1fr); gap: var(--ds-space-6); }
+  .settings-navigation { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 2px solid var(--ds-line); padding: var(--ds-space-1) var(--ds-space-1) var(--ds-space-3); }
+  .settings-navigation button { flex-shrink: 0; }
   .theme-options { grid-template-columns: minmax(0, 1fr); }
 }
 /* 登录沿用基础控件；固定发送按钮宽度和反馈区高度，避免状态切换挤动表单。 */
