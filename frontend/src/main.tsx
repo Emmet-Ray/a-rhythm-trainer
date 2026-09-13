@@ -4,8 +4,10 @@ import { BrowserRouter } from 'react-router'
 import './index.css'
 import App from './App.tsx'
 import { initializeAppearance } from './settings/appearance'
+import { initializeTappingPrecision } from './settings/tappingPrecision'
 
 initializeAppearance()
+initializeTappingPrecision()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

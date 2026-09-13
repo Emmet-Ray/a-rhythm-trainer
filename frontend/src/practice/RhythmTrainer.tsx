@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { RhythmExercise } from "../rhythm/RhythmModel";
+import { DEFAULT_TAPPING_PRECISION, getTappingTimingWindows } from "../settings/tappingPrecision";
 import RhythmScore from "../rhythm/notation/RhythmScore";
 import {
   createExerciseTimeline,
@@ -39,15 +40,11 @@ const IDLE_PLAYBACK: PlaybackState = {
 export type RhythmTrainerProps = {
   exercise: RhythmExercise;
   bpm: number;
+  /** 可选覆盖窗口；与浏览器偏好一样，仅在新一轮开始时取快照。 */
   timingWindows?: TimingWindows;
   /** 默认一小节的预备拍；显式传入 0 可关闭。 */
   countInBeatCount?: number;
   metronomeEnabled?: boolean;
-};
-
-const DEFAULT_TIMING_WINDOWS: TimingWindows = {
-  perfectMs: 50,
-  hitMs: 150,
 };
 
 function formatTimingEvent(timingEvent: TimingEvent): string {
@@ -73,17 +70,20 @@ function formatTimingEvent(timingEvent: TimingEvent): string {
 
 /**
  * 展示并运行一份节奏练习，内部管理击拍/试听、声音与判定。
- * 当前先支持本轮配置保持不变；播放中变更配置的停止/清理规则将在下一步接入。
+ * 每轮固定判定窗口；题目和 BPM 的切换由父级 key 重建，节拍器可即时切换。
  */
 function RhythmTrainer({
   exercise,
   bpm,
-  timingWindows = DEFAULT_TIMING_WINDOWS,
+  timingWindows,
   countInBeatCount,
   metronomeEnabled = true,
 }: RhythmTrainerProps) {
-  const { perfectMs, hitMs } = timingWindows;
-  // 按数值稳定判定配置，避免父组件传入等值新对象时重建回调和时间线。
+  const [roundTimingWindows, setRoundTimingWindows] = useState<TimingWindows>(
+    () => ({ ...(timingWindows ?? getTappingTimingWindows(DEFAULT_TAPPING_PRECISION)) }),
+  );
+  const { perfectMs, hitMs } = roundTimingWindows;
+  // 按数值稳定配置；下一轮仍使用同档时，不因快照对象换新而重建时间线。
   const effectiveTimingWindows = useMemo(
     () => ({ perfectMs, hitMs }),
     [perfectMs, hitMs],
@@ -239,6 +239,12 @@ function RhythmTrainer({
     const request = ++startRequestRef.current;
 
     try {
+      // 在异步准备之前取快照。设置变化不影响正在启动、本轮判定或结束后的重算。
+      // 试听维持原标准窗口，不让击拍偏好改变试听的结束时刻。
+      const nextWindows = { ...(timingWindows ?? getTappingTimingWindows(
+        requestedMode === "listen" ? DEFAULT_TAPPING_PRECISION : undefined,
+      )) };
+      const nextTimeline = createExerciseTimeline(exercise, bpm, countInBeatCount, nextWindows);
       if (audioContextRef.current === null) {
         audioContextRef.current = new AudioContext();
         audioContextRef.current.addEventListener("statechange", resetInputTime);
@@ -248,13 +254,14 @@ function RhythmTrainer({
       if (request !== startRequestRef.current) return;
 
       stopScheduledSounds();
-      const clock = createPracticeClock(context, timeline.countInDurationMs);
+      const clock = createPracticeClock(context, nextTimeline.countInDurationMs);
       clockRef.current = clock;
-      metronomeRef.current = createMetronome(context, clock, bpm, exercise.timeSignature.beats, timeline.eventEndOffsetsMs.at(-1) ?? 0);
+      metronomeRef.current = createMetronome(context, clock, bpm, exercise.timeSignature.beats, nextTimeline.eventEndOffsetsMs.at(-1) ?? 0);
       metronomeRef.current.setEnabled(metronomeEnabledRef.current);
+      setRoundTimingWindows(nextWindows);
       setMode(requestedMode);
 
-      timeline.countInOffsetsMs.forEach((offsetMs, index) => {
+      nextTimeline.countInOffsetsMs.forEach((offsetMs, index) => {
         scheduleCountIn(
           context,
           clock.audioTimeAt(offsetMs),
@@ -266,11 +273,11 @@ function RhythmTrainer({
       // 试听提前安排全部音符，与预备拍共用声源列表，停止时一起取消。
       // 使用请求参数，因为 setMode 不会改变本次函数执行中读到的 mode。
       if (requestedMode === "listen") {
-        timeline.targetTaps.forEach((target) => {
+        nextTimeline.targetTaps.forEach((target) => {
           scheduleTapSound(
             context,
             clock.audioTimeAt(target.offsetMs),
-            clock.audioTimeAt(timeline.eventEndOffsetsMs[target.eventIndex]),
+            clock.audioTimeAt(nextTimeline.eventEndOffsetsMs[target.eventIndex]),
             scheduledSourcesRef.current,
           );
         });
@@ -279,7 +286,7 @@ function RhythmTrainer({
       nextTargetIndexRef.current = 0;
       tapOffsetsRef.current = [];
       setTimingEvents([]);
-      setPlayback(getPlaybackPosition(timeline, clock.nowMs()));
+      setPlayback(getPlaybackPosition(nextTimeline, clock.nowMs()));
     } catch (error) {
       if (request !== startRequestRef.current) return;
       stopScheduledSounds();

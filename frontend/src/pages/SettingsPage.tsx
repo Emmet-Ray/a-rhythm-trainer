@@ -10,12 +10,18 @@ import {
   clearCustomExercises,
   getCustomExerciseSummary,
 } from "../exercises/customExercises";
+import {
+  DEFAULT_TAPPING_PRECISION,
+  getTappingPrecision,
+  selectTappingPrecision,
+  tappingPrecisions,
+} from "../settings/tappingPrecision";
 
 const categories = [
   { id: "appearance", label: "外观" },
   { id: "local-data", label: "本地数据" },
   { id: "sound", label: "声音" },
-  { id: "difficulty", label: "练习难度" },
+  { id: "tapping-precision", label: "击拍精度" },
 ] as const;
 
 export default function SettingsPage() {
@@ -57,7 +63,7 @@ export default function SettingsPage() {
               aria-labelledby="appearance-heading"
             >
               <h2 id="appearance-heading">外观</h2>
-              <fieldset className="theme-options">
+              <fieldset className="settings-options">
                 <legend>配色主题</legend>
                 {themes.map((theme) => (
                   <label key={theme.id}>
@@ -102,21 +108,53 @@ export default function SettingsPage() {
               {/* TODO: 接入音色偏好与试听；练习页仍保留节拍器开关。 */}
             </section>
           )}
-          {category === "difficulty" && (
-            <section
-              className="settings-section"
-              aria-labelledby="difficulty-heading"
-            >
-              <header className="settings-section-heading">
-                <h2 id="difficulty-heading">练习难度</h2>
-                <span>待实现</span>
-              </header>
-              <p>调整击拍判定的精准度要求。</p>
-              {/* TODO: 确定判定容差档位后再接入；不改变题目内容或 BPM。 */}
-            </section>
-          )}
+          {category === "tapping-precision" && <TappingPrecisionSettings />}
         </div>
       </div>
+    </section>
+  );
+}
+
+function TappingPrecisionSettings() {
+  const [preference, setPreference] = useState(getTappingPrecision);
+  return (
+    <section
+      className="settings-section"
+      aria-labelledby="tapping-precision-heading"
+    >
+      <h2 id="tapping-precision-heading">击拍精度</h2>
+      <fieldset
+        className="settings-options"
+        aria-describedby="tapping-precision-description"
+      >
+        <legend>精准度要求</legend>
+        {tappingPrecisions.map((item) => (
+          <label key={item.id}>
+            <input
+              type="radio"
+              name="tapping-precision"
+              value={item.id}
+              checked={preference.precision === item.id}
+              onChange={() => setPreference(selectTappingPrecision(item.id))}
+            />
+            <span>{item.label}</span>
+          </label>
+        ))}
+      </fieldset>
+      <div className="settings-actions">
+        <button
+          type="button"
+          onClick={() =>
+            setPreference(selectTappingPrecision(DEFAULT_TAPPING_PRECISION))
+          }
+        >
+          恢复默认
+        </button>
+      </div>
+      <p className="settings-message" role="status">
+        {!preference.storageAvailable &&
+          "浏览器存储不可用，本次选择仍会生效，但刷新后可能恢复标准。"}
+      </p>
     </section>
   );
 }

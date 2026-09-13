@@ -338,12 +338,13 @@
 .settings-section-heading h2 { margin: 0; }
 .settings-section-heading span { color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .settings-section > p:not(.settings-message) { margin: 0; color: var(--ds-muted); }
-.theme-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ds-space-3); border: 0; padding: 0; margin: 0; min-width: 0; }
-.theme-options legend { margin-bottom: var(--ds-space-3); color: var(--ds-muted); font-size: var(--ds-text-sm); }
-.theme-options label { display: flex; align-items: center; gap: var(--ds-space-3); min-height: 64px; padding: var(--ds-space-3); border: 2px solid var(--ds-line); border-radius: var(--ds-radius-sm); cursor: pointer; font-weight: 650; }
-.theme-options label:hover { border-color: var(--ds-primary); }
-.theme-options label:has(input:checked) { border-color: var(--ds-primary); background: var(--ds-tint); }
-.theme-options input { min-height: 0; width: 18px; height: 18px; padding: 0; margin: 0; flex-shrink: 0; accent-color: var(--ds-primary); }
+.settings-section > p.settings-description { margin-top: var(--ds-space-6); }
+.settings-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ds-space-3); border: 0; padding: 0; margin: 0; min-width: 0; }
+.settings-options legend { margin-bottom: var(--ds-space-3); color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.settings-options label { display: flex; align-items: center; gap: var(--ds-space-3); min-height: 64px; padding: var(--ds-space-3); border: 2px solid var(--ds-line); border-radius: var(--ds-radius-sm); cursor: pointer; font-weight: 650; }
+.settings-options label:hover { border-color: var(--ds-primary); }
+.settings-options label:has(input:checked) { border-color: var(--ds-primary); background: var(--ds-tint); }
+.settings-options input { min-height: 0; width: 18px; height: 18px; padding: 0; margin: 0; flex-shrink: 0; accent-color: var(--ds-primary); }
 .theme-swatch { width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; background: var(--ds-primary); }
 .settings-actions { margin-top: var(--ds-space-8); }
 .settings-message { min-height: 48px; margin-top: var(--ds-space-4); color: var(--ds-error); font-size: var(--ds-text-sm); }
@@ -351,7 +352,7 @@
   .settings-layout { grid-template-columns: minmax(0, 1fr); gap: var(--ds-space-6); }
   .settings-navigation { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 2px solid var(--ds-line); padding: var(--ds-space-1) var(--ds-space-1) var(--ds-space-3); }
   .settings-navigation button { flex-shrink: 0; }
-  .theme-options { grid-template-columns: minmax(0, 1fr); }
+  .settings-options { grid-template-columns: minmax(0, 1fr); }
 }
 /* 登录沿用基础控件；固定发送按钮宽度和反馈区高度，避免状态切换挤动表单。 */
 .login-page.design-system { max-width: 400px; }

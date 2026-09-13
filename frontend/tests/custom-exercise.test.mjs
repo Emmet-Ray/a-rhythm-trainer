@@ -141,11 +141,11 @@ test("设置页提供四个分类，默认只展示外观内容", async () => {
   const html = await renderApp("/settings");
   for (const [id, title] of [
     ["appearance", "外观"], ["local-data", "本地数据"],
-    ["sound", "声音"], ["difficulty", "练习难度"],
+    ["sound", "声音"], ["tapping-precision", "击拍精度"],
   ]) {
     assert.match(html, new RegExp(`<button[^>]*aria-pressed="${id === "appearance"}"[^>]*>${title}</button>`));
   }
-  for (const id of ["local-data", "sound", "difficulty"]) {
+  for (const id of ["local-data", "sound", "tapping-precision"]) {
     assert.doesNotMatch(html, new RegExp(`id="${id}-heading"`));
   }
   assert.match(html, /aria-label="设置分类"/);
