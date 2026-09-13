@@ -709,6 +709,25 @@ test("谱面布局支持单行、窄屏、空谱与未测得宽度", () => {
   assert.equal(scoreLayout.createScoreLayout(4, 740).height, 360);
 });
 
+test("放大记谱先换算逻辑宽度，两小节保持同排且坐标同步缩放", () => {
+  const enlarged = scoreLayout.createScoreLayout(2, 1140, 320, 1.5);
+  const logical = scoreLayout.createScoreLayout(2, 760, 320);
+  assert.deepEqual(enlarged.measures, logical.measures);
+  assert.equal(enlarged.height, 180);
+  assert.equal(enlarged.scale, 1.5);
+  assert.equal(enlarged.width * enlarged.scale, 1140);
+  assert.ok(enlarged.measures.every(m => (m.x + m.width) * enlarged.scale <= 1140));
+});
+
+test("放大偏好不突破密集小节的最小宽度，窄屏仍能完整容纳谱面", () => {
+  for (const width of [240, 320, 768, 1140]) {
+    const enlarged = scoreLayout.createScoreLayout(4, width, 510, 1.5);
+    assert.ok(enlarged.measures.every(m => m.width >= 510));
+    assert.ok(Math.abs(enlarged.width * enlarged.scale - width) < 0.001);
+    assert.ok(enlarged.scale <= 1.5);
+  }
+});
+
 test("误敲跨行时直接切换到下一小节，不在行间插值", () => {
   const measures = [
     { startOffsetMs: 0, endOffsetMs: 4000, minimumX: 100, maximumX: 700, markerY: 150,

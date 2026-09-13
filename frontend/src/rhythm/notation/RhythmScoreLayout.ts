@@ -57,15 +57,16 @@ export type ScoreLayout = {
 };
 
 /** 按完整小节换行；最小小节宽度可由记谱库测量提供。
- * 末行等宽左对齐；放不下一个小节时统一缩放；未测得容器宽度时不排版。
+ * preferredScale 指定期望记谱倍率；先换算逻辑宽度再排版，音符与反馈共用 scale。
+ * 末行等宽左对齐；放不下一个小节时统一缩小；未测得容器宽度时不排版。
  */
-export function createScoreLayout(measureCount: number, containerWidth: number, minimumMeasureWidth = MINIMUM_MEASURE_WIDTH): ScoreLayout {
+export function createScoreLayout(measureCount: number, containerWidth: number, minimumMeasureWidth = MINIMUM_MEASURE_WIDTH, preferredScale = 1): ScoreLayout {
   const measuredWidth = Math.max(0, Math.floor(containerWidth));
   if (measureCount === 0 || measuredWidth === 0) {
     return { width: measuredWidth, height: 0, scale: 1, measures: [] };
   }
   const minimumWidth = Math.max(MINIMUM_MEASURE_WIDTH, Math.ceil(minimumMeasureWidth));
-  const width = Math.max(minimumWidth + HORIZONTAL_PADDING * 2, measuredWidth);
+  const width = Math.max(minimumWidth + HORIZONTAL_PADDING * 2, measuredWidth / preferredScale);
   const availableWidth = width - HORIZONTAL_PADDING * 2;
   const measuresPerRow = Math.min(
     measureCount,

@@ -35,11 +35,14 @@ function parseBpm(value: string): number | null {
  * 调用方不维护第二份设置状态；重建此组件才重置设置，子级换题不重置。
  * BPM 默认 60、范围 40–240。拖动只更新草稿，松手提交；键盘/辅助技术调整即时提交。
  * 数字输入失焦或回车提交；无效或相同值不打断播放，取消拖动恢复生效值。
+ * sidebar 由调用方放置第二个参数 settingsPanel；仍只创建一套设置与播放连接。
  */
 export default function PracticeSettings({
   children,
+  layout = "stacked",
 }: {
-  children: (settings: PracticeSettingsValue) => ReactNode;
+  children: (settings: PracticeSettingsValue, settingsPanel: ReactNode) => ReactNode;
+  layout?: "stacked" | "sidebar";
 }) {
   const inputId = useId();
   const errorId = useId();
@@ -97,101 +100,109 @@ export default function PracticeSettings({
     };
   }, [applyBpm, cancelDrag]);
 
+  const settingsPanel = (
+    <section
+      className="practice-settings design-system"
+      aria-label="练习设置"
+    >
+      <MechanicalMetronome
+        enabled={metronomeEnabled}
+        onToggle={() => setMetronomeEnabled((previous) => !previous)}
+        playback={metronomePlayback}
+      />
+      <form
+        className="tempo-settings"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          applyBpm(bpmInput);
+        }}
+      >
+        <div className="tempo-slider">
+          <span className="tempo-endpoint" aria-hidden="true" title="慢">
+            🐢
+          </span>
+          <input
+            type="range"
+            min={MIN_BPM}
+            max={MAX_BPM}
+            step={1}
+            value={sliderBpm}
+            aria-label="速度滑块"
+            aria-valuetext={`${sliderBpm} BPM`}
+            style={
+              {
+                "--tempo-progress": `${((sliderBpm - MIN_BPM) / (MAX_BPM - MIN_BPM)) * 100}%`,
+              } as CSSProperties
+            }
+            onPointerDown={(event) => {
+              if (!event.isPrimary || event.button !== 0) return;
+              dragRef.current = {
+                pointerId: event.pointerId,
+                originalBpm: bpm,
+                value: event.currentTarget.value,
+              };
+            }}
+            onChange={(event) => {
+              setBpmInput(event.currentTarget.value);
+              setHasBpmError(false);
+              // 原生 range 的键盘与辅助技术操作没有指针拖动，直接生效。
+              if (dragRef.current === null)
+                applyBpm(event.currentTarget.value);
+              else dragRef.current.value = event.currentTarget.value;
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") cancelDrag();
+            }}
+          />
+          <span className="tempo-endpoint" aria-hidden="true" title="快">
+            🐇
+          </span>
+        </div>
+        <div className="tempo-value">
+          <input
+            id={inputId}
+            type="number"
+            min={MIN_BPM}
+            max={MAX_BPM}
+            step={1}
+            required
+            value={bpmInput}
+            aria-label="速度 BPM"
+            aria-invalid={hasBpmError || undefined}
+            aria-describedby={hasBpmError ? errorId : undefined}
+            onChange={(event) => {
+              setBpmInput(event.target.value);
+              setHasBpmError(false);
+            }}
+            onBlur={(event) => applyBpm(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              applyBpm(event.currentTarget.value);
+            }}
+          />
+          <label htmlFor={inputId} className="unit">
+            BPM
+          </label>
+        </div>
+        {hasBpmError && (
+          <p id={errorId} className="bpm-error" role="alert">
+            请输入 {MIN_BPM}–{MAX_BPM} 之间的整数。
+          </p>
+        )}
+      </form>
+    </section>
+  );
+
   return (
     <MetronomePlaybackContext.Provider value={metronomePlayback}>
-      <section
-        className="practice-settings design-system"
-        aria-label="练习设置"
-      >
-        <MechanicalMetronome
-          enabled={metronomeEnabled}
-          onToggle={() => setMetronomeEnabled((previous) => !previous)}
-          playback={metronomePlayback}
-        />
-        <form
-          className="tempo-settings"
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault();
-            applyBpm(bpmInput);
-          }}
-        >
-          <div className="tempo-slider">
-            <span className="tempo-endpoint" aria-hidden="true" title="慢">
-              🐢
-            </span>
-            <input
-              type="range"
-              min={MIN_BPM}
-              max={MAX_BPM}
-              step={1}
-              value={sliderBpm}
-              aria-label="速度滑块"
-              aria-valuetext={`${sliderBpm} BPM`}
-              style={
-                {
-                  "--tempo-progress": `${((sliderBpm - MIN_BPM) / (MAX_BPM - MIN_BPM)) * 100}%`,
-                } as CSSProperties
-              }
-              onPointerDown={(event) => {
-                if (!event.isPrimary || event.button !== 0) return;
-                dragRef.current = {
-                  pointerId: event.pointerId,
-                  originalBpm: bpm,
-                  value: event.currentTarget.value,
-                };
-              }}
-              onChange={(event) => {
-                setBpmInput(event.currentTarget.value);
-                setHasBpmError(false);
-                // 原生 range 的键盘与辅助技术操作没有指针拖动，直接生效。
-                if (dragRef.current === null)
-                  applyBpm(event.currentTarget.value);
-                else dragRef.current.value = event.currentTarget.value;
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") cancelDrag();
-              }}
-            />
-            <span className="tempo-endpoint" aria-hidden="true" title="快">
-              🐇
-            </span>
-          </div>
-          <div className="tempo-value">
-            <input
-              id={inputId}
-              type="number"
-              min={MIN_BPM}
-              max={MAX_BPM}
-              step={1}
-              required
-              value={bpmInput}
-              aria-label="速度 BPM"
-              aria-invalid={hasBpmError || undefined}
-              aria-describedby={hasBpmError ? errorId : undefined}
-              onChange={(event) => {
-                setBpmInput(event.target.value);
-                setHasBpmError(false);
-              }}
-              onBlur={(event) => applyBpm(event.currentTarget.value)}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
-                event.preventDefault();
-                applyBpm(event.currentTarget.value);
-              }}
-            />
-            <label htmlFor={inputId} className="unit">
-              BPM
-            </label>
-          </div>
-          {hasBpmError && (
-            <p id={errorId} className="bpm-error" role="alert">
-              请输入 {MIN_BPM}–{MAX_BPM} 之间的整数。
-            </p>
-          )}
-        </form>
-      </section>
-      {children({ bpm, metronomeEnabled })}
+      {layout === "sidebar" ? children({ bpm, metronomeEnabled }, settingsPanel) : (
+        <div className="practice-layout practice-layout--stacked design-system">
+          {settingsPanel}
+          {children({ bpm, metronomeEnabled }, settingsPanel)}
+        </div>
+      )}
     </MetronomePlaybackContext.Provider>
   );
 }

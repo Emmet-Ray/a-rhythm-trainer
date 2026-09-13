@@ -89,7 +89,9 @@ function RhythmScore({
       return { notes, beams, tuplets, minimumWidth: Math.max(noteWidth + 120, 100 + notes.length * 24) };
     });
     const minimumWidth = Math.max(320, ...preparedMeasures.map((measure) => measure.minimumWidth));
-    const scoreLayout = createScoreLayout(measures.length, containerWidth, minimumWidth);
+    // 保留常规两小节的阅读宽度，额外空间优先放大符号，最多 1.6 倍。
+    const notationScale = Math.min(1.6, Math.max(1, containerWidth / 760));
+    const scoreLayout = createScoreLayout(measures.length, containerWidth, minimumWidth, notationScale);
     if (scoreLayout.measures.length === 0) return;
     const renderer = new Renderer(container, Renderer.Backends.SVG);
     renderer.resize(containerWidth, scoreLayout.height * scoreLayout.scale);

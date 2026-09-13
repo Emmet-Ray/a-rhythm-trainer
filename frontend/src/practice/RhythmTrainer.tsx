@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MetronomePlaybackContext } from "./MetronomePlayback";
 
 import type { RhythmExercise } from "../rhythm/RhythmModel";
@@ -46,6 +46,8 @@ export type RhythmTrainerProps = {
   /** 默认一小节的预备拍；显式传入 0 可关闭。 */
   countInBeatCount?: number;
   metronomeEnabled?: boolean;
+  /** 公共设置提供的面板，仅负责放置，不拥有第二份设置状态。 */
+  settingsPanel?: ReactNode;
 };
 
 function formatTimingEvent(timingEvent: TimingEvent): string {
@@ -80,6 +82,7 @@ function RhythmTrainer({
   timingWindows,
   countInBeatCount,
   metronomeEnabled = true,
+  settingsPanel,
 }: RhythmTrainerProps) {
   const metronomePlayback = useContext(MetronomePlaybackContext);
   const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
@@ -398,24 +401,7 @@ function RhythmTrainer({
   ]);
 
   return (
-    <div className="rhythm-trainer design-system">
-      <RhythmScore
-        exercise={exercise}
-        activeEventIndex={activeEventIndex}
-        timeline={timeline}
-        timingEvents={timingEvents}
-      />
-      <div className="trainer-feedback" data-feedback={audioError ? "error" : result ? (result.passed ? "success" : "error") : isRunning && mode === "practice" && latestTimingEvent ? (latestTimingEvent.kind === "hit" ? "success" : "error") : "neutral"}>
-        {beatText !== null && <div>{beatText}</div>}
-        {mode === "practice" && isRunning && latestTimingEvent !== null && (
-          <div>{formatTimingEvent(latestTimingEvent)}</div>
-        )}
-        {audioError && <div role="alert">{audioError}</div>}
-        {result !== null && (
-          <p role="status">{result.passed ? "通过" : "未通过"}</p>
-        )}
-      </div>
-
+    <TrainerFrame settingsPanel={settingsPanel} actions={
       <div className="trainer-actions">
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
         <button
@@ -442,8 +428,24 @@ function RhythmTrainer({
           {isRunning && mode === "listen" ? "停止" : "试听"}
         </button>
       </div>
-      <p className="keyboard-hint"><kbd>空格</kbd> 键敲击</p>
-    </div>
+    }>
+      <RhythmScore
+        exercise={exercise}
+        activeEventIndex={activeEventIndex}
+        timeline={timeline}
+        timingEvents={timingEvents}
+      />
+      <div className="trainer-feedback" data-feedback={audioError ? "error" : result ? (result.passed ? "success" : "error") : isRunning && mode === "practice" && latestTimingEvent ? (latestTimingEvent.kind === "hit" ? "success" : "error") : "neutral"}>
+        {beatText !== null && <div>{beatText}</div>}
+        {mode === "practice" && isRunning && latestTimingEvent !== null && (
+          <div>{formatTimingEvent(latestTimingEvent)}</div>
+        )}
+        {audioError && <div role="alert">{audioError}</div>}
+        {result !== null && (
+          <p role="status">{result.passed ? "通过" : "未通过"}</p>
+        )}
+      </div>
+    </TrainerFrame>
   );
 }
 
@@ -451,18 +453,38 @@ function RhythmTrainer({
 export default function RhythmTrainerWorkspace(props: Omit<RhythmTrainerProps, "exercise"> & { exercise: RhythmExercise | null }) {
   if (props.exercise) return <RhythmTrainer {...props} exercise={props.exercise} />;
   return (
-    <div className="rhythm-trainer design-system">
+    <TrainerFrame settingsPanel={props.settingsPanel} actions={
+      <div className="trainer-actions">
+        <button type="button" disabled>击拍练习</button>
+        <button type="button" disabled>试听</button>
+      </div>
+    }>
       <div className="empty-practice-score" role="region" aria-label="空白节奏乐谱">
         <svg width="100%" height="180" aria-hidden="true">
           <line x1="10%" x2="90%" y1="90" y2="90" stroke="currentColor" />
         </svg>
       </div>
       <div className="trainer-feedback" />
-      <div className="trainer-actions">
-        <button type="button" disabled>击拍练习</button>
-        <button type="button" disabled>试听</button>
-      </div>
-      <p className="keyboard-hint"><kbd>空格</kbd> 键敲击</p>
-    </div>
+    </TrainerFrame>
   );
+}
+
+/** 空态与真实练习共用：整行操作栏，下方才分成谱面和设置两栏。 */
+function TrainerFrame({ actions, settingsPanel, children }: {
+  actions: ReactNode;
+  settingsPanel?: ReactNode;
+  children: ReactNode;
+}) {
+  return <div className="rhythm-trainer design-system">
+    <div className="practice-layout practice-layout--sidebar">
+      <div className="trainer-toolbar">
+        {actions}
+        <p className="keyboard-hint"><kbd>空格</kbd> 键敲击</p>
+      </div>
+      <div className="trainer-body">
+        <div className="trainer-score-area">{children}</div>
+        {settingsPanel}
+      </div>
+    </div>
+  </div>;
 }

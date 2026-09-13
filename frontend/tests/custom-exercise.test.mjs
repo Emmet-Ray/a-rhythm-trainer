@@ -195,6 +195,7 @@ test("自定义练习复用组件自身样式，不需要页面开启设计开�
     assert.match(html, mode === "tapping"
       ? /class="rhythm-trainer design-system"/
       : /class="rhythm-dictation design-system"/);
+    assert.match(html, mode === "tapping" ? /practice-layout--sidebar/ : /practice-layout--stacked/);
   }
 });
 
@@ -359,6 +360,8 @@ test("新建草稿默认两节、空名称、4/4，提供公共设置但全空�
   assert.match(html, /aria-label="节拍器" aria-pressed="true"/);
   assert.match(html, /<button[^>]*disabled=""[^>]*>试听<\/button>/);
   assert.doesNotMatch(html, /验证当前小节|播放题目|播放我的答案|查看答案/);
+  assert.match(html, /practice-layout--stacked/);
+  assert.doesNotMatch(html, /practice-layout--sidebar/);
 });
 
 test("公共速度控件提供整数滑块与数值输入，不再要求点击应用", () => {
@@ -374,6 +377,29 @@ test("公共速度控件提供整数滑块与数值输入，不再要求点击�
   assert.match(html, /<button[^>]*aria-label="节拍器" aria-pressed="true"/);
   assert.match(html, /class="metronome-pendulum" transform="rotate\(0 40 76\)"/);
   assert.doesNotMatch(html, /metronome-toggle|type="checkbox"/);
+});
+
+test("击拍使用侧栏布局，空态与真实题目均将操作按钮放在谱面之前", async () => {
+  for (const path of ["/preset/basic-values-01", "/random/tapping"]) {
+    const html = await renderApp(path);
+    assert.match(html, /practice-layout--sidebar/);
+    const actions = html.indexOf('class="trainer-actions"');
+    const score = html.indexOf(path.startsWith("/preset") ? 'aria-label="节奏乐谱"' : 'aria-label="空白节奏乐谱"');
+    assert.ok(actions >= 0 && actions < score);
+    assert.ok(score < html.indexOf('class="trainer-feedback"'));
+    const toolbar = html.indexOf('class="trainer-toolbar"');
+    const body = html.indexOf('class="trainer-body"');
+    assert.ok(toolbar < actions && actions < body);
+    assert.ok(html.indexOf('class="keyboard-hint"') < body);
+    assert.ok(html.indexOf('aria-label="练习设置"') > body);
+    assert.equal((html.match(/aria-label="速度 BPM"/g) ?? []).length, 1);
+    assert.equal((html.match(/aria-label="节拍器"/g) ?? []).length, 1);
+  }
+  for (const path of ["/preset/dictation-basic-values-01", "/random/dictation"]) {
+    const html = await renderApp(path);
+    assert.match(html, /practice-layout--stacked/);
+    assert.doesNotMatch(html, /practice-layout--sidebar/);
+  }
 });
 
 test("公共设置提供一致默认值，多实例的标签和输入 ID 不冲突", () => {

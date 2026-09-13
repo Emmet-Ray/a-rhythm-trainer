@@ -16,8 +16,8 @@ export default function PracticeWorkspace({
   mode: "tapping" | "dictation";
 }) {
   return (
-    <PracticeSettings>
-      {({ bpm, metronomeEnabled }) => (
+    <PracticeSettings layout={mode === "tapping" ? "sidebar" : "stacked"}>
+      {({ bpm, metronomeEnabled }, settingsPanel) => (
         <section aria-label={mode === "dictation" ? "节奏听写区" : "击拍训练区"}>
           {mode === "dictation" ? (
             // BPM 改变只重建听写内部播放器，保留草稿、验证结果和参考答案状态。
@@ -29,6 +29,7 @@ export default function PracticeWorkspace({
               exercise={exercise}
               bpm={bpm}
               metronomeEnabled={metronomeEnabled}
+              settingsPanel={settingsPanel}
             />
           )}
         </section>
