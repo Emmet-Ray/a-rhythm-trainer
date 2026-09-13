@@ -244,44 +244,47 @@ export function getTargetTimingWindow(
 }
 
 /**
- * 将一次敲击与 nextTargetIndex 指向的下一个待判定目标匹配。
- * tapTimeMs 与 target.offsetMs 均为相对正式练习起点的毫秒数。
- * 调用者应先过滤本轮有效输入时间、收齐过期目标并推进游标；
- * 本函数只返回结果，不修改目标或游标。
+ * 处理一次有效敲击，返回本次记录与新游标，不修改输入。
+ * 目标须按 offsetMs 升序排列；游标之前的目标均已结算，不能回头补敲。
+ * 时间均为相对正式练习起点的毫秒数，调用者负责过滤本轮以外的输入。
  *
- * 命中窗口为 [目标起点 - hitMs, 目标起点 + hitMs)，左闭右开：
- * - 早于窗口或已无待匹配目标：返回 wrongTap，只记录敲击时间，不推进游标。
- * - 位于窗口内：返回 hit；误差 = 敲击时间 - 目标起点。
- *   |误差| <= perfectMs 为 perfect，其余负误差为 early，正误差为 late。
- *   调用者记录命中并将游标前移一个目标。
- * - 到达或超过尚未清理的目标窗口右边界：返回 null，表示本次敲击未匹配。
- *   漏拍由过期检查负责，本函数不会直接生成 miss。
+ * 先结算过期目标，再在 [目标起点 - hitMs, 目标起点 + hitMs) 内
+ * 选择时间误差最小的待判定目标；等距优先较早目标。
+ * 命中时将跳过的目标记为漏拍，再记录命中；无候选则记录误敲，
+ * 不消耗尚未过期的目标。最后一条记录始终对应本次敲击。
+ * |误差| <= perfectMs 为 perfect，其余负误差为 early，正误差为 late。
  */
 export function evaluateTap(
   targetTaps: readonly TargetTap[],
   nextTargetIndex: number,
   tapTimeMs: number,
   windows: TimingWindows,
-): TimingEvent | null {
-  // 目标耗尽不代表本轮结束；本轮是否仍接收输入由调用者判断。
-  if (nextTargetIndex >= targetTaps.length) {
-    return { kind: "wrongTap", tapOffsetMs: tapTimeMs };
+): { events: TimingEvent[]; nextTargetIndex: number } {
+  validateTimingWindows(windows);
+  const events = collectExpiredTargets(targetTaps, nextTargetIndex, tapTimeMs, windows);
+  const firstPendingIndex = nextTargetIndex + events.length;
+  let closestIndex = -1;
+  let closestDistance = Infinity;
+  for (let index = firstPendingIndex; index < targetTaps.length; index += 1) {
+    const target = targetTaps[index];
+    const { opensAtMs, closesAtMs } = getTargetTimingWindow(target, windows);
+    if (tapTimeMs < opensAtMs) break;
+    const distance = Math.abs(tapTimeMs - target.offsetMs);
+    if (tapTimeMs < closesAtMs && distance < closestDistance) {
+      closestIndex = index;
+      closestDistance = distance;
+    }
+  }
+  if (closestIndex === -1) {
+    events.push({ kind: "wrongTap", tapOffsetMs: tapTimeMs });
+    return { events, nextTargetIndex: firstPendingIndex };
   }
 
-  const target = targetTaps[nextTargetIndex];
-  const { opensAtMs, closesAtMs } = getTargetTimingWindow(target, windows);
+  for (let index = firstPendingIndex; index < closestIndex; index += 1) {
+    events.push({ kind: "miss", targetIndex: index, eventIndex: targetTaps[index].eventIndex });
+  }
+  const target = targetTaps[closestIndex];
   const errorMs = tapTimeMs - target.offsetMs;
-
-  if (tapTimeMs < opensAtMs) {
-    return {
-      kind: "wrongTap",
-      tapOffsetMs: tapTimeMs,
-    };
-  }
-  // 命中窗口采用左闭右开区间；到达右边界后由超时逻辑判定 miss。
-  if (tapTimeMs >= closesAtMs) {
-    return null;
-  }
 
   let grade: "perfect" | "early" | "late";
   if (Math.abs(errorMs) <= windows.perfectMs) {
@@ -292,14 +295,15 @@ export function evaluateTap(
     grade = "late";
   }
 
-  return {
+  events.push({
     kind: "hit",
     grade,
-    targetIndex: nextTargetIndex,
+    targetIndex: closestIndex,
     eventIndex: target.eventIndex,
     tapOffsetMs: tapTimeMs,
     errorMs,
-  };
+  });
+  return { events, nextTargetIndex: closestIndex + 1 };
 }
 
 export function evaluateExpiredTarget(

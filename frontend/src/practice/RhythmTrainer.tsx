@@ -307,9 +307,10 @@ function RhythmTrainer({
 
       const tapOffsetMs = clock.nowMs();
 
-      // 补齐漏拍
-      recordExpiredTargets(tapOffsetMs);
-      if (tapOffsetMs >= timeline.finishOffsetMs) return;
+      if (tapOffsetMs >= timeline.finishOffsetMs) {
+        recordExpiredTargets(tapOffsetMs);
+        return;
+      }
 
       // 敲击匹配
       if (tapOffsetMs < 0) {
@@ -326,20 +327,17 @@ function RhythmTrainer({
 
       // 敲击与判定
       tapOffsetsRef.current.push(tapOffsetMs);
-      const timingEvent = evaluateTap(
+      const judgement = evaluateTap(
         targetTapTimeline,
         nextTargetIndexRef.current,
         tapOffsetMs,
         effectiveTimingWindows,
       );
-      if (timingEvent === null) return;
 
       // 命中与误敲使用相同声音，反馈实际敲击；对错由视觉和统计表达。
       playTapSound(audioContext, scheduledSourcesRef.current);
-      if (timingEvent.kind === "hit") {
-        nextTargetIndexRef.current += 1;
-      }
-      setTimingEvents((previous) => [...previous, timingEvent]);
+      nextTargetIndexRef.current = judgement.nextTargetIndex;
+      setTimingEvents((previous) => [...previous, ...judgement.events]);
     }
 
     window.addEventListener("keydown", handleKeyDown);

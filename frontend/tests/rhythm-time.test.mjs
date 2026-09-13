@@ -119,9 +119,9 @@ test("全音符和二分音符按四分音符单位展开，长音符只生成�
       assert.equal(timing.getPlaybackPosition(expanded, 4 * beatMs - 1).phase, "playing");
       assert.equal(timing.getPlaybackPosition(expanded, 4 * beatMs).phase, "finished");
       for (const [index, target] of expanded.targetTaps.entries()) {
-        assert.equal(timing.evaluateTap(expanded.targetTaps, index, target.offsetMs, windows).grade, "perfect");
+        assert.equal(timing.evaluateTap(expanded.targetTaps, index, target.offsetMs, windows).events.at(-1).grade, "perfect");
       }
-      assert.deepEqual(timing.evaluateTap(expanded.targetTaps, expanded.targetTaps.length, 4 * beatMs - 1, windows), {
+      assert.deepEqual(timing.evaluateTap(expanded.targetTaps, expanded.targetTaps.length, 4 * beatMs - 1, windows).events.at(-1), {
         kind: "wrongTap", tapOffsetMs: 4 * beatMs - 1,
       });
     }
@@ -175,7 +175,7 @@ test("多小节连续累计时间与全局事件下标，跨小节不提前结�
   const misses = timing.collectExpiredTargets(multi.targetTaps, 0, 12000, windows);
   assert.deepEqual(misses.map((event) => event.eventIndex), [0, 1, 4]);
   assert.equal(timing.summarizePractice(3, misses).missCount, 3);
-  const hits = multi.targetTaps.map((target, index) => timing.evaluateTap(multi.targetTaps, index, target.offsetMs, windows));
+  const hits = multi.targetTaps.map((target, index) => timing.evaluateTap(multi.targetTaps, index, target.offsetMs, windows).events.at(-1));
   assert.equal(timing.summarizePractice(3, hits).passed, true);
 });
 
@@ -184,7 +184,7 @@ test("两小节交界窗口允许提前命中第二小节，不重复判漏拍",
     { elements: [{ kind: "note", noteValue: "whole" }] },
     { elements: [{ kind: "note", noteValue: "whole" }] },
   ] }, 60, 0, windows);
-  const hit = timing.evaluateTap(multi.targetTaps, 1, 3900, windows);
+  const hit = timing.evaluateTap(multi.targetTaps, 1, 3900, windows).events.at(-1);
   assert.equal(hit.eventIndex, 1);
   assert.equal(hit.grade, "early");
   assert.deepEqual(timing.collectExpiredTargets(multi.targetTaps, 2, 8000, windows), []);
@@ -238,7 +238,7 @@ test("零目标结果：没有误敲通过，有误敲不通过", () => {
 
 test("结束时先补齐遗漏目标，再汇总结果", () => {
   const hits = timeline.targetTaps.slice(0, -1).map((target, index) =>
-    timing.evaluateTap(timeline.targetTaps, index, target.offsetMs, windows),
+    timing.evaluateTap(timeline.targetTaps, index, target.offsetMs, windows).events.at(-1),
   );
   const misses = timing.collectExpiredTargets(
     timeline.targetTaps, hits.length, timeline.finishOffsetMs, windows,
@@ -282,7 +282,7 @@ test("重新开始建立新起点；调度余量不会加入敲击误差", () =>
     const clock = createPracticeClock(context, 3000, leadInMs);
     context.currentTime = clock.audioTimeAt(30);
     approximately(clock.nowMs(), 30);
-    assert.equal(timing.evaluateTap(timeline.targetTaps, 0, clock.nowMs(), windows).grade, "perfect");
+    assert.equal(timing.evaluateTap(timeline.targetTaps, 0, clock.nowMs(), windows).events.at(-1).grade, "perfect");
   }
 });
 
@@ -337,7 +337,7 @@ test("空练习、全休止符与零预备拍不会访问不存在的目标", ()
     assert.deepEqual(empty.countInOffsetsMs, []);
     assert.deepEqual(empty.targetTaps, []);
     // 判定函数不负责过滤本轮输入时间；没有目标的有效输入统一为误敲。
-    assert.deepEqual(timing.evaluateTap(empty.targetTaps, 0, 0, windows), {
+    assert.deepEqual(timing.evaluateTap(empty.targetTaps, 0, 0, windows).events.at(-1), {
       kind: "wrongTap", tapOffsetMs: 0,
     });
     assert.deepEqual(timing.collectExpiredTargets(empty.targetTaps, 0, 1000, windows), []);
@@ -347,10 +347,16 @@ test("空练习、全休止符与零预备拍不会访问不存在的目标", ()
 
 test("命中窗口左闭右开，perfect 含正负边界，预备拍末尾允许提前命中", () => {
   for (const [tapMs, grade] of [[850, "early"], [949, "early"], [950, "perfect"], [1000, "perfect"], [1050, "perfect"], [1051, "late"], [1149, "late"]]) {
-    assert.equal(timing.evaluateTap(timeline.targetTaps, 1, tapMs, windows).grade, grade);
+    assert.equal(timing.evaluateTap(timeline.targetTaps, 1, tapMs, windows).events.at(-1).grade, grade);
   }
-  assert.equal(timing.evaluateTap(timeline.targetTaps, 1, 1150, windows), null);
-  const early = timing.evaluateTap(timeline.targetTaps, 0, -100, windows);
+  assert.deepEqual(timing.evaluateTap(timeline.targetTaps, 1, 1150, windows), {
+    events: [
+      { kind: "miss", targetIndex: 1, eventIndex: timeline.targetTaps[1].eventIndex },
+      { kind: "wrongTap", tapOffsetMs: 1150 },
+    ],
+    nextTargetIndex: 2,
+  });
+  const early = timing.evaluateTap(timeline.targetTaps, 0, -100, windows).events.at(-1);
   assert.equal(early.grade, "early");
   assert.equal(early.errorMs, -100);
 });
@@ -358,18 +364,18 @@ test("命中窗口左闭右开，perfect 含正负边界，预备拍末尾允许
 test("窗口之前的误敲只记录时间，不消耗目标", () => {
   const before = structuredClone(timeline.targetTaps);
   for (const tapOffsetMs of [600, 700, 849]) {
-    assert.deepEqual(timing.evaluateTap(timeline.targetTaps, 1, tapOffsetMs, windows), {
+    assert.deepEqual(timing.evaluateTap(timeline.targetTaps, 1, tapOffsetMs, windows).events.at(-1), {
       kind: "wrongTap", tapOffsetMs,
     });
   }
-  assert.equal(timing.evaluateTap(timeline.targetTaps, 1, 1000, windows).grade, "perfect");
+  assert.equal(timing.evaluateTap(timeline.targetTaps, 1, 1000, windows).events.at(-1).grade, "perfect");
   assert.deepEqual(timeline.targetTaps, before);
 });
 
 test("最后目标命中或漏拍后，本轮剩余时间内每次敲击均为误敲", () => {
   const lastIndex = timeline.targetTaps.length - 1;
   const lastTarget = timeline.targetTaps[lastIndex];
-  const hit = timing.evaluateTap(timeline.targetTaps, lastIndex, lastTarget.offsetMs, windows);
+  const hit = timing.evaluateTap(timeline.targetTaps, lastIndex, lastTarget.offsetMs, windows).events.at(-1);
   assert.equal(hit.kind, "hit");
   const misses = timing.collectExpiredTargets(timeline.targetTaps, lastIndex, 3750, windows);
   assert.equal(misses.length, 1);
@@ -377,7 +383,7 @@ test("最后目标命中或漏拍后，本轮剩余时间内每次敲击均为�
   for (const nextIndex of [lastIndex + 1, lastIndex + misses.length]) {
     for (const tapOffsetMs of [3750, 3800, 3999]) {
       assert.ok(tapOffsetMs < timeline.finishOffsetMs);
-      assert.deepEqual(timing.evaluateTap(timeline.targetTaps, nextIndex, tapOffsetMs, windows), {
+      assert.deepEqual(timing.evaluateTap(timeline.targetTaps, nextIndex, tapOffsetMs, windows).events.at(-1), {
         kind: "wrongTap", tapOffsetMs,
       });
       assert.deepEqual(timing.collectExpiredTargets(timeline.targetTaps, nextIndex, tapOffsetMs, windows), []);
@@ -392,7 +398,7 @@ test("漏拍在窗口关闭时产生，延迟后补齐多个目标，推进游�
   assert.deepEqual(misses.map((m) => m.targetIndex), [0, 1, 2]);
   const nextIndex = misses.length;
   assert.deepEqual(timing.collectExpiredTargets(timeline.targetTaps, nextIndex, 2200, windows), []);
-  assert.equal(timing.evaluateTap(timeline.targetTaps, nextIndex, 3000, windows).grade, "perfect");
+  assert.equal(timing.evaluateTap(timeline.targetTaps, nextIndex, 3000, windows).events.at(-1).grade, "perfect");
   assert.deepEqual(timing.collectExpiredTargets(timeline.targetTaps, nextIndex + 1, 3150, windows), []);
 });
 
@@ -412,17 +418,111 @@ test("结束时可收齐漏拍；最后音符短于命中窗口时要等到窗�
   assert.equal(timing.collectExpiredTargets(timeline.targetTaps, 0, timeline.finishOffsetMs, windows).length, 5);
 });
 
-test("窗口重叠时匹配最靠前的待判定目标，而非时间上最近的目标", () => {
+test("窗口重叠时选择最近目标，跳过的旧目标记为漏拍", () => {
   const fast = timing.createExerciseTimeline({
     ...exercise,
     measures: [{ elements: [{ kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "eighth" }, { kind: "rest", noteValue: "half", dots: 1 }] }],
   }, 120, 3, windows);
-  const first = timing.evaluateTap(fast.targetTaps, 0, 140, windows);
-  assert.equal(first.targetIndex, 0);
-  assert.equal(first.grade, "late");
-  const second = timing.evaluateTap(fast.targetTaps, 1, 140, windows);
-  assert.equal(second.targetIndex, 1);
-  assert.equal(second.grade, "early");
+  const result = timing.evaluateTap(fast.targetTaps, 0, 140, windows);
+  assert.deepEqual(result, {
+    events: [
+      { kind: "miss", targetIndex: 0, eventIndex: 0 },
+      { kind: "hit", targetIndex: 1, eventIndex: 1, grade: "early", tapOffsetMs: 140, errorMs: -110 },
+    ],
+    nextTargetIndex: 2,
+  });
+});
+
+test("密集十六分音符漏掉上一拍后，准时敲下一拍立即恢复，等距优先较早目标", () => {
+  const targets = [1000, 1125, 1250].map((offsetMs, eventIndex) => ({ offsetMs, eventIndex }));
+  const before = structuredClone(targets);
+  const result = timing.evaluateTap(targets, 0, 1125, windows);
+  assert.deepEqual(result.events.map(e => [e.kind, e.targetIndex]), [["miss", 0], ["hit", 1]]);
+  assert.equal(result.events.at(-1).grade, "perfect");
+  assert.equal(result.nextTargetIndex, 2);
+  const next = timing.evaluateTap(targets, result.nextTargetIndex, 1250, windows);
+  assert.equal(next.events.length, 1);
+  assert.equal(next.events[0].targetIndex, 2);
+  assert.equal(next.events[0].grade, "perfect");
+  assert.equal(timing.evaluateTap(targets, 0, 1062.5, windows).events.at(-1).targetIndex, 0);
+  assert.equal(timing.evaluateTap(targets, 0, 1062.6, windows).events.at(-1).targetIndex, 1);
+  assert.deepEqual(targets, before);
+});
+
+test("一次敲击统一补齐过期和跳过的目标，已结算目标不能回补或重复漏拍", () => {
+  const targets = [0, 100, 200, 300, 1000].map((offsetMs, i) => ({ offsetMs, eventIndex: i * 2 }));
+  const result = timing.evaluateTap(targets, 0, 300, windows);
+  assert.deepEqual(result.events.map(e => [e.kind, e.targetIndex, e.eventIndex]), [
+    ["miss", 0, 0], ["miss", 1, 2], ["miss", 2, 4], ["hit", 3, 6],
+  ]);
+  assert.equal(result.nextTargetIndex, 4);
+  assert.deepEqual(timing.collectExpiredTargets(targets, result.nextTargetIndex, 450, windows), []);
+  assert.deepEqual(timing.evaluateTap(targets, result.nextTargetIndex, 310, windows), {
+    events: [{ kind: "wrongTap", tapOffsetMs: 310 }], nextTargetIndex: 4,
+  });
+  const finalMisses = timing.collectExpiredTargets(targets, result.nextTargetIndex, 1150, windows);
+  const all = [...result.events, ...finalMisses];
+  assert.equal(new Set(all.map(e => e.targetIndex)).size, targets.length);
+  assert.deepEqual(timing.summarizePractice(targets.length, all), {
+    passed: false, targetCount: 5, hitCount: 1, missCount: 4, wrongTapCount: 0,
+  });
+});
+
+test("没有候选时只推进已过期目标，不消耗未来目标；左右窗口边界保持不变", () => {
+  const targets = [{ offsetMs: 0, eventIndex: 0 }, { offsetMs: 1000, eventIndex: 2 }];
+  const result = timing.evaluateTap(targets, 0, 500, windows);
+  assert.deepEqual(result, {
+    events: [{ kind: "miss", targetIndex: 0, eventIndex: 0 }, { kind: "wrongTap", tapOffsetMs: 500 }],
+    nextTargetIndex: 1,
+  });
+  assert.deepEqual(timing.evaluateTap(targets, 1, 849, windows), {
+    events: [{ kind: "wrongTap", tapOffsetMs: 849 }], nextTargetIndex: 1,
+  });
+  assert.equal(timing.evaluateTap(targets, 1, 850, windows).events.at(-1).kind, "hit");
+  assert.equal(timing.evaluateTap(targets, 1, 1150, windows).nextTargetIndex, 2);
+});
+
+test("三连音与十六分序列在不同速度下保持唯一结算，逐帧和延迟检查结果一致", () => {
+  const denseExercise = {
+    timeSignature: { beats: 4, beatType: 4 },
+    measures: [{ elements: [
+      { kind: "triplet", notes: Array.from({ length: 3 }, () => ({ kind: "note", noteValue: "eighth" })) },
+      ...Array.from({ length: 4 }, () => ({ kind: "note", noteValue: "sixteenth" })),
+      { kind: "rest", noteValue: "quarter" },
+      { kind: "note", noteValue: "quarter" },
+    ] }],
+  };
+  for (const bpm of [60, 120, 240]) {
+    const line = timing.createExerciseTimeline(denseExercise, bpm, 0, windows);
+    const run = (checkBeforeTap, skip) => {
+      let cursor = 0;
+      const events = [];
+      for (let i = 0; i < line.targetTaps.length; i++) {
+        if (skip && [0, 3, 4].includes(i)) continue;
+        const time = line.targetTaps[i].offsetMs;
+        if (checkBeforeTap) {
+          const misses = timing.collectExpiredTargets(line.targetTaps, cursor, time, windows);
+          events.push(...misses);
+          cursor += misses.length;
+        }
+        const result = timing.evaluateTap(line.targetTaps, cursor, time, windows);
+        assert.ok(result.nextTargetIndex >= cursor);
+        cursor = result.nextTargetIndex;
+        events.push(...result.events);
+      }
+      events.push(...timing.collectExpiredTargets(line.targetTaps, cursor, line.finishOffsetMs, windows));
+      assert.equal(events.length, line.targetTaps.length);
+      assert.equal(new Set(events.map(e => e.targetIndex)).size, line.targetTaps.length);
+      return events;
+    };
+    assert.deepEqual(run(true, true), run(false, true));
+    const result = timing.summarizePractice(line.targetTaps.length, run(false, true));
+    assert.equal(result.missCount, 3);
+    assert.equal(result.wrongTapCount, 0);
+    const perfect = run(false, false);
+    assert.ok(perfect.every(e => e.kind === "hit" && e.grade === "perfect"));
+    assert.equal(timing.summarizePractice(line.targetTaps.length, perfect).passed, true);
+  }
 });
 
 test("非法 BPM、预备拍数和判定窗口给出明确错误", () => {
@@ -519,7 +619,7 @@ test("单附点时值、休止符、BPM 缩放与跨小节时间保持一致", (
     assert.equal(result.finishOffsetMs, 8 * beatMs);
     assert.equal(timing.getPlaybackPosition(result, 1.5 * beatMs - 1).playingBeatIndex, 0);
     assert.equal(timing.getPlaybackPosition(result, 1.5 * beatMs).playingBeatIndex, 1);
-    assert.equal(timing.evaluateTap(result.targetTaps, 1, 1.5 * beatMs, windows).grade, "perfect");
+    assert.equal(timing.evaluateTap(result.targetTaps, 1, 1.5 * beatMs, windows).events.at(-1).grade, "perfect");
   }
   assert.deepEqual(dotted, before);
 });
@@ -591,7 +691,7 @@ test("十六分音符和休止符支持时值、附点、BPM 缩放与快速顺�
     const interval = 60000 / bpm / 4;
     assert.deepEqual(result.targetTaps.map(t => t.offsetMs), Array.from({length: 16}, (_, i) => i * interval));
     assert.equal(result.finishOffsetMs, Math.max(16 * interval, 15 * interval + windows.hitMs));
-    result.targetTaps.forEach((t, i) => assert.equal(timing.evaluateTap(result.targetTaps, i, t.offsetMs, windows).grade, "perfect"));
+    result.targetTaps.forEach((t, i) => assert.equal(timing.evaluateTap(result.targetTaps, i, t.offsetMs, windows).events.at(-1).grade, "perfect"));
   }
   const mixed = { ...exercise, measures: [{ elements: [
     {kind: "note", noteValue: "eighth", dots: 1},
@@ -631,7 +731,7 @@ test("连续三连音跨小节无累计误差，目标、高亮、漏拍和统�
     assert.equal(line.eventEndOffsetsMs.at(-1), 32 * (60000 / bpm));
     const target = line.targetTaps[13];
     assert.equal(timing.getPlaybackPosition(line, target.offsetMs).playingBeatIndex, 13);
-    assert.equal(timing.evaluateTap(line.targetTaps, 13, target.offsetMs, windows).grade, "perfect");
+    assert.equal(timing.evaluateTap(line.targetTaps, 13, target.offsetMs, windows).events.at(-1).grade, "perfect");
     const misses = timing.collectExpiredTargets(line.targetTaps, 0, line.finishOffsetMs, windows);
     assert.equal(misses.length, 96);
     assert.equal(timing.summarizePractice(96, misses).missCount, 96);
