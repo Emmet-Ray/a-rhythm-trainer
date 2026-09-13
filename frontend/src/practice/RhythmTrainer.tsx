@@ -50,27 +50,6 @@ export type RhythmTrainerProps = {
   settingsPanel?: ReactNode;
 };
 
-function formatTimingEvent(timingEvent: TimingEvent): string {
-  if (timingEvent.kind === "miss") {
-    return "漏拍";
-  }
-
-  if (timingEvent.kind === "wrongTap") {
-    return "误敲";
-  }
-
-  const absoluteErrorMs = Math.abs(timingEvent.errorMs).toFixed(0);
-  if (timingEvent.grade === "perfect") {
-    return `完美（误差 ${absoluteErrorMs}ms）`;
-  }
-
-  if (timingEvent.grade === "early") {
-    return `快了 ${absoluteErrorMs}ms`;
-  }
-
-  return `慢了 ${absoluteErrorMs}ms`;
-}
-
 /**
  * 展示并运行一份节奏练习，内部管理击拍/试听、声音与判定。
  * 每轮固定判定窗口；题目、BPM 或预备拍数变化时停止并清空旧轮次，保留谱面组件。
@@ -109,9 +88,13 @@ function RhythmTrainer({
 
   const [mode, setMode] = useState<PlaybackMode>("practice");
   const [playback, setPlayback] = useState<PlaybackState>(IDLE_PLAYBACK);
+  const [roundId, setRoundId] = useState(0);
   const { phase, countInBeat, playingBeatIndex } = playback;
   const [timingEvents, setTimingEvents] = useState<TimingEvent[]>([]);
-  const [isStarting, setIsStarting] = useState(false);
+  const [startingMode, setStartingMode] = useState<PlaybackMode | null>(null);
+  const isStarting = startingMode !== null;
+  const [dismissedResultRound, setDismissedResultRound] = useState<number | null>(null);
+  const practiceButtonRef = useRef<HTMLButtonElement>(null);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [configuration, setConfiguration] = useState({ exercise, bpm, countInBeatCount });
   if (configuration.exercise !== exercise || configuration.bpm !== bpm || configuration.countInBeatCount !== countInBeatCount) {
@@ -121,7 +104,7 @@ function RhythmTrainer({
     setPlayback(IDLE_PLAYBACK);
     setTimingEvents([]);
     setMode("practice");
-    setIsStarting(false);
+    setStartingMode(null);
     setAudioError(null);
   }
 
@@ -146,10 +129,9 @@ function RhythmTrainer({
   const isRunning = phase === "countIn" || phase === "playing";
   const activeEventIndex =
     mode === "listen" && phase === "playing" ? playingBeatIndex : null;
-  const latestTimingEvent = timingEvents.at(-1) ?? null;
   // 在状态更新后的渲染中结算，包含结束帧补上的漏拍；不另存结果 state。
   const result =
-    mode === "practice" && phase === "finished"
+    mode === "practice" && phase === "finished" && !isStarting
       ? summarizePractice(targetTapTimeline.length, timingEvents)
       : null;
 
@@ -180,15 +162,14 @@ function RhythmTrainer({
     }
   }, [mode, targetTapTimeline, effectiveTimingWindows]);
 
-  let beatText: string | null = null;
-  if (isStarting) {
-    beatText = "准备中";
-  } else if (phase === "countIn") {
-    beatText = countInBeat < 0 ? "准备中" : `预备拍：${countInBeat + 1}`;
-  } else if (mode === "listen" && phase === "playing") {
-    beatText = "试听中";
-  } else if (mode === "listen" && phase === "finished") {
-    beatText = "试听结束";
+  // 只改变显示方向：声音仍按原有时钟调度，不增加“0”或“开始”这一拍。
+  const countInRemaining = phase === "countIn" && countInBeat >= 0
+    ? timeline.countInOffsetsMs.length - countInBeat
+    : null;
+
+  function dismissResult() {
+    setDismissedResultRound(roundId);
+    practiceButtonRef.current?.focus({ preventScroll: true });
   }
 
   useEffect(() => {
@@ -260,7 +241,7 @@ function RhythmTrainer({
     clockRef.current = null;
     finishedRef.current = false;
     startingRef.current = true;
-    setIsStarting(true);
+    setStartingMode(requestedMode);
     setAudioError(null);
     const request = ++startRequestRef.current;
 
@@ -318,6 +299,7 @@ function RhythmTrainer({
       nextTargetIndexRef.current = 0;
       tapOffsetsRef.current = [];
       setTimingEvents([]);
+      setRoundId(previous => previous + 1);
       setPlayback(getPlaybackPosition(nextTimeline, clock.nowMs()));
     } catch (error) {
       if (request !== startRequestRef.current) return;
@@ -330,7 +312,7 @@ function RhythmTrainer({
     } finally {
       if (request === startRequestRef.current) {
         startingRef.current = false;
-        setIsStarting(false);
+        setStartingMode(null);
       }
     }
   }
@@ -401,10 +383,11 @@ function RhythmTrainer({
   ]);
 
   return (
-    <TrainerFrame settingsPanel={settingsPanel} actions={
+    <TrainerFrame settingsPanel={settingsPanel} error={audioError} actions={
       <div className="trainer-actions">
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
         <button
+          ref={practiceButtonRef}
           type="button"
           data-action={isRunning && mode === "practice" ? "stop" : "start"}
           disabled={isStarting || (isRunning && mode !== "practice")}
@@ -413,7 +396,7 @@ function RhythmTrainer({
             void handlePlay("practice");
           }}
         >
-          {isRunning && mode === "practice" ? "停止" : "击拍练习"}
+          {startingMode === "practice" ? "准备中…" : isRunning && mode === "practice" ? "停止" : "击拍练习"}
         </button>
         {/* 点击试听之后，该按钮变为停止状态，先播放预备拍，然后系统自动播放击拍，高亮当前击拍音符，播放声音 */}
         <button
@@ -425,7 +408,7 @@ function RhythmTrainer({
             void handlePlay("listen");
           }}
         >
-          {isRunning && mode === "listen" ? "停止" : "试听"}
+          {startingMode === "listen" ? "准备中…" : isRunning && mode === "listen" ? "停止" : "试听"}
         </button>
       </div>
     }>
@@ -434,17 +417,27 @@ function RhythmTrainer({
         activeEventIndex={activeEventIndex}
         timeline={timeline}
         timingEvents={timingEvents}
+        playback={isRunning ? { roundId, eventIndex: phase === "countIn" ? 0 : playingBeatIndex } : null}
+        overlay={countInRemaining !== null ? (
+          <div className="trainer-countdown" role="img" aria-label={`预备拍：${countInRemaining}`}>
+            {countInRemaining}
+          </div>
+        ) : result !== null && dismissedResultRound !== roundId ? (
+          <section className="trainer-result-layer" aria-label="练习结果"
+            onKeyDown={event => {
+              if (event.key === "Escape") {
+                event.stopPropagation();
+                dismissResult();
+              }
+            }}>
+            <button type="button" className="trainer-result-dismiss" aria-label="关闭练习结果" onClick={dismissResult}>
+              <span className="trainer-result" role="status" data-passed={result.passed}>
+                {result.passed ? "通过" : "未通过"}
+              </span>
+            </button>
+          </section>
+        ) : null}
       />
-      <div className="trainer-feedback" data-feedback={audioError ? "error" : result ? (result.passed ? "success" : "error") : isRunning && mode === "practice" && latestTimingEvent ? (latestTimingEvent.kind === "hit" ? "success" : "error") : "neutral"}>
-        {beatText !== null && <div>{beatText}</div>}
-        {mode === "practice" && isRunning && latestTimingEvent !== null && (
-          <div>{formatTimingEvent(latestTimingEvent)}</div>
-        )}
-        {audioError && <div role="alert">{audioError}</div>}
-        {result !== null && (
-          <p role="status">{result.passed ? "通过" : "未通过"}</p>
-        )}
-      </div>
     </TrainerFrame>
   );
 }
@@ -464,15 +457,15 @@ export default function RhythmTrainerWorkspace(props: Omit<RhythmTrainerProps, "
           <line x1="10%" x2="90%" y1="90" y2="90" stroke="currentColor" />
         </svg>
       </div>
-      <div className="trainer-feedback" />
     </TrainerFrame>
   );
 }
 
 /** 空态与真实练习共用：整行操作栏，下方才分成谱面和设置两栏。 */
-function TrainerFrame({ actions, settingsPanel, children }: {
+function TrainerFrame({ actions, settingsPanel, error, children }: {
   actions: ReactNode;
   settingsPanel?: ReactNode;
+  error?: string | null;
   children: ReactNode;
 }) {
   return <div className="rhythm-trainer design-system">
@@ -480,6 +473,7 @@ function TrainerFrame({ actions, settingsPanel, children }: {
       <div className="trainer-toolbar">
         {actions}
         <p className="keyboard-hint"><kbd>空格</kbd> 键敲击</p>
+        {error && <p className="trainer-audio-error" role="alert">{error}</p>}
       </div>
       <div className="trainer-body">
         <div className="trainer-score-area">{children}</div>

@@ -68,7 +68,6 @@ main:focus { outline: none; }
 .training-workspace { padding-top: 16px; text-align: center; min-width: 0; }
 .keyboard-hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
 .rhythm-trainer { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.trainer-feedback { min-height: 54px; display: grid; align-content: center; gap: 4px; }
 .trainer-actions { display: flex; justify-content: center; gap: 12px; margin-top: 10px; }
 .trainer-actions button:first-child { color: #fff; background: var(--accent); border-color: var(--accent); }
 .trainer-actions button:first-child:hover:not(:disabled) { background: #45409e; }

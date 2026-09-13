@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import {
   BarlineType,
   Beam,
@@ -17,21 +17,30 @@ import {
   createScoreLayout,
   createTimingFeedbackLayout,
   getBeatBeamGroups,
+  getScoreViewportHeight,
+  getScoreFollowTop,
   timingOffsetToScorePosition,
   type MeasureGeometry,
   type ScorePosition,
+  type ScoreLayout,
 } from "./RhythmScoreLayout";
 
 const ACTIVE_NOTE_COLOR = "var(--ds-primary, #7052d6)";
 const HIT_MARKER_COLOR = "#65a94b";
 const ERROR_MARKER_COLOR = "#df4438";
 const MARKER_Y_OFFSET = 32;
+// 为页头、标题与操作栏预留高度；极矮窗口仍至少保留一行可读谱面。
+const PAGE_CHROME_HEIGHT = 400;
 
 type RhythmScoreProps = {
   exercise: RhythmExercise;
   activeEventIndex: number | null;
   timeline: ExerciseTimeline;
   timingEvents: readonly TimingEvent[];
+  /** 仅控制阅读跟随；事件位置来自音频时钟，预备拍指向首事件，停止后传 null。 */
+  playback: { roundId: number; eventIndex: number } | null;
+  /** 固定在可视窗口上的临时提示，由调用方决定内容；不随谱面滚动或参与排版。 */
+  overlay?: ReactNode;
 };
 
 type RenderedScore = {
@@ -39,6 +48,7 @@ type RenderedScore = {
   notes: StaveNote[];
   eventPositions: ScorePosition[];
   measures: MeasureGeometry[];
+  layout: ScoreLayout;
 };
 
 // 排版仅依赖题目和容器宽度；时间线、高亮和判定只更新反馈，不重建基础 SVG。
@@ -47,11 +57,19 @@ function RhythmScore({
   activeEventIndex,
   timeline,
   timingEvents,
+  playback,
+  overlay,
 }: RhythmScoreProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const renderedRef = useRef<RenderedScore | null>(null);
+  const automaticScrollTop = useRef(0);
+  const [windowHeight, setWindowHeight] = useState(0);
+  const [pausedRound, setPausedRound] = useState<number | null>(null);
+  const roundId = playback?.roundId ?? null;
+  const followingEventIndex = playback?.eventIndex ?? null;
+  const followPaused = roundId !== null && pausedRound === roundId;
   const { measures, timeSignature } = exercise;
 
   useEffect(() => {
@@ -62,7 +80,13 @@ function RhythmScore({
       if (width > 0) setContainerWidth((previous) => previous === width ? previous : width);
     });
     observer.observe(viewport);
-    return () => observer.disconnect();
+    const resize = () => setWindowHeight(window.innerHeight);
+    resize();
+    window.addEventListener("resize", resize);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", resize);
+    };
   }, []);
 
   useLayoutEffect(() => {
@@ -97,10 +121,15 @@ function RhythmScore({
     renderer.resize(containerWidth, scoreLayout.height * scoreLayout.scale);
     const context = renderer.getContext();
     context.scale(scoreLayout.scale, scoreLayout.scale);
-    const rendered: RenderedScore = { context, notes: [], eventPositions: [], measures: [] };
+    const rendered: RenderedScore = { context, notes: [], eventPositions: [], measures: [], layout: scoreLayout };
 
     preparedMeasures.forEach(({ notes: measureNotes, beams, tuplets }, measureIndex) => {
       const placement = scoreLayout.measures[measureIndex];
+      context.openGroup("measure-number");
+      context.save().setFillStyle("var(--ds-muted)").setFont("sans-serif", 12);
+      context.fillText(String(measureIndex + 1), placement.x + 4, placement.y - 22);
+      context.restore();
+      context.closeGroup();
       const stave = createRhythmStave(placement.x, placement.y, placement.width, placement.isRowStart);
       if (!placement.isRowStart) {
         // 左侧小节已画右边界，避免重复描画同一根线。
@@ -137,6 +166,39 @@ function RhythmScore({
     };
   }, [containerWidth, measures, timeSignature.beats, timeSignature.beatType]);
 
+  // 可视高度改变只改变裁剪窗口，不能重建谱面或影响音频时间线。
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    const rendered = renderedRef.current;
+    if (!viewport || !rendered) return;
+    viewport.style.height = `${getScoreViewportHeight(rendered.layout, windowHeight - PAGE_CHROME_HEIGHT)}px`;
+    automaticScrollTop.current = viewport.scrollTop;
+  }, [containerWidth, windowHeight, measures, timeSignature.beats, timeSignature.beatType]);
+
+  useLayoutEffect(() => {
+    if (roundId !== null) {
+      automaticScrollTop.current = 0;
+      viewportRef.current?.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, [roundId]);
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    const rendered = renderedRef.current;
+    if (!viewport || !rendered || followingEventIndex === null || followPaused) return;
+    const top = getScoreFollowTop(rendered.layout, timeline, followingEventIndex, viewport.scrollTop, viewport.clientHeight);
+    // 按行切换而非连续动画，敲击时音符保持静止；也满足减少动态效果偏好。
+    if (Math.abs(top - viewport.scrollTop) > 0.5) {
+      automaticScrollTop.current = top;
+      viewport.scrollTo({ top, behavior: "instant" });
+    }
+  }, [roundId, followingEventIndex, followPaused, timeline, containerWidth, windowHeight, measures]);
+
+  function pauseFollow() {
+    const viewport = viewportRef.current;
+    if (roundId !== null && viewport && viewport.scrollHeight > viewport.clientHeight) setPausedRound(roundId);
+  }
+
   useLayoutEffect(() => {
     const rendered = renderedRef.current;
     if (!rendered) return;
@@ -170,8 +232,29 @@ function RhythmScore({
   }, [containerWidth, measures, timeSignature.beats, timeSignature.beatType, activeEventIndex, timeline, timingEvents]);
 
   return (
-    <div ref={viewportRef} style={{ width: "100%", minWidth: 0 }} role="region" aria-label="节奏乐谱" tabIndex={0}>
-      <div ref={containerRef} />
+    <div className="rhythm-score">
+      <div className="rhythm-score-stage">
+        <div ref={viewportRef} className="rhythm-score-viewport" role="region" aria-label="节奏乐谱" tabIndex={0}
+          onWheel={pauseFollow} onTouchMove={pauseFollow}
+          onScroll={event => {
+            // 也覆盖原生滚动条拖动；自身的按行滚动不能被误认成用户操作。
+            const top = event.currentTarget.scrollTop;
+            if (Math.abs(top - automaticScrollTop.current) > 1) pauseFollow();
+            automaticScrollTop.current = top;
+          }}
+          onKeyDown={event => {
+            if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"].includes(event.key)) pauseFollow();
+          }}>
+          <div ref={containerRef} />
+        </div>
+        {overlay && <div className="rhythm-score-overlay">{overlay}</div>}
+      </div>
+      <div className="score-follow-controls">
+        {followPaused && <button type="button" onClick={event => {
+          event.currentTarget.blur();
+          setPausedRound(null);
+        }}>继续跟随</button>}
+      </div>
     </div>
   );
 }

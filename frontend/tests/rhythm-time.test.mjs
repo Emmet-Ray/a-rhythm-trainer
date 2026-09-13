@@ -676,44 +676,44 @@ test("非法 BPM、预备拍数和判定窗口给出明确错误", () => {
 test("谱面布局按完整小节换行，末行等宽左对齐", () => {
   const layout = scoreLayout.createScoreLayout(5, 1000);
   assert.equal(layout.width, 1000);
-  assert.equal(layout.height, 540);
+  assert.equal(layout.height, 450);
   assert.deepEqual(layout.measures, [
     { x: 10, y: 40, width: 490, isRowStart: true },
     { x: 500, y: 40, width: 490, isRowStart: false },
-    { x: 10, y: 220, width: 490, isRowStart: true },
-    { x: 500, y: 220, width: 490, isRowStart: false },
-    { x: 10, y: 400, width: 490, isRowStart: true },
+    { x: 10, y: 190, width: 490, isRowStart: true },
+    { x: 500, y: 190, width: 490, isRowStart: false },
+    { x: 10, y: 340, width: 490, isRowStart: true },
   ]);
 });
 
 test("密集小节使用测量宽度减少每行小节数，并统一缩放反馈坐标", () => {
   const wide = scoreLayout.createScoreLayout(4, 1000, 510);
-  assert.equal(wide.height, 720);
+  assert.equal(wide.height, 600);
   assert.ok(wide.measures.every(m => m.width >= 510 && m.isRowStart));
   const narrow = scoreLayout.createScoreLayout(2, 280, 510);
   assert.equal(narrow.width, 530);
   assert.equal(narrow.width * narrow.scale, 280);
   assert.equal(narrow.measures[0].width, 510);
-  assert.equal(narrow.measures[1].y, 220);
+  assert.equal(narrow.measures[1].y, 190);
 });
 
 test("谱面布局支持单行、窄屏、空谱与未测得宽度", () => {
-  assert.equal(scoreLayout.createScoreLayout(4, 1460).height, 180);
+  assert.equal(scoreLayout.createScoreLayout(4, 1460).height, 150);
   const narrow = scoreLayout.createScoreLayout(8, 280);
-  assert.equal(narrow.height, 1440);
+  assert.equal(narrow.height, 1200);
   assert.equal(narrow.width * narrow.scale, 280);
   assert.ok(narrow.measures.every((measure) => measure.isRowStart && measure.width === 320));
   assert.deepEqual(scoreLayout.createScoreLayout(0, 1000), { width: 1000, height: 0, scale: 1, measures: [] });
   assert.deepEqual(scoreLayout.createScoreLayout(8, 0), { width: 0, height: 0, scale: 1, measures: [] });
-  assert.equal(scoreLayout.createScoreLayout(4, 739).height, 720);
-  assert.equal(scoreLayout.createScoreLayout(4, 740).height, 360);
+  assert.equal(scoreLayout.createScoreLayout(4, 739).height, 600);
+  assert.equal(scoreLayout.createScoreLayout(4, 740).height, 300);
 });
 
 test("放大记谱先换算逻辑宽度，两小节保持同排且坐标同步缩放", () => {
   const enlarged = scoreLayout.createScoreLayout(2, 1140, 320, 1.5);
   const logical = scoreLayout.createScoreLayout(2, 760, 320);
   assert.deepEqual(enlarged.measures, logical.measures);
-  assert.equal(enlarged.height, 180);
+  assert.equal(enlarged.height, 150);
   assert.equal(enlarged.scale, 1.5);
   assert.equal(enlarged.width * enlarged.scale, 1140);
   assert.ok(enlarged.measures.every(m => (m.x + m.width) * enlarged.scale <= 1140));
@@ -726,6 +726,67 @@ test("放大偏好不突破密集小节的最小宽度，窄屏仍能完整容�
     assert.ok(Math.abs(enlarged.width * enlarged.scale - width) < 0.001);
     assert.ok(enlarged.scale <= 1.5);
   }
+});
+
+test("谱面窗口按实际倍率容纳完整的一至两行，短谱不撑出空白", () => {
+  const layout = scoreLayout.createScoreLayout(6, 1140, 320, 1.5);
+  assert.equal(scoreLayout.getScoreViewportHeight(layout, 100), 225);
+  assert.equal(scoreLayout.getScoreViewportHeight(layout, 449), 225);
+  assert.equal(scoreLayout.getScoreViewportHeight(layout, 450), 450);
+  assert.equal(scoreLayout.getScoreViewportHeight(layout, 2000), 450);
+  assert.equal(scoreLayout.getScoreViewportHeight(scoreLayout.createScoreLayout(1, 760), 2000), 150);
+  assert.equal(scoreLayout.getScoreViewportHeight(scoreLayout.createScoreLayout(0, 760), 2000), 0);
+});
+
+test("两行跟随在换行时保留下一行，同一行内不移动，末行不滚出空白", () => {
+  const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures:
+    Array.from({ length: 6 }, () => ({ elements: [{ kind: "note", noteValue: "whole" }] })) };
+  const timeline = timing.createExerciseTimeline(exercise, 60, 4, windows);
+  const layout = scoreLayout.createScoreLayout(6, 1140, 320, 1.5);
+  const top = (event, previous) => scoreLayout.getScoreFollowTop(layout, timeline, event, previous, 450);
+  assert.equal(top(0, 0), 0);
+  assert.equal(top(1, 0), 0);
+  assert.equal(top(2, 0), 225);
+  assert.equal(top(3, 225), 225);
+  assert.equal(top(4, 225), 225);
+  assert.equal(top(5, 225), 225);
+  assert.equal(top(0, 225), 0); // 恢复跟随也能从用户滚到的后面返回当前行。
+  assert.equal(top(-1, 120), 120);
+});
+
+test("全休止小节与混合事件按播放时间换行，不依赖待敲击目标或命中", () => {
+  const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [
+    { elements: Array.from({ length: 4 }, () => ({ kind: "note", noteValue: "quarter" })) },
+    { elements: [{ kind: "rest", noteValue: "whole" }] },
+    { elements: [{ kind: "rest", noteValue: "whole" }] },
+    { elements: [{ kind: "note", noteValue: "whole" }] },
+  ] };
+  const layout = scoreLayout.createScoreLayout(4, 360); // 一行一小节。
+  for (const bpm of [30, 60, 240]) {
+    const timeline = timing.createExerciseTimeline(exercise, bpm, 4, windows);
+    let scrollTop = 0;
+    for (let measure = 0; measure < 4; measure++) {
+      const position = timing.getPlaybackPosition(timeline, timeline.measures[measure].startOffsetMs);
+      scrollTop = scoreLayout.getScoreFollowTop(layout, timeline, position.playingBeatIndex, scrollTop, 150);
+      assert.equal(scrollTop, measure * 150);
+    }
+    assert.equal(timeline.targetTaps.length, 5);
+  }
+});
+
+test("跟随容忍像素取整，重排后定位新谱行，单行与空谱不滚动", () => {
+  const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures:
+    Array.from({ length: 5 }, () => ({ elements: [{ kind: "rest", noteValue: "whole" }] })) };
+  const timeline = timing.createExerciseTimeline(exercise, 60, 4, windows);
+  const layout = scoreLayout.createScoreLayout(5, 1000, 320, 1.3);
+  const height = scoreLayout.getScoreViewportHeight(layout, 400);
+  const first = scoreLayout.getScoreFollowTop(layout, timeline, 2, 0, Math.round(height));
+  assert.equal(scoreLayout.getScoreFollowTop(layout, timeline, 3, first + 0.25, Math.round(height)), first + 0.25);
+  const narrow = scoreLayout.createScoreLayout(5, 360);
+  assert.equal(scoreLayout.getScoreFollowTop(narrow, timeline, 3, first, 150), 450);
+  const singleRow = scoreLayout.createScoreLayout(5, 2000);
+  assert.equal(scoreLayout.getScoreFollowTop(singleRow, timeline, 4, 0, 150), 0);
+  assert.equal(scoreLayout.getScoreFollowTop(scoreLayout.createScoreLayout(0, 0), timeline, 0, 0, 0), 0);
 });
 
 test("误敲跨行时直接切换到下一小节，不在行间插值", () => {

@@ -37,7 +37,7 @@ export function getBeatBeamGroups(elements: readonly RhythmElement[]): number[][
 
 const HORIZONTAL_PADDING = 10;
 const PREFERRED_MEASURE_WIDTH = 360;
-const ROW_HEIGHT = 180;
+const ROW_HEIGHT = 150;
 const STAVE_TOP = 40;
 const MINIMUM_MEASURE_WIDTH = 320;
 
@@ -84,6 +84,34 @@ export function createScoreLayout(measureCount: number, containerWidth: number, 
       isRowStart: index % measuresPerRow === 0,
     })),
   };
+}
+
+/** 可视窗口只显示完整的一至两行；即使矮屏也不裁掉单行内的符号和反馈。 */
+export function getScoreViewportHeight(layout: ScoreLayout, availableHeight: number): number {
+  if (layout.measures.length === 0) return 0;
+  const rowHeight = ROW_HEIGHT * layout.scale;
+  const visibleRows = Math.max(1, Math.min(2, Math.floor(availableHeight / rowHeight)));
+  return Math.min(layout.height * layout.scale, visibleRows * rowHeight);
+}
+
+/** 从时钟定位的事件（含休止符）选择谱行，不读取敲击结果。
+ * 两行窗口优先保留当前行与下一行；仅在需要换行时返回新的滚动位置。
+ * 返回值为显示像素，与 SVG 的逻辑坐标隔离；末尾不滚出空白区域。
+ */
+export function getScoreFollowTop(
+  layout: ScoreLayout, timeline: ExerciseTimeline, eventIndex: number,
+  scrollTop: number, viewportHeight: number,
+): number {
+  const measureIndex = timeline.measures.findLastIndex(measure => measure.firstEventIndex <= eventIndex);
+  const placement = layout.measures[measureIndex];
+  if (!placement || viewportHeight <= 0) return scrollTop;
+  const rowHeight = ROW_HEIGHT * layout.scale;
+  const rowTop = (placement.y - STAVE_TOP) * layout.scale;
+  const totalHeight = layout.height * layout.scale;
+  const visibleRows = Math.max(1, Math.min(2, Math.floor((viewportHeight + 0.5) / rowHeight)));
+  const requiredBottom = Math.min(totalHeight, rowTop + visibleRows * rowHeight);
+  if (rowTop >= scrollTop - 0.5 && requiredBottom <= scrollTop + viewportHeight + 0.5) return scrollTop;
+  return Math.max(0, Math.min(rowTop, totalHeight - viewportHeight));
 }
 
 export type ScorePosition = { x: number; y: number };

@@ -1,0 +1,1481 @@
+<!doctype html>
+<html lang="en" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Dictation Room</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Dictation Room" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot; data-visualize-standalone&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Dictation Room&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 14px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --icon-size: 16px;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --corner-shape: round;
+  --radius: var(--border-radius-lg, 10px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: var(--visualize-paint-gutter, 0px);
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans) !important;
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--corner-shape);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card, .progress) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+hr {
+  width: 100%;
+  height: 1px;
+  margin-block: 6px;
+  border: 0;
+  background: var(--border);
+}
+
+.nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress {
+  display: flex;
+  height: 8px;
+  margin-block: calc((var(--line-height-normal, 1.5em) - 8px) / 2);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+}
+
+.progress-bar:only-child {
+  border-radius: var(--radius-full);
+}
+
+.progress-bar {
+  height: 100%;
+  flex-shrink: 0;
+  border: 0;
+  background: var(--viz-series-1);
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.nav-link,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn,
+.nav-link {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover,
+.nav-link:not(:disabled):not([aria-disabled=&quot;true&quot;]):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.nav-pills .nav-link {
+  min-width: 0;
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.nav-justified .nav-link {
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.nav-pills .nav-link.active {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.btn:disabled,
+.nav-link:disabled,
+.nav-link[aria-disabled=&quot;true&quot;] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: var(--corner-shape);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+  [aria-pressed=&quot;true&quot;],
+  [aria-selected=&quot;true&quot;],
+  .is-selected
+) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .nav-link,
+  .form-control,
+  .form-select {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Keep small-screen WebKit from zooming when a text field receives focus. */
+  .form-control,
+  .form-select {
+    font-size: max(16px, var(--font-size-normal));
+  }
+
+  .form-control[type=&quot;file&quot;]::file-selector-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .form-control-color[type=&quot;color&quot;] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .form-control:is(
+    [type=&quot;date&quot;],
+    [type=&quot;datetime-local&quot;],
+    [type=&quot;month&quot;],
+    [type=&quot;time&quot;],
+    [type=&quot;week&quot;]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    padding-block: 8px;
+  }
+
+  .form-check {
+    min-height: 44px;
+    padding-inline: 15px;
+  }
+
+  .form-check-input {
+    position: relative;
+  }
+
+  .form-check-input::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    content: &quot;&quot;;
+    transform: translate(-50%, -50%);
+  }
+
+  .form-check-label {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .form-range {
+    height: 44px;
+    touch-action: pan-y;
+  }
+
+  .form-range::-webkit-slider-runnable-track {
+    height: 44px;
+  }
+
+  .form-range::-moz-range-track {
+    height: 44px;
+  }
+
+  .form-range::-webkit-slider-thumb {
+    margin-top: 12px;
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: var(--icon-size) !important;
+  height: var(--icon-size) !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;style&gt;
+#dictation-room{--dr-bg:light-dark(#f7f7fa,#16151b);--dr-paper:light-dark(#fff,#211f28);--dr-ink:light-dark(#292534,#eeebf5);--dr-muted:light-dark(#756e80,#b0a8bc);--dr-line:light-dark(#e7e3ee,#3e3749);--dr-soft:light-dark(#f3effb,#342a46);--dr-purple:light-dark(#7050cc,#b69aef);font:14px/1.5 -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,&quot;PingFang SC&quot;,sans-serif;color:var(--dr-ink);background:var(--dr-bg);border-radius:12px;overflow:hidden;color-scheme:light dark}
+#dictation-room *{box-sizing:border-box}#dictation-room button,#dictation-room input{font:inherit;color:inherit}#dictation-room button{cursor:pointer}#dictation-room button:disabled{opacity:.36;cursor:default}#dictation-room button:focus-visible,#dictation-room input:focus-visible{outline:3px solid var(--dr-purple);outline-offset:3px}#dictation-room button{transition:background .15s,border-color .15s}#dictation-room button:hover:not(:disabled){border-color:var(--dr-purple)}#dictation-room .dr-top{height:65px;display:flex;justify-content:space-between;align-items:center;padding:0 34px;background:var(--dr-paper);border-bottom:1px solid var(--dr-line)}#dictation-room .dr-brand{display:flex;align-items:center;gap:10px;color:var(--dr-purple);font-weight:750;font-size:20px}#dictation-room .dr-mark{display:flex;gap:3px;align-items:center}#dictation-room .dr-mark b{width:3px;height:12px;border-radius:3px;background:currentColor}#dictation-room .dr-mark b:nth-child(2){height:23px}#dictation-room .dr-mark b:nth-child(3){height:17px}#dictation-room .dr-nav{display:flex;gap:27px;font-size:13px;color:var(--dr-muted)}#dictation-room .dr-nav .active{color:var(--dr-purple);font-weight:650}#dictation-room .dr-body{max-width:1240px;margin:auto;padding:22px 34px 24px}#dictation-room .dr-crumb{display:flex;gap:9px;align-items:center;font-size:12px;color:var(--dr-muted);margin-bottom:18px}#dictation-room .dr-crumb svg{height:14px;width:14px}#dictation-room .dr-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;gap:14px}#dictation-room h1{font-size:29px;font-weight:700;letter-spacing:-1px;line-height:1.3;margin:0 0 6px}#dictation-room .dr-heading p{font-size:12px;color:var(--dr-muted);margin:0}#dictation-room .dr-mode{font-size:12px;color:var(--dr-purple);display:flex;gap:7px;align-items:center;white-space:nowrap}#dictation-room .dr-mode svg{height:15px;width:15px}#dictation-room .dr-work{background:var(--dr-paper);border:1px solid var(--dr-line);border-radius:12px;overflow:hidden}#dictation-room .dr-transport{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:18px 22px;border-bottom:1px solid var(--dr-line);flex-wrap:wrap}#dictation-room .dr-play-actions{display:flex;gap:9px}#dictation-room .dr-button{border:1px solid var(--dr-line);border-radius:7px;height:39px;padding:0 15px;background:var(--dr-paper);display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:12px;font-weight:600;white-space:nowrap}#dictation-room .dr-button svg{height:14px;width:14px}#dictation-room .dr-primary{background:var(--dr-purple);color:var(--dr-paper);border-color:transparent}#dictation-room .dr-scope{display:flex;gap:2px;padding:3px;border-radius:7px;background:var(--dr-bg)}#dictation-room .dr-scope button{border:1px solid transparent;background:transparent;border-radius:5px;padding:6px 9px;font-size:11px;color:var(--dr-muted);white-space:nowrap}#dictation-room .dr-scope button[aria-pressed=true]{background:var(--dr-paper);border-color:var(--dr-line);color:var(--dr-purple)}#dictation-room .dr-speed{display:flex;align-items:center;gap:8px}#dictation-room .dr-metro{border:0;background:transparent;padding:0;color:var(--dr-purple);height:36px;width:29px}#dictation-room .dr-metro svg{width:29px;height:36px;display:block}#dictation-room .dr-speed input{width:48px;border:0;background:var(--dr-bg);border-radius:5px;padding:6px 2px;text-align:center;font-size:17px;font-weight:600;appearance:textfield;-moz-appearance:textfield}#dictation-room .dr-speed input::-webkit-inner-spin-button{appearance:none}#dictation-room .dr-speed span{font-size:10px;color:var(--dr-muted)}#dictation-room .dr-layout{display:grid;grid-template-columns:minmax(0,1fr) 220px}#dictation-room .dr-editor{padding:22px;min-width:0}#dictation-room .dr-editor-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}#dictation-room .dr-editor-title strong{font-size:13px;display:flex;align-items:center;gap:8px;font-weight:650}#dictation-room .dr-editor-title strong::before{content:&quot;&quot;;width:3px;height:13px;background:var(--dr-purple);border-radius:2px}#dictation-room .dr-meta{color:var(--dr-muted);font-size:11px}#dictation-room .dr-sheet{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-height:348px;min-height:215px;overflow:auto;align-content:start;padding:4px 3px 13px;scrollbar-width:thin}#dictation-room .dr-measure{border:1px solid var(--dr-line);border-radius:8px;min-width:0;background:var(--dr-paper);position:relative;align-self:start;cursor:pointer}#dictation-room .dr-measure.selected{border-color:var(--dr-purple);background:var(--dr-soft);box-shadow:0 0 0 1px var(--dr-purple)}#dictation-room .dr-measure.playing::after{content:&quot;&quot;;position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--dr-purple)}#dictation-room .dr-measure-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px 0;font-size:10px;color:var(--dr-muted)}#dictation-room .dr-select-measure{border:0;background:transparent;padding:0;font-size:10px;color:inherit;min-height:20px}#dictation-room .selected .dr-select-measure{color:var(--dr-purple);font-weight:650}#dictation-room .dr-notation{width:100%;height:111px;display:block;color:var(--dr-ink)}#dictation-room .dr-empty{font-size:11px;fill:var(--dr-muted)}#dictation-room .dr-note-button{cursor:pointer;outline:none}#dictation-room .dr-note-button:focus-visible .dr-note-hit{stroke:var(--dr-purple);stroke-width:2}#dictation-room .dr-note-selected{color:var(--dr-purple)}#dictation-room .dr-note-selected .dr-note-hit{fill:color-mix(in srgb,var(--dr-purple) 12%,transparent)}#dictation-room .dr-measure-foot{display:flex;justify-content:space-between;align-items:center;padding:0 12px 10px;color:var(--dr-muted);font-size:10px}#dictation-room .dr-add{border:0;background:transparent;color:var(--dr-purple);font-size:10px;padding:2px 0}#dictation-room .dr-edit-row{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--dr-line);padding:12px 0;color:var(--dr-muted);font-size:11px}#dictation-room .dr-edit-actions{display:flex;gap:5px}#dictation-room .dr-small{height:29px;border:1px solid var(--dr-line);background:var(--dr-paper);border-radius:5px;display:inline-flex;justify-content:center;align-items:center;padding:0 8px;font-size:11px}#dictation-room .dr-small svg{width:14px;height:14px}#dictation-room .dr-submit{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:5px}#dictation-room .dr-text-button{font-size:11px;border:0;background:transparent;color:var(--dr-muted);padding:8px 0;display:flex;align-items:center;gap:5px}#dictation-room .dr-text-button svg{width:13px;height:13px}#dictation-room .dr-message{font-size:11px;color:var(--dr-muted);min-height:29px;padding-top:13px;line-height:1.6}#dictation-room .dr-reference{margin-top:12px;border-top:1px solid var(--dr-line);padding-top:12px}#dictation-room .dr-reference[hidden]{display:none}#dictation-room .dr-reference strong{font-size:11px;color:var(--dr-muted);font-weight:500}#dictation-room .dr-reference svg{height:83px;max-width:340px}#dictation-room .dr-palette{padding:21px 17px;background:color-mix(in srgb,var(--dr-bg) 55%,var(--dr-paper));border-left:1px solid var(--dr-line)}#dictation-room .dr-palette-head{display:flex;align-items:center;justify-content:space-between;gap:5px;font-size:12px;margin-bottom:14px}#dictation-room .dr-palette-head span{font-size:10px;color:var(--dr-muted)}#dictation-room .dr-label{font-size:10px;color:var(--dr-muted);margin:0 0 7px}#dictation-room .dr-symbols{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:15px}#dictation-room .dr-symbol{border:1px solid var(--dr-line);background:var(--dr-paper);border-radius:6px;height:56px;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:3px;color:var(--dr-purple);gap:1px}#dictation-room .dr-symbol svg{width:33px;height:29px;overflow:visible}#dictation-room .dr-symbol span{font-size:9px;color:var(--dr-muted)}#dictation-room .dr-symbol:active{background:var(--dr-soft)}#dictation-room .dr-extra{display:flex;gap:7px}#dictation-room .dr-extra button{flex:1}#dictation-room .dr-palette-note{font-size:10px;color:var(--dr-muted);line-height:1.8;margin:13px 0 0}#dictation-room .dr-end{font-size:11px;color:var(--dr-muted);margin-top:14px;display:flex;justify-content:space-between;gap:10px}#dictation-room[data-tools=bottom] .dr-layout{grid-template-columns:1fr}#dictation-room[data-tools=bottom] .dr-palette{border-left:0;border-top:1px solid var(--dr-line);display:grid;grid-template-columns:1fr 1fr;gap:0 20px}#dictation-room[data-tools=bottom] .dr-palette-head{grid-column:1/-1}#dictation-room[data-tools=bottom] .dr-symbols{grid-template-columns:repeat(5,1fr)}#dictation-room[data-tools=bottom] .dr-palette-note{margin:4px 0 0}#dictation-room[data-tools=bottom] .dr-sheet{min-height:180px}
+@media(max-width:760px){#dictation-room .dr-transport{gap:12px}#dictation-room .dr-play-actions{flex:1}#dictation-room .dr-speed{margin-left:auto}#dictation-room .dr-layout{grid-template-columns:minmax(0,1fr) 185px}#dictation-room .dr-palette{padding:20px 12px}#dictation-room .dr-editor{padding:20px 16px}#dictation-room .dr-scope{order:3}#dictation-room .dr-symbol{height:52px}}
+@media(max-width:580px){#dictation-room .dr-top{height:56px;padding:0 19px}#dictation-room .dr-brand{font-size:18px}#dictation-room .dr-nav{gap:17px}#dictation-room .dr-nav span:first-child,#dictation-room .dr-nav span:last-child{display:none}#dictation-room .dr-body{padding:18px 16px 20px}#dictation-room h1{font-size:25px}#dictation-room .dr-heading{margin-bottom:18px}#dictation-room .dr-heading p{font-size:11px}#dictation-room .dr-mode{display:none}#dictation-room .dr-crumb{font-size:11px;margin-bottom:14px}#dictation-room .dr-transport{padding:13px;gap:10px}#dictation-room .dr-play-actions{width:100%;flex:auto}#dictation-room .dr-play-actions button{flex:1;padding:0 9px}#dictation-room .dr-speed{order:3}#dictation-room .dr-scope{order:2}#dictation-room .dr-layout{grid-template-columns:1fr}#dictation-room .dr-sheet{grid-template-columns:1fr;min-height:173px;max-height:190px;gap:10px}#dictation-room .dr-palette,#dictation-room[data-tools=bottom] .dr-palette{border-left:0;border-top:1px solid var(--dr-line);padding:17px 15px;display:block}#dictation-room .dr-symbols,#dictation-room[data-tools=bottom] .dr-symbols{grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}#dictation-room .dr-symbol{height:51px}#dictation-room .dr-palette-head{margin-bottom:10px}#dictation-room .dr-palette-note{margin-top:9px}#dictation-room .dr-end span:last-child{display:none}#dictation-room .dr-edit-row{flex-wrap:wrap}#dictation-room .dr-editor{padding:17px 14px 15px}#dictation-room .dr-measure-head{padding:7px 7px 0;font-size:9px}#dictation-room .dr-measure-foot{padding:0 7px 7px;font-size:9px}#dictation-room .dr-notation{height:95px}#dictation-room .dr-measure-head&gt;span{display:none}}
+@media(prefers-reduced-motion:reduce){#dictation-room *{transition:none!important}}
+&lt;/style&gt;
+&lt;div id=&quot;dictation-room&quot; data-tools=&quot;side&quot; aria-label=&quot;节奏听写页面设计&quot;&gt;
+ &lt;header class=&quot;dr-top&quot;&gt;&lt;div class=&quot;dr-brand&quot;&gt;&lt;span class=&quot;dr-mark&quot; aria-hidden=&quot;true&quot;&gt;&lt;b&gt;&lt;/b&gt;&lt;b&gt;&lt;/b&gt;&lt;b&gt;&lt;/b&gt;&lt;b&gt;&lt;/b&gt;&lt;/span&gt;节奏训练&lt;/div&gt;&lt;nav class=&quot;dr-nav&quot; aria-label=&quot;主导航&quot;&gt;&lt;span&gt;首页&lt;/span&gt;&lt;span class=&quot;active&quot; aria-current=&quot;page&quot;&gt;练习&lt;/span&gt;&lt;span&gt;设置&lt;/span&gt;&lt;span&gt;登录&lt;/span&gt;&lt;/nav&gt;&lt;/header&gt;
+ &lt;main class=&quot;dr-body&quot;&gt;&lt;div class=&quot;dr-crumb&quot;&gt;&lt;i data-lucide=&quot;arrow-left&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;预设练习&lt;/span&gt;&lt;span&gt;/&lt;/span&gt;&lt;span&gt;基础时值&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;dr-heading&quot;&gt;&lt;div&gt;&lt;h1&gt;节奏听写 · 练习 1&lt;/h1&gt;&lt;p&gt;听出时值，再把节奏写下来。&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;dr-mode&quot;&gt;&lt;i data-lucide=&quot;headphones&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;节奏听写&lt;/div&gt;&lt;/div&gt;
+ &lt;section class=&quot;dr-work&quot; aria-label=&quot;听写工作区&quot;&gt;
+  &lt;div class=&quot;dr-transport&quot;&gt;&lt;div class=&quot;dr-play-actions&quot;&gt;&lt;button class=&quot;dr-button dr-primary&quot; id=&quot;dr-question&quot;&gt;&lt;i data-lucide=&quot;play&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;播放题目&lt;/span&gt;&lt;/button&gt;&lt;button class=&quot;dr-button&quot; id=&quot;dr-draft&quot;&gt;&lt;i data-lucide=&quot;headphones&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;播放我的答案&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;dr-scope&quot; role=&quot;group&quot; aria-label=&quot;播放范围&quot;&gt;&lt;button id=&quot;dr-all&quot; aria-pressed=&quot;true&quot;&gt;整题&lt;/button&gt;&lt;button id=&quot;dr-current&quot; aria-pressed=&quot;false&quot;&gt;当前小节&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;dr-speed&quot;&gt;&lt;button class=&quot;dr-metro&quot; id=&quot;dr-metro&quot; aria-label=&quot;关闭节拍器&quot; aria-pressed=&quot;true&quot;&gt;&lt;svg viewBox=&quot;0 0 60 76&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;M20 4 H40 L54 71 H6 Z&quot; fill=&quot;var(--dr-soft)&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot;/&gt;&lt;path d=&quot;M20 26 H40 M17 41 H43 M14 56 H46&quot; stroke=&quot;var(--dr-line)&quot; stroke-width=&quot;2&quot;/&gt;&lt;g id=&quot;dr-arm&quot;&gt;&lt;path d=&quot;M30 64 V12&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot;/&gt;&lt;rect x=&quot;26&quot; y=&quot;26&quot; width=&quot;8&quot; height=&quot;11&quot; rx=&quot;2&quot; fill=&quot;currentColor&quot;/&gt;&lt;/g&gt;&lt;circle cx=&quot;30&quot; cy=&quot;64&quot; r=&quot;3&quot; fill=&quot;currentColor&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;input id=&quot;dr-bpm&quot; type=&quot;number&quot; min=&quot;40&quot; max=&quot;240&quot; value=&quot;60&quot; aria-label=&quot;速度 BPM&quot;&gt;&lt;span&gt;BPM&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;div class=&quot;dr-layout&quot;&gt;&lt;section class=&quot;dr-editor&quot; aria-label=&quot;我的答案编辑区&quot;&gt;&lt;div class=&quot;dr-editor-title&quot;&gt;&lt;strong&gt;我的答案&lt;/strong&gt;&lt;span class=&quot;dr-meta&quot; id=&quot;dr-meta&quot;&gt;4/4 拍 · 2 小节&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;dr-sheet&quot; id=&quot;dr-sheet&quot;&gt;&lt;/div&gt;&lt;div class=&quot;dr-edit-row&quot;&gt;&lt;span id=&quot;dr-position&quot;&gt;第 1 小节 · 在末尾添加&lt;/span&gt;&lt;div class=&quot;dr-edit-actions&quot;&gt;&lt;button class=&quot;dr-small&quot; id=&quot;dr-undo&quot; aria-label=&quot;撤销&quot; disabled&gt;&lt;i data-lucide=&quot;undo-2&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/button&gt;&lt;button class=&quot;dr-small&quot; id=&quot;dr-delete&quot;&gt;删除末尾&lt;/button&gt;&lt;button class=&quot;dr-small&quot; id=&quot;dr-clear&quot;&gt;清空小节&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;dr-submit&quot;&gt;&lt;button class=&quot;dr-button dr-primary&quot; id=&quot;dr-check&quot;&gt;&lt;i data-lucide=&quot;check&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;验证当前小节&lt;/span&gt;&lt;/button&gt;&lt;button class=&quot;dr-text-button&quot; id=&quot;dr-answer&quot; aria-expanded=&quot;false&quot;&gt;&lt;i data-lucide=&quot;eye&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;查看答案&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;dr-message&quot; id=&quot;dr-message&quot; role=&quot;status&quot;&gt;选择音符，补全当前小节。&lt;/div&gt;&lt;div class=&quot;dr-reference&quot; id=&quot;dr-reference&quot; hidden&gt;&lt;/div&gt;&lt;/section&gt;
+   &lt;aside class=&quot;dr-palette&quot; aria-label=&quot;音符工具&quot;&gt;&lt;div class=&quot;dr-palette-head&quot;&gt;&lt;strong&gt;写入节奏&lt;/strong&gt;&lt;span id=&quot;dr-remaining&quot;&gt;还差 2 拍&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;p class=&quot;dr-label&quot;&gt;音符&lt;/p&gt;&lt;div class=&quot;dr-symbols&quot; id=&quot;dr-notes&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;p class=&quot;dr-label&quot;&gt;休止符&lt;/p&gt;&lt;div class=&quot;dr-symbols&quot; id=&quot;dr-rests&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;dr-extra&quot;&gt;&lt;button class=&quot;dr-small&quot; id=&quot;dr-dot&quot;&gt;· 附点&lt;/button&gt;&lt;button class=&quot;dr-small&quot; id=&quot;dr-triplet&quot;&gt;三连音&lt;/button&gt;&lt;/div&gt;&lt;p class=&quot;dr-palette-note&quot;&gt;点选谱面音符可替换&lt;br&gt;点击“继续添加”在末尾写入&lt;/p&gt;&lt;/aside&gt;
+  &lt;/div&gt;
+ &lt;/section&gt;&lt;div class=&quot;dr-end&quot;&gt;&lt;span id=&quot;dr-play-status&quot;&gt;先听一遍题目，再逐小节填写。&lt;/span&gt;&lt;span&gt;播放前有 4 拍预备拍&lt;/span&gt;&lt;/div&gt;&lt;/main&gt;
+&lt;/div&gt;
+&lt;script&gt;
+(()=&gt;{
+ const root=document.getElementById(&#x27;dictation-room&#x27;),$=s=&gt;root.querySelector(s);
+ const state={tools:&#x27;side&#x27;,length:&#x27;2&#x27;,bpm:60,enabled:true,scope:&#x27;all&#x27;,measure:0,index:null};
+ const note=(d,rest=false)=&gt;({d,rest});
+ const patterns=[[note(1),note(1),note(2)],[note(.5),note(.5),note(1),note(2)],[note(2),note(2)],[note(1),note(1),note(1),note(1)]];
+ let drafts=[[note(1),note(1)],[]],history=[],showAnswer=false,ctx=null,run=null,frame=null,generation=0;
+ const durations=[4,2,1,.5,.25],names=[&#x27;全音符&#x27;,&#x27;二分音符&#x27;,&#x27;四分音符&#x27;,&#x27;八分音符&#x27;,&#x27;十六分音符&#x27;];
+ const sum=items=&gt;items.reduce((a,n)=&gt;a+n.d,0),near=(a,b)=&gt;Math.abs(a-b)&lt;.0001;
+ const fmt=n=&gt;Number(n.toFixed(2)).toString();
+ function glyph(n,x=15,y=27,scale=1){
+  let shape=&#x27;&#x27;;
+  if(n.rest){if(n.d&gt;=2)shape=&#x27;&lt;path d=&quot;M7 14 H26&quot; stroke=&quot;currentColor&quot;/&gt;&lt;rect x=&quot;11&quot; y=&quot;&#x27;+(n.d===4?14:9)+&#x27;&quot; width=&quot;12&quot; height=&quot;5&quot; fill=&quot;currentColor&quot;/&gt;&#x27;;
+   else if(n.d===1)shape=&#x27;&lt;path d=&quot;M17 3 L22 10 L15 16 L22 23 Q10 20 15 30&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;3&quot;/&gt;&#x27;;
+   else shape=&#x27;&lt;path d=&quot;M24 10 L17 29 M23 11 Q18 17 13 12&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot;/&gt;&lt;circle cx=&quot;12&quot; cy=&quot;11&quot; r=&quot;3&quot; fill=&quot;currentColor&quot;/&gt;&#x27;+(n.d===.25?&#x27;&lt;path d=&quot;M21 18 Q16 24 11 20&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot;/&gt;&lt;circle cx=&quot;10&quot; cy=&quot;19&quot; r=&quot;3&quot; fill=&quot;currentColor&quot;/&gt;&#x27;:&#x27;&#x27;);
+  }else{const base=n.dot?n.d/1.5:n.d;shape=&#x27;&lt;ellipse cx=&quot;13&quot; cy=&quot;26&quot; rx=&quot;5.3&quot; ry=&quot;3.5&quot; transform=&quot;rotate(-22 13 26)&quot; fill=&quot;&#x27;+(base&gt;=2?&#x27;var(--dr-paper)&#x27;:&#x27;currentColor&#x27;)+&#x27;&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.5&quot;/&gt;&#x27;;
+   if(base&lt;4)shape+=&#x27;&lt;path d=&quot;M18 25 V3&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.5&quot;/&gt;&#x27;;
+   if(base&lt;1&amp;&amp;!n.triplet)shape+=&#x27;&lt;path d=&quot;M18 3 Q30 13 24 20 Q27 11 18 10&quot; fill=&quot;currentColor&quot;/&gt;&#x27;;
+   if(base===.25)shape+=&#x27;&lt;path d=&quot;M18 9 Q30 19 24 26 Q27 17 18 16&quot; fill=&quot;currentColor&quot;/&gt;&#x27;;
+   if(n.dot)shape+=&#x27;&lt;circle cx=&quot;24&quot; cy=&quot;25&quot; r=&quot;1.8&quot; fill=&quot;currentColor&quot;/&gt;&#x27;;
+   if(n.triplet)shape+=&#x27;&lt;text x=&quot;24&quot; y=&quot;7&quot; font-size=&quot;9&quot; fill=&quot;currentColor&quot;&gt;3&lt;/text&gt;&#x27;;
+  }
+  return &#x27;&lt;g transform=&quot;translate(&#x27;+(x-13*scale)+&#x27; &#x27;+(y-26*scale)+&#x27;) scale(&#x27;+scale+&#x27;)&quot;&gt;&#x27;+shape+&#x27;&lt;/g&gt;&#x27;;
+ }
+ function notation(items,m,reference=false){
+  let s=&#x27;&lt;svg class=&quot;dr-notation&quot; viewBox=&quot;0 0 260 120&quot; role=&quot;img&quot; aria-label=&quot;第 &#x27;+(m+1)+&#x27; 小节&#x27;+(reference?&#x27;参考答案&#x27;:&#x27;已写 &#x27;+fmt(sum(items))+&#x27; 拍&#x27;)+&#x27;&quot;&gt;&lt;path d=&quot;M15 77 H247 M15 53 V95 M247 53 V95&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1&quot;/&gt;&#x27;;
+  if(!items.length)s+=&#x27;&lt;text x=&quot;130&quot; y=&quot;54&quot; text-anchor=&quot;middle&quot; class=&quot;dr-empty&quot;&gt;点击填写这一小节&lt;/text&gt;&#x27;;
+  let pos=0;items.forEach((n,i)=&gt;{const x=36+pos*48;s+=&#x27;&lt;g &#x27;+(reference?&#x27;&#x27;:&#x27;role=&quot;button&quot; tabindex=&quot;0&quot; aria-label=&quot;第 &#x27;+(m+1)+&#x27; 小节第 &#x27;+(i+1)+&#x27; 个&#x27;+(n.rest?&#x27;休止符&#x27;:&#x27;音符&#x27;)+&#x27;，&#x27;+fmt(n.d)+&#x27; 拍&quot; data-note=&quot;&#x27;+i+&#x27;&quot; data-measure=&quot;&#x27;+m+&#x27;&quot;&#x27;)+&#x27; class=&quot;dr-note-button &#x27;+(!reference&amp;&amp;m===state.measure&amp;&amp;i===state.index?&#x27;dr-note-selected&#x27;:&#x27;&#x27;)+&#x27;&quot;&gt;&lt;rect class=&quot;dr-note-hit&quot; x=&quot;&#x27;+(x-10)+&#x27;&quot; y=&quot;30&quot; width=&quot;&#x27;+Math.max(17,n.d*48-2)+&#x27;&quot; height=&quot;62&quot; rx=&quot;4&quot; fill=&quot;transparent&quot;/&gt;&#x27;+glyph(n,x,77,1.35)+&#x27;&lt;/g&gt;&#x27;;pos+=n.d;});
+  return s+&#x27;&lt;/svg&gt;&#x27;;
+ }
+ function render(){
+  const count=Number(state.length);while(drafts.length&lt;count)drafts.push([]);if(drafts.length&gt;count)drafts.length=count;state.measure=Math.min(state.measure,count-1);
+  root.dataset.tools=state.tools;$(&#x27;#dr-meta&#x27;).textContent=&#x27;4/4 拍 · &#x27;+count+&#x27; 小节&#x27;;
+  $(&#x27;#dr-sheet&#x27;).innerHTML=drafts.map((items,m)=&gt;&#x27;&lt;div class=&quot;dr-measure &#x27;+(m===state.measure?&#x27;selected&#x27;:&#x27;&#x27;)+&#x27;&quot; data-bar=&quot;&#x27;+m+&#x27;&quot;&gt;&lt;div class=&quot;dr-measure-head&quot;&gt;&lt;button class=&quot;dr-select-measure&quot; data-select=&quot;&#x27;+m+&#x27;&quot; aria-pressed=&quot;&#x27;+(m===state.measure)+&#x27;&quot;&gt;第 &#x27;+(m+1)+&#x27; 小节&lt;/button&gt;&lt;span&gt;&#x27;+(m===state.measure?&#x27;正在编辑&#x27;:&#x27;&#x27;)+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;+notation(items,m)+&#x27;&lt;div class=&quot;dr-measure-foot&quot;&gt;&lt;span&gt;&#x27;+fmt(sum(items))+&#x27; / 4 拍&lt;/span&gt;&lt;button class=&quot;dr-add&quot; data-append=&quot;&#x27;+m+&#x27;&quot;&gt;&#x27;+(near(sum(items),4)?&#x27;已填满&#x27;:&#x27;继续添加&#x27;)+&#x27;&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&#x27;).join(&#x27;&#x27;);
+  const items=drafts[state.measure],used=sum(items);$(&#x27;#dr-remaining&#x27;).textContent=near(used,4)?&#x27;已满 4 拍&#x27;:&#x27;还差 &#x27;+fmt(4-used)+&#x27; 拍&#x27;;
+  $(&#x27;#dr-position&#x27;).textContent=&#x27;第 &#x27;+(state.measure+1)+&#x27; 小节 · &#x27;+(state.index===null?&#x27;在末尾添加&#x27;:&#x27;替换第 &#x27;+(state.index+1)+&#x27; 个符号&#x27;);
+  $(&#x27;#dr-delete&#x27;).textContent=state.index===null?&#x27;删除末尾&#x27;:&#x27;删除选中&#x27;;$(&#x27;#dr-delete&#x27;).disabled=items.length===0;$(&#x27;#dr-clear&#x27;).disabled=items.length===0;$(&#x27;#dr-dot&#x27;).disabled=items.length===0;$(&#x27;#dr-undo&#x27;).disabled=history.length===0;
+  $(&#x27;#dr-draft&#x27;).disabled=!(state.scope===&#x27;all&#x27;?drafts.some(a=&gt;a.length):items.length);
+  root.querySelectorAll(&#x27;[data-duration]&#x27;).forEach(b=&gt;{const next=Number(b.dataset.duration),old=state.index===null?0:items[state.index]?.d||0;b.disabled=used-old+next&gt;4.0001;});
+  $(&#x27;#dr-answer&#x27;).setAttribute(&#x27;aria-expanded&#x27;,String(showAnswer));$(&#x27;#dr-answer span&#x27;).textContent=showAnswer?&#x27;收起答案&#x27;:&#x27;查看答案&#x27;;$(&#x27;#dr-reference&#x27;).hidden=!showAnswer;
+  if(showAnswer)$(&#x27;#dr-reference&#x27;).innerHTML=&#x27;&lt;strong&gt;第 &#x27;+(state.measure+1)+&#x27; 小节 · 参考答案&lt;/strong&gt;&#x27;+notation(patterns[state.measure%4],state.measure,true);
+ }
+ function message(text){$(&#x27;#dr-message&#x27;).textContent=text;}
+ function remember(){history.push(JSON.stringify({drafts,measure:state.measure}));if(history.length&gt;30)history.shift();}
+ function edit(entries){const items=drafts[state.measure],copy=items.slice();if(state.index===null)copy.push(...entries);else copy.splice(state.index,1,...entries);if(sum(copy)&gt;4.0001){message(&#x27;这一小节放不下，请选择更短的时值。&#x27;);return;}stop();remember();drafts[state.measure]=copy;state.index=null;showAnswer=false;render();message(near(sum(copy),4)?&#x27;当前小节已填满，可以回放或验证。&#x27;:&#x27;已写入 · 还差 &#x27;+fmt(4-sum(copy))+&#x27; 拍&#x27;);}
+ durations.forEach((d,i)=&gt;{for(const rest of [false,true]){const b=document.createElement(&#x27;button&#x27;);b.className=&#x27;dr-symbol&#x27;;b.dataset.duration=d;b.setAttribute(&#x27;aria-label&#x27;,rest?names[i].replace(&#x27;音符&#x27;,&#x27;休止符&#x27;):names[i]);b.innerHTML=&#x27;&lt;svg viewBox=&quot;0 0 36 34&quot; aria-hidden=&quot;true&quot;&gt;&#x27;+glyph(note(d,rest))+&#x27;&lt;/svg&gt;&lt;span&gt;&#x27;+fmt(d)+&#x27; 拍&lt;/span&gt;&#x27;;b.onclick=()=&gt;edit([note(d,rest)]);$(rest?&#x27;#dr-rests&#x27;:&#x27;#dr-notes&#x27;).append(b);}});
+ $(&#x27;#dr-sheet&#x27;).onclick=e=&gt;{const target=e.target.closest(&#x27;[data-note]&#x27;),append=e.target.closest(&#x27;[data-append]&#x27;),bar=e.target.closest(&#x27;[data-bar]&#x27;);if(!bar)return;state.measure=Number(bar.dataset.bar);state.index=target?Number(target.dataset.note):null;showAnswer=false;if(append)state.index=null;render();message(state.index===null?&#x27;选择音符，在当前小节末尾添加。&#x27;:&#x27;已选中，点击工具中的符号可替换。&#x27;);};
+ $(&#x27;#dr-sheet&#x27;).onkeydown=e=&gt;{if((e.key===&#x27;Enter&#x27;||e.key===&#x27; &#x27;)&amp;&amp;e.target.matches(&#x27;[data-note]&#x27;)){e.preventDefault();e.target.dispatchEvent(new MouseEvent(&#x27;click&#x27;,{bubbles:true}));}};
+ $(&#x27;#dr-delete&#x27;).onclick=()=&gt;{stop();remember();drafts[state.measure].splice(state.index??drafts[state.measure].length-1,1);state.index=null;showAnswer=false;render();message(&#x27;已删除，可撤销。&#x27;);};
+ $(&#x27;#dr-clear&#x27;).onclick=()=&gt;{stop();remember();drafts[state.measure]=[];state.index=null;showAnswer=false;render();message(&#x27;已清空当前小节，可撤销。&#x27;);};
+ $(&#x27;#dr-undo&#x27;).onclick=()=&gt;{if(!history.length)return;stop();const prev=JSON.parse(history.pop());drafts=prev.drafts;state.measure=prev.measure;state.index=null;showAnswer=false;render();message(&#x27;已撤销上一步。&#x27;);};
+ $(&#x27;#dr-dot&#x27;).onclick=()=&gt;{const items=drafts[state.measure],i=state.index??items.length-1;if(i&lt;0)return;const n=items[i];if(n.triplet){message(&#x27;三连音暂不添加附点。&#x27;);return;}state.index=i;edit([{...n,d:n.dot?n.d/1.5:n.d*1.5,dot:!n.dot}]);};
+ $(&#x27;#dr-triplet&#x27;).onclick=()=&gt;edit([0,1,2].map(()=&gt;({...note(1/3),triplet:true})));
+ $(&#x27;#dr-check&#x27;).onclick=()=&gt;{const items=drafts[state.measure],target=patterns[state.measure%4];if(!near(sum(items),4)){message(&#x27;还差 &#x27;+fmt(4-sum(items))+&#x27; 拍，先补全这一小节。&#x27;);return;}const correct=items.length===target.length&amp;&amp;items.every((n,i)=&gt;near(n.d,target[i].d)&amp;&amp;n.rest===target[i].rest);message(correct?&#x27;这一小节正确！可以继续下一小节。&#x27;:&#x27;时值已满，但节奏还不一样。试着只播放当前小节，再听一次。&#x27;);};
+ $(&#x27;#dr-answer&#x27;).onclick=()=&gt;{showAnswer=!showAnswer;render();};
+ function scope(next){stop();state.scope=next;$(&#x27;#dr-all&#x27;).setAttribute(&#x27;aria-pressed&#x27;,String(next===&#x27;all&#x27;));$(&#x27;#dr-current&#x27;).setAttribute(&#x27;aria-pressed&#x27;,String(next===&#x27;current&#x27;));render();}
+ $(&#x27;#dr-all&#x27;).onclick=()=&gt;scope(&#x27;all&#x27;);$(&#x27;#dr-current&#x27;).onclick=()=&gt;scope(&#x27;current&#x27;);
+ function stop(){generation++;if(frame!==null)cancelAnimationFrame(frame);frame=null;if(run)run.nodes.forEach(n=&gt;{try{n.stop();}catch{}});run=null;$(&#x27;#dr-arm&#x27;).removeAttribute(&#x27;transform&#x27;);$(&#x27;#dr-question span&#x27;).textContent=&#x27;播放题目&#x27;;$(&#x27;#dr-draft span&#x27;).textContent=&#x27;播放我的答案&#x27;;root.querySelectorAll(&#x27;.playing&#x27;).forEach(n=&gt;n.classList.remove(&#x27;playing&#x27;));$(&#x27;#dr-play-status&#x27;).textContent=&#x27;先听一遍题目，再逐小节填写。&#x27;;}
+ function tone(time,freq,duration,volume){const osc=ctx.createOscillator(),gain=ctx.createGain();osc.frequency.value=freq;gain.gain.setValueAtTime(0,time);gain.gain.linearRampToValueAtTime(volume,time+.003);gain.gain.exponentialRampToValueAtTime(.001,time+duration);osc.connect(gain).connect(ctx.destination);osc.start(time);osc.stop(time+duration+.01);run.nodes.push(osc);osc.onended=()=&gt;{osc.disconnect();gain.disconnect();};}
+ async function play(kind){if(run?.kind===kind){stop();return;}stop();const ticket=generation;try{ctx??=new AudioContext();await ctx.resume();if(ticket!==generation)return;const measures=state.scope===&#x27;all&#x27;?drafts.map((_,i)=&gt;i):[state.measure];run={kind,measures,start:ctx.currentTime+.12,beat:60/state.bpm,next:0,nodes:[],last:-2};const source=kind===&#x27;question&#x27;?measures.map(i=&gt;patterns[i%4]):measures.map(i=&gt;drafts[i].map(n=&gt;({...n})));
+  source.forEach((items,m)=&gt;{let offset=4+m*4;items.forEach(n=&gt;{if(!n.rest)tone(run.start+offset*run.beat,440,Math.min(n.d*run.beat*.8,.24),.09);offset+=n.d;});});$(kind===&#x27;question&#x27;?&#x27;#dr-question span&#x27;:&#x27;#dr-draft span&#x27;).textContent=&#x27;停止播放&#x27;;animate();
+ }catch{stop();$(&#x27;#dr-play-status&#x27;).textContent=&#x27;暂时无法播放声音，请重试。&#x27;;}}
+ function animate(){if(!run)return;const now=ctx.currentTime,progress=(now-run.start)/run.beat,total=4+run.measures.length*4;while(run.next&lt;total&amp;&amp;run.start+run.next*run.beat&lt;now+.08){const n=run.next++;if(n&lt;4||state.enabled)tone(run.start+n*run.beat,n%4?720:1000,.045,.045);}if(progress&gt;=total){stop();$(&#x27;#dr-play-status&#x27;).textContent=&#x27;播放结束&#x27;;return;}const beat=Math.floor(progress);if(beat!==run.last){run.last=beat;$(&#x27;#dr-play-status&#x27;).textContent=beat&lt;0?&#x27;准备中&#x27;:beat&lt;4?&#x27;预备拍 &#x27;+(beat+1)+&#x27; / 4&#x27;:(run.kind===&#x27;question&#x27;?&#x27;正在播放题目&#x27;:&#x27;正在播放我的答案&#x27;)+&#x27; · 第 &#x27;+(run.measures[Math.floor((beat-4)/4)]+1)+&#x27; 小节&#x27;;root.querySelectorAll(&#x27;[data-bar]&#x27;).forEach(el=&gt;el.classList.toggle(&#x27;playing&#x27;,beat&gt;=4&amp;&amp;Number(el.dataset.bar)===run.measures[Math.floor((beat-4)/4)]));}$(&#x27;#dr-arm&#x27;).setAttribute(&#x27;transform&#x27;,&#x27;rotate(&#x27;+(state.enabled&amp;&amp;progress&gt;=0&amp;&amp;!window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches?-25*Math.cos(Math.PI*progress):0)+&#x27; 30 64)&#x27;);frame=requestAnimationFrame(animate);}
+ $(&#x27;#dr-question&#x27;).onclick=()=&gt;play(&#x27;question&#x27;);$(&#x27;#dr-draft&#x27;).onclick=()=&gt;play(&#x27;draft&#x27;);
+ $(&#x27;#dr-metro&#x27;).onclick=()=&gt;{state.enabled=!state.enabled;$(&#x27;#dr-metro&#x27;).setAttribute(&#x27;aria-pressed&#x27;,String(state.enabled));$(&#x27;#dr-metro&#x27;).setAttribute(&#x27;aria-label&#x27;,state.enabled?&#x27;关闭节拍器&#x27;:&#x27;开启节拍器&#x27;);$(&#x27;#dr-metro&#x27;).style.opacity=state.enabled?&#x27;1&#x27;:&#x27;.35&#x27;;};
+ $(&#x27;#dr-bpm&#x27;).oninput=e=&gt;{const n=Number(e.target.value);if(Number.isInteger(n)&amp;&amp;n&gt;=40&amp;&amp;n&lt;=240){if(n!==state.bpm)stop();state.bpm=n;}};$(&#x27;#dr-bpm&#x27;).onchange=()=&gt;{$(&#x27;#dr-bpm&#x27;).value=state.bpm;};
+ window.addEventListener(&#x27;pagehide&#x27;,()=&gt;{stop();if(ctx)void ctx.close();});
+ render();
+ if(globalThis.Tweak){const tweak=new Tweak({container:root,onChange:()=&gt;{stop();state.index=null;history=[];showAnswer=false;render();}});tweak.addSelect(state,&#x27;length&#x27;,{label:&#x27;题目长度&#x27;,options:[{label:&#x27;2 小节&#x27;,value:&#x27;2&#x27;},{label:&#x27;4 小节&#x27;,value:&#x27;4&#x27;},{label:&#x27;8 小节&#x27;,value:&#x27;8&#x27;}]});tweak.addSelect(state,&#x27;tools&#x27;,{label:&#x27;音符工具位置&#x27;,options:[{label:&#x27;右侧 · 推荐&#x27;,value:&#x27;side&#x27;},{label:&#x27;下方&#x27;,value:&#x27;bottom&#x27;}]});}
+})();
+&lt;/script&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+  let lastPointerWasTouch = false;
+  let pinnedByTouch = false;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    pinnedByTouch = false;
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handlePointer = (event) =&gt; {
+    lastPointerWasTouch =
+      event.type === &quot;pointerdown&quot; &amp;&amp; event.pointerType === &quot;touch&quot;;
+  };
+  const handleTouchClick = (event) =&gt; {
+    const isTouch = event.pointerType === &quot;touch&quot; || lastPointerWasTouch;
+    lastPointerWasTouch = false;
+    if (!isTouch || event.detail === 0) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (
+      trigger == null ||
+      !trigger.isConnected ||
+      getContent(trigger).length === 0 ||
+      (pinnedByTouch &amp;&amp; activeTrigger === trigger)
+    ) {
+      if (pinnedByTouch) {
+        closeTooltip();
+      }
+      return;
+    }
+    openTooltip(trigger);
+    pinnedByTouch = activeTrigger === trigger;
+    window.setTimeout(() =&gt; {
+      if (activeTrigger === trigger &amp;&amp; !trigger.isConnected) {
+        closeTooltip(false);
+      }
+    }, 0);
+  };
+  const handleLeave = (event) =&gt; {
+    if (pinnedByTouch) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    lastPointerWasTouch = false;
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    lastPointerWasTouch = false;
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerdown&quot;, handlePointer);
+    document.removeEventListener(&quot;pointercancel&quot;, handlePointer);
+    document.removeEventListener(&quot;click&quot;, handleTouchClick);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerdown&quot;, handlePointer);
+  document.addEventListener(&quot;pointercancel&quot;, handlePointer);
+  document.addEventListener(&quot;click&quot;, handleTouchClick);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-tabs&quot;&gt;
+(() =&gt; {
+  const selector = &#x27;.nav[role=&quot;tablist&quot;] [role=&quot;tab&quot;]&#x27;;
+  const disabled = &#x27;:disabled,[aria-disabled=&quot;true&quot;]&#x27;;
+  const selectTab = (selected) =&gt; {
+    const panelId = selected.getAttribute(&quot;aria-controls&quot;);
+    for (const tab of selected.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;)) {
+      const active = tab === selected;
+      tab.classList.toggle(&quot;active&quot;, active);
+      tab.setAttribute(&quot;aria-selected&quot;, String(active));
+      const id = tab.getAttribute(&quot;aria-controls&quot;);
+      const panel = id &amp;&amp; document.getElementById(id);
+      if (panel != null) {
+        panel.hidden = id !== panelId;
+        if (!panel.hidden &amp;&amp; selected.id) {
+          panel.setAttribute(&quot;aria-labelledby&quot;, selected.id);
+        }
+      }
+    }
+  };
+  const interact = (event) =&gt; {
+    const tab = event.target?.closest?.(selector);
+    if (event.defaultPrevented || tab == null || tab.matches(disabled)) {
+      return;
+    }
+    if (event.type === &quot;click&quot;) {
+      selectTab(tab);
+      return;
+    }
+    const tabs = Array.from(
+      tab.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;),
+    ).filter((candidate) =&gt; !candidate.matches(disabled));
+    const current = tabs.indexOf(tab);
+    let next;
+    if (event.key === &quot;ArrowRight&quot; || event.key === &quot;ArrowDown&quot;) {
+      next = (current + 1) % tabs.length;
+    } else if (event.key === &quot;ArrowLeft&quot; || event.key === &quot;ArrowUp&quot;) {
+      next = (current + tabs.length - 1) % tabs.length;
+    } else if (event.key === &quot;Home&quot;) {
+      next = 0;
+    } else if (event.key === &quot;End&quot;) {
+      next = tabs.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    tabs[next].focus();
+    selectTab(tabs[next]);
+  };
+
+  for (const list of document.querySelectorAll(&#x27;.nav[role=&quot;tablist&quot;]&#x27;)) {
+    const selected =
+      list.querySelector(&#x27;[role=&quot;tab&quot;][aria-selected=&quot;true&quot;]&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;].active&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;]&#x27;);
+    if (selected != null) {
+      selectTab(selected);
+    }
+  }
+  document.addEventListener(&quot;click&quot;, interact);
+  document.addEventListener(&quot;keydown&quot;, interact);
+  window.addEventListener(&quot;pagehide&quot;, () =&gt; {
+    document.removeEventListener(&quot;click&quot;, interact);
+    document.removeEventListener(&quot;keydown&quot;, interact);
+  }, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>

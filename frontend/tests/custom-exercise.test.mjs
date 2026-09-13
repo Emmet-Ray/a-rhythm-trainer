@@ -15,6 +15,8 @@ const { default: CustomPracticePage } = await server.ssrLoadModule("/src/pages/C
 const { default: PracticeSettings } = await server.ssrLoadModule("/src/practice/PracticeSettings.tsx");
 const { default: RhythmPlayback } = await server.ssrLoadModule("/src/practice/RhythmPlayback.tsx");
 const { default: App } = await server.ssrLoadModule("/src/App.tsx");
+const { default: RhythmScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmScore.tsx");
+const { createExerciseTimeline } = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
 
 async function renderApp(path) {
   const stream = await renderToReadableStream(createElement(MemoryRouter, { initialEntries: [path] }, createElement(App)));
@@ -87,7 +89,7 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
   assert.match(await renderApp("/preset"), /class="design-system preset-library"/);
   const tapping = await renderApp("/preset/basic-values-01");
   assert.match(tapping, /class="design-system practice-page"/);
-  assert.match(tapping, /data-feedback="neutral"/);
+  assert.doesNotMatch(tapping, /trainer-feedback|rhythm-score-overlay/);
   assert.match(tapping, /data-action="start"/);
   assert.match(tapping, /data-action="listen"/);
   assert.match(await renderApp("/random"), /class="design-system random-page random-index"/);
@@ -386,7 +388,7 @@ test("击拍使用侧栏布局，空态与真实题目均将操作按钮放在�
     const actions = html.indexOf('class="trainer-actions"');
     const score = html.indexOf(path.startsWith("/preset") ? 'aria-label="节奏乐谱"' : 'aria-label="空白节奏乐谱"');
     assert.ok(actions >= 0 && actions < score);
-    assert.ok(score < html.indexOf('class="trainer-feedback"'));
+    assert.doesNotMatch(html, /trainer-feedback|试听中|试听结束|trainer-result|trainer-countdown/);
     const toolbar = html.indexOf('class="trainer-toolbar"');
     const body = html.indexOf('class="trainer-body"');
     assert.ok(toolbar < actions && actions < body);
@@ -400,6 +402,21 @@ test("击拍使用侧栏布局，空态与真实题目均将操作按钮放在�
     assert.match(html, /practice-layout--stacked/);
     assert.doesNotMatch(html, /practice-layout--sidebar/);
   }
+});
+
+test("谱面临时提示位于滚动内容之外，省略提示时不渲染浮层", () => {
+  const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [
+    { elements: [{ kind: "note", noteValue: "whole" }] },
+  ] };
+  const props = { exercise, timeline: createExerciseTimeline(exercise, 60, 4, { perfectMs: 50, hitMs: 150 }),
+    activeEventIndex: null, timingEvents: [], playback: null };
+  const plain = renderToStaticMarkup(createElement(RhythmScore, props));
+  assert.doesNotMatch(plain, /rhythm-score-overlay/);
+  const html = renderToStaticMarkup(createElement(RhythmScore, { ...props,
+    overlay: createElement("span", null, "临时提示"),
+  }));
+  assert.match(html, /aria-label="节奏乐谱"[^>]*><div><\/div><\/div><div class="rhythm-score-overlay"><span>临时提示<\/span><\/div><\/div>/);
+  assert.match(html, /class="rhythm-score-stage"/);
 });
 
 test("公共设置提供一致默认值，多实例的标签和输入 ID 不冲突", () => {
