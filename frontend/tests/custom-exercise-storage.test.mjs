@@ -7,9 +7,9 @@ const server = await createServer({
   server: { middlewareMode: true, watch: null, ws: false },
   optimizeDeps: { noDiscovery: true, include: [] },
 });
-let saveCustomExercise, listCustomExercises;
+let saveCustomExercise, listCustomExercises, getCustomExerciseSummary, clearCustomExercises;
 try {
-  ({ saveCustomExercise, listCustomExercises } = await server.ssrLoadModule("/src/exercises/customExercises.ts"));
+  ({ saveCustomExercise, listCustomExercises, getCustomExerciseSummary, clearCustomExercises } = await server.ssrLoadModule("/src/exercises/customExercises.ts"));
 } finally {
   await server.close();
 }
@@ -26,6 +26,40 @@ const note = (noteValue, dots) => ({ kind: "note", noteValue, ...(dots === undef
 const candidate = (mode = "tapping") => ({
   name: "  我的练习  ", mode,
   exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [note("whole")] }] },
+});
+
+test("本地概览汇总两种模式，空题库为零，损坏和读取失败不返回零", () => {
+  const storage = memoryStorage();
+  assert.deepEqual(getCustomExerciseSummary(storage), { total: 0, tapping: 0, dictation: 0, estimatedBytes: 0 });
+  saveCustomExercise(candidate(), storage);
+  saveCustomExercise(candidate(), storage);
+  saveCustomExercise(candidate("dictation"), storage);
+  assert.deepEqual(getCustomExerciseSummary(storage), { total: 3, tapping: 2, dictation: 1, estimatedBytes: ("rhythm-trainer.custom-exercises".length + storage.raw.length) * 2 });
+  assert.throws(() => getCustomExerciseSummary(memoryStorage("broken")), /损坏/);
+  assert.throws(() => getCustomExerciseSummary({ getItem() { throw Error(); } }), /无法读取/);
+});
+
+test("空间按原始存储文本估算，中文与 emoji 保留代码单元长度，清空后归零", () => {
+  const storage = memoryStorage();
+  saveCustomExercise({ ...candidate(), name: "中文🎵" }, storage);
+  storage.raw = `  ${storage.raw}  `;
+  const summary = getCustomExerciseSummary(storage);
+  assert.equal(summary.estimatedBytes, ("rhythm-trainer.custom-exercises".length + storage.raw.length) * 2);
+  clearCustomExercises({ removeItem() { storage.raw = null; } });
+  assert.equal(getCustomExerciseSummary(storage).estimatedBytes, 0);
+});
+
+test("清空只删除练习键，保留其他数据，支持空或损坏题库", () => {
+  for (const raw of [null, "broken", JSON.stringify({version: 1, exercises: []})]) {
+    const entries = new Map([["rhythm-trainer.appearance", "blue"], ["unrelated", "keep"]]);
+    if (raw !== null) entries.set("rhythm-trainer.custom-exercises", raw);
+    clearCustomExercises({ removeItem(key) { entries.delete(key); } });
+    assert.deepEqual([...entries], [["rhythm-trainer.appearance", "blue"], ["unrelated", "keep"]]);
+  }
+});
+
+test("清空失败抛出可操作错误，不报告成功", () => {
+  assert.throws(() => clearCustomExercises({ removeItem() { throw Error("blocked"); } }), /清空本地练习失败/);
 });
 
 test("空存储返回空列表，不主动写入初始化数据", () => {

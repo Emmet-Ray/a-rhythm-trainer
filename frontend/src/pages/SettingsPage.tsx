@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { DEFAULT_THEME, getAppearance, selectTheme, themes, type Theme } from "../settings/appearance";
+import {
+  DEFAULT_THEME,
+  getAppearance,
+  selectTheme,
+  themes,
+  type Theme,
+} from "../settings/appearance";
+import {
+  clearCustomExercises,
+  getCustomExerciseSummary,
+} from "../exercises/customExercises";
 
 const categories = [
   { id: "appearance", label: "外观" },
@@ -9,7 +19,8 @@ const categories = [
 ] as const;
 
 export default function SettingsPage() {
-  const [category, setCategory] = useState<typeof categories[number]["id"]>("appearance");
+  const [category, setCategory] =
+    useState<(typeof categories)[number]["id"]>("appearance");
   const [appearance, setAppearance] = useState(getAppearance);
 
   function choose(theme: Theme) {
@@ -17,73 +28,201 @@ export default function SettingsPage() {
   }
 
   return (
-    <section className="design-system settings-page" aria-labelledby="settings-heading">
+    <section
+      className="design-system settings-page"
+      aria-labelledby="settings-heading"
+    >
       <title>设置 · 节奏训练</title>
-      <header className="page-heading"><h1 id="settings-heading">设置</h1></header>
+      <header className="page-heading">
+        <h1 id="settings-heading">设置</h1>
+      </header>
       <div className="settings-layout">
         <nav className="settings-navigation" aria-label="设置分类">
-          {categories.map(item => (
-            <button key={item.id} type="button" aria-pressed={category === item.id}
-              aria-controls="settings-content" onClick={() => setCategory(item.id)}>
+          {categories.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={category === item.id}
+              aria-controls="settings-content"
+              onClick={() => setCategory(item.id)}
+            >
               {item.label}
             </button>
           ))}
         </nav>
         <div id="settings-content" className="settings-content">
           {category === "appearance" && (
-          <section className="settings-section" aria-labelledby="appearance-heading">
-            <h2 id="appearance-heading">外观</h2>
-            <fieldset className="theme-options">
-              <legend>配色主题</legend>
-              {themes.map(theme => (
-                <label key={theme.id}>
-                  <input type="radio" name="theme" value={theme.id}
-                    checked={appearance.theme === theme.id} onChange={() => choose(theme.id)} />
-                  <span className="theme-swatch" data-theme-preview={theme.id} aria-hidden="true" />
-                  <span>{theme.label}</span>
-                </label>
-              ))}
-            </fieldset>
-            <div className="settings-actions">
-              <button type="button" onClick={() => choose(DEFAULT_THEME)}>恢复默认</button>
-            </div>
-            <p className="settings-message" role="status">
-              {!appearance.storageAvailable && "浏览器存储不可用，本次配色仍会生效，但刷新后可能恢复默认。"}
-            </p>
-          </section>
+            <section
+              className="settings-section"
+              aria-labelledby="appearance-heading"
+            >
+              <h2 id="appearance-heading">外观</h2>
+              <fieldset className="theme-options">
+                <legend>配色主题</legend>
+                {themes.map((theme) => (
+                  <label key={theme.id}>
+                    <input
+                      type="radio"
+                      name="theme"
+                      value={theme.id}
+                      checked={appearance.theme === theme.id}
+                      onChange={() => choose(theme.id)}
+                    />
+                    <span
+                      className="theme-swatch"
+                      data-theme-preview={theme.id}
+                      aria-hidden="true"
+                    />
+                    <span>{theme.label}</span>
+                  </label>
+                ))}
+              </fieldset>
+              <div className="settings-actions">
+                <button type="button" onClick={() => choose(DEFAULT_THEME)}>
+                  恢复默认
+                </button>
+              </div>
+              <p className="settings-message" role="status">
+                {!appearance.storageAvailable &&
+                  "浏览器存储不可用，本次配色仍会生效，但刷新后可能恢复默认。"}
+              </p>
+            </section>
           )}
-          {category === "local-data" && (
-          <section className="settings-section" aria-labelledby="local-data-heading">
-            <header className="settings-section-heading">
-              <h2 id="local-data-heading">本地数据</h2>
-              <span>待实现</span>
-            </header>
-            <p>管理保存在当前浏览器中的自定义练习。</p>
-            {/* TODO: 展示和管理本地练习；与账号题库分开，不作为普通缓存清理。 */}
-          </section>
-          )}
+          {category === "local-data" && <LocalDataSettings />}
           {category === "sound" && (
-          <section className="settings-section" aria-labelledby="sound-heading">
-            <header className="settings-section-heading">
-              <h2 id="sound-heading">声音</h2>
-              <span>待实现</span>
-            </header>
-            <p>选择节拍器和练习音色。</p>
-            {/* TODO: 接入音色偏好与试听；练习页仍保留节拍器开关。 */}
-          </section>
+            <section
+              className="settings-section"
+              aria-labelledby="sound-heading"
+            >
+              <header className="settings-section-heading">
+                <h2 id="sound-heading">声音</h2>
+                <span>待实现</span>
+              </header>
+              <p>选择节拍器和练习音色。</p>
+              {/* TODO: 接入音色偏好与试听；练习页仍保留节拍器开关。 */}
+            </section>
           )}
           {category === "difficulty" && (
-          <section className="settings-section" aria-labelledby="difficulty-heading">
-            <header className="settings-section-heading">
-              <h2 id="difficulty-heading">练习难度</h2>
-              <span>待实现</span>
-            </header>
-            <p>调整击拍判定的精准度要求。</p>
-            {/* TODO: 确定判定容差档位后再接入；不改变题目内容或 BPM。 */}
-          </section>
+            <section
+              className="settings-section"
+              aria-labelledby="difficulty-heading"
+            >
+              <header className="settings-section-heading">
+                <h2 id="difficulty-heading">练习难度</h2>
+                <span>待实现</span>
+              </header>
+              <p>调整击拍判定的精准度要求。</p>
+              {/* TODO: 确定判定容差档位后再接入；不改变题目内容或 BPM。 */}
+            </section>
           )}
         </div>
       </div>
+    </section>
+  );
+}
+
+type LocalDataState =
+  | { summary: ReturnType<typeof getCustomExerciseSummary>; error: null }
+  | { summary: null; error: string };
+
+function formatStorageSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+}
+
+function readLocalData(): LocalDataState {
+  try {
+    return { summary: getCustomExerciseSummary(), error: null };
+  } catch (error) {
+    return {
+      summary: null,
+      error: error instanceof Error ? error.message : "无法读取本地练习。",
+    };
+  }
+}
+
+// 每次进入此分类重新读取；不根据登录状态切换数据来源。
+function LocalDataSettings() {
+  const [data, setData] = useState(readLocalData);
+  const [message, setMessage] = useState("");
+  const [clearError, setClearError] = useState("");
+
+  function clear() {
+    if (!window.confirm("将删除当前浏览器保存的全部自定义练习，确定清空吗？"))
+      return;
+    setMessage("");
+    setClearError("");
+    try {
+      clearCustomExercises();
+      setData(readLocalData());
+      setMessage("本地练习已清空。");
+    } catch (error) {
+      setClearError(
+        error instanceof Error ? error.message : "清空本地练习失败。",
+      );
+    }
+  }
+
+  return (
+    <section className="settings-section" aria-labelledby="local-data-heading">
+      <h2 id="local-data-heading">本地数据</h2>
+      {data.summary ? (
+        <dl className="local-data-summary">
+          <div>
+            <dt>击拍练习数量</dt>
+            <dd>{data.summary.tapping} 道</dd>
+          </div>
+          <div>
+            <dt>节奏听写数量</dt>
+            <dd>{data.summary.dictation} 道</dd>
+          </div>
+          <div>
+            <dt>本地练习总数量</dt>
+            <dd>{data.summary.total} 道</dd>
+          </div>
+          <div>
+            <dt title="仅估算本地练习存储文本的大小，不包含主题偏好、账号数据或浏览器缓存。">
+              占用空间
+            </dt>
+            <dd>
+              {data.summary.estimatedBytes > 0 ? "约 " : ""}
+              {formatStorageSize(data.summary.estimatedBytes)}
+            </dd>
+          </div>
+        </dl>
+      ) : (
+        <div className="settings-actions">
+          <p role="alert" className="settings-message">
+            {data.error}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setData(readLocalData());
+              setMessage("");
+            }}
+          >
+            重新读取
+          </button>
+        </div>
+      )}
+      <div className="settings-actions">
+        <button
+          type="button"
+          className="local-data-clear"
+          disabled={data.summary?.total === 0}
+          onClick={clear}
+        >
+          清空本地练习
+        </button>
+      </div>
+      {clearError && (
+        <p role="alert" className="settings-message">
+          {clearError}
+        </p>
+      )}
+      <p role="status">{message}</p>
     </section>
   );
 }

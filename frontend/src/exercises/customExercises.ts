@@ -28,26 +28,28 @@ function getStorage(storage?: StorageAccess): StorageAccess {
   }
 }
 
-function readAll(storage: StorageAccess): CustomExercise[] {
+function readAll(storage: StorageAccess): { exercises: CustomExercise[]; estimatedBytes: number } {
   let raw: string | null;
   try {
     raw = storage.getItem(STORAGE_KEY);
   } catch {
     throw new Error("无法读取本地练习，请检查浏览器存储后重试。");
   }
-  if (raw === null) return [];
+  if (raw === null) return { exercises: [], estimatedBytes: 0 };
 
   try {
     const data: unknown = JSON.parse(raw);
     if (!isRecord(data) || data.version !== 1 || !Array.isArray(data.exercises)) throw new Error("无效存储格式");
     const ids = new Set<string>();
-    return data.exercises.map((item: unknown) => {
+    const exercises = data.exercises.map((item: unknown) => {
       if (!isRecord(item) || typeof item.id !== "string" || !item.id.trim() || ids.has(item.id)
         || typeof item.name !== "string" || !item.name.trim()) throw new Error("无效题目");
       requireMode(item.mode);
       ids.add(item.id);
       return { id: item.id, name: item.name.trim(), mode: item.mode, exercise: parseRhythmExercise(item.exercise) };
     });
+    // 按 UTF-16 代码单元估算键与原始值的大小，不代表浏览器实际磁盘占用或配额。
+    return { exercises, estimatedBytes: (STORAGE_KEY.length + raw.length) * 2 };
   } catch {
     throw new Error("本地练习数据损坏或版本暂不支持，无法读取或追加保存；原数据未修改。");
   }
@@ -56,7 +58,23 @@ function readAll(storage: StorageAccess): CustomExercise[] {
 /** 每次读取最新存储，按模式返回独立快照；读取失败抛错，不回退成空题库。 */
 export function listCustomExercises(mode: CustomMode, storage?: StorageAccess): CustomExercise[] {
   requireMode(mode);
-  return readAll(getStorage(storage)).filter((item) => item.mode === mode);
+  return readAll(getStorage(storage)).exercises.filter((item) => item.mode === mode);
+}
+
+/** 一次读取并校验完整题库；失败时抛错，不把未知数量当作零。 */
+export function getCustomExerciseSummary(storage?: StorageAccess) {
+  const { exercises, estimatedBytes } = readAll(getStorage(storage));
+  const tapping = exercises.filter(item => item.mode === "tapping").length;
+  return { total: exercises.length, tapping, dictation: exercises.length - tapping, estimatedBytes };
+}
+
+/** 删除当前浏览器的全部本地练习（包括损坏数据）；调用方负责确认，不影响其他存储项。 */
+export function clearCustomExercises(storage?: Pick<Storage, "removeItem">): void {
+  try {
+    (storage ?? globalThis.localStorage).removeItem(STORAGE_KEY);
+  } catch {
+    throw new Error("清空本地练习失败，请检查浏览器是否允许网站存储后重试。");
+  }
 }
 
 /**
@@ -70,7 +88,7 @@ export function saveCustomExercise(input: Omit<CustomExercise, "id">, storage?: 
   if (typeof input.name !== "string" || !input.name.trim()) throw new Error("请输入练习名称。");
   const exercise = parseRhythmExercise(input.exercise);
   const target = getStorage(storage);
-  const existing = readAll(target);
+  const { exercises: existing } = readAll(target);
   const item = { id: `custom-${crypto.randomUUID()}`, name: input.name.trim(), mode: input.mode, exercise };
   if (existing.some((previous) => previous.id === item.id)) throw new Error("生成题目编号失败，请重试。");
   try {
