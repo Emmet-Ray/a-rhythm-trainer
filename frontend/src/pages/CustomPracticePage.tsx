@@ -282,10 +282,13 @@ function CustomExerciseList({
           ← 自定义练习
         </ReturnLink>
         <h1>{label}</h1>
+      </header>
+      <section className="custom-catalog" aria-label="题目列表">
+      <div className="custom-catalog-actions">
         <Link className="custom-new-link" to={`/custom/${mode}/new`}>
           新建练习
         </Link>
-      </header>
+      </div>
       {result.error ? (
         <div className="custom-storage-error">
           <p role="alert">{result.error}</p>
@@ -350,6 +353,7 @@ function CustomExerciseList({
           </button>
         </nav>
       )}
+      </section>
     </div>
   );
 }

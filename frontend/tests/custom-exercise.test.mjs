@@ -342,6 +342,8 @@ test("已保存列表链接到所属模式的题目", async (t) => {
     assert.match(html, /开始练习/);
     assert.doesNotMatch(html, /question-meta|4\/4 拍|\d+ 小节/);
     assert.match(html, /practice-titlebar custom-list-heading/);
+    assert.match(html, /<section class="custom-catalog" aria-label="题目列表">[\s\S]*class="custom-new-link"[\s\S]*aria-label="已保存的自定义练习"/);
+    assert.doesNotMatch(html.match(/<header class="practice-titlebar custom-list-heading">[\s\S]*?<\/header>/)?.[0] ?? "", /custom-new-link/);
     assert.doesNotMatch(html, /未开放|eyebrow/);
     assert.doesNotMatch(html, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
   }

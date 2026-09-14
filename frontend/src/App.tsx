@@ -138,6 +138,7 @@ export default App;
 
 function PracticeNavigation({ pathname }: { pathname: string }) {
   const ref = useRef<HTMLDetailsElement>(null);
+  const mouseInside = useRef(false);
   useEffect(() => {
     function closeOutside(event: PointerEvent) {
       if (ref.current && event.target instanceof Node && !ref.current.contains(event.target)) ref.current.open = false;
@@ -149,11 +150,19 @@ function PracticeNavigation({ pathname }: { pathname: string }) {
   return (
     <details className="practice-navigation" ref={ref}
       onPointerEnter={(event) => {
-        // 只对鼠标启用悬停；触屏仍由 summary 的原生点击行为控制。
-        if (event.pointerType === "mouse") event.currentTarget.open = true;
+        if (event.pointerType === "mouse") {
+          mouseInside.current = true;
+          event.currentTarget.open = true;
+        }
       }}
       onPointerLeave={(event) => {
-        if (event.pointerType === "mouse") event.currentTarget.open = false;
+        if (event.pointerType === "mouse") {
+          mouseInside.current = false;
+          event.currentTarget.open = false;
+        }
+      }}
+      onPointerDown={(event) => {
+        mouseInside.current = event.pointerType === "mouse";
       }}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
@@ -165,7 +174,10 @@ function PracticeNavigation({ pathname }: { pathname: string }) {
           event.currentTarget.querySelector("summary")?.focus();
         }
       }}>
-      <summary>练习</summary>
+      <summary onClick={(event) => {
+        // 鼠标悬停已展开时，点击不反向关闭；键盘和触屏保留原生切换。
+        if (event.detail > 0 && mouseInside.current && ref.current?.open) event.preventDefault();
+      }}>练习</summary>
       <ul className="practice-navigation-links" aria-label="练习来源">
         {[
           { path: "/preset", label: "预设练习" },

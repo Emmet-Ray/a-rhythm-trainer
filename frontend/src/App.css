@@ -1,5 +1,5 @@
 /* 外壳不依赖页面内容或加载状态；页头与工作区共享同一条外侧对齐线。 */
-:root { --site-content-width: 1440px; --site-gutter: 40px; }
+:root { --site-content-width: 1440px; --site-gutter: 40px; --site-sidebar-width: 260px; --site-column-gap: 32px; --site-heading-gap: 32px; }
 body { background: var(--ds-subtle); }
 .site-shell { min-height: 100svh; display: flex; flex-direction: column; }
 .site-header { display: flex; justify-content: space-between; align-items: center; min-height: 76px; padding-inline: max(var(--site-gutter), calc((100% - var(--site-content-width)) / 2)); border-bottom: 1px solid var(--line); background: var(--ds-surface); }
@@ -27,7 +27,7 @@ body { background: var(--ds-subtle); }
 .login-code-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
 .login-feedback { min-height: 36px; padding: 4px 0; color: var(--muted); font-size: 13px; }
 .login-form > button[type="submit"]:not(:disabled) { background: var(--accent); border-color: var(--accent); color: white; }
-.site-shell > main { flex: 1; min-width: 0; width: 100%; max-width: calc(var(--site-content-width) + 2 * var(--site-gutter)); margin-inline: auto; padding: 28px var(--site-gutter) 48px; }
+.site-shell > main { display: flow-root; flex: 1; min-width: 0; width: 100%; max-width: calc(var(--site-content-width) + 2 * var(--site-gutter)); margin-inline: auto; padding: 28px var(--site-gutter) 48px; }
 .site-shell > .auth-error { width: 100%; max-width: calc(var(--site-content-width) + 2 * var(--site-gutter)); margin: 12px auto 0; padding-inline: var(--site-gutter); }
 main:focus { outline: none; }
 .page-heading { margin-bottom: 20px; }
