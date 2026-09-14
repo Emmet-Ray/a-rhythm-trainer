@@ -17,6 +17,8 @@ const { default: RhythmPlayback } = await server.ssrLoadModule("/src/practice/Rh
 const { default: PracticeCue } = await server.ssrLoadModule("/src/practice/PracticeCue.tsx");
 const { RhythmDraftScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmDraftScore.tsx");
 const { default: App } = await server.ssrLoadModule("/src/App.tsx");
+const { VisitsContext } = await server.ssrLoadModule("/src/navigation/usePageNavigation.ts");
+const { PageVisits } = await server.ssrLoadModule("/src/navigation/PageVisits.ts");
 const { default: RhythmScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmScore.tsx");
 const { createExerciseTimeline } = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
 
@@ -200,15 +202,49 @@ test("登录表单保留标签、自动填充和反馈语义，未发送验证�
   assert.match(html, /<button type="submit" disabled="">登录/);
 });
 
-async function renderPage(path, route, auth = { state: { status: "guest" }, busy: false }) {
-  const stream = await renderToReadableStream(createElement(MemoryRouter, { initialEntries: [path] },
+async function renderPage(path, route, auth = { state: { status: "guest" }, busy: false }, visits = null) {
+  const stream = await renderToReadableStream(createElement(VisitsContext, { value: visits }, createElement(MemoryRouter, { initialEntries: [{ pathname: path, key: "test-visit" }] },
     createElement(Routes, null,
       createElement(Route, { path: route, element: createElement(CustomPracticePage, { auth }) }),
     ),
-  ));
+  )));
   await stream.allReady;
   return new Response(stream).text();
 }
+
+test("原访问恢复草稿内容和生效设置，身份及模式不同不载入，清除后回到空草稿", async () => {
+  const visits = new PageVisits();
+  const draft = {
+    name: "账号一草稿",
+    measures: [[], [], [{ kind: "note", noteValue: "half" }]],
+    selectedMeasureIndex: 2,
+    settings: { bpm: 93, metronomeEnabled: false },
+  };
+  const field = "custom:account:1:tapping:draft";
+  visits.write("test-visit", field, draft);
+  const auth = { state: { status: "authenticated", user: { id: 1 } }, busy: false };
+  const html = await renderPage("/custom/tapping/new", "/custom/:mode/new", auth, visits);
+  assert.match(html, /value="账号一草稿"/);
+  assert.match(html, /aria-label="当前小节数量">3/);
+  assert.match(html, /aria-label="跳到小节 3" aria-pressed="true"/);
+  assert.match(html, /aria-label="节拍器" aria-pressed="false"/);
+  assert.match(html, /value="93"/);
+  assert.doesNotMatch(html, /预备拍：|>停止<|正在保存/);
+  for (const other of [
+    { state: { status: "guest" }, busy: false },
+    { state: { status: "authenticated", user: { id: 2 } }, busy: false },
+  ]) {
+    const isolated = await renderPage("/custom/tapping/new", "/custom/:mode/new", other, visits);
+    assert.doesNotMatch(isolated, /账号一草稿/);
+    assert.match(isolated, /aria-label="当前小节数量">2/);
+  }
+  const otherMode = await renderPage("/custom/dictation/new", "/custom/:mode/new", auth, visits);
+  assert.doesNotMatch(otherMode, /账号一草稿/);
+  visits.forget("test-visit", field, draft);
+  const cleared = await renderPage("/custom/tapping/new", "/custom/:mode/new", auth, visits);
+  assert.doesNotMatch(cleared, /账号一草稿/);
+  assert.match(cleared, /aria-label="当前小节数量">2/);
+});
 
 function mockSavedExercises(t, raw) {
   const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
@@ -289,13 +325,28 @@ test("已登录打开旧本地链接仍读取本地题目，不隐式改为账�
   assert.match(html, /tapping题目/);
 });
 
-test("编辑器不显示存储提示，登录状态未知时不能保存但保留编辑界面", async () => {
+test("编辑器不显示存储提示，登录状态未知时先确认草稿身份", async () => {
   for (const status of ["authenticated", "checking", "unavailable"]) {
     const html = await renderPage("/custom/tapping/new", "/custom/:mode/new", { state: { status, user: { id: 1 } }, busy: false });
-    assert.match(html, /编辑自定义练习/);
+    if (status === "authenticated") assert.match(html, /编辑自定义练习/);
+    else {
+      assert.doesNotMatch(html, /编辑自定义练习|保存练习/);
+      assert.match(html, /正在确认登录|无法确认登录状态/);
+    }
     assert.doesNotMatch(html, /class="custom-draft-notice"/);
-    if (status !== "authenticated") assert.match(html, /<button[^>]*disabled=""[^>]*>保存练习/);
   }
+});
+
+test("公共练习设置可从已生效快照初始化，不自动触发变化或播放", () => {
+  let changes = 0;
+  const html = renderToStaticMarkup(createElement(PracticeSettings, {
+    initialValue: { bpm: 112, metronomeEnabled: false },
+    onChange() { changes++; },
+    children: value => createElement("output", null, JSON.stringify(value)),
+  }));
+  assert.match(html, /value="112"/);
+  assert.match(html, /aria-label="节拍器" aria-pressed="false"/);
+  assert.equal(changes, 0);
 });
 
 test("保存题目可按地址直接进入相应训练，共用 BPM 和节拍器", async (t) => {

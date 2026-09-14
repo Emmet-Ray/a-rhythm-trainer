@@ -1,6 +1,6 @@
 type Visit = { key: string; path: string };
 
-/** 仅保存本次应用会话的浏览现场，不保存业务数据或跨刷新持久化。
+/** 仅保存本次应用会话内显式声明的页面状态，不做跨刷新持久化。
  * 历史记录以 key 区分同一地址的多次访问；未知历史不推测返回距离。
  */
 export class PageVisits {
@@ -36,6 +36,12 @@ export class PageVisits {
 
   write<T>(key: string, field: string, value: T) {
     this.values.set(`${key}:${field}`, value);
+  }
+
+  /** 异步保存成功时只清除提交的版本，不丢弃离开后再次编辑产生的新版本。 */
+  forget<T>(key: string, field: string, expected: T) {
+    const id = `${key}:${field}`;
+    if (this.values.get(id) === expected) this.values.delete(id);
   }
 
   position(key: string) { return this.positions.get(key) ?? 0; }

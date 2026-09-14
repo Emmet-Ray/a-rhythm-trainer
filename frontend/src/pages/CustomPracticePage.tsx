@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   Link,
   useLocation,
@@ -22,7 +22,7 @@ import {
   type AccountExerciseSummary,
 } from "../api/customExercises";
 import type { RhythmEditorHandle } from "../practice/RhythmEditor";
-import PracticeSettings from "../practice/PracticeSettings";
+import PracticeSettings, { type PracticeSettingsValue } from "../practice/PracticeSettings";
 import RhythmPlayback from "../practice/RhythmPlayback";
 import {
   listCustomExercises,
@@ -61,35 +61,6 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
   const selectedMode = customModes.find((item) => item.id === mode);
   if (mode !== undefined && !selectedMode) return <NotFoundPage />;
 
-  if (selectedMode && isNew) {
-    return (
-      <div className="design-system practice-page custom-create">
-        <title>{`新建${selectedMode.label} · 节奏训练`}</title>
-        <ReturnLink className="back-link" to={`/custom/${selectedMode.id}`}>
-          ← 返回题目列表
-        </ReturnLink>
-        <header className="page-heading practice-heading">
-          <p className="eyebrow">自定义练习 / {selectedMode.label}</p>
-          <h1>新建练习</h1>
-        </header>
-        <Suspense
-          fallback={
-            <p className="loading-message" role="status" data-navigation-pending>
-              正在加载编辑器…
-            </p>
-          }
-        >
-          {/* 换模式即新草稿，不把一道题自动共享给两种训练方式。 */}
-          <CustomExerciseEditor
-            key={selectedMode.id}
-            mode={selectedMode.id}
-            auth={auth}
-          />
-        </Suspense>
-      </div>
-    );
-  }
-
   if (
     selectedMode &&
     (auth.state.status === "checking" ||
@@ -111,6 +82,36 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
             重试
           </button>
         )}
+      </div>
+    );
+  }
+
+  if (selectedMode && isNew) {
+    return (
+      <div className="design-system practice-page custom-create">
+        <title>{`新建${selectedMode.label} · 节奏训练`}</title>
+        <ReturnLink className="back-link" to={`/custom/${selectedMode.id}`}>
+          ← 返回题目列表
+        </ReturnLink>
+        <header className="page-heading practice-heading">
+          <p className="eyebrow">自定义练习 / {selectedMode.label}</p>
+          <h1>新建练习</h1>
+        </header>
+        <Suspense
+          fallback={
+            <p className="loading-message" role="status" data-navigation-pending>
+              正在加载编辑器…
+            </p>
+          }
+        >
+          {/* 换模式即新草稿，不把一道题自动共享给两种训练方式。 */}
+          <CustomExerciseEditor
+            key={`${identity}:${selectedMode.id}`}
+            mode={selectedMode.id}
+            auth={auth}
+            identity={identity}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -457,30 +458,38 @@ const timeSignature: RhythmExercise["timeSignature"] = {
 };
 
 /**
- * 一次挂载对应一份未保存草稿。允许小节未填满，试听保留完整小节时长，不做判题。
+ * 一次历史访问及身份对应一份未保存草稿。允许小节未填满，试听保留完整小节时长，不做判题。
  * 小节只从末尾增减，删除有内容的小节需确认；至少保留一节，选择始终在有效范围内。
- * 草稿只在本页内存中持有；显式保存成功后返回所属模式列表，失败时保留草稿。
+ * 返回原记录时恢复草稿，新建访问不复用；保存成功只清除提交版本，失败时保留。
  */
 function CustomExerciseEditor({
   mode,
   auth,
+  identity,
 }: {
   mode: CustomMode;
   auth: Auth;
+  identity: string;
 }) {
   const navigate = useNavigate();
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [measures, setMeasures] = useState<RhythmElement[][]>(() => [[], []]);
-  const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
+  const [draft, setDraft, forgetDraft] = useVisitState<{
+    name: string;
+    measures: RhythmElement[][];
+    selectedMeasureIndex: number;
+    settings: PracticeSettingsValue;
+  }>(`custom:${identity}:${mode}:draft`, {
+    name: "", measures: [[], []], selectedMeasureIndex: 0,
+    settings: { bpm: 60, metronomeEnabled: true },
+  });
+  const { name, measures, selectedMeasureIndex } = draft;
+  const rememberSettings = useCallback((settings: PracticeSettingsValue) => {
+    setDraft(previous => ({ ...previous, settings }));
+  }, [setDraft]);
   const editorRef = useRef<RhythmEditorHandle>(null);
   const [saving, setSaving] = useState(false);
   const locked = useRef(false);
   const saveGeneration = useRef(0);
-  const identity =
-    auth.state.status === "authenticated"
-      ? `account:${auth.state.user.id}`
-      : auth.state.status;
   const canSave =
     !auth.busy &&
     (auth.state.status === "guest" || auth.state.status === "authenticated");
@@ -493,7 +502,7 @@ function CustomExerciseEditor({
 
   function addMeasure() {
     setSaveError(null);
-    setMeasures((previous) => [...previous, []]);
+    setDraft(previous => ({ ...previous, measures: [...previous.measures, []] }));
     editorRef.current?.clearMessage();
   }
 
@@ -509,11 +518,12 @@ function CustomExerciseEditor({
     )
       return;
 
-    setMeasures((previous) => previous.slice(0, -1));
+    setDraft(previous => ({
+      ...previous,
+      measures: previous.measures.slice(0, -1),
+      selectedMeasureIndex: Math.min(previous.selectedMeasureIndex, previous.measures.length - 2),
+    }));
     setSaveError(null);
-    setSelectedMeasureIndex((previous) =>
-      Math.min(previous, measures.length - 2),
-    );
     editorRef.current?.clearMessage();
   }
 
@@ -538,6 +548,8 @@ function CustomExerciseEditor({
         auth.state.status === "authenticated"
           ? await saveAccountExercise(candidate)
           : saveCustomExercise(candidate);
+      // 即使已离开，确认保存成功也清除原提交快照；后来修改的新版本不会被清除。
+      forgetDraft(draft);
       if (generation !== saveGeneration.current) return;
       // 写入成功才离开编辑页，卸载播放器会取消旧声音和异步启动。
       navigate(`/custom/${mode}`, {
@@ -564,7 +576,8 @@ function CustomExerciseEditor({
             <input
               value={name}
               onChange={(event) => {
-                setName(event.target.value);
+                const name = event.target.value;
+                setDraft(previous => ({ ...previous, name }));
                 setSaveError(null);
               }}
             />
@@ -590,7 +603,7 @@ function CustomExerciseEditor({
           </div>
           <span className="custom-time-signature">4/4 拍</span>
         </div>
-        <PracticeSettings>
+        <PracticeSettings initialValue={draft.settings} onChange={rememberSettings}>
           {({ bpm, metronomeEnabled }) => (
             <div className="custom-playback">
               {/* 速度与小节数改变时仅重建播放器；名称、谱面和选中状态保留。 */}
@@ -611,14 +624,15 @@ function CustomExerciseEditor({
           measures={measures}
           timeSignature={timeSignature}
           selectedMeasureIndex={selectedMeasureIndex}
-          onSelectMeasure={setSelectedMeasureIndex}
+          onSelectMeasure={selectedMeasureIndex => setDraft(previous => ({ ...previous, selectedMeasureIndex }))}
           onChange={(measureIndex, elements) => {
             setSaveError(null);
-            setMeasures((previous) =>
-              previous.map((measure, index) =>
+            setDraft((previous) => ({
+              ...previous,
+              measures: previous.measures.map((measure, index) =>
                 index === measureIndex ? elements : measure,
               ),
-            );
+            }));
           }}
         />
         <div className="custom-save-actions">

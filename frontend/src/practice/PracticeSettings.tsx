@@ -32,7 +32,8 @@ function parseBpm(value: string): number | null {
 
 /**
  * 统一拥有速度输入、校验、生效值和节拍器开关，以 children 提供给具体工作区。
- * 调用方不维护第二份设置状态；重建此组件才重置设置，子级换题不重置。
+ * initialValue 仅在挂载时恢复设置；onChange 只报告已生效值，供调用方保存快照。
+ * 编辑中的输入、拖动和播放连接仍由本组件拥有，子级换题不重置。
  * BPM 默认 60、范围 40–240。拖动只更新草稿，松手提交；键盘/辅助技术调整即时提交。
  * 数字输入失焦或回车提交；无效或相同值不打断播放，取消拖动恢复生效值。
  * sidebar 由调用方放置第二个参数 settingsPanel；仍只创建一套设置与播放连接。
@@ -40,15 +41,19 @@ function parseBpm(value: string): number | null {
 export default function PracticeSettings({
   children,
   layout = "stacked",
+  initialValue,
+  onChange,
 }: {
   children: (settings: PracticeSettingsValue, settingsPanel: ReactNode) => ReactNode;
   layout?: "stacked" | "sidebar";
+  initialValue?: PracticeSettingsValue;
+  onChange?: (value: PracticeSettingsValue) => void;
 }) {
   const inputId = useId();
   const errorId = useId();
-  const [bpm, setBpm] = useState(60);
-  const [metronomeEnabled, setMetronomeEnabled] = useState(true);
-  const [bpmInput, setBpmInput] = useState("60");
+  const [bpm, setBpm] = useState(initialValue?.bpm ?? 60);
+  const [metronomeEnabled, setMetronomeEnabled] = useState(initialValue?.metronomeEnabled ?? true);
+  const [bpmInput, setBpmInput] = useState(String(initialValue?.bpm ?? 60));
   const [hasBpmError, setHasBpmError] = useState(false);
   const [metronomePlayback] = useState(createMetronomePlayback);
   const dragRef = useRef<{
@@ -68,7 +73,8 @@ export default function PracticeSettings({
     setHasBpmError(false);
     setBpm(nextBpm);
     setBpmInput(String(nextBpm));
-  }, []);
+    if (nextBpm !== bpm) onChange?.({ bpm: nextBpm, metronomeEnabled });
+  }, [bpm, metronomeEnabled, onChange]);
 
   const cancelDrag = useCallback(() => {
     const drag = dragRef.current;
@@ -107,7 +113,10 @@ export default function PracticeSettings({
     >
       <MechanicalMetronome
         enabled={metronomeEnabled}
-        onToggle={() => setMetronomeEnabled((previous) => !previous)}
+        onToggle={() => {
+          setMetronomeEnabled(!metronomeEnabled);
+          onChange?.({ bpm, metronomeEnabled: !metronomeEnabled });
+        }}
         playback={metronomePlayback}
       />
       <form

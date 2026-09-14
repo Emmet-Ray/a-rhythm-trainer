@@ -3,8 +3,10 @@ import { useLocation, useNavigationType } from "react-router";
 import { PageVisits } from "./PageVisits";
 export const VisitsContext = createContext<PageVisits | null>(null);
 
-/** 调用方仅声明需要保留的 UI 字段。页面须按 location.key 挂载，业务状态不自动保存。 */
-export function useVisitState<T>(field: string, initial: T): [T, Dispatch<SetStateAction<T>>] {
+/** 页面须按 location.key 及字段所属身份挂载，状态以不可变数据更新。
+ * forget 仅清除匹配版本的快照，不改变当前画面，可在异步保存成功后调用。
+ */
+export function useVisitState<T>(field: string, initial: T): [T, Dispatch<SetStateAction<T>>, (expected: T) => void] {
   const visits = useContext(VisitsContext);
   const { key } = useLocation();
   const [value, setValue] = useState(() => visits ? visits.read(key, field, initial) : initial);
@@ -15,7 +17,8 @@ export function useVisitState<T>(field: string, initial: T): [T, Dispatch<SetSta
     visits?.write(key, field, resolved);
     setValue(resolved);
   }, [visits, key, field]);
-  return [value, update];
+  const forget = useCallback((expected: T) => visits?.forget(key, field, expected), [visits, key, field]);
+  return [value, update, forget];
 }
 
 /** 等待路由及异步页面内容就绪后恢复；用户主动滚动时停止接管视野。

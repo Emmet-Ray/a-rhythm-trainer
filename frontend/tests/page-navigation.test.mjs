@@ -6,6 +6,23 @@ const server = await createServer({ configFile: false, server: { middlewareMode:
 after(() => server.close());
 const { PageVisits } = await server.ssrLoadModule("/src/navigation/PageVisits.ts");
 
+test("草稿按访问、身份和模式隔离，保存成功只清除提交的版本", () => {
+  const visits = new PageVisits();
+  const submitted = { name: "草稿", measures: [[], []] };
+  const edited = { ...submitted, name: "继续修改" };
+  visits.write("entry", "account:1:tapping:draft", submitted);
+  visits.write("entry", "account:2:tapping:draft", submitted);
+  visits.write("entry", "account:1:dictation:draft", submitted);
+  assert.equal(visits.read("new-entry", "account:1:tapping:draft", null), null);
+  visits.write("entry", "account:1:tapping:draft", edited);
+  visits.forget("entry", "account:1:tapping:draft", submitted);
+  assert.equal(visits.read("entry", "account:1:tapping:draft", null), edited);
+  visits.forget("entry", "account:1:tapping:draft", edited);
+  assert.equal(visits.read("entry", "account:1:tapping:draft", null), null);
+  assert.equal(visits.read("entry", "account:2:tapping:draft", null), submitted);
+  assert.equal(visits.read("entry", "account:1:dictation:draft", null), submitted);
+});
+
 test("同一地址的不同访问各自保留选择和滚动，后退前进恢复原记录", () => {
   const visits = new PageVisits();
   visits.enter({ key: "a", path: "/preset" }, "POP");
