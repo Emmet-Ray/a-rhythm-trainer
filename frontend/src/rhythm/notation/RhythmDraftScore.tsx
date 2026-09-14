@@ -4,12 +4,15 @@ import { expandRhythmElements, type RhythmElement, type RhythmExercise } from ".
 import { createRhythmStave, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
 import { createDraftScoreLayout, getBeatBeamGroups, getDraftMeasureScrollLeft } from "./RhythmScoreLayout";
 
+export type MeasureFeedback = "unchecked" | "correct" | "incorrect";
+const feedbackLabels = { correct: "正确", incorrect: "有错误" };
+
 type RhythmDraftScoreProps = {
   measures: readonly (readonly RhythmElement[])[];
   timeSignature: RhythmExercise["timeSignature"];
   selectedMeasureIndex?: number;
   onSelectMeasure?: (index: number) => void;
-  measureFeedback?: readonly ReactNode[];
+  measureFeedback?: readonly MeasureFeedback[];
   overlay?: ReactNode;
   navigationLabel?: string;
 };
@@ -121,12 +124,15 @@ export function RhythmDraftScore({
     <div className="rhythm-draft-score">
       <div className="draft-measure-navigation" role="group" aria-label="小节导航">
         <span>{navigationLabel}</span>
-        {measures.map((_, index) => (
-          <button key={index} type="button" aria-label={`跳到小节 ${index + 1}`}
+        {measures.map((_, index) => {
+          const verdict = measureFeedback?.[index];
+          const checked = verdict === "correct" || verdict === "incorrect";
+          return <button key={index} type="button" aria-label={`跳到小节 ${index + 1}${checked ? `，${feedbackLabels[verdict]}` : ""}`}
             aria-pressed={index === activeMeasure} onClick={() => selectMeasure(index)}>
             {index + 1}
-          </button>
-        ))}
+            {checked && <span className="draft-navigation-verdict" data-verdict={verdict} aria-hidden="true">{verdict === "correct" ? "✓" : "×"}</span>}
+          </button>;
+        })}
       </div>
     <div style={{ position: "relative", minWidth: 0 }}>
     <div ref={viewportRef} className="rhythm-draft-viewport" role="region" aria-label="节奏谱面，可左右滚动" tabIndex={0}
@@ -174,9 +180,11 @@ export function RhythmDraftScore({
         />
         {measureFeedback?.map((feedback, index) => {
           const placement = score.measures[index];
-          return feedback && placement ? <div key={index} className="draft-measure-feedback"
+          return feedback && feedback !== "unchecked" && placement ? <div key={index} className="draft-measure-feedback"
             style={{ left: placement.x * score.scale, width: placement.width * score.scale }}>
-            {feedback}
+            <span role="status" aria-label={`小节 ${index + 1} 验证结果`} data-verdict={feedback}>
+              {feedback === "correct" ? "✓" : "×"} {feedbackLabels[feedback]}
+            </span>
           </div> : null;
         })}
       </div>

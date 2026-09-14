@@ -7,7 +7,7 @@ import {
   type RhythmEvent,
   type RhythmExercise,
 } from "../rhythm/RhythmModel";
-import { RhythmDraftScore } from "../rhythm/notation/RhythmDraftScore";
+import { RhythmDraftScore, type MeasureFeedback } from "../rhythm/notation/RhythmDraftScore";
 import { RhythmSymbol } from "../rhythm/notation/RhythmSymbol";
 import { appendRhythmInput, rhythmInputPatterns } from "./RhythmEditorInput";
 
@@ -62,7 +62,7 @@ type RhythmEditorProps = {
   /** 在原谱面位置展示只读内容；草稿保持挂载，编辑工具隐藏但保留占位。 */
   preview?: ReactNode;
   scoreOverlay?: ReactNode;
-  measureFeedback?: readonly ReactNode[];
+  measureFeedback?: readonly MeasureFeedback[];
   measures: readonly (readonly RhythmElement[])[];
   timeSignature: RhythmExercise["timeSignature"];
   selectedMeasureIndex: number;

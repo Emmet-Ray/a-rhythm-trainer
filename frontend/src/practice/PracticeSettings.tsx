@@ -35,7 +35,8 @@ function parseBpm(value: string): number | null {
  * initialValue 仅在挂载时恢复设置；onChange 只报告已生效值，供调用方保存快照。
  * 编辑中的输入、拖动和播放连接仍由本组件拥有，子级换题不重置。
  * BPM 默认 60、范围 40–240。拖动只更新草稿，松手提交；键盘/辅助技术调整即时提交。
- * 数字输入失焦或回车提交；无效或相同值不打断播放，取消拖动恢复生效值。
+ * 数字输入失焦提交；回车校验通过后退出焦点并提交，失败时保留焦点。
+ * 无效或相同值不打断播放，取消拖动恢复生效值。
  * sidebar 由调用方放置第二个参数 settingsPanel；仍只创建一套设置与播放连接。
  */
 export default function PracticeSettings({
@@ -191,7 +192,12 @@ export default function PracticeSettings({
             onKeyDown={(event) => {
               if (event.key !== "Enter") return;
               event.preventDefault();
-              applyBpm(event.currentTarget.value);
+              if (parseBpm(event.currentTarget.value) === null) {
+                setHasBpmError(true);
+                return;
+              }
+              // 统一交由 onBlur 提交，避免同一次回车重复通知调用方。
+              event.currentTarget.blur();
             }}
           />
           <label htmlFor={inputId} className="unit">

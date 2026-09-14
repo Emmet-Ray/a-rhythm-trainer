@@ -65,12 +65,27 @@ test("共用提示支持倒数和可关闭结果，听写反馈位于小节内�
   const cue = createElement(PracticeCue, { passed: true, onDismiss() {} });
   const html = renderToStaticMarkup(createElement(RhythmDraftScore, {
     measures: [[]], timeSignature: { beats: 4, beatType: 4 },
-    measureFeedback: [createElement("span", { "data-verdict": "correct" }, "正确")], overlay: cue,
+    measureFeedback: ["correct"], overlay: cue,
   }));
   assert.match(html, /draft-measure-feedback[^]*data-verdict="correct"/);
   assert.match(html, /<\/div><\/div><\/div><div class="rhythm-score-overlay">/);
   assert.match(html, /aria-label="关闭练习结果"/);
   assert.match(html, /data-passed="true">通过/);
+});
+
+test("听写小节反馈与导航同步，未验证或清除后不显示结果", () => {
+  const render = (measureFeedback) => renderToStaticMarkup(createElement(RhythmDraftScore, {
+    measures: [[], [], []], timeSignature: { beats: 4, beatType: 4 }, selectedMeasureIndex: 1, measureFeedback,
+  }));
+  const html = render(["incorrect", "correct", "unchecked"]);
+  assert.match(html, /aria-label="跳到小节 1，有错误"/);
+  assert.match(html, /aria-label="跳到小节 2，正确" aria-pressed="true"/);
+  assert.match(html, /aria-label="跳到小节 3"/);
+  assert.equal((html.match(/class="draft-navigation-verdict"/g) ?? []).length, 2);
+  assert.equal((html.match(/class="draft-measure-feedback"/g) ?? []).length, 2);
+  const cleared = render(["unchecked", "correct", "unchecked"]);
+  assert.doesNotMatch(cleared, /有错误|小节 1 验证结果/);
+  assert.doesNotMatch(render(undefined), /data-verdict|draft-measure-feedback/);
 });
 
 test("首页独立展示三个平等入口，不显示预设主题或训练区", async () => {

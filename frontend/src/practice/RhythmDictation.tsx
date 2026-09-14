@@ -208,18 +208,7 @@ export function RhythmDictation({
               <PracticeCue passed onDismiss={() => setResultVisible(false)} />
             ) : null
           }
-          measureFeedback={measureVerdicts.map((verdict, index) =>
-            verdict === "unchecked" ? null : (
-              <span
-                key={index}
-                role="status"
-                aria-label={`小节 ${index + 1} 验证结果`}
-                data-verdict={verdict}
-              >
-                {verdict === "correct" ? "✓ 正确" : "× 有错误"}
-              </span>
-            ),
-          )}
+          measureFeedback={measureVerdicts}
           ref={editorRef}
           emptyContent={
             <div className="empty-practice-score" role="status">
