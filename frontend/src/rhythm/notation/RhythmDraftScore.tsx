@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BarlineType, Beam, Formatter, Renderer, Tuplet } from "vexflow";
 import { expandRhythmElements, type RhythmElement, type RhythmExercise } from "../RhythmModel";
 import { createRhythmStave, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
@@ -9,6 +9,8 @@ type RhythmDraftScoreProps = {
   timeSignature: RhythmExercise["timeSignature"];
   selectedMeasureIndex?: number;
   onSelectMeasure?: (index: number) => void;
+  measureFeedback?: readonly ReactNode[];
+  overlay?: ReactNode;
 };
 
 // 原样显示草稿或参考答案，不自动补休止符；未传选择回调时仅展示谱面。
@@ -17,6 +19,8 @@ export function RhythmDraftScore({
   timeSignature,
   selectedMeasureIndex,
   onSelectMeasure,
+  measureFeedback,
+  overlay,
 }: RhythmDraftScoreProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -92,6 +96,7 @@ export function RhythmDraftScore({
   }, [score]);
 
   return (
+    <div style={{ position: "relative", minWidth: 0 }}>
     <div ref={viewportRef} className="rhythm-draft-viewport" role="region" aria-label="节奏谱面，可左右滚动" tabIndex={0}
       style={{ width: "100%", minWidth: 0, overflowX: "auto" }}>
       <div
@@ -135,7 +140,16 @@ export function RhythmDraftScore({
           aria-hidden="true"
           style={{ position: "relative", pointerEvents: "none" }}
         />
+        {measureFeedback?.map((feedback, index) => {
+          const placement = score.measures[index];
+          return feedback && placement ? <div key={index} className="draft-measure-feedback"
+            style={{ left: placement.x * score.scale, width: placement.width * score.scale }}>
+            {feedback}
+          </div> : null;
+        })}
       </div>
+    </div>
+    {overlay && <div className="rhythm-score-overlay">{overlay}</div>}
     </div>
   );
 }

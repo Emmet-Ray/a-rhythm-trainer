@@ -16,6 +16,16 @@ try {
   await server.close();
 }
 
+test("输入限制提示保留在音符工具之前，不放在删除按钮之后", () => {
+  const html = renderToStaticMarkup(createElement(editor.RhythmEditor, {
+    measures: [[]], timeSignature: { beats: 4, beatType: 4 }, selectedMeasureIndex: 0,
+    onSelectMeasure() {}, onChange() {},
+  }));
+  assert.match(html, /class="rhythm-editor-controls"><p class="rhythm-editor-input-message" role="status"><\/p>/);
+  assert.ok(html.indexOf('class="rhythm-editor-input-message"') < html.indexOf('aria-label="添加音符"'));
+  assert.equal((html.match(/class="rhythm-editor-input-message"/g) ?? []).length, 1);
+});
+
 test("编辑器支持五种音符和休止符，以及四分、八分音符的单附点", () => {
   for (const kind of ["note", "rest"]) {
     for (const noteValue of ["whole", "half", "quarter", "eighth", "sixteenth"]) {

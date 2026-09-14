@@ -25,7 +25,7 @@ type PlaybackOption = {
  * BPM、播放范围或小节数量改变时，调用方用 key 重建；卸载取消排程、RAF 和异步启动并关闭音频。
  * 节拍器开关实时生效，不参与 key，也不影响预备拍和钢琴。
  */
-export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, extraActions, controls }: {
+export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, extraActions, controls, onCountInChange, onStart }: {
   options: readonly PlaybackOption[];
   timeSignature: RhythmExercise["timeSignature"] | null;
   bpm: number;
@@ -33,6 +33,9 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
   extraActions?: (busy: boolean) => ReactNode;
   /** 与播放按钮成组的控制项，例如播放范围；不参与播放状态管理。 */
   controls?: ReactNode;
+  /** 音频时钟给出的剩余预备拍；取消、正式播放和卸载时清空。 */
+  onCountInChange?: (remaining: number | null) => void;
+  onStart?: () => void;
 }) {
   const metronomePlayback = useContext(MetronomePlaybackContext);
   const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
@@ -54,6 +57,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
   const [playbackSource, setPlaybackSource] = useState<string | null>(null);
 
   const cancelPlayback = useCallback(() => {
+    onCountInChange?.(null);
     clearMetronomePlaybackRef.current?.();
     clearMetronomePlaybackRef.current = null;
     metronomeRef.current?.dispose();
@@ -65,7 +69,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
     frameRef.current = null;
     sourcesRef.current.forEach((source) => source.stop());
     sourcesRef.current = [];
-  }, []);
+  }, [onCountInChange]);
 
   useEffect(
     () => () => {
@@ -89,6 +93,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
     // 新一轮开始前清理上一轮尚未结束的自然尾音。
     cancelPlayback();
     activeRef.current = source;
+    onStart?.();
     setPlaybackSource(source);
     const request = ++requestRef.current;
     setStatus("starting");
@@ -149,6 +154,8 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
           return;
         }
         setStatus(nowMs < 0 ? "countIn" : "playing");
+        const beat = timeline.countInOffsetsMs.findLastIndex(offset => nowMs >= offset);
+        onCountInChange?.(nowMs < 0 && beat >= 0 ? timeline.countInOffsetsMs.length - beat : null);
         frameRef.current = requestAnimationFrame(update);
       }
       frameRef.current = requestAnimationFrame(update);
@@ -189,7 +196,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
                   disabled={!playing && (!timeSignature || !option.measures?.some((elements) => elements.length > 0))}
                   onClick={() => void togglePlayback(option)}
                 >
-                  {playing ? option.stopLabel : option.label}
+                  {playing ? status === "starting" ? "准备中" : option.stopLabel : option.label}
                 </button>
               );
             })}
@@ -198,7 +205,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
         </div>
         {extraActions?.(isActive)}
       </div>
-      <span className="rhythm-playback-status" role="status">{text}</span>
+      {!onCountInChange && <span className="rhythm-playback-status" role="status">{text}</span>}
       {error && <span role="alert">{error}</span>}
     </div>
   );

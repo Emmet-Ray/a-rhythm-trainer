@@ -14,6 +14,8 @@ after(() => server.close());
 const { default: CustomPracticePage } = await server.ssrLoadModule("/src/pages/CustomPracticePage.tsx");
 const { default: PracticeSettings } = await server.ssrLoadModule("/src/practice/PracticeSettings.tsx");
 const { default: RhythmPlayback } = await server.ssrLoadModule("/src/practice/RhythmPlayback.tsx");
+const { default: PracticeCue } = await server.ssrLoadModule("/src/practice/PracticeCue.tsx");
+const { RhythmDraftScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmDraftScore.tsx");
 const { default: App } = await server.ssrLoadModule("/src/App.tsx");
 const { default: RhythmScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmScore.tsx");
 const { createExerciseTimeline } = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
@@ -23,6 +25,23 @@ async function renderApp(path) {
   await stream.allReady;
   return (await new Response(stream).text()).replaceAll("<!-- -->", "");
 }
+
+test("共用提示支持倒数和可关闭结果，听写反馈位于小节内而遮罩位于滚动窗口之外", () => {
+  for (const countdown of [4, 3, 2, 1]) {
+    const html = renderToStaticMarkup(createElement(PracticeCue, { countdown }));
+    assert.match(html, new RegExp(`aria-label="预备拍：${countdown}"`));
+    assert.doesNotMatch(html, /关闭练习结果/);
+  }
+  const cue = createElement(PracticeCue, { passed: true, onDismiss() {} });
+  const html = renderToStaticMarkup(createElement(RhythmDraftScore, {
+    measures: [[]], timeSignature: { beats: 4, beatType: 4 },
+    measureFeedback: [createElement("span", { "data-verdict": "correct" }, "正确")], overlay: cue,
+  }));
+  assert.match(html, /draft-measure-feedback[^]*data-verdict="correct"/);
+  assert.match(html, /<\/div><\/div><\/div><div class="rhythm-score-overlay">/);
+  assert.match(html, /aria-label="关闭练习结果"/);
+  assert.match(html, /data-passed="true">通过/);
+});
 
 test("首页独立展示三个平等入口，不显示预设主题或训练区", async () => {
   const html = await renderApp("/");
@@ -105,7 +124,7 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
   for (const path of ["/preset/dictation-basic-values-01", "/random/dictation"]) {
     const html = await renderApp(path);
     assert.match(html, /class="rhythm-dictation design-system"/);
-    assert.match(html, /data-verdict="unchecked"/);
+    assert.doesNotMatch(html, /data-verdict=|rhythm-playback-status|dictation-completion/);
     assert.match(html, /data-action="play" data-source="question"/);
   }
   const customIndex = await renderApp("/custom");

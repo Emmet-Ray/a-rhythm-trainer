@@ -1,6 +1,7 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MetronomePlaybackContext } from "./MetronomePlayback";
 import PracticeFrame from "./PracticeFrame";
+import PracticeCue from "./PracticeCue";
 
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import { DEFAULT_TAPPING_PRECISION, getTappingTimingWindows } from "../settings/tappingPrecision";
@@ -425,23 +426,9 @@ function RhythmTrainer({
         timingEvents={timingEvents}
         playback={isRunning ? { roundId, eventIndex: phase === "countIn" ? 0 : playingBeatIndex } : null}
         overlay={countInRemaining !== null ? (
-          <div className="trainer-countdown" role="img" aria-label={`预备拍：${countInRemaining}`}>
-            {countInRemaining}
-          </div>
+          <PracticeCue countdown={countInRemaining} />
         ) : result !== null && dismissedResultRound !== roundId ? (
-          <section className="trainer-result-layer" aria-label="练习结果"
-            onKeyDown={event => {
-              if (event.key === "Escape") {
-                event.stopPropagation();
-                dismissResult();
-              }
-            }}>
-            <button type="button" className="trainer-result-dismiss" aria-label="关闭练习结果" onClick={dismissResult}>
-              <span className="trainer-result" role="status" data-passed={result.passed}>
-                {result.passed ? "通过" : "未通过"}
-              </span>
-            </button>
-          </section>
+          <PracticeCue passed={result.passed} onDismiss={dismissResult} />
         ) : null}
       />
     </PracticeFrame>

@@ -58,6 +58,8 @@ export function canEditRhythmElements(
 type RhythmEditorProps = {
   ref?: Ref<RhythmEditorHandle>;
   emptyContent?: ReactNode;
+  scoreOverlay?: ReactNode;
+  measureFeedback?: readonly ReactNode[];
   measures: readonly (readonly RhythmElement[])[];
   timeSignature: RhythmExercise["timeSignature"];
   selectedMeasureIndex: number;
@@ -78,6 +80,8 @@ export type RhythmEditorHandle = {
 export function RhythmEditor({
   ref,
   emptyContent,
+  scoreOverlay,
+  measureFeedback,
   measures,
   timeSignature,
   selectedMeasureIndex,
@@ -157,6 +161,8 @@ export function RhythmEditor({
         emptyContent
       ) : (
         <RhythmDraftScore
+          overlay={scoreOverlay}
+          measureFeedback={measureFeedback}
           measures={measures}
           timeSignature={timeSignature}
           selectedMeasureIndex={selectedMeasureIndex}
@@ -167,6 +173,9 @@ export function RhythmEditor({
         />
       )}
       <div className="rhythm-editor-controls">
+        <p className="rhythm-editor-input-message" role="status">
+          {addEventMessage}
+        </p>
         <div
           role="group"
           aria-label="添加音符"
@@ -285,9 +294,6 @@ export function RhythmEditor({
             清空当前小节
           </button>
         </div>
-        <p className="rhythm-editor-input-message" role="status">
-          {addEventMessage}
-        </p>
       </div>
     </div>
   );

@@ -95,8 +95,6 @@ main:focus { outline: none; }
 .dictation-verification-result [role="status"] { font-size: 14px; }
 .dictation-verify { background: var(--accent); color: white; border-color: var(--accent); }
 .dictation-verify:hover:not(:disabled) { background: #45409e; }
-.dictation-completion { margin: 8px 0 0; color: var(--accent); font-weight: 600; }
-.dictation-completion:empty { margin: 0; }
 .dictation-reference { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 20px; }
 .dictation-reference h3 { margin: 0 0 8px; font-size: 16px; }
 .rhythm-playback [role="alert"] { color: #b33131; font-size: 13px; }

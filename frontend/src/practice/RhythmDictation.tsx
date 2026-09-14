@@ -11,6 +11,7 @@ import { RhythmDraftScore } from "../rhythm/notation/RhythmDraftScore";
 import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
 import RhythmPlayback from "./RhythmPlayback";
 import PracticeFrame from "./PracticeFrame";
+import PracticeCue from "./PracticeCue";
 
 {
   /*
@@ -77,6 +78,8 @@ export function RhythmDictation({
   settingsPanel,
 }: RhythmDictationProps) {
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [resultVisible, setResultVisible] = useState(false);
   const editorRef = useRef<RhythmEditorHandle>(null);
   const [playbackScope, setPlaybackScope] = useState<"all" | "measure">("all");
   const [isReferenceAnswerVisible, setIsReferenceAnswerVisible] =
@@ -104,7 +107,6 @@ export function RhythmDictation({
     [exercise],
   );
   const expectedMeasure = expectedMeasures[selectedMeasureIndex];
-  const selectedVerdict = measureVerdicts[selectedMeasureIndex];
   const isComplete =
     measureVerdicts.length > 0 &&
     measureVerdicts.every((verdict) => verdict === "correct");
@@ -116,15 +118,15 @@ export function RhythmDictation({
       answerMeasures[selectedMeasureIndex],
       expectedMeasure,
     );
-    setMeasureVerdicts((previous) =>
-      previous.map((verdict, index) =>
+    const nextVerdicts = measureVerdicts.map((verdict, index) =>
         index === selectedMeasureIndex
           ? correct
             ? "correct"
             : "incorrect"
           : verdict,
-      ),
-    );
+      );
+    setMeasureVerdicts(nextVerdicts);
+    if (nextVerdicts.every(verdict => verdict === "correct")) setResultVisible(true);
   }
 
 
@@ -137,6 +139,8 @@ export function RhythmDictation({
           key={[bpm, playbackScope, selectedMeasureIndex].join("-")}
           bpm={bpm}
           metronomeEnabled={metronomeEnabled}
+          onCountInChange={setCountdown}
+          onStart={() => setResultVisible(false)}
           extraActions={extraActions}
           timeSignature={exercise?.timeSignature ?? null}
           options={[
@@ -176,6 +180,13 @@ export function RhythmDictation({
       }>
 
       <RhythmEditor
+        scoreOverlay={countdown !== null ? <PracticeCue countdown={countdown} />
+          : isComplete && resultVisible ? <PracticeCue passed onDismiss={() => setResultVisible(false)} /> : null}
+        measureFeedback={measureVerdicts.map((verdict, index) => verdict === "unchecked" ? null : (
+          <span key={index} role="status" aria-label={`小节 ${index + 1} 验证结果`} data-verdict={verdict}>
+            {verdict === "correct" ? "✓ 正确" : "× 有错误"}
+          </span>
+        ))}
         ref={editorRef}
         emptyContent={<div className="empty-practice-score" role="status">请先生成题目</div>}
         measures={answerMeasures}
@@ -183,6 +194,7 @@ export function RhythmDictation({
         selectedMeasureIndex={selectedMeasureIndex}
         onSelectMeasure={setSelectedMeasureIndex}
         onChange={(measureIndex, elements) => {
+          setResultVisible(false);
           setAnswerMeasures((previous) => previous.map((measure, index) =>
             index === measureIndex ? elements : measure,
           ));
@@ -201,13 +213,6 @@ export function RhythmDictation({
           >
             验证当前小节
           </button>
-          <span role="status" aria-label="当前小节验证结果" data-verdict={selectedVerdict ?? "unchecked"}>
-            {selectedVerdict === "correct"
-              ? "正确"
-              : selectedVerdict === "incorrect"
-                ? "有错误"
-                : ""}
-          </span>
         </div>
         <button
           type="button"
@@ -222,13 +227,6 @@ export function RhythmDictation({
       {expectedMeasures.some((measure) => measure === null) && (
         <p role="alert">本题包含当前编辑器暂不支持的节奏，暂时无法完成作答。</p>
       )}
-      <p
-        className="dictation-completion"
-        role="status"
-        aria-label="整题完成状态"
-      >
-        {isComplete ? "本题完成" : ""}
-      </p>
       <section
         className="dictation-reference"
         id={referenceAnswerId}
