@@ -7,6 +7,31 @@ after(() => server.close());
 const { PageVisits } = await server.ssrLoadModule("/src/navigation/PageVisits.ts");
 const { createDictationState, dictationBinding, restoreDictation } = await server.ssrLoadModule("/src/practice/DictationState.ts");
 
+test("惰性初值每条访问每个字段只创建一次，返回和后续更新复用原状态", () => {
+  const visits = new PageVisits();
+  let calls = 0;
+  const create = () => ({ id: ++calls });
+  const first = visits.readOrCreate("entry", "question", create);
+  assert.equal(visits.readOrCreate("entry", "question", create), first);
+  assert.equal(visits.read("entry", "question", null), first);
+  assert.equal(calls, 1);
+  const replacement = { id: 100 };
+  visits.write("entry", "question", replacement);
+  assert.equal(visits.readOrCreate("entry", "question", create), replacement);
+  assert.equal(calls, 1);
+  assert.notEqual(visits.readOrCreate("new-entry", "question", create), first);
+  assert.notEqual(visits.readOrCreate("entry", "other-mode", create), first);
+  assert.equal(calls, 3);
+});
+
+test("惰性初始化保留空值；创建失败不缓存，普通读取不写入初值", () => {
+  const visits = new PageVisits();
+  assert.equal(visits.read("entry", "question", "fallback"), "fallback");
+  assert.throws(() => visits.readOrCreate("entry", "question", () => { throw new Error("failed"); }), /failed/);
+  assert.equal(visits.readOrCreate("entry", "question", () => null), null);
+  assert.equal(visits.readOrCreate("entry", "question", () => assert.fail("已有空值也应恢复")), null);
+});
+
 test("听写恢复同时绑定生成编号与题目内容，不按小节数量误配答案", () => {
   const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: "note", noteValue: "whole" }] }] };
   const empty = createDictationState(exercise);

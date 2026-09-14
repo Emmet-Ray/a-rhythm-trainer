@@ -157,14 +157,19 @@ test("随机源非法值明确报错", () => {
   }
 });
 
-test("随机页面默认基础主题与两小节，主题选项来自目录，生成前保留空训练区", async () => {
+test("随机页面首次进入已有默认两小节题目，设置关闭且入口为换一题", async () => {
   const pageServer = await createServer({ configFile: false,
     server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
   try {
     const { default: RandomPracticePage } = await pageServer.ssrLoadModule("/src/pages/RandomPracticePage.tsx");
+    const { VisitsContext } = await pageServer.ssrLoadModule("/src/navigation/usePageNavigation.ts");
+    const { PageVisits } = await pageServer.ssrLoadModule("/src/navigation/PageVisits.ts");
     for (const mode of ["tapping", "dictation"]) {
-      const stream = await renderToReadableStream(createElement(MemoryRouter, { initialEntries: [`/random/${mode}`] },
-        createElement(Routes, null, createElement(Route, { path: "/random/:mode", element: createElement(RandomPracticePage) }))));
+      const visits = new PageVisits();
+      const tree = createElement(VisitsContext.Provider, { value: visits },
+        createElement(MemoryRouter, { initialEntries: [`/random/${mode}`] },
+          createElement(Routes, null, createElement(Route, { path: "/random/:mode", element: createElement(RandomPracticePage) }))));
+      const stream = await renderToReadableStream(tree);
       await stream.allReady;
       const html = await new Response(stream).text();
       for (const topic of randomMaterials) assert.ok(html.includes(topic.label));
@@ -180,7 +185,9 @@ test("随机页面默认基础主题与两小节，主题选项来自目录，�
       assert.equal((counts.match(/type="radio"/g) ?? []).length, 3);
       assert.equal((counts.match(/checked=""/g) ?? []).length, 1);
       assert.match(counts, /checked="" value="2"/);
-      assert.match(html, /生成题目/);
+      assert.match(html, /换一题/);
+      assert.doesNotMatch(html, /生成题目|空白节奏乐谱/);
+      assert.doesNotMatch(drawer, /<dialog[^>]*\sopen(?:\s|=|>)/);
       assert.match(html, /<dialog[^>]*class="design-system random-settings-drawer"[^>]*aria-labelledby=/);
       assert.match(html, /aria-label="关闭生成设置"/);
       assert.match(html, /class="random-toolbar-actions"/);
@@ -190,6 +197,16 @@ test("随机页面默认基础主题与两小节，主题选项来自目录，�
       assert.doesNotMatch(html, /应用速度|未应用/);
       assert.match(html, /节拍器/);
       assert.doesNotMatch(html, /固定示例|重新生成/);
+      const question = visits.read("default", `random:${mode}:question`, null);
+      assert.equal(question.id, 1);
+      assert.equal(question.exercise.measures.length, 2);
+      assert.doesNotThrow(() => validateRhythmExercise(question.exercise));
+      // 返回时即使设置已清空，也必须恢复原题，不能尝试用待应用配置重新生成。
+      visits.write("default", `random:${mode}:config`, config([], 4, mode));
+      const restored = await renderToReadableStream(tree);
+      await restored.allReady;
+      await new Response(restored).text();
+      assert.equal(visits.read("default", `random:${mode}:question`, null), question);
     }
   } finally { await pageServer.close(); }
 });

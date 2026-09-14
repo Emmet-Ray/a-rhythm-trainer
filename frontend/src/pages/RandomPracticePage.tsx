@@ -6,7 +6,7 @@ import NotFoundPage from "./NotFoundPage";
 import { generateRandomExercise, randomMaterials, defaultRandomMaterials, randomMeasureCounts, DEFAULT_RANDOM_MEASURE_COUNT, type RandomGenerationConfig } from "../exercises/randomExercises";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 
-// 进入对应模式后加载完整工作区，尚未生成时显示空状态。
+// 进入对应模式后加载完整工作区。
 const PracticeWorkspace = lazy(() => import("../practice/PracticeWorkspace"));
 const RhythmSymbol = lazy(() => import("../rhythm/notation/RhythmSymbol").then(module => ({ default: module.RhythmSymbol })));
 const materialGroups = ["音符", "休止符", "节奏型"] as const;
@@ -54,7 +54,7 @@ export default function RandomPracticePage() {
             <li key={item.id}>
               <Link className="question-link" to={`/random/${item.id}`}>
                 <h3>{item.label}</h3>
-                <span className="question-action">配置规则 <span aria-hidden="true">→</span></span>
+                <span className="question-action">开始练习 <span aria-hidden="true">→</span></span>
               </Link>
             </li>
           ))}
@@ -78,15 +78,22 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
   const drawerRef = useRef<HTMLDialogElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [config, setConfig] = useVisitState<RandomGenerationConfig>(`random:${mode}:config`, { mode, materials: defaultRandomMaterials, measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
-  const [generated, setGenerated] = useVisitState<{ id: number; exercise: RhythmExercise } | null>(`random:${mode}:question`, null);
-  const [settingsOpen, setSettingsOpen] = useState(generated === null);
+  const [generated, setGenerated] = useVisitState<{ id: number; exercise: RhythmExercise }>(`random:${mode}:question`, () => ({
+    id: 1,
+    exercise: generateRandomExercise({ mode, materials: defaultRandomMaterials, measureCount: DEFAULT_RANDOM_MEASURE_COUNT }),
+  }));
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const restoreSettingsFocus = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const rangeError = config.materials.length === 0 ? "至少选择一个练习范围。" : error;
 
   useEffect(() => {
     if (!settingsOpen) {
       // 生成会重建操作栏，提交后的焦点应落到新按钮，而非已卸载的旧节点。
-      settingsButtonRef.current?.focus({ preventScroll: true });
+      if (restoreSettingsFocus.current) {
+        settingsButtonRef.current?.focus({ preventScroll: true });
+        restoreSettingsFocus.current = false;
+      }
       return;
     }
     const dialog = drawerRef.current;
@@ -98,9 +105,10 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
       dialog.close();
       document.body.style.overflow = previousOverflow;
     };
-  }, [settingsOpen, generated?.id]);
+  }, [settingsOpen, generated.id]);
 
   function closeSettings() {
+    restoreSettingsFocus.current = true;
     drawerRef.current?.close();
     setSettingsOpen(false);
     settingsButtonRef.current?.focus({ preventScroll: true });
@@ -108,9 +116,9 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
 
   function generate() {
     try {
-      // 生成只在事件中执行，不放进渲染或 state updater，避免重复执行。
+      // 手动换题只在事件中执行；先生成成功，再替换题目及作答绑定。
       const exercise = generateRandomExercise(config);
-      setGenerated(previous => ({ id: (previous?.id ?? 0) + 1, exercise }));
+      setGenerated(previous => ({ id: previous.id + 1, exercise }));
       setError(null);
       closeSettings();
     } catch (error) {
@@ -179,10 +187,10 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
       </section>
       </dialog>
         <Suspense fallback={<p className="loading-message" role="status" data-navigation-pending>正在加载练习…</p>}>
-          <PracticeWorkspace exerciseKey={generated?.id ?? 0} exercise={generated?.exercise ?? null} mode={mode}
+          <PracticeWorkspace exerciseKey={generated.id} exercise={generated.exercise} mode={mode}
             extraActions={busy => (
               <div className="random-toolbar-actions">
-                <button type="button" disabled={busy || config.materials.length === 0} onClick={generate}>{generated ? "换一题" : "生成题目"}</button>
+                <button type="button" disabled={busy || config.materials.length === 0} onClick={generate}>换一题</button>
                 <button ref={settingsButtonRef} className="random-settings-trigger" type="button" disabled={busy}
                   aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}>生成设置</button>
               </div>

@@ -544,12 +544,12 @@ test("公共速度控件提供整数滑块与数值输入，不再要求点击�
   assert.doesNotMatch(html, /metronome-toggle|type="checkbox"/);
 });
 
-test("击拍使用侧栏布局，空态与真实题目均将操作按钮放在谱面之前", async () => {
+test("预设与随机击拍都有题目，侧栏布局将操作按钮放在谱面之前", async () => {
   for (const path of ["/preset/basic-values-01", "/random/tapping"]) {
     const html = await renderApp(path);
     assert.match(html, /practice-layout--sidebar/);
     const actions = html.indexOf('class="trainer-actions"');
-    const score = html.indexOf(path.startsWith("/preset") ? 'aria-label="节奏乐谱"' : 'aria-label="空白节奏乐谱"');
+    const score = html.indexOf('aria-label="节奏乐谱"');
     assert.ok(actions >= 0 && actions < score);
     assert.doesNotMatch(html, /trainer-feedback|试听中|试听结束|trainer-result|trainer-countdown/);
     const toolbar = html.indexOf('class="practice-toolbar"');
@@ -569,7 +569,7 @@ test("击拍使用侧栏布局，空态与真实题目均将操作按钮放在�
     assert.match(html, /class="dictation-scope-toggle"><input type="checkbox"/);
     assert.match(html, /仅播放当前小节/);
     assert.doesNotMatch(html, /dictation-scope-options|class="dictation-scope-toggle"><input[^>]*checked/);
-    if (path.startsWith("/random")) assert.match(html, /type="checkbox" disabled=""/);
+    assert.doesNotMatch(html, /class="dictation-scope-toggle"><input[^>]*disabled/);
     assert.ok(html.indexOf('data-source="question"') < body);
     assert.ok(html.indexOf('aria-label="练习设置"') > body);
     assert.equal((html.match(/aria-label="速度 BPM"/g) ?? []).length, 1);

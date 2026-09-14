@@ -34,6 +34,13 @@ export class PageVisits {
     return this.values.has(`${key}:${field}`) ? this.values.get(`${key}:${field}`) as T : initial;
   }
 
+  /** 惰性初值只为该次访问创建一次；重复挂载或返回时复用，包括尚未手动更新的状态。 */
+  readOrCreate<T>(key: string, field: string, create: () => T): T {
+    const id = `${key}:${field}`;
+    if (!this.values.has(id)) this.values.set(id, create());
+    return this.values.get(id) as T;
+  }
+
   write<T>(key: string, field: string, value: T) {
     this.values.set(`${key}:${field}`, value);
   }

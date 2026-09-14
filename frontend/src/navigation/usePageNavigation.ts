@@ -4,12 +4,19 @@ import { PageVisits } from "./PageVisits";
 export const VisitsContext = createContext<PageVisits | null>(null);
 
 /** 页面须按 location.key 及字段所属身份挂载，状态以不可变数据更新。
+ * 函数初值按访问惰性创建并保存，返回时不会重新调用；状态值本身不支持函数。
  * forget 仅清除匹配版本的快照，不改变当前画面，可在异步保存成功后调用。
  */
-export function useVisitState<T>(field: string, initial: T): [T, Dispatch<SetStateAction<T>>, (expected: T) => void] {
+export function useVisitState<T>(field: string, initial: T | (() => T)): [T, Dispatch<SetStateAction<T>>, (expected: T) => void] {
   const visits = useContext(VisitsContext);
   const { key } = useLocation();
-  const [value, setValue] = useState(() => visits ? visits.read(key, field, initial) : initial);
+  const [value, setValue] = useState(() => {
+    if (typeof initial === "function") {
+      const create = initial as () => T;
+      return visits ? visits.readOrCreate(key, field, create) : create();
+    }
+    return visits ? visits.read(key, field, initial) : initial;
+  });
   const current = useRef(value);
   const update = useCallback((next: SetStateAction<T>) => {
     const resolved = typeof next === "function" ? (next as (value: T) => T)(current.current) : next;
