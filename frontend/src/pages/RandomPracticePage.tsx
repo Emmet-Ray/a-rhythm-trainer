@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
+import { ReturnLink } from "../navigation/PageNavigation";
 import { Link, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
 import { generateRandomExercise, randomTopics, randomMeasureCounts, DEFAULT_RANDOM_MEASURE_COUNT, type RandomGenerationConfig } from "../exercises/randomExercises";
@@ -23,7 +24,7 @@ export default function RandomPracticePage() {
       <div className="random-page">
         <title>{`随机${selectedMode.label} · 节奏训练`}</title>
         <div className="design-system practice-page">
-        <Link className="back-link" to="/random">← 返回随机练习</Link>
+        <ReturnLink className="back-link" to="/random">← 返回随机练习</ReturnLink>
         <header className="page-heading practice-heading">
           <p className="eyebrow">随机练习</p>
           <h1>{selectedMode.label}</h1>
@@ -160,7 +161,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
         {error && <p role="alert">{error}</p>}
       </section>
       </dialog>
-        <Suspense fallback={<p className="loading-message" role="status">正在加载练习…</p>}>
+        <Suspense fallback={<p className="loading-message" role="status" data-navigation-pending>正在加载练习…</p>}>
           <PracticeWorkspace exerciseKey={generated?.id ?? 0} exercise={generated?.exercise ?? null} mode={mode}
             extraActions={busy => (
               <div className="random-toolbar-actions">

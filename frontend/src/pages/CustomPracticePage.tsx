@@ -7,6 +7,8 @@ import {
   useParams,
 } from "react-router";
 import NotFoundPage from "./NotFoundPage";
+import { ReturnLink } from "../navigation/PageNavigation";
+import { useVisitState } from "../navigation/usePageNavigation";
 import {
   parseRhythmExercise,
   type RhythmElement,
@@ -63,16 +65,16 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
     return (
       <div className="design-system practice-page custom-create">
         <title>{`新建${selectedMode.label} · 节奏训练`}</title>
-        <Link className="back-link" to={`/custom/${selectedMode.id}`}>
+        <ReturnLink className="back-link" to={`/custom/${selectedMode.id}`}>
           ← 返回题目列表
-        </Link>
+        </ReturnLink>
         <header className="page-heading practice-heading">
           <p className="eyebrow">自定义练习 / {selectedMode.label}</p>
           <h1>新建练习</h1>
         </header>
         <Suspense
           fallback={
-            <p className="loading-message" role="status">
+            <p className="loading-message" role="status" data-navigation-pending>
               正在加载编辑器…
             </p>
           }
@@ -96,10 +98,10 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
   ) {
     return (
       <div className="design-system practice-page custom-status">
-        <Link className="back-link" to="/custom">
+        <ReturnLink className="back-link" to="/custom">
           ← 返回自定义练习
-        </Link>
-        <p role="status">
+        </ReturnLink>
+        <p role="status" data-navigation-pending={auth.state.status === "checking" || auth.busy ? true : undefined}>
           {auth.state.status === "unavailable"
             ? "无法确认登录状态，请重试后读取练习。"
             : "正在确认登录…"}
@@ -119,7 +121,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
         <div className="design-system practice-page custom-status">
           <p>请登录后查看账号练习。</p>
           <Link to="/login">登录</Link> ·{" "}
-          <Link to={`/custom/${selectedMode.id}`}>返回题目列表</Link>
+          <ReturnLink to={`/custom/${selectedMode.id}`}>返回题目列表</ReturnLink>
         </div>
       );
     // 路由参数改变时重新读取题目，并卸载旧训练及其音频、草稿和设置。
@@ -139,6 +141,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
       <CustomExerciseList
         key={`${identity}:${selectedMode.id}`}
         source={source}
+        identity={identity}
         mode={selectedMode.id}
         label={selectedMode.label}
       />
@@ -185,10 +188,12 @@ function CustomExerciseList({
   mode,
   label,
   source,
+  identity,
 }: {
   mode: CustomMode;
   label: string;
   source: Source;
+  identity: string;
 }) {
   const { state } = useLocation();
   type ListResult = {
@@ -209,13 +214,18 @@ function CustomExerciseList({
     }
   }
   const [result, setResult] = useState(readExercises);
-  const [offset, setOffset] = useState(0);
+  const [offset, setOffset] = useVisitState(`custom:${identity}:${mode}:offset`, 0);
   const [revision, setRevision] = useState(0);
   useEffect(() => {
     if (source !== "account") return;
     const controller = new AbortController();
     void listAccountExercises(mode, { offset, signal: controller.signal })
       .then((page) => {
+        if (!controller.signal.aborted && offset > 0 && page.items.length === 0) {
+          // 返回期间数据可能被删除，退到仍有内容的最近一页，再恢复滚动。
+          setOffset(Math.max(0, offset - 50));
+          return;
+        }
         if (!controller.signal.aborted)
           setResult({ items: page.items, error: null, loading: false });
       })
@@ -229,7 +239,7 @@ function CustomExerciseList({
           });
       });
     return () => controller.abort();
-  }, [source, mode, offset, revision]);
+  }, [source, mode, offset, revision, setOffset]);
   function reload(nextOffset = offset) {
     setResult(readExercises());
     setOffset(nextOffset);
@@ -238,9 +248,9 @@ function CustomExerciseList({
   return (
     <div className="design-system practice-page custom-library">
       <title>{`自定义${label} · 节奏训练`}</title>
-      <Link className="back-link" to="/custom">
+      <ReturnLink className="back-link" to="/custom">
         ← 返回自定义练习
-      </Link>
+      </ReturnLink>
       <header className="page-heading practice-heading custom-list-heading">
         <div>
           <p className="eyebrow">自定义练习</p>
@@ -268,7 +278,7 @@ function CustomExerciseList({
           </button>
         </div>
       ) : result.loading ? (
-        <p role="status">正在读取练习…</p>
+        <p role="status" data-navigation-pending>正在读取练习…</p>
       ) : result.items.length === 0 ? (
         <p className="empty-questions">暂无题目</p>
       ) : (
@@ -385,9 +395,9 @@ function CustomExercisePractice({
   return (
     <div className="design-system practice-page custom-detail">
       <title>{`${result.item?.name ?? "自定义练习"} · ${label}`}</title>
-      <Link className="back-link" to={`/custom/${mode}`}>
+      <ReturnLink className="back-link" to={`/custom/${mode}`}>
         ← 返回题目列表
-      </Link>
+      </ReturnLink>
       <header className="page-heading practice-heading">
         <p className="eyebrow">
           {source === "account" ? "我的练习" : "本地练习"} / {label}
@@ -415,11 +425,11 @@ function CustomExercisePractice({
           </button>
         </div>
       ) : result.loading ? (
-        <p role="status">正在读取练习…</p>
+        <p role="status" data-navigation-pending>正在读取练习…</p>
       ) : result.item ? (
         <Suspense
           fallback={
-            <p className="loading-message" role="status">
+            <p className="loading-message" role="status" data-navigation-pending>
               正在加载练习…
             </p>
           }

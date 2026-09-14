@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useVisitState } from "../navigation/usePageNavigation";
 import {
   DEFAULT_THEME,
   getAppearance,
@@ -26,7 +27,7 @@ const categories = [
 
 export default function SettingsPage() {
   const [category, setCategory] =
-    useState<(typeof categories)[number]["id"]>("appearance");
+    useVisitState<(typeof categories)[number]["id"]>("settings:category", "appearance");
   const [appearance, setAppearance] = useState(getAppearance);
 
   function choose(theme: Theme) {

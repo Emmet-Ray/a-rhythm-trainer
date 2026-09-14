@@ -3,6 +3,8 @@ import { Link, Route, Routes, useLocation } from "react-router";
 import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useAuth } from "./auth/useAuth";
+import { PageNavigation } from "./navigation/PageNavigation";
+import { useNavigationScroll } from "./navigation/usePageNavigation";
 import "./App.css";
 import "./design-system.css";
 
@@ -15,15 +17,15 @@ const LoginPage = lazy(() => import("./pages/LoginPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 
 function App() {
-  const auth = useAuth();
-  const { pathname } = useLocation();
-  const mainRef = useRef<HTMLElement>(null);
+  return <PageNavigation><AppShell /></PageNavigation>;
+}
 
-  useEffect(() => {
-    // 客户端导航没有整页加载，主动把阅读位置与键盘焦点带到新页面。
-    window.scrollTo(0, 0);
-    mainRef.current?.focus({ preventScroll: true });
-  }, [pathname]);
+function AppShell() {
+  const auth = useAuth();
+  const { pathname, key } = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+  const identity = auth.state.status === "authenticated" ? `account:${auth.state.user.id}` : auth.state.status;
+  useNavigationScroll(pathname.startsWith("/custom") ? identity : "public");
 
   return (
     <div className="site-shell">
@@ -86,9 +88,9 @@ function App() {
       ) : null}
       <main id="main-content" ref={mainRef} tabIndex={-1}>
         {/* todo: 这个suspense是干嘛的 */}
-        <Suspense
+        <Suspense key={key}
           fallback={
-            <p className="loading-message" role="status">
+            <p className="loading-message" role="status" data-navigation-pending>
               正在加载…
             </p>
           }
