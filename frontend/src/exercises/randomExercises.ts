@@ -1,83 +1,78 @@
-import { expandRhythmElements, TICKS_PER_QUARTER, validateRhythmExercise, type RhythmElement, type RhythmExercise } from "../rhythm/RhythmModel";
+import { expandRhythmElements, TICKS_PER_QUARTER, validateRhythmExercise, type RhythmElement, type RhythmEvent, type RhythmExercise } from "../rhythm/RhythmModel";
+import { rhythmPatterns } from "../rhythm/RhythmPatterns";
 
-/** 随机主题独立于预设题库；综合主题通过多选表达，不重复登记材料。 */
-export const randomTopics = [
-  { id: "basic-notes", label: "全音符、二分音符、四分音符" },
-  { id: "eighth-notes", label: "八分音符、二平均节奏" },
-  { id: "rests", label: "四种休止符" },
-  { id: "dotted-quarters", label: "附点四分音符、大附点节奏" },
-  { id: "syncopation", label: "大切分节奏" },
-  { id: "sixteenth-notes", label: "十六分音符、四平均节奏、前八后十六节奏、前十六后八节奏" },
-  { id: "dotted-eighths", label: "附点八分音符、小附点节奏" },
-  { id: "small-syncopation", label: "小切分节奏" },
-  { id: "eighth-triplets", label: "小三连节奏" },
-] as const;
-export type RandomTopicId = typeof randomTopics[number]["id"];
 export const randomMeasureCounts = [1, 2, 4] as const;
 export const DEFAULT_RANDOM_MEASURE_COUNT = 2;
 
-/** topics 是允许范围，不保证逐题覆盖；不隐式加入基础主题，允许纯休止符。 */
-export type RandomGenerationConfig = {
-  mode: "tapping" | "dictation";
-  topics: readonly RandomTopicId[];
-  measureCount: typeof randomMeasureCounts[number];
-};
-
-type PatternDefinition = {
-  id: string;
-  /** 所列主题必须全部选中，才能使用这份材料。 */
-  requires: readonly RandomTopicId[];
-  elements: RhythmElement[];
-  /** 4/4 小节中的零基四分拍位置；这是出题策略，不是模型的音乐合法性限制。 */
+const noteValues = [
+  { value: "whole", label: "全" }, { value: "half", label: "二分" },
+  { value: "quarter", label: "四分" }, { value: "eighth", label: "八分" },
+  { value: "sixteenth", label: "十六分" },
+] as const;
+type MaterialId = `${typeof noteValues[number]["value"]}-${"note" | "rest"}`
+  | "dotted-quarter-note" | "dotted-eighth-note"
+  | typeof rhythmPatterns[number]["id"] | "eighth-triplet";
+type RandomMaterial = {
+  id: MaterialId;
+  label: string;
+  group: "音符" | "休止符" | "节奏型";
+  elements: readonly RhythmElement[];
+  /** 普通短音符按自身网格放置；节奏型整组从拍头开始，长节奏型从第 1、3 拍开始。 */
   startBeats: readonly number[];
 };
 
-// 材料可以包含普通事件或三连音组；时值由模型计算，不另存一份易失同步的拍数。
-// 新主题在上方登记，材料在这里登记；跨主题组合使用 requires，不散落到生成算法中。
-const patterns: readonly PatternDefinition[] = [
-  { id: "whole-note", requires: ["basic-notes"], elements: [{ kind: "note", noteValue: "whole" }], startBeats: [0] },
-  { id: "half-note", requires: ["basic-notes"], elements: [{ kind: "note", noteValue: "half" }], startBeats: [0, 2] },
-  { id: "quarter-note", requires: ["basic-notes"], elements: [{ kind: "note", noteValue: "quarter" }], startBeats: [0, 1, 2, 3] },
-  { id: "two-eighths", requires: ["eighth-notes"], elements: [{ kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "eighth" }], startBeats: [0, 1, 2, 3] },
-  { id: "whole-rest", requires: ["rests"], elements: [{ kind: "rest", noteValue: "whole" }], startBeats: [0] },
-  { id: "half-rest", requires: ["rests"], elements: [{ kind: "rest", noteValue: "half" }], startBeats: [0, 2] },
-  { id: "quarter-rest", requires: ["rests"], elements: [{ kind: "rest", noteValue: "quarter" }], startBeats: [0, 1, 2, 3] },
-  { id: "eighth-rest", requires: ["rests"], elements: [{ kind: "rest", noteValue: "eighth" }], startBeats: [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5] },
-  { id: "eighth-note-rest", requires: ["eighth-notes", "rests"], elements: [{ kind: "note", noteValue: "eighth" }, { kind: "rest", noteValue: "eighth" }], startBeats: [0, 1, 2, 3] },
-  { id: "eighth-rest-note", requires: ["eighth-notes", "rests"], elements: [{ kind: "rest", noteValue: "eighth" }, { kind: "note", noteValue: "eighth" }], startBeats: [0, 1, 2, 3] },
-  // 长节奏型整体占两拍，先限定在第 1、3 拍；不任意拆分或替换其中音符。
-  { id: "dotted-quarter-eighth", requires: ["dotted-quarters"], elements: [{ kind: "note", noteValue: "quarter", dots: 1 }, { kind: "note", noteValue: "eighth" }], startBeats: [0, 2] },
-  { id: "large-syncopation", requires: ["syncopation"], elements: [{ kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "quarter" }, { kind: "note", noteValue: "eighth" }], startBeats: [0, 2] },
-  { id: "four-sixteenths", requires: ["sixteenth-notes"], elements: Array.from({ length: 4 }, () => ({ kind: "note", noteValue: "sixteenth" })), startBeats: [0, 1, 2, 3] },
-  { id: "eighth-two-sixteenths", requires: ["sixteenth-notes"], elements: [{ kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "sixteenth" }, { kind: "note", noteValue: "sixteenth" }], startBeats: [0, 1, 2, 3] },
-  { id: "two-sixteenths-eighth", requires: ["sixteenth-notes"], elements: [{ kind: "note", noteValue: "sixteenth" }, { kind: "note", noteValue: "sixteenth" }, { kind: "note", noteValue: "eighth" }], startBeats: [0, 1, 2, 3] },
-  { id: "dotted-eighth-sixteenth", requires: ["dotted-eighths"], elements: [{ kind: "note", noteValue: "eighth", dots: 1 }, { kind: "note", noteValue: "sixteenth" }], startBeats: [0, 1, 2, 3] },
-  { id: "small-syncopation", requires: ["small-syncopation"], elements: [{ kind: "note", noteValue: "sixteenth" }, { kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "sixteenth" }], startBeats: [0, 1, 2, 3] },
-  { id: "eighth-triplet", requires: ["eighth-triplets"], elements: [{ kind: "triplet", notes: [
+function singleMaterial(kind: RhythmEvent["kind"], value: typeof noteValues[number]): RandomMaterial {
+  const element: RhythmEvent = { kind, noteValue: value.value };
+  const beats = expandRhythmElements([element]).durationTicks / TICKS_PER_QUARTER;
+  return {
+    id: `${value.value}-${kind}`,
+    label: value.label + (kind === "note" ? "音符" : "休止符"),
+    group: kind === "note" ? "音符" : "休止符",
+    elements: [element],
+    startBeats: Array.from({ length: 4 / beats }, (_, i) => i * beats),
+  };
+}
+
+/** 界面预览与生成材料共用目录；每项独立启用，组合不依赖基础音符勾选。 */
+export const randomMaterials: readonly RandomMaterial[] = [
+  ...noteValues.map(value => singleMaterial("note", value)),
+  { id: "dotted-quarter-note", label: "附点四分音符", group: "音符", elements: [{ kind: "note", noteValue: "quarter", dots: 1 }], startBeats: [0, 1, 2] },
+  { id: "dotted-eighth-note", label: "附点八分音符", group: "音符", elements: [{ kind: "note", noteValue: "eighth", dots: 1 }], startBeats: [0, 1, 2, 3] },
+  ...noteValues.map(value => singleMaterial("rest", value)),
+  ...rhythmPatterns.map(pattern => ({
+    id: pattern.id, label: pattern.label, group: "节奏型" as const, elements: pattern.events,
+    startBeats: expandRhythmElements(pattern.events).durationTicks === 2 * TICKS_PER_QUARTER ? [0, 2] : [0, 1, 2, 3],
+  })),
+  { id: "eighth-triplet", label: "小三连", group: "节奏型", elements: [{ kind: "triplet", notes: [
     { kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "eighth" },
   ] }], startBeats: [0, 1, 2, 3] },
 ];
+export const defaultRandomMaterials: readonly MaterialId[] = ["whole-note", "half-note", "quarter-note"];
 
-/** 校验配置并解析候选材料快照，不随机、不填小节、不修改输入。
- * 每个材料只出现一次；依赖主题全部满足才启用。输出使用模型的整数 tick。
- * 生成器还需筛选起点、剩余时值，以及剩余空间能否由候选材料填满。
- */
+/** materials 是允许材料，不保证逐题覆盖；不隐式补入其他音符，允许纯休止符。 */
+export type RandomGenerationConfig = {
+  mode: "tapping" | "dictation";
+  materials: readonly MaterialId[];
+  measureCount: typeof randomMeasureCounts[number];
+};
+
+/** 校验配置并解析所选材料的独立快照；起点和时值统一转换为模型整数 tick。 */
 export function resolveRandomPatterns(config: RandomGenerationConfig) {
   if (config?.mode !== "tapping" && config?.mode !== "dictation") throw new Error("请选择击拍或节奏听写模式。");
-  if (!Array.isArray(config.topics) || config.topics.length === 0) throw new Error("请至少选择一个主题。");
-  if (config.topics.some(id => !randomTopics.some(topic => topic.id === id))) throw new Error("包含尚未支持的随机主题。");
+  if (!Array.isArray(config.materials) || config.materials.length === 0) throw new Error("至少选择一个练习范围。");
+  if (config.materials.some(id => !randomMaterials.some(material => material.id === id))) throw new Error("包含尚未支持的练习范围。");
   if (!randomMeasureCounts.includes(config.measureCount)) throw new Error("小节数只支持 1、2、4。");
-  const selected = new Set(config.topics);
-  return patterns.filter(pattern => pattern.requires.every(id => selected.has(id))).map(pattern => ({
-    id: pattern.id,
-    elements: structuredClone(pattern.elements),
-    durationTicks: expandRhythmElements(pattern.elements).durationTicks,
-    startTicks: pattern.startBeats.map(beat => beat * TICKS_PER_QUARTER),
+  const selected = new Set(config.materials);
+  return randomMaterials.filter(material => selected.has(material.id)).map(material => ({
+    id: material.id,
+    elements: structuredClone(material.elements),
+    durationTicks: expandRhythmElements(material.elements).durationTicks,
+    startTicks: material.startBeats.map(beat => beat * TICKS_PER_QUARTER),
   }));
 }
 
 /** 生成固定 4/4 的完整题目，每步在可完成小节的材料中等概率选择。
- * 不保证主题覆盖或完整题目等概率，允许重复题目及全休止符。
+ * 不保证材料覆盖或完整题目等概率，允许重复题目及全休止符。
  * random 每次必须返回 [0, 1) 内的有限数；可注入以复现结果和测试边界。
  * 不修改配置，结果中的材料逐次深拷贝，不共享可变事件或三连音组。
  */
@@ -98,7 +93,7 @@ export function generateRandomExercise(config: RandomGenerationConfig, random: (
     });
     canFinish[position] = choices[position].length > 0;
   }
-  if (!canFinish[0]) throw new Error("所选主题无法组成完整的 4/4 小节，请调整主题范围。");
+  if (!canFinish[0]) throw new Error("所选材料无法填满 4/4 小节，请增加其他音符或节奏型。");
 
   const exercise: RhythmExercise = {
     timeSignature: { beats: 4, beatType: 4 },

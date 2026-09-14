@@ -1,13 +1,24 @@
-import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
+import { lazy, memo, Suspense, useEffect, useId, useRef, useState } from "react";
 import { PracticeHeading } from "../practice/PracticeHeading";
 import { useVisitState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
-import { generateRandomExercise, randomTopics, randomMeasureCounts, DEFAULT_RANDOM_MEASURE_COUNT, type RandomGenerationConfig } from "../exercises/randomExercises";
+import { generateRandomExercise, randomMaterials, defaultRandomMaterials, randomMeasureCounts, DEFAULT_RANDOM_MEASURE_COUNT, type RandomGenerationConfig } from "../exercises/randomExercises";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 
 // 进入对应模式后加载完整工作区，尚未生成时显示空状态。
 const PracticeWorkspace = lazy(() => import("../practice/PracticeWorkspace"));
+const RhythmSymbol = lazy(() => import("../rhythm/notation/RhythmSymbol").then(module => ({ default: module.RhythmSymbol })));
+const materialGroups = ["音符", "休止符", "节奏型"] as const;
+
+// 材料定义不随勾选变化；静态 SVG 不必跟随每次配置更新重新排版。
+const MaterialPreview = memo(function MaterialPreview({ material }: { material: typeof randomMaterials[number] }) {
+  return <Suspense fallback={<span className="random-symbol-placeholder" aria-hidden="true" />}>
+    {material.elements.length === 1
+      ? <RhythmSymbol {...material.elements[0]} />
+      : <RhythmSymbol kind="pattern" events={material.elements.filter(element => element.kind !== "triplet")} />}
+  </Suspense>;
+});
 
 // 随机练习的开放范围独立于预设题库；这里只列出已有子页面的模式。
 const randomModes = [
@@ -62,12 +73,15 @@ export default function RandomPracticePage() {
 function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"] }) {
   const measureCountName = useId();
   const drawerTitleId = useId();
+  const rangeTitleId = useId();
+  const rangeErrorId = useId();
   const drawerRef = useRef<HTMLDialogElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
-  const [config, setConfig] = useVisitState<RandomGenerationConfig>(`random:${mode}:config`, { mode, topics: ["basic-notes"], measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
+  const [config, setConfig] = useVisitState<RandomGenerationConfig>(`random:${mode}:config`, { mode, materials: defaultRandomMaterials, measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
   const [generated, setGenerated] = useVisitState<{ id: number; exercise: RhythmExercise } | null>(`random:${mode}:question`, null);
   const [settingsOpen, setSettingsOpen] = useState(generated === null);
   const [error, setError] = useState<string | null>(null);
+  const rangeError = config.materials.length === 0 ? "至少选择一个练习范围。" : error;
 
   useEffect(() => {
     if (!settingsOpen) {
@@ -119,23 +133,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
         <button type="button" aria-label="关闭生成设置" onClick={closeSettings}>×</button>
       </header>
       <section className="design-system random-generation" aria-label="生成配置">
-        <form className="random-config" onSubmit={event => { event.preventDefault(); generate(); }}>
-          <fieldset className="random-topics">
-            <legend>练习范围</legend>
-            {randomTopics.map(topic => (
-              <label key={topic.id}>
-                <input type="checkbox" checked={config.topics.includes(topic.id)} onChange={event => {
-                  const checked = event.target.checked;
-                  setConfig(previous => ({ ...previous, topics: checked
-                    ? [...previous.topics, topic.id]
-                    : previous.topics.filter(id => id !== topic.id) }));
-                  setError(null);
-                }} />
-                {topic.label}
-              </label>
-            ))}
-          </fieldset>
-          <div className="random-generation-actions">
+        <div className="random-config">
             <fieldset className="measure-count">
               <legend>小节数</legend>
               <div className="measure-count-options">
@@ -152,17 +150,39 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
                 ))}
               </div>
             </fieldset>
-            <button className="generate-button" type="submit">生成题目</button>
+          <div className="random-range-heading">
+            <h3 id={rangeTitleId}>练习范围</h3>
+            {rangeError && <p id={rangeErrorId} role="alert">{rangeError}</p>}
           </div>
-        </form>
-        {error && <p role="alert">{error}</p>}
+          <div className="random-range-scroll" role="group" aria-labelledby={rangeTitleId}
+            aria-describedby={rangeError ? rangeErrorId : undefined}>
+            {materialGroups.map(group => <fieldset key={group} className="random-material-group" data-group={group}>
+              <legend>{group}</legend>
+              <div className="random-material-options">
+              {randomMaterials.filter(material => material.group === group).map(material => (
+                <label key={material.id}>
+                  <input type="checkbox" checked={config.materials.includes(material.id)} onChange={event => {
+                    const checked = event.target.checked;
+                    setConfig(previous => ({ ...previous, materials: checked
+                      ? [...previous.materials, material.id]
+                      : previous.materials.filter(id => id !== material.id) }));
+                    setError(null);
+                  }} />
+                  <MaterialPreview material={material} />
+                  <span>{material.label}</span>
+                </label>
+              ))}
+              </div>
+            </fieldset>)}
+          </div>
+        </div>
       </section>
       </dialog>
         <Suspense fallback={<p className="loading-message" role="status" data-navigation-pending>正在加载练习…</p>}>
           <PracticeWorkspace exerciseKey={generated?.id ?? 0} exercise={generated?.exercise ?? null} mode={mode}
             extraActions={busy => (
               <div className="random-toolbar-actions">
-                <button type="button" disabled={busy} onClick={generate}>{generated ? "换一题" : "生成题目"}</button>
+                <button type="button" disabled={busy || config.materials.length === 0} onClick={generate}>{generated ? "换一题" : "生成题目"}</button>
                 <button ref={settingsButtonRef} className="random-settings-trigger" type="button" disabled={busy}
                   aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}>生成设置</button>
               </div>

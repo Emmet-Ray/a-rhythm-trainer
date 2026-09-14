@@ -4,7 +4,7 @@ import type { RhythmEvent } from "../RhythmModel";
 import { createRhythmStave, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
 
 type RhythmSymbolProps =
-  | { kind: RhythmEvent["kind"]; noteValue: RhythmEvent["noteValue"] }
+  | { kind: RhythmEvent["kind"]; noteValue: RhythmEvent["noteValue"]; dots?: RhythmEvent["dots"] }
   | { kind: "triplet"; noteValue?: never }
   | { kind: "pattern"; noteValue?: never; events: readonly RhythmEvent[] }
   | { kind: "dot"; noteValue?: never };
@@ -12,6 +12,7 @@ type RhythmSymbolProps =
 /** 工具栏专用的静态记谱图形，不携带编辑行为；名称与交互由外层按钮提供。 */
 export function RhythmSymbol(props: RhythmSymbolProps) {
   const { kind, noteValue } = props;
+  const dots = props.kind === "note" || props.kind === "rest" ? props.dots : undefined;
   const events = props.kind === "pattern" ? props.events : undefined;
   const containerRef = useRef<HTMLSpanElement>(null);
 
@@ -27,7 +28,7 @@ export function RhythmSymbol(props: RhythmSymbolProps) {
     context.setStrokeStyle("currentColor");
     const notes = events ? events.map(rhythmEventToVexFlowStaveNote) : kind === "triplet"
       ? Array.from({ length: 3 }, () => rhythmEventToVexFlowStaveNote({ kind: "note", noteValue: "eighth" }))
-      : kind === "note" || kind === "rest" ? [rhythmEventToVexFlowStaveNote({ kind, noteValue })] : [];
+      : kind === "note" || kind === "rest" ? [rhythmEventToVexFlowStaveNote({ kind, noteValue, dots })] : [];
     if (notes.length === 0) return;
     notes.forEach((note) => note.setStemStyle({ strokeStyle: "currentColor" }));
     const tuplet = kind === "triplet"
@@ -68,7 +69,7 @@ export function RhythmSymbol(props: RhythmSymbolProps) {
     svg.style.removeProperty("width");
     svg.style.removeProperty("height");
     return () => container.replaceChildren();
-  }, [kind, noteValue, events]);
+  }, [kind, noteValue, dots, events]);
 
   return <span ref={containerRef} className="rhythm-symbol" aria-hidden="true">
     {kind === "dot" ? <svg viewBox="0 0 64 64" focusable="false"><circle cx="32" cy="32" r="4" fill="currentColor" /></svg> : null}
