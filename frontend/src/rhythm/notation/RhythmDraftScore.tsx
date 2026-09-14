@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BarlineType, Beam, Formatter, Renderer, Tuplet } from "vexflow";
 import { expandRhythmElements, type RhythmElement, type RhythmExercise } from "../RhythmModel";
 import { createRhythmStave, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
@@ -27,6 +27,7 @@ export function RhythmDraftScore({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState(0);
+  const initialPositioned = useRef(false);
   const [browsingMeasure, setBrowsingMeasure] = useState(0);
   const activeMeasure = selectedMeasureIndex ?? Math.min(browsingMeasure, measures.length - 1);
   useEffect(() => {
@@ -39,6 +40,16 @@ export function RhythmDraftScore({
   const layout = useMemo(() => createDraftScoreLayout(
     measures.length, viewportWidth, timeSignature.beats * 4 / timeSignature.beatType,
   ), [measures.length, viewportWidth, timeSignature.beats, timeSignature.beatType]);
+  // 历史恢复可能从第 3、4 小节继续：等待真实宽度后只定位一次。
+  // 后续编辑、尺寸变化及手动滚动不接管视野；显式跳转仍由 selectMeasure 处理。
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || viewportWidth <= 0 || initialPositioned.current) return;
+    initialPositioned.current = true;
+    if (selectedMeasureIndex !== undefined) {
+      viewport.scrollLeft = getDraftMeasureScrollLeft(layout, selectedMeasureIndex, viewport.scrollLeft, viewport.clientWidth);
+    }
+  }, [layout, viewportWidth, selectedMeasureIndex]);
   // 测量结果同时供绘谱和选择区域使用；切换选中小节不重新排版。
   const score = useMemo(() => {
     const preparedMeasures = [];

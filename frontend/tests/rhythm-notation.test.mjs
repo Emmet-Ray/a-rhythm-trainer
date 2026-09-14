@@ -64,6 +64,25 @@ test("小节定位只在需要时滚动，窄屏对齐左端并限制末尾位�
   assert.equal(layout.getDraftMeasureScrollLeft(draft, 99, 150, 320), 150);
 });
 
+test("恢复末尾小节时宽屏完整可见，窄屏对齐小节起点且不越界", () => {
+  for (const width of [320, 768, 1180, 1500]) {
+    for (const count of [1, 2, 4, 8]) {
+      const draft = layout.createDraftScoreLayout(count, width, 4);
+      const measure = draft.measures[count - 1];
+      const left = measure.x * draft.scale;
+      const right = (measure.x + measure.width) * draft.scale;
+      const scroll = layout.getDraftMeasureScrollLeft(draft, count - 1, 0, width);
+      assert.ok(scroll >= 0 && scroll <= Math.max(0, draft.width * draft.scale - width));
+      if (measure.width * draft.scale <= width) {
+        assert.ok(left >= scroll && right <= scroll + width);
+      } else {
+        assert.equal(scroll, left);
+      }
+      assert.equal(layout.getDraftMeasureScrollLeft(draft, count - 1, scroll, width), scroll);
+    }
+  }
+});
+
 test("节奏谱只显示中线，首小节使用打击乐谱号，后续小节不重复谱号", () => {
   const first = notation.createRhythmStave(10, 40, 300, true);
   const next = notation.createRhythmStave(310, 40, 300, false);
