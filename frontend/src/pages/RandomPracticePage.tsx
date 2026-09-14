@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
 import { ReturnLink } from "../navigation/PageNavigation";
+import { useVisitState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
 import { generateRandomExercise, randomTopics, randomMeasureCounts, DEFAULT_RANDOM_MEASURE_COUNT, type RandomGenerationConfig } from "../exercises/randomExercises";
@@ -67,9 +68,9 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
   const drawerTitleId = useId();
   const drawerRef = useRef<HTMLDialogElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
-  const [settingsOpen, setSettingsOpen] = useState(true);
-  const [config, setConfig] = useState<RandomGenerationConfig>({ mode, topics: ["basic-notes"], measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
-  const [generated, setGenerated] = useState<{ id: number; exercise: RhythmExercise } | null>(null);
+  const [config, setConfig] = useVisitState<RandomGenerationConfig>(`random:${mode}:config`, { mode, topics: ["basic-notes"], measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
+  const [generated, setGenerated] = useVisitState<{ id: number; exercise: RhythmExercise } | null>(`random:${mode}:question`, null);
+  const [settingsOpen, setSettingsOpen] = useState(generated === null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

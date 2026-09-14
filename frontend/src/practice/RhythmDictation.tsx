@@ -1,4 +1,5 @@
-import { useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type ReactNode, type Dispatch, type SetStateAction } from "react";
+import { createDictationState, type DictationState } from "./DictationState";
 import {
   RhythmEditor,
   canEditRhythmElements,
@@ -62,9 +63,9 @@ type RhythmDictationProps = {
   metronomeEnabled?: boolean;
   extraActions?: (busy: boolean) => ReactNode;
   settingsPanel?: ReactNode;
+  /** 可选受控作答；工作区负责历史恢复，听写组件不依赖路由或存储。 */
+  session?: { state: DictationState; onChange: Dispatch<SetStateAction<DictationState>> };
 };
-
-type MeasureVerdict = "unchecked" | "correct" | "incorrect";
 
 // 核心的节奏听写组件
 // 一次挂载对应一道题；调用方换题时通过 key 重建，清空答案和交互状态。
@@ -74,12 +75,14 @@ export function RhythmDictation({
   metronomeEnabled = true,
   extraActions,
   settingsPanel,
+  session,
 }: RhythmDictationProps) {
-  const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
+  const [localState, setLocalState] = useState(() => createDictationState(exercise));
+  const { selectedMeasureIndex, playbackScope, answerMeasures, measureVerdicts } = session?.state ?? localState;
+  const updateState = session?.onChange ?? setLocalState;
   const [countdown, setCountdown] = useState<number | null>(null);
   const [resultVisible, setResultVisible] = useState(false);
   const editorRef = useRef<RhythmEditorHandle>(null);
-  const [playbackScope, setPlaybackScope] = useState<"all" | "measure">("all");
   const [isReferenceAnswerVisible, setIsReferenceAnswerVisible] =
     useState(false);
   const referenceAnswerId = useId();
@@ -87,14 +90,7 @@ export function RhythmDictation({
     () => exercise?.measures.map(({ elements }) => elements) ?? [],
     [exercise],
   );
-  // 只取标准答案的小节数量，绝不把标准答案的音符复制到草稿。
-  const [answerMeasures, setAnswerMeasures] = useState<RhythmElement[][]>(
-    () => exercise?.measures.map(() => []) ?? [],
-  );
   const hasSelectedMeasure = answerMeasures[selectedMeasureIndex] !== undefined;
-  const [measureVerdicts, setMeasureVerdicts] = useState<MeasureVerdict[]>(
-    () => exercise?.measures.map(() => "unchecked") ?? [],
-  );
   // 不把编辑器尚不能作答的题判成用户错误。
   const expectedMeasures = useMemo(
     () =>
@@ -116,14 +112,14 @@ export function RhythmDictation({
       answerMeasures[selectedMeasureIndex],
       expectedMeasure,
     );
-    const nextVerdicts = measureVerdicts.map((verdict, index) =>
+    const nextVerdicts = measureVerdicts.map((verdict, index): DictationState["measureVerdicts"][number] =>
       index === selectedMeasureIndex
         ? correct
           ? "correct"
           : "incorrect"
         : verdict,
     );
-    setMeasureVerdicts(nextVerdicts);
+    updateState(previous => ({ ...previous, measureVerdicts: nextVerdicts }));
     if (nextVerdicts.every((verdict) => verdict === "correct"))
       setResultVisible(true);
   }
@@ -181,11 +177,10 @@ export function RhythmDictation({
                       type="checkbox"
                       checked={playbackScope === "measure"}
                       disabled={!exercise}
-                      onChange={(event) =>
-                        setPlaybackScope(
-                          event.target.checked ? "measure" : "all",
-                        )
-                      }
+                      onChange={(event) => {
+                        const playbackScope = event.target.checked ? "measure" : "all";
+                        updateState(previous => ({ ...previous, playbackScope }));
+                      }}
                     />
                     <span>仅播放当前小节</span>
                   </label>
@@ -234,19 +229,18 @@ export function RhythmDictation({
           measures={answerMeasures}
           timeSignature={exercise?.timeSignature ?? { beats: 4, beatType: 4 }}
           selectedMeasureIndex={selectedMeasureIndex}
-          onSelectMeasure={setSelectedMeasureIndex}
+          onSelectMeasure={selectedMeasureIndex => updateState(previous => ({ ...previous, selectedMeasureIndex }))}
           onChange={(measureIndex, elements) => {
             setResultVisible(false);
-            setAnswerMeasures((previous) =>
-              previous.map((measure, index) =>
+            updateState((previous) => ({
+              ...previous,
+              answerMeasures: previous.answerMeasures.map((measure, index) =>
                 index === measureIndex ? elements : measure,
               ),
-            );
-            setMeasureVerdicts((previous) =>
-              previous.map((verdict, index) =>
+              measureVerdicts: previous.measureVerdicts.map((verdict, index) =>
                 index === measureIndex ? "unchecked" : verdict,
               ),
-            );
+            }));
           }}
         />
         <div className="dictation-verification">

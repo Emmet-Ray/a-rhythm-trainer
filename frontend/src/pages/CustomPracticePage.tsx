@@ -129,6 +129,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
     return (
       <CustomExercisePractice
         key={`${identity}:${isAccount}:${selectedMode.id}:${exerciseId}`}
+        identity={identity}
         source={isAccount ? "account" : "local"}
         mode={selectedMode.id}
         label={selectedMode.label}
@@ -340,11 +341,13 @@ function CustomExercisePractice({
   label,
   exerciseId,
   source,
+  identity,
 }: {
   mode: CustomMode;
   label: string;
   exerciseId: string;
   source: Source;
+  identity: string;
 }) {
   function readExercise(): {
     item: CustomExercise | undefined;
@@ -436,6 +439,7 @@ function CustomExercisePractice({
           }
         >
           <PracticeWorkspace
+            recoveryScope={`custom:${identity}:${source}:${mode}:${result.item.id}`}
             exercise={result.item.exercise}
             mode={mode}
             exerciseKey={result.item.id}

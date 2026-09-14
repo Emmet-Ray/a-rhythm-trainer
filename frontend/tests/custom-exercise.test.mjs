@@ -19,6 +19,8 @@ const { RhythmDraftScore } = await server.ssrLoadModule("/src/rhythm/notation/Rh
 const { default: App } = await server.ssrLoadModule("/src/App.tsx");
 const { VisitsContext } = await server.ssrLoadModule("/src/navigation/usePageNavigation.ts");
 const { PageVisits } = await server.ssrLoadModule("/src/navigation/PageVisits.ts");
+const { default: PracticeWorkspace } = await server.ssrLoadModule("/src/practice/PracticeWorkspace.tsx");
+const { dictationBinding } = await server.ssrLoadModule("/src/practice/DictationState.ts");
 const { default: RhythmScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmScore.tsx");
 const { createExerciseTimeline } = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
 
@@ -211,6 +213,32 @@ async function renderPage(path, route, auth = { state: { status: "guest" }, busy
   await stream.allReady;
   return new Response(stream).text();
 }
+
+test("工作区恢复听写答案、验证及设置但不恢复结果遮罩，账号来源隔离", () => {
+  const visits = new PageVisits();
+  const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: "note", noteValue: "whole" }] }] };
+  const scope = "custom:account:1:account:dictation:item";
+  visits.write("session", `practice:${scope}:settings`, { bpm: 97, metronomeEnabled: false });
+  visits.write("session", `practice:${scope}:dictation`, {
+    binding: dictationBinding(1, exercise),
+    state: { answerMeasures: [exercise.measures[0].elements], selectedMeasureIndex: 0, playbackScope: "measure", measureVerdicts: ["correct"] },
+  });
+  function render(recoveryScope = scope, exerciseKey = 1) {
+    return renderToStaticMarkup(createElement(VisitsContext, { value: visits },
+      createElement(MemoryRouter, { initialEntries: [{ pathname: "/practice", key: "session" }] },
+        createElement(PracticeWorkspace, { exercise, mode: "dictation", exerciseKey, recoveryScope }))));
+  }
+  const html = render();
+  assert.match(html, /value="97"/);
+  assert.match(html, /aria-label="节拍器" aria-pressed="false"/);
+  assert.match(html, /type="checkbox" checked=""/);
+  assert.match(html, /小节 1 验证结果/);
+  assert.doesNotMatch(html, /关闭练习结果|预备拍：|停止题目|停止答案/);
+  assert.doesNotMatch(render(scope, 2), /小节 1 验证结果/);
+  const other = render("custom:account:2:account:dictation:item");
+  assert.doesNotMatch(other, /小节 1 验证结果/);
+  assert.match(other, /value="60"/);
+});
 
 test("原访问恢复草稿内容和生效设置，身份及模式不同不载入，清除后回到空草稿", async () => {
   const visits = new PageVisits();

@@ -5,6 +5,24 @@ import { createServer } from "vite";
 const server = await createServer({ configFile: false, server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
 after(() => server.close());
 const { PageVisits } = await server.ssrLoadModule("/src/navigation/PageVisits.ts");
+const { createDictationState, dictationBinding, restoreDictation } = await server.ssrLoadModule("/src/practice/DictationState.ts");
+
+test("听写恢复同时绑定生成编号与题目内容，不按小节数量误配答案", () => {
+  const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: "note", noteValue: "whole" }] }] };
+  const empty = createDictationState(exercise);
+  assert.deepEqual(empty.answerMeasures, [[]]);
+  assert.deepEqual(empty.measureVerdicts, ["unchecked"]);
+  const state = { ...empty, answerMeasures: [[{ kind: "note", noteValue: "half" }]], playbackScope: "measure", measureVerdicts: ["incorrect"] };
+  const binding = dictationBinding(1, exercise);
+  const snapshot = { binding, state };
+  assert.equal(restoreDictation(snapshot, dictationBinding(1, structuredClone(exercise)), empty), state);
+  assert.equal(restoreDictation(snapshot, dictationBinding(2, exercise), empty), empty);
+  const changed = structuredClone(exercise);
+  changed.measures[0].elements[0].kind = "rest";
+  assert.equal(restoreDictation(snapshot, dictationBinding(1, changed), empty), empty);
+  assert.equal(restoreDictation(null, binding, empty), empty);
+  assert.deepEqual(createDictationState(null).answerMeasures, []);
+});
 
 test("草稿按访问、身份和模式隔离，保存成功只清除提交的版本", () => {
   const visits = new PageVisits();
