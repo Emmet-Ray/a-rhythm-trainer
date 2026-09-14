@@ -118,11 +118,41 @@
 /* 预设列表：无外框的主题分组，平面的分段选择，以及紧凑的可按压题目入口。 */
 .preset-library { max-width: 1080px; margin-inline: auto; }
 .preset-library .page-heading { margin: var(--ds-space-4) 0 var(--ds-space-8); }
-.preset-library .topic-section { grid-template-columns: 220px minmax(0, 1fr); gap: var(--ds-space-8); padding: var(--ds-space-8) 0; border-bottom: var(--ds-border) solid var(--ds-line); }
-.preset-library .topic-section:first-child { padding-top: 0; }
-.preset-library .topic-heading { padding-top: var(--ds-space-2); }
-.preset-library .topic-number { display: inline-grid; place-items: center; min-width: 36px; height: 32px; padding: 0 var(--ds-space-2); margin-bottom: var(--ds-space-3); border-radius: 10px; background: var(--ds-tint); color: var(--ds-primary); font-weight: 750; font-size: var(--ds-text-sm); }
-.preset-library .topic-heading h2 { font-size: 19px; line-height: 1.6; overflow-wrap: anywhere; }
+.preset-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.preset-question-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 4px 4px 20px; flex-shrink: 0; }
+.preset-library .preset-question-heading h2 { flex: 1 1 300px; margin: 0; }
+.preset-library .preset-question-heading .topic-modes { flex: 0 0 auto; margin: 0; }
+.preset-browser { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 32px; align-items: start; }
+.preset-topics { display: grid; gap: 4px; border-right: 1px solid var(--ds-line); padding-right: 20px; }
+.preset-library .preset-topics button { display: flex; align-items: baseline; gap: 12px; text-align: left; min-height: 48px; padding: 12px; border: 0; box-shadow: none; background: transparent; color: var(--ds-muted); font-size: 16px; font-weight: 550; line-height: 1.5; }
+.preset-library .preset-topics button > span:first-child { flex-shrink: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.preset-library .preset-topics button:hover, .preset-library .preset-topics button[aria-current] { background: var(--ds-tint); color: var(--ds-primary); }
+.preset-library .preset-topics button:active { transform: none; }
+.preset-topic-select { display: none; }
+.preset-questions { min-width: 0; }
+@media (min-width: 761px) {
+  .site-shell:has(.preset-library) { height: 100dvh; min-height: 0; overflow: hidden; }
+  .site-shell:has(.preset-library) > .site-header { flex-shrink: 0; }
+  .site-shell:has(.preset-library) > main { display: flex; min-height: 0; }
+  .preset-library { display: flex; flex-direction: column; width: 100%; min-height: 0; }
+  .preset-library .preset-heading { flex-shrink: 0; }
+  .preset-browser { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+  .preset-topics, .preset-question-scroll { min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding-block: 4px; }
+  .preset-topics { align-content: start; grid-auto-rows: max-content; }
+  .preset-questions { display: flex; flex-direction: column; min-height: 0; }
+  .preset-question-scroll { flex: 1; padding-inline: 4px; }
+}
+.preset-questions h2 { margin: 8px 0 24px; font-size: 22px; line-height: 1.5; overflow-wrap: anywhere; }
+.preset-library .question-copy { min-width: 0; }
+.preset-library .question-action { flex-shrink: 0; }
+@media (max-width: 760px) {
+  .preset-browser { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .preset-topics { display: none; }
+  .preset-questions { position: static; }
+  .preset-topic-select { display: grid; gap: 8px; min-width: 0; color: var(--ds-muted); }
+  .preset-topic-select select { width: 100%; min-width: 0; min-height: 48px; padding: 10px; border: 1px solid var(--ds-line); border-radius: 8px; background: var(--ds-surface); color: var(--ds-ink); font: inherit; }
+  .preset-library .preset-question-heading .topic-modes { flex: 1 0 100%; }
+}
 .preset-library .topic-modes { display: flex; flex-wrap: wrap; gap: var(--ds-space-1); padding: var(--ds-space-1); margin-bottom: var(--ds-space-4); border: 0; border-radius: var(--ds-radius-sm); background: var(--ds-subtle); }
 .preset-library .topic-modes button { flex: 1 1 auto; min-height: 44px; padding: 8px 10px; border: 2px solid transparent; border-radius: 8px; background: transparent; box-shadow: none; color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .preset-library .topic-modes button:hover:not(:disabled) { background: var(--ds-tint); border-color: var(--ds-line); color: var(--ds-primary); }

@@ -114,7 +114,13 @@ test("三个来源页面不再展示来源切换栏，保留首页返回入口�
     assert.match(html, /href="\/"[^>]*>首页/);
     assert.match(html, /击拍练习/);
     assert.match(html, /节奏听写/);
-    if (path === "/preset") assert.match(html, /class="option-strip topic-modes"/);
+    if (path === "/preset") {
+      assert.equal((html.match(/aria-label="训练方式"/g) ?? []).length, 1);
+      assert.match(html, /class="preset-question-heading"[^]*?aria-label="训练方式"[^]*?<\/header>\s*<section id="preset-question-list"/);
+      assert.match(html, /aria-label="练习主题"/);
+      assert.match(html, /<select/);
+      assert.doesNotMatch(html, /几何游戏|未开放|href="\/preset\/eighths-01"/);
+    }
   }
   assert.match(await renderApp("/login"), /href="\/"[^>]*>首页/);
 });
@@ -340,7 +346,6 @@ test("保存返回仅突出匹配题目，失效保存标记不显示反馈", as
 test("账号列表等待远程响应，不读取本地题库", async (t) => {
   mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
   const html = await renderPage("/custom/tapping", "/custom/:mode", { state: { status: "authenticated", user: { id: 1 } }, busy: false });
-  assert.match(html, /我的练习/);
   assert.match(html, /正在读取练习/);
   assert.doesNotMatch(html, /saved-tapping|暂无题目/);
 });

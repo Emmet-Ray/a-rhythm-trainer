@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useLayoutEffect, useRef, type UIEvent } from "react";
 import { PracticeHeading } from "../practice/PracticeHeading";
 import { useVisitState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
@@ -7,7 +7,6 @@ import {
   presetTopics,
   findPresetQuestion,
   type PracticeMode,
-  type PracticeTopic,
 } from "../exercises/presetExercises";
 import NotFoundPage from "./NotFoundPage";
 
@@ -18,19 +17,85 @@ export default function PresetPracticePage() {
   const { questionId } = useParams();
   if (questionId !== undefined) return <PresetExercisePage questionId={questionId} />;
 
+  return <PresetLibrary />;
+}
+
+function PresetLibrary() {
+  const [selectedMode, setSelectedMode] = useVisitState<PracticeMode>("preset:mode", "tapping");
+  const [topicId, setTopicId] = useVisitState("preset:topic", presetTopics[0].id);
+  const topic = presetTopics.find(item => item.id === topicId) ?? presetTopics[0];
+  const questions = topic.modes.find(group => group.mode === selectedMode)?.questions ?? [];
+  const [topicScrollRef, onTopicScroll] = useListScroll("preset:topic-scroll", "topics");
+  const [questionScrollRef, onQuestionScroll] = useListScroll("preset:question-scroll", `${topic.id}:${selectedMode}`);
+
   return (
     <div className="design-system preset-library">
       <title>预设练习 · 节奏训练</title>
-      <header className="page-heading">
+      <header className="page-heading preset-heading">
         <h1>预设练习</h1>
       </header>
-      <div className="topic-list">
-        {presetTopics.map((topic, index) => (
-          <TopicQuestions key={topic.id} topic={topic} index={index} />
-        ))}
+      <div className="preset-browser">
+        <nav className="preset-topics" aria-label="练习主题" ref={topicScrollRef} onScroll={onTopicScroll} tabIndex={0}>
+          {presetTopics.map((item, index) => (
+            <button key={item.id} type="button" aria-current={topic.id === item.id ? "true" : undefined}
+              aria-controls="preset-questions" onClick={() => setTopicId(item.id)}>
+              <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+              <span>{item.title}</span>
+            </button>
+          ))}
+        </nav>
+        <label className="preset-topic-select">
+          <span>练习主题</span>
+          <select value={topic.id} onChange={event => setTopicId(event.target.value)}>
+            {presetTopics.map((item, index) => (
+              <option key={item.id} value={item.id}>{`${String(index + 1).padStart(2, "0")} ${item.title}`}</option>
+            ))}
+          </select>
+        </label>
+        <section id="preset-questions" className="preset-questions" aria-labelledby="preset-topic-title">
+          <header className="preset-question-heading">
+            <h2 id="preset-topic-title">{topic.title}</h2>
+            <div className="topic-modes" role="group" aria-label="训练方式">
+              {practiceModes.filter(mode => mode.available).map(mode => (
+                <button key={mode.id} type="button" aria-pressed={selectedMode === mode.id}
+                  aria-controls="preset-question-list" onClick={() => setSelectedMode(mode.id)}>
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+          </header>
+          <section id="preset-question-list" className="preset-question-scroll" aria-label="题目列表"
+            ref={questionScrollRef} onScroll={onQuestionScroll} tabIndex={0}>
+          <ul className="question-list">
+            {questions.map(question => (
+              <li key={question.id}>
+                <Link className="question-link" to={`/preset/${question.id}`}>
+                  <div className="question-copy"><h3>{question.title}</h3></div>
+                  <span className="question-action">开始练习 <span aria-hidden="true">→</span></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {questions.length === 0 && <p className="empty-questions" role="status">该主题暂时没有{practiceModes.find(mode => mode.id === selectedMode)?.label}题目。</p>}
+          </section>
+        </section>
       </div>
     </div>
   );
+}
+
+/** 滚动快照属于当前历史记录；切换内容时归零，返回该记录时恢复。 */
+function useListScroll(field: string, content: string) {
+  const ref = useRef<HTMLElement>(null);
+  const [position, setPosition] = useVisitState(field, { content, top: 0 });
+  useLayoutEffect(() => {
+    if (ref.current) ref.current.scrollTop = position.content === content ? position.top : 0;
+  }, [content, position]);
+  function onScroll(event: UIEvent<HTMLElement>) {
+    const top = event.currentTarget.scrollTop;
+    if (position.content !== content || position.top !== top) setPosition({ content, top });
+  }
+  return [ref, onScroll] as const;
 }
 
 function PresetExercisePage({ questionId }: { questionId: string }) {
@@ -49,68 +114,5 @@ function PresetExercisePage({ questionId }: { questionId: string }) {
         </Suspense>
       ) : <p>该训练模式尚未开放</p>}
     </div>
-  );
-}
-
-// 模式选择属于主题的选题区域，不属于一道题的训练过程。
-function TopicQuestions({
-  topic,
-  index,
-}: {
-  topic: PracticeTopic;
-  index: number;
-}) {
-  const [selectedMode, setSelectedMode] = useVisitState<PracticeMode>(`preset:${topic.id}:mode`, "tapping");
-  const questions =
-    topic.modes.find((group) => group.mode === selectedMode)?.questions ?? [];
-
-  return (
-    <section className="topic-section" aria-labelledby={`topic-${topic.id}`}>
-      <header className="topic-heading">
-        <span className="topic-number" aria-hidden="true">
-          {String(index + 1).padStart(2, "0")}
-        </span>
-        <h2 id={`topic-${topic.id}`}>{topic.title}</h2>
-      </header>
-      <div className="topic-content">
-        <div
-          className="option-strip topic-modes"
-          role="group"
-          aria-label={`${topic.title}的训练方式`}
-        >
-          {practiceModes.map((mode) => (
-            <button
-              key={mode.id}
-              type="button"
-              className={
-                selectedMode === mode.id ? "option-current" : undefined
-              }
-              aria-pressed={selectedMode === mode.id}
-              aria-controls={`questions-${topic.id}`}
-              disabled={!mode.available}
-              onClick={() => setSelectedMode(mode.id)}
-            >
-              {mode.label}
-              {!mode.available && <small> 未开放</small>}
-            </button>
-          ))}
-        </div>
-        <ul id={`questions-${topic.id}`} className="question-list">
-          {questions.map((question) => (
-            <li key={question.id}>
-              <Link className="question-link" to={`/preset/${question.id}`}>
-                <div className="question-copy">
-                  <h3>{question.title}</h3>
-                </div>
-                <span className="question-action">
-                  开始练习 <span aria-hidden="true">→</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-        {questions.length === 0 && <p className="empty-questions">暂无题目</p>}
-      </div>
-    </section>
   );
 }
