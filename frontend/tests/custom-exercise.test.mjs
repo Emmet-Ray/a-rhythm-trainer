@@ -216,8 +216,8 @@ test("登录表单保留标签、自动填充和反馈语义，未发送验证�
   assert.match(html, /<button type="submit" disabled="">登录/);
 });
 
-async function renderPage(path, route, auth = { state: { status: "guest" }, busy: false }, visits = null) {
-  const stream = await renderToReadableStream(createElement(VisitsContext, { value: visits }, createElement(MemoryRouter, { initialEntries: [{ pathname: path, key: "test-visit" }] },
+async function renderPage(path, route, auth = { state: { status: "guest" }, busy: false }, visits = null, state = null) {
+  const stream = await renderToReadableStream(createElement(VisitsContext, { value: visits }, createElement(MemoryRouter, { initialEntries: [{ pathname: path, key: "test-visit", state }] },
     createElement(Routes, null,
       createElement(Route, { path: route, element: createElement(CustomPracticePage, { auth }) }),
     ),
@@ -319,8 +319,21 @@ test("已保存列表链接到所属模式的题目", async (t) => {
     assert.match(html, /class="design-system practice-page custom-library"/);
     assert.ok(html.includes(`href="/custom/${mode}/saved-${mode}"`));
     assert.match(html, /开始练习/);
-    assert.match(html, /<button type="button" disabled="">编辑 <small>未开放<\/small><\/button>/);
+    assert.doesNotMatch(html, /question-meta|4\/4 拍|\d+ 小节/);
+    assert.match(html, /practice-titlebar custom-list-heading/);
+    assert.doesNotMatch(html, /未开放|eyebrow/);
     assert.doesNotMatch(html, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
+  }
+});
+
+test("保存返回仅突出匹配题目，失效保存标记不显示反馈", async (t) => {
+  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
+  for (const mode of ["tapping", "dictation"]) {
+    const html = await renderPage(`/custom/${mode}`, "/custom/:mode", undefined, null, { savedExerciseId: `saved-${mode}` });
+    assert.equal((html.match(/data-just-saved="true"/g) ?? []).length, 1);
+    assert.match(html, /class="custom-saved-notice" role="status">已保存/);
+    const stale = await renderPage(`/custom/${mode}`, "/custom/:mode", undefined, null, { savedExerciseId: "missing" });
+    assert.doesNotMatch(stale, /data-just-saved|custom-saved-notice/);
   }
 });
 
@@ -432,14 +445,14 @@ test("自定义入口分别提供击拍和听写的列表地址，几何游戏�
   assert.doesNotMatch(html, /aria-label="内容来源"/);
 });
 
-test("模式列表保留新建入口，空存储显示暂无题目", async (t) => {
+test("模式列表保留新建入口，空存储引导创建", async (t) => {
   const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { getItem: () => null } });
   t.after(() => previous ? Object.defineProperty(globalThis, "localStorage", previous) : delete globalThis.localStorage);
   for (const mode of ["tapping", "dictation"]) {
     const html = await renderPage(`/custom/${mode}`, "/custom/:mode");
     assert.ok(html.includes(`href="/custom/${mode}/new"`));
-    assert.match(html, /暂无题目/);
+    assert.match(html, /还没有练习，点击上方「新建练习」开始创建。/);
     assert.doesNotMatch(html, /已保存的自定义练习|编辑自定义练习/);
   }
 });

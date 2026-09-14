@@ -1,4 +1,11 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Link,
   useLocation,
@@ -23,7 +30,9 @@ import {
   type AccountExerciseSummary,
 } from "../api/customExercises";
 import type { RhythmEditorHandle } from "../practice/RhythmEditor";
-import PracticeSettings, { type PracticeSettingsValue } from "../practice/PracticeSettings";
+import PracticeSettings, {
+  type PracticeSettingsValue,
+} from "../practice/PracticeSettings";
 import RhythmPlayback from "../practice/RhythmPlayback";
 import PracticeCue from "../practice/PracticeCue";
 import {
@@ -74,7 +83,12 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
         <ReturnLink className="back-link" to="/custom">
           ← 返回自定义练习
         </ReturnLink>
-        <p role="status" data-navigation-pending={auth.state.status === "checking" || auth.busy ? true : undefined}>
+        <p
+          role="status"
+          data-navigation-pending={
+            auth.state.status === "checking" || auth.busy ? true : undefined
+          }
+        >
           {auth.state.status === "unavailable"
             ? "无法确认登录状态，请重试后读取练习。"
             : "正在确认登录…"}
@@ -92,10 +106,18 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
     return (
       <div className="design-system practice-page custom-create">
         <title>{`新建${selectedMode.label} · 节奏训练`}</title>
-        <PracticeHeading backTo={`/custom/${selectedMode.id}`} backLabel="题目列表" title="新建练习" />
+        <PracticeHeading
+          backTo={`/custom/${selectedMode.id}`}
+          backLabel="题目列表"
+          title="新建练习"
+        />
         <Suspense
           fallback={
-            <p className="loading-message" role="status" data-navigation-pending>
+            <p
+              className="loading-message"
+              role="status"
+              data-navigation-pending
+            >
               正在加载编辑器…
             </p>
           }
@@ -118,7 +140,9 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
         <div className="design-system practice-page custom-status">
           <p>请登录后查看账号练习。</p>
           <Link to="/login">登录</Link> ·{" "}
-          <ReturnLink to={`/custom/${selectedMode.id}`}>返回题目列表</ReturnLink>
+          <ReturnLink to={`/custom/${selectedMode.id}`}>
+            返回题目列表
+          </ReturnLink>
         </div>
       );
     // 路由参数改变时重新读取题目，并卸载旧训练及其音频、草稿和设置。
@@ -212,14 +236,21 @@ function CustomExerciseList({
     }
   }
   const [result, setResult] = useState(readExercises);
-  const [offset, setOffset] = useVisitState(`custom:${identity}:${mode}:offset`, 0);
+  const [offset, setOffset] = useVisitState(
+    `custom:${identity}:${mode}:offset`,
+    0,
+  );
   const [revision, setRevision] = useState(0);
   useEffect(() => {
     if (source !== "account") return;
     const controller = new AbortController();
     void listAccountExercises(mode, { offset, signal: controller.signal })
       .then((page) => {
-        if (!controller.signal.aborted && offset > 0 && page.items.length === 0) {
+        if (
+          !controller.signal.aborted &&
+          offset > 0 &&
+          page.items.length === 0
+        ) {
           // 返回期间数据可能被删除，退到仍有内容的最近一页，再恢复滚动。
           setOffset(Math.max(0, offset - 50));
           return;
@@ -246,28 +277,15 @@ function CustomExerciseList({
   return (
     <div className="design-system practice-page custom-library">
       <title>{`自定义${label} · 节奏训练`}</title>
-      <ReturnLink className="back-link" to="/custom">
-        ← 返回自定义练习
-      </ReturnLink>
-      <header className="page-heading practice-heading custom-list-heading">
-        <div>
-          <p className="eyebrow">自定义练习</p>
-          <h1>{label}</h1>
-        </div>
+      <header className="practice-titlebar custom-list-heading">
+        <ReturnLink className="practice-return" to="/custom">
+          ← 自定义练习
+        </ReturnLink>
+        <h1>{label}</h1>
         <Link className="custom-new-link" to={`/custom/${mode}/new`}>
           新建练习
         </Link>
       </header>
-      <p className="custom-draft-notice">
-        {source === "account"
-          ? "我的练习 · 保存在当前账号"
-          : "本地练习 · 保存在当前浏览器，清除网站数据后会丢失。"}
-      </p>
-      {result.items.some((item) => item.id === state?.savedExerciseId) && (
-        <p className="custom-saved-notice" role="status">
-          已保存
-        </p>
-      )}
       {result.error ? (
         <div className="custom-storage-error">
           <p role="alert">{result.error}</p>
@@ -276,22 +294,30 @@ function CustomExerciseList({
           </button>
         </div>
       ) : result.loading ? (
-        <p role="status" data-navigation-pending>正在读取练习…</p>
+        <p role="status" data-navigation-pending>
+          正在读取练习…
+        </p>
       ) : result.items.length === 0 ? (
-        <p className="empty-questions">暂无题目</p>
+        <p className="empty-questions">
+          还没有练习，点击上方「新建练习」开始创建。
+        </p>
       ) : (
         <ul className="question-list" aria-label="已保存的自定义练习">
           {result.items.map((item) => (
-            <li className="custom-saved-question" key={item.id}>
+            <li
+              className="custom-saved-question"
+              key={item.id}
+              data-just-saved={item.id === state?.savedExerciseId || undefined}
+            >
               <Link
                 className="question-link"
                 to={`/custom/${mode}/${source === "account" ? "account/" : ""}${encodeURIComponent(item.id)}`}
               >
                 <div>
                   <h2>{item.name}</h2>
-                  {"exercise" in item && (
-                    <span className="question-meta">
-                      4/4 拍 · {item.exercise.measures.length} 小节
+                  {item.id === state?.savedExerciseId && (
+                    <span className="custom-saved-notice" role="status">
+                      已保存
                     </span>
                   )}
                 </div>
@@ -299,10 +325,6 @@ function CustomExerciseList({
                   开始练习 <span aria-hidden="true">→</span>
                 </span>
               </Link>
-              {/* TODO: 接入该题目的编辑入口，载入草稿并按原 ID 保存修改。 */}
-              <button type="button" disabled>
-                编辑 <small>未开放</small>
-              </button>
             </li>
           ))}
         </ul>
@@ -395,13 +417,18 @@ function CustomExercisePractice({
   return (
     <div className="design-system practice-page custom-detail">
       <title>{`${result.item?.name ?? "自定义练习"} · ${label}`}</title>
-      <PracticeHeading backTo={`/custom/${mode}`} backLabel="题目列表"
-        title={result.item?.name ??
-            (result.loading
-              ? "正在读取练习…"
-              : result.error
-                ? "无法读取练习"
-                : "未找到该练习")} />
+      <PracticeHeading
+        backTo={`/custom/${mode}`}
+        backLabel="题目列表"
+        title={
+          result.item?.name ??
+          (result.loading
+            ? "正在读取练习…"
+            : result.error
+              ? "无法读取练习"
+              : "未找到该练习")
+        }
+      />
       {result.error ? (
         <div className="custom-storage-error">
           <p role="alert">{result.error}</p>
@@ -416,11 +443,17 @@ function CustomExercisePractice({
           </button>
         </div>
       ) : result.loading ? (
-        <p role="status" data-navigation-pending>正在读取练习…</p>
+        <p role="status" data-navigation-pending>
+          正在读取练习…
+        </p>
       ) : result.item ? (
         <Suspense
           fallback={
-            <p className="loading-message" role="status" data-navigation-pending>
+            <p
+              className="loading-message"
+              role="status"
+              data-navigation-pending
+            >
               正在加载练习…
             </p>
           }
@@ -471,13 +504,18 @@ function CustomExerciseEditor({
     selectedMeasureIndex: number;
     settings: PracticeSettingsValue;
   }>(`custom:${identity}:${mode}:draft`, {
-    name: "", measures: [[], []], selectedMeasureIndex: 0,
+    name: "",
+    measures: [[], []],
+    selectedMeasureIndex: 0,
     settings: { bpm: 60, metronomeEnabled: true },
   });
   const { name, measures, selectedMeasureIndex } = draft;
-  const rememberSettings = useCallback((settings: PracticeSettingsValue) => {
-    setDraft(previous => ({ ...previous, settings }));
-  }, [setDraft]);
+  const rememberSettings = useCallback(
+    (settings: PracticeSettingsValue) => {
+      setDraft((previous) => ({ ...previous, settings }));
+    },
+    [setDraft],
+  );
   const editorRef = useRef<RhythmEditorHandle>(null);
   const [saving, setSaving] = useState(false);
   const locked = useRef(false);
@@ -494,7 +532,10 @@ function CustomExerciseEditor({
 
   function addMeasure() {
     setSaveError(null);
-    setDraft(previous => ({ ...previous, measures: [...previous.measures, []] }));
+    setDraft((previous) => ({
+      ...previous,
+      measures: [...previous.measures, []],
+    }));
     editorRef.current?.clearMessage();
   }
 
@@ -510,10 +551,13 @@ function CustomExerciseEditor({
     )
       return;
 
-    setDraft(previous => ({
+    setDraft((previous) => ({
       ...previous,
       measures: previous.measures.slice(0, -1),
-      selectedMeasureIndex: Math.min(previous.selectedMeasureIndex, previous.measures.length - 2),
+      selectedMeasureIndex: Math.min(
+        previous.selectedMeasureIndex,
+        previous.measures.length - 2,
+      ),
     }));
     setSaveError(null);
     editorRef.current?.clearMessage();
@@ -560,68 +604,125 @@ function CustomExerciseEditor({
   }
 
   return (
-    <section className="custom-exercise-editor practice-layout--sidebar" aria-label="编辑自定义练习">
+    <section
+      className="custom-exercise-editor practice-layout--sidebar"
+      aria-label="编辑自定义练习"
+    >
       <fieldset className="custom-exercise-fields" disabled={saving}>
-        <PracticeSettings layout="sidebar" initialValue={draft.settings} onChange={rememberSettings}
+        <PracticeSettings
+          layout="sidebar"
+          initialValue={draft.settings}
+          onChange={rememberSettings}
           extraControls={
-            <div className="custom-measure-count" role="group" aria-label="小节数量">
+            <div
+              className="custom-measure-count"
+              role="group"
+              aria-label="小节数量"
+            >
               <span>小节数量</span>
               <div className="custom-measure-stepper">
-                <button type="button" aria-label="减少小节" disabled={measures.length === 1} onClick={removeMeasure}>−</button>
+                <button
+                  type="button"
+                  aria-label="减少小节"
+                  disabled={measures.length === 1}
+                  onClick={removeMeasure}
+                >
+                  −
+                </button>
                 <output aria-label="当前小节数量">{measures.length}</output>
-                <button type="button" aria-label="增加小节" onClick={addMeasure}>+</button>
+                <button
+                  type="button"
+                  aria-label="增加小节"
+                  onClick={addMeasure}
+                >
+                  +
+                </button>
               </div>
             </div>
-          }>
-          {({ bpm, metronomeEnabled }, settingsPanel) => <>
-        <div className="practice-toolbar custom-editor-toolbar">
-          <label className="custom-name">
-            <span>练习名称</span>
-            <input
-              value={name}
-              onChange={(event) => {
-                const name = event.target.value;
-                setDraft(previous => ({ ...previous, name }));
-                setSaveError(null);
-              }}
-            />
-          </label>
-          <div className="custom-editor-actions" role="group" aria-label="试听与保存">
-          <RhythmPlayback
-            key={[bpm, measures.length].join(":")}
-            bpm={bpm} metronomeEnabled={metronomeEnabled} timeSignature={timeSignature}
-            options={[{ id: "draft", label: "试听", stopLabel: "停止", measures }]}
-            onCountInChange={setCountdown}
-          />
-          <button className="custom-save-button" type="button" disabled={saving || !canSave} onClick={() => void save()}>
-            {saving ? "正在保存…" : "保存练习"}
-          </button>
-          </div>
-          {saveError && <p className="custom-save-error" role="alert">{saveError}</p>}
-        </div>
-        <div className="practice-body">
-        <div className="practice-content">
-        <RhythmEditor
-          ref={editorRef}
-          scoreOverlay={countdown !== null ? <PracticeCue countdown={countdown} /> : null}
-          measures={measures}
-          timeSignature={timeSignature}
-          selectedMeasureIndex={selectedMeasureIndex}
-          onSelectMeasure={selectedMeasureIndex => setDraft(previous => ({ ...previous, selectedMeasureIndex }))}
-          onChange={(measureIndex, elements) => {
-            setSaveError(null);
-            setDraft((previous) => ({
-              ...previous,
-              measures: previous.measures.map((measure, index) =>
-                index === measureIndex ? elements : measure,
-              ),
-            }));
-          }}
-        />
-        </div>
-        {settingsPanel}
-        </div>
-          </>}
+          }
+        >
+          {({ bpm, metronomeEnabled }, settingsPanel) => (
+            <>
+              <div className="practice-toolbar custom-editor-toolbar">
+                <label className="custom-name">
+                  <span>练习名称</span>
+                  <input
+                    value={name}
+                    onChange={(event) => {
+                      const name = event.target.value;
+                      setDraft((previous) => ({ ...previous, name }));
+                      setSaveError(null);
+                    }}
+                  />
+                </label>
+                <div
+                  className="custom-editor-actions"
+                  role="group"
+                  aria-label="试听与保存"
+                >
+                  <RhythmPlayback
+                    key={[bpm, measures.length].join(":")}
+                    bpm={bpm}
+                    metronomeEnabled={metronomeEnabled}
+                    timeSignature={timeSignature}
+                    options={[
+                      {
+                        id: "draft",
+                        label: "试听",
+                        stopLabel: "停止",
+                        measures,
+                      },
+                    ]}
+                    onCountInChange={setCountdown}
+                  />
+                  <button
+                    className="custom-save-button"
+                    type="button"
+                    disabled={saving || !canSave}
+                    onClick={() => void save()}
+                  >
+                    {saving ? "正在保存…" : "保存练习"}
+                  </button>
+                </div>
+                {saveError && (
+                  <p className="custom-save-error" role="alert">
+                    {saveError}
+                  </p>
+                )}
+              </div>
+              <div className="practice-body">
+                <div className="practice-content">
+                  <RhythmEditor
+                    ref={editorRef}
+                    scoreOverlay={
+                      countdown !== null ? (
+                        <PracticeCue countdown={countdown} />
+                      ) : null
+                    }
+                    measures={measures}
+                    timeSignature={timeSignature}
+                    selectedMeasureIndex={selectedMeasureIndex}
+                    onSelectMeasure={(selectedMeasureIndex) =>
+                      setDraft((previous) => ({
+                        ...previous,
+                        selectedMeasureIndex,
+                      }))
+                    }
+                    onChange={(measureIndex, elements) => {
+                      setSaveError(null);
+                      setDraft((previous) => ({
+                        ...previous,
+                        measures: previous.measures.map((measure, index) =>
+                          index === measureIndex ? elements : measure,
+                        ),
+                      }));
+                    }}
+                  />
+                </div>
+                {settingsPanel}
+              </div>
+            </>
+          )}
         </PracticeSettings>
       </fieldset>
     </section>
