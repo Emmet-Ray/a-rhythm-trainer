@@ -89,7 +89,7 @@ test("清空按钮只在当前小节有内容时可用，不受其他小节内�
       measures, selectedMeasureIndex, timeSignature: { beats: 4, beatType: 4 },
       onChange: () => assert.fail("渲染不应清空"), onSelectMeasure: () => {},
     }));
-    const button = html.match(/<button\b[^>]*>清空当前小节<\/button>/)[0];
+    const button = html.match(/<button\b[^>]*aria-label="清空当前小节"[^>]*>/)[0];
     assert.equal(button.includes('disabled=""'), disabled);
   }
 });
@@ -105,7 +105,11 @@ test("符号按钮保留中文名称和提示，装饰图形不代替按钮的�
     assert.doesNotMatch(html, new RegExp(`>${label}</button>`));
   }
   assert.match(html, /aria-label="附点"[^>]*disabled=""[^>]*aria-pressed="false"/);
-  assert.match(html, />删除末尾<\/button>/);
+  for (const label of ["删除末尾", "清空当前小节"]) {
+    assert.match(html, new RegExp(`<button[^>]*aria-label="${label}"[^>]*title="${label}"[^>]*><svg[^>]*aria-hidden="true"`));
+  }
+  assert.ok(html.indexOf('aria-label="小三连"') < html.indexOf('aria-label="附点"'));
+  assert.ok(html.indexOf('aria-label="附点"') < html.indexOf('aria-label="添加休止符"'));
   assert.equal((html.match(/class="rhythm-symbol"/g) ?? []).length, 22);
   assert.doesNotMatch(html, /rhythm-editor-row-label/);
   assert.match(html, /role="group" aria-label="添加音符"/);

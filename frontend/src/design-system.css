@@ -349,7 +349,7 @@
 .rhythm-editor .rhythm-editor-current-measure { margin-bottom: var(--ds-space-4); font-size: var(--ds-text-sm); font-weight: 750; }
 .rhythm-editor .rhythm-editor-symbol-row { margin-top: var(--ds-space-3); }
 .rhythm-editor-input-groups { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px 40px; }
-.rhythm-editor-basic-input { width: 384px; max-width: 100%; }
+.rhythm-editor-basic-input { width: 444px; max-width: 100%; }
 .rhythm-editor-pattern-input { width: 440px; max-width: 100%; }
 .rhythm-editor-basic-input .rhythm-editor-symbol-row:first-of-type { margin-top: 0; }
 .rhythm-editor-pattern-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px 8px; }
@@ -361,8 +361,9 @@
 .rhythm-symbol { display: block; width: 44px; height: 44px; pointer-events: none; }
 .rhythm-editor-triplet .rhythm-symbol { width: 76px; }
 .rhythm-symbol svg { display: block; width: 100%; height: 100%; }
-.rhythm-editor .rhythm-editor-edit-actions { margin-top: var(--ds-space-4); gap: var(--ds-space-3); }
-.rhythm-editor .rhythm-editor-edit-actions button[aria-pressed="true"]:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); border-color: var(--ds-primary); }
+.rhythm-editor .rhythm-editor-edit-actions { margin-top: var(--ds-space-4); gap: var(--ds-space-4); }
+.rhythm-editor .rhythm-editor-edit-actions button { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; padding: 2px; }
+.rhythm-editor button.rhythm-editor-dot[aria-pressed="true"]:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); border-color: var(--ds-primary); }
 .rhythm-editor .rhythm-editor-input-message { min-height: 2lh; margin: 0; color: var(--ds-error); }
 .rhythm-dictation .dictation-verification { margin-top: var(--ds-space-4); padding-top: var(--ds-space-6); border-top: 2px solid var(--ds-line); gap: var(--ds-space-4); }
 .rhythm-dictation .dictation-verification-result { gap: var(--ds-space-3); }

@@ -236,6 +236,11 @@ export function RhythmEditor({
             >
               <RhythmSymbol kind="triplet" />
             </button>
+            <button type="button" className="rhythm-editor-dot" aria-label="附点"
+              disabled={!canToggleLastDot} aria-pressed={lastHasDot}
+              title="切换当前小节末尾四分或八分音符的附点" onClick={toggleLastDot}>
+              <RhythmSymbol kind="dot" />
+            </button>
           </div>
         </div>
 
@@ -290,33 +295,29 @@ export function RhythmEditor({
         >
           <button
             type="button"
-            className="rhythm-editor-dot"
-            aria-label="附点"
-            disabled={!canToggleLastDot}
-            aria-pressed={lastHasDot}
-            title="切换当前小节末尾四分或八分音符的附点"
-            onClick={toggleLastDot}
-          >
-            <RhythmSymbol kind="dot" />
-          </button>
-
-          <button
-            type="button"
+            aria-label="删除末尾" title="删除末尾"
             disabled={
               !hasSelectedMeasure || measures[selectedMeasureIndex].length === 0
             }
             onClick={removeLastEvent}
           >
-            删除末尾
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <path d="M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-7-7Z" />
+              <path d="m12 9 6 6m0-6-6 6" />
+            </svg>
           </button>
           <button
             type="button"
+            aria-label="清空当前小节" title="清空当前小节"
             disabled={
               !hasSelectedMeasure || measures[selectedMeasureIndex].length === 0
             }
             onClick={clearSelectedMeasure}
           >
-            清空当前小节
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <path d="m14 3 7 7a1 1 0 0 1 0 2l-8 8H7l-5-5a1 1 0 0 1 0-2L12 3a1 1 0 0 1 2 0Z" />
+              <path d="m7 8 9 9M7 21h14" />
+            </svg>
           </button>
         </div>
       </div>
