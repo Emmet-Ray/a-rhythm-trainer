@@ -473,32 +473,38 @@
 .design-system .settings-navigation button { text-align: left; white-space: nowrap; border-color: transparent; box-shadow: none; background: transparent; color: var(--ds-muted); transform: none; }
 .design-system .settings-navigation button:hover { background: var(--ds-subtle); color: var(--ds-ink); }
 .design-system .settings-navigation button[aria-pressed="true"] { background: var(--ds-tint); color: var(--ds-primary); }
+.settings-unavailable { margin-left: 8px; font-size: 12px; font-weight: 400; color: var(--ds-muted); }
 .settings-content { min-width: 0; min-height: 360px; max-width: 768px; padding: 4px; }
-.local-data-summary { margin: var(--ds-space-6) 0; }
+.local-data-summary { max-width: 480px; margin: var(--ds-space-6) 0; }
 .local-data-summary > div { display: flex; justify-content: space-between; gap: var(--ds-space-4); padding: var(--ds-space-4) 0; border-bottom: 1px solid var(--ds-line); }
-.local-data-summary dd { margin: 0; font-weight: 650; }
+.local-data-summary dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .design-system .local-data-clear:not(:disabled) { color: var(--ds-error); }
 .settings-section-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-4); flex-wrap: wrap; margin-bottom: var(--ds-space-3); }
 .settings-section-heading h2 { margin: 0; }
 .settings-section-heading span { color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .settings-section > p:not(.settings-message) { margin: 0; color: var(--ds-muted); }
-.settings-section > p.settings-description { margin-top: var(--ds-space-6); }
-.settings-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ds-space-3); border: 0; padding: 0; margin: 0; min-width: 0; }
+.settings-section > p.settings-description { margin-top: var(--ds-space-3); }
+.settings-description { max-width: 480px; color: var(--ds-muted); font-size: var(--ds-text-sm); line-height: 1.6; }
+.settings-actions > .settings-description { margin: 0 0 var(--ds-space-3); }
+.settings-options { display: flex; flex-wrap: wrap; gap: var(--ds-space-3); border: 0; padding: 0; margin: 0; min-width: 0; }
 .settings-options legend { margin-bottom: var(--ds-space-3); color: var(--ds-muted); font-size: var(--ds-text-sm); }
-.settings-options label { display: flex; align-items: center; gap: var(--ds-space-3); min-height: 64px; padding: var(--ds-space-3); border: 2px solid var(--ds-line); border-radius: var(--ds-radius-sm); cursor: pointer; font-weight: 650; }
+.settings-options label { display: flex; flex: 0 1 160px; min-width: 0; align-items: center; gap: var(--ds-space-3); min-height: 56px; padding: var(--ds-space-3); border: 2px solid var(--ds-line); border-radius: var(--ds-radius-sm); cursor: pointer; font-weight: 650; }
 .settings-options label:hover { border-color: var(--ds-primary); }
 .settings-options label:has(input:checked) { border-color: var(--ds-primary); background: var(--ds-tint); }
 .settings-options input { min-height: 0; width: 18px; height: 18px; padding: 0; margin: 0; flex-shrink: 0; accent-color: var(--ds-primary); }
 .theme-swatch { width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; background: var(--ds-primary); }
 .settings-actions { margin-top: var(--ds-space-8); }
-.settings-message { min-height: 48px; margin-top: var(--ds-space-4); color: var(--ds-error); font-size: var(--ds-text-sm); }
+.settings-message { max-width: 480px; margin: var(--ds-space-3) 0 0; color: var(--ds-error); font-size: var(--ds-text-sm); line-height: 1.6; }
+.settings-message:empty { margin: 0; }
+.settings-message--success { color: var(--ds-success); }
 @media (max-width: 760px) {
   .settings-layout { grid-template-columns: minmax(0, 1fr); gap: var(--ds-space-6); }
-  .settings-navigation { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 2px solid var(--ds-line); padding: var(--ds-space-1) var(--ds-space-1) var(--ds-space-3); }
+  .settings-navigation { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--ds-line); padding: var(--ds-space-1) var(--ds-space-1) var(--ds-space-3); }
   .settings-navigation button { flex-shrink: 0; }
 }
-@media (max-width: 600px) {
-  .settings-options { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 480px) {
+  .settings-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .design-system .settings-navigation button { padding-inline: 12px; }
 }
 /* 登录沿用基础控件；固定发送按钮宽度和反馈区高度，避免状态切换挤动表单。 */
 .login-page.design-system { max-width: 400px; }

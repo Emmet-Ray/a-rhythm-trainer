@@ -208,7 +208,8 @@ test("设置页不要求登录，显示三套配色与恢复默认入口", async
   assert.match(html, /蓝色/);
   assert.match(html, /青绿色/);
   assert.match(html, /恢复默认/);
-  assert.doesNotMatch(html, /未开放|请登录后/);
+  assert.match(html, /class="settings-unavailable">未开放<\/span>/);
+  assert.doesNotMatch(html, /请登录后/);
 });
 
 test("设置页提供四个分类，默认只展示外观内容", async () => {
@@ -217,7 +218,8 @@ test("设置页提供四个分类，默认只展示外观内容", async () => {
     ["appearance", "外观"], ["local-data", "本地数据"],
     ["sound", "声音"], ["tapping-precision", "击拍精度"],
   ]) {
-    assert.match(html, new RegExp(`<button[^>]*aria-pressed="${id === "appearance"}"[^>]*>${title}</button>`));
+    const badge = id === "sound" ? '<span class="settings-unavailable">未开放</span>' : "";
+    assert.match(html, new RegExp(`<button[^>]*aria-pressed="${id === "appearance"}"[^>]*>${title}${badge}</button>`));
   }
   for (const id of ["local-data", "sound", "tapping-precision"]) {
     assert.doesNotMatch(html, new RegExp(`id="${id}-heading"`));

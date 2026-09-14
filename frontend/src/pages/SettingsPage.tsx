@@ -26,8 +26,9 @@ const categories = [
 ] as const;
 
 export default function SettingsPage() {
-  const [category, setCategory] =
-    useVisitState<(typeof categories)[number]["id"]>("settings:category", "appearance");
+  const [category, setCategory] = useVisitState<
+    (typeof categories)[number]["id"]
+  >("settings:category", "appearance");
   const [appearance, setAppearance] = useState(getAppearance);
 
   function choose(theme: Theme) {
@@ -54,6 +55,9 @@ export default function SettingsPage() {
               onClick={() => setCategory(item.id)}
             >
               {item.label}
+              {item.id === "sound" && (
+                <span className="settings-unavailable">未开放</span>
+              )}
             </button>
           ))}
         </nav>
@@ -65,7 +69,6 @@ export default function SettingsPage() {
             >
               <h2 id="appearance-heading">外观</h2>
               <fieldset className="settings-options">
-                <legend>配色主题</legend>
                 {themes.map((theme) => (
                   <label key={theme.id}>
                     <input
@@ -103,9 +106,8 @@ export default function SettingsPage() {
             >
               <header className="settings-section-heading">
                 <h2 id="sound-heading">声音</h2>
-                <span>待实现</span>
               </header>
-              <p>选择节拍器和练习音色。</p>
+              <p>暂未提供音色设置。</p>
               {/* TODO: 接入音色偏好与试听；练习页仍保留节拍器开关。 */}
             </section>
           )}
@@ -250,6 +252,7 @@ function LocalDataSettings() {
         <button
           type="button"
           className="local-data-clear"
+          aria-describedby="local-data-clear-description"
           disabled={data.summary?.total === 0}
           onClick={clear}
         >
@@ -261,7 +264,9 @@ function LocalDataSettings() {
           {clearError}
         </p>
       )}
-      <p role="status">{message}</p>
+      <p role="status" className="settings-message settings-message--success">
+        {message}
+      </p>
     </section>
   );
 }
