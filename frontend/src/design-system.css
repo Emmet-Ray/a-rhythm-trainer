@@ -345,6 +345,13 @@
 .rhythm-editor .rhythm-editor-controls { margin-top: var(--ds-space-4); }
 .rhythm-editor .rhythm-editor-current-measure { margin-bottom: var(--ds-space-4); font-size: var(--ds-text-sm); font-weight: 750; }
 .rhythm-editor .rhythm-editor-symbol-row { margin-top: var(--ds-space-3); }
+.rhythm-editor-input-groups { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px 40px; }
+.rhythm-editor-basic-input { width: 384px; max-width: 100%; }
+.rhythm-editor-pattern-input { width: 440px; max-width: 100%; }
+.rhythm-editor-basic-input .rhythm-editor-symbol-row:first-of-type { margin-top: 0; }
+.rhythm-editor-pattern-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px 8px; }
+.rhythm-editor .rhythm-editor-pattern-buttons button { display: flex; align-items: center; justify-content: center; height: 52px; padding: 2px; min-width: 0; }
+.rhythm-editor-pattern-buttons .rhythm-symbol { width: 94px; max-width: 100%; }
 .rhythm-editor .rhythm-editor-symbol-buttons { display: flex; flex-wrap: wrap; gap: var(--ds-space-2); }
 .rhythm-editor .rhythm-editor-symbol-buttons button, .rhythm-editor button.rhythm-editor-dot { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 52px; height: 52px; padding: 2px; }
 .rhythm-editor .rhythm-editor-symbol-buttons .rhythm-editor-triplet { width: 84px; }

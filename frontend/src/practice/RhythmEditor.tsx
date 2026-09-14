@@ -9,6 +9,7 @@ import {
 } from "../rhythm/RhythmModel";
 import { RhythmDraftScore } from "../rhythm/notation/RhythmDraftScore";
 import { RhythmSymbol } from "../rhythm/notation/RhythmSymbol";
+import { appendRhythmInput, rhythmInputPatterns } from "./RhythmEditorInput";
 
 // 输入按钮与题目支持检查共用这一列表，避免出现题目可验证却无法填写的情况。
 const eventOptions = [
@@ -106,19 +107,20 @@ export function RhythmEditor({
     measures[selectedMeasureIndex] ?? [],
   ).durationTicks;
 
-  function addElement(newElement: RhythmElement) {
+  function addElements(input: readonly RhythmElement[]) {
     if (!hasSelectedMeasure) return;
-    const nextElements = [...measures[selectedMeasureIndex], newElement];
-    if (
-      expandRhythmElements(nextElements).durationTicks >
-      measureBeats * TICKS_PER_QUARTER
-    ) {
+    const nextElements = appendRhythmInput(measures[selectedMeasureIndex], input, timeSignature);
+    if (!nextElements) {
       setAddEventMessage("添加这个符号会超出当前小节允许的拍数。");
       return;
     }
 
     setAddEventMessage("");
     onChange(selectedMeasureIndex, nextElements);
+  }
+
+  function addElement(element: RhythmElement) {
+    addElements([element]);
   }
 
   function toggleLastDot() {
@@ -184,6 +186,8 @@ export function RhythmEditor({
         <p className="rhythm-editor-input-message" role="status">
           {addEventMessage}
         </p>
+        <div className="rhythm-editor-input-groups">
+        <div className="rhythm-editor-basic-input">
         <div
           role="group"
           aria-label="添加音符"
@@ -264,6 +268,19 @@ export function RhythmEditor({
                 </button>
               ))}
           </div>
+        </div>
+
+        </div>
+        <div role="group" aria-label="常见节奏型" className="rhythm-editor-pattern-input">
+          <div className="rhythm-editor-pattern-buttons">
+            {rhythmInputPatterns.map(pattern => (
+              <button key={pattern.id} type="button" aria-label={pattern.label} title={pattern.label}
+                disabled={!hasSelectedMeasure} onClick={() => addElements(pattern.events)}>
+                <RhythmSymbol kind="pattern" events={pattern.events} />
+              </button>
+            ))}
+          </div>
+        </div>
         </div>
 
         <div

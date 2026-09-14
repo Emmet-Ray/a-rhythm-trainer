@@ -10,8 +10,10 @@ const server = await createServer({
   optimizeDeps: { noDiscovery: true, include: [] },
 });
 let editor;
+let input;
 try {
   editor = await server.ssrLoadModule("/src/practice/RhythmEditor.tsx");
+  input = await server.ssrLoadModule("/src/practice/RhythmEditorInput.ts");
 } finally {
   await server.close();
 }
@@ -73,7 +75,7 @@ test("无小节时显示调用方的空态，保留但禁用输入，不触发�
   assert.match(html, /请先生成题目/);
   assert.doesNotMatch(html, /rhythm-answer-notation/);
   const buttons = html.match(/<button\b[^>]*>/g);
-  assert.equal(buttons.length, 14);
+  assert.equal(buttons.length, 24);
   assert.ok(buttons.every((button) => button.includes('disabled=""')));
 });
 
@@ -104,10 +106,50 @@ test("符号按钮保留中文名称和提示，装饰图形不代替按钮的�
   }
   assert.match(html, /aria-label="附点"[^>]*disabled=""[^>]*aria-pressed="false"/);
   assert.match(html, />删除末尾<\/button>/);
-  assert.equal((html.match(/class="rhythm-symbol"/g) ?? []).length, 12);
+  assert.equal((html.match(/class="rhythm-symbol"/g) ?? []).length, 22);
   assert.doesNotMatch(html, /rhythm-editor-row-label/);
   assert.match(html, /role="group" aria-label="添加音符"/);
   assert.match(html, /role="group" aria-label="添加休止符"/);
+});
+
+test("十种常见节奏型展开为普通音符，一拍和两拍组合均整组拒绝超拍", () => {
+  const signature = { beats: 4, beatType: 4 };
+  assert.equal(input.rhythmInputPatterns.length, 10);
+  for (const pattern of input.rhythmInputPatterns) {
+    const twoBeatPattern = ["大附点", "反大附点", "大切分"].includes(pattern.label);
+    const existing = [{ kind: "note", noteValue: "half" }, ...(twoBeatPattern ? [] : [{ kind: "note", noteValue: "quarter" }])];
+    const before = structuredClone(pattern.events);
+    assert.equal(editor.canEditRhythmElements(pattern.events), true);
+    assert.ok(pattern.events.every(event => event.kind === "note"));
+    const full = input.appendRhythmInput(existing, pattern.events, signature);
+    assert.deepEqual(full, [...existing, ...pattern.events]);
+    assert.equal(input.appendRhythmInput(full, [{ kind: "note", noteValue: "sixteenth" }], signature), null);
+    const crowded = [...existing, { kind: "note", noteValue: "sixteenth" }];
+    assert.equal(input.appendRhythmInput(crowded, pattern.events, signature), null);
+    assert.equal(crowded.length, existing.length + 1);
+    full[existing.length].noteValue = "whole";
+    assert.deepEqual(pattern.events, before);
+  }
+});
+
+test("快捷组合可逐个删除末尾，非拍头插入不改变顺序或补齐时值", () => {
+  const current = [{ kind: "rest", noteValue: "eighth" }];
+  const pattern = input.rhythmInputPatterns.find(p => p.id === "eighth-two-sixteenths");
+  const result = input.appendRhythmInput(current, pattern.events, { beats: 3, beatType: 4 });
+  assert.deepEqual(result.slice(0, -1), [...current, ...pattern.events.slice(0, -1)]);
+  assert.deepEqual(current, [{ kind: "rest", noteValue: "eighth" }]);
+});
+
+test("常见节奏型常驻展示、有可访问名称且不使用页签", () => {
+  const html = renderToStaticMarkup(createElement(editor.RhythmEditor, {
+    measures: [[]], timeSignature: { beats: 4, beatType: 4 }, selectedMeasureIndex: 0,
+    onChange() {}, onSelectMeasure() {},
+  }));
+  assert.match(html, /aria-label="常见节奏型"/);
+  assert.doesNotMatch(html, /role="tab/);
+  for (const pattern of input.rhythmInputPatterns) {
+    assert.ok(html.includes(`aria-label="${pattern.label}" title="${pattern.label}"`));
+  }
 });
 
 test("附点改为符号后仍按末尾音符控制禁用状态", () => {

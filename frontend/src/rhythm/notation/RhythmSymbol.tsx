@@ -6,10 +6,13 @@ import { createRhythmStave, rhythmEventToVexFlowStaveNote } from "./RhythmNotati
 type RhythmSymbolProps =
   | { kind: RhythmEvent["kind"]; noteValue: RhythmEvent["noteValue"] }
   | { kind: "triplet"; noteValue?: never }
+  | { kind: "pattern"; noteValue?: never; events: readonly RhythmEvent[] }
   | { kind: "dot"; noteValue?: never };
 
 /** 工具栏专用的静态记谱图形，不携带编辑行为；名称与交互由外层按钮提供。 */
-export function RhythmSymbol({ kind, noteValue }: RhythmSymbolProps) {
+export function RhythmSymbol(props: RhythmSymbolProps) {
+  const { kind, noteValue } = props;
+  const events = props.kind === "pattern" ? props.events : undefined;
   const containerRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
@@ -22,16 +25,20 @@ export function RhythmSymbol({ kind, noteValue }: RhythmSymbolProps) {
     const context = renderer.getContext();
     context.setFillStyle("currentColor");
     context.setStrokeStyle("currentColor");
-    const notes = kind === "triplet"
+    const notes = events ? events.map(rhythmEventToVexFlowStaveNote) : kind === "triplet"
       ? Array.from({ length: 3 }, () => rhythmEventToVexFlowStaveNote({ kind: "note", noteValue: "eighth" }))
-      : [rhythmEventToVexFlowStaveNote({ kind, noteValue })];
+      : kind === "note" || kind === "rest" ? [rhythmEventToVexFlowStaveNote({ kind, noteValue })] : [];
+    if (notes.length === 0) return;
     notes.forEach((note) => note.setStemStyle({ strokeStyle: "currentColor" }));
     const tuplet = kind === "triplet"
       ? new Tuplet(notes, { numNotes: 3, notesOccupied: 2, bracketed: false })
       : null;
-    const beam = kind === "triplet" ? new Beam(notes) : null;
+    // 只有整组均为短音符时连梁；大附点、大切分中的四分音符不能加入连梁。
+    const beam = kind === "triplet" || (kind === "pattern" && events?.every(event =>
+      event.kind === "note" && (event.noteValue === "eighth" || event.noteValue === "sixteenth"),
+    )) ? new Beam(notes) : null;
     // 借用同一套谱面坐标排版，但不绘制谱线、谱号或小节线。
-    const stave = createRhythmStave(0, 0, kind === "triplet" ? 100 : 60, false);
+    const stave = createRhythmStave(0, 0, kind === "pattern" ? 130 : kind === "triplet" ? 100 : 60, false);
     Formatter.FormatAndDraw(context, stave, notes);
     beam?.setContext(context).draw();
     tuplet?.setContext(context).draw();
@@ -52,7 +59,7 @@ export function RhythmSymbol({ kind, noteValue }: RhythmSymbolProps) {
       bounds.x -= 5;
       bounds.w += 10;
     }
-    const width = Math.max(kind === "triplet" ? 100 : 64, bounds.w + 12);
+    const width = Math.max(kind === "pattern" ? 130 : kind === "triplet" ? 100 : 64, bounds.w + 12);
     const height = Math.max(64, bounds.h + 12);
     svg.setAttribute("viewBox", `${bounds.x + bounds.w / 2 - width / 2} ${bounds.y + bounds.h / 2 - height / 2} ${width} ${height}`);
     svg.setAttribute("focusable", "false");
@@ -61,7 +68,7 @@ export function RhythmSymbol({ kind, noteValue }: RhythmSymbolProps) {
     svg.style.removeProperty("width");
     svg.style.removeProperty("height");
     return () => container.replaceChildren();
-  }, [kind, noteValue]);
+  }, [kind, noteValue, events]);
 
   return <span ref={containerRef} className="rhythm-symbol" aria-hidden="true">
     {kind === "dot" ? <svg viewBox="0 0 64 64" focusable="false"><circle cx="32" cy="32" r="4" fill="currentColor" /></svg> : null}
