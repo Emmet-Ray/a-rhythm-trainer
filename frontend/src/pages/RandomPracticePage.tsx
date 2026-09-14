@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
-import { ReturnLink } from "../navigation/PageNavigation";
+import { PracticeHeading } from "../practice/PracticeHeading";
 import { useVisitState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
@@ -25,11 +25,7 @@ export default function RandomPracticePage() {
       <div className="random-page">
         <title>{`随机${selectedMode.label} · 节奏训练`}</title>
         <div className="design-system practice-page">
-        <ReturnLink className="back-link" to="/random">← 返回随机练习</ReturnLink>
-        <header className="page-heading practice-heading">
-          <p className="eyebrow">随机练习</p>
-          <h1>{selectedMode.label}</h1>
-        </header>
+        <PracticeHeading backTo="/random" backLabel="随机练习" />
         </div>
         <RandomExerciseWorkspace key={selectedMode.id} mode={selectedMode.id} />
       </div>

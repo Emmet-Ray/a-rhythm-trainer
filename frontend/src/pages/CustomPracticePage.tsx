@@ -8,6 +8,7 @@ import {
 } from "react-router";
 import NotFoundPage from "./NotFoundPage";
 import { ReturnLink } from "../navigation/PageNavigation";
+import { PracticeHeading } from "../practice/PracticeHeading";
 import { useVisitState } from "../navigation/usePageNavigation";
 import {
   parseRhythmExercise,
@@ -399,22 +400,13 @@ function CustomExercisePractice({
   return (
     <div className="design-system practice-page custom-detail">
       <title>{`${result.item?.name ?? "自定义练习"} · ${label}`}</title>
-      <ReturnLink className="back-link" to={`/custom/${mode}`}>
-        ← 返回题目列表
-      </ReturnLink>
-      <header className="page-heading practice-heading">
-        <p className="eyebrow">
-          {source === "account" ? "我的练习" : "本地练习"} / {label}
-        </p>
-        <h1>
-          {result.item?.name ??
+      <PracticeHeading backTo={`/custom/${mode}`} backLabel="题目列表"
+        title={result.item?.name ??
             (result.loading
               ? "正在读取练习…"
               : result.error
                 ? "无法读取练习"
-                : "未找到该练习")}
-        </h1>
-      </header>
+                : "未找到该练习")} />
       {result.error ? (
         <div className="custom-storage-error">
           <p role="alert">{result.error}</p>

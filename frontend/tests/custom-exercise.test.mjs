@@ -23,6 +23,18 @@ const { default: PracticeWorkspace } = await server.ssrLoadModule("/src/practice
 const { dictationBinding } = await server.ssrLoadModule("/src/practice/DictationState.ts");
 const { default: RhythmScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmScore.tsx");
 const { createExerciseTimeline } = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
+const { PracticeHeading } = await server.ssrLoadModule("/src/practice/PracticeHeading.tsx");
+
+test("共用题头只显示返回入口和原题名，无题名时不补模式标题", () => {
+  for (const title of [undefined, "练习 1", "很长的自定义题目".repeat(12)]) {
+    const html = renderToStaticMarkup(createElement(MemoryRouter, null,
+      createElement(PracticeHeading, { backTo: "/random", backLabel: "随机练习", title })));
+    assert.match(html, /href="\/random"[^>]*>← 随机练习/);
+    if (title) assert.ok(html.includes(`<h1>${title}</h1>`));
+    else assert.doesNotMatch(html, /<h1/);
+    assert.doesNotMatch(html, /eyebrow|击拍练习|节奏听写/);
+  }
+});
 
 test("共用谱面列出所有小节导航，受控选择与只读浏览独立", () => {
   for (const count of [1, 2, 4]) {
@@ -84,7 +96,7 @@ test("预设列表与详情都在 preset 下，旧 practice 地址不再兼容",
   assert.match(list, /href="\/preset\/basic-values-01"/);
   assert.doesNotMatch(list, /href="\/practice\//);
   const detail = await renderApp("/preset/basic-values-01");
-  assert.match(detail, /href="\/preset"[^>]*>← 返回预设练习/);
+  assert.match(detail, /href="\/preset"[^>]*>← 预设练习/);
   assert.match(detail, /击拍训练区/);
   const missing = await renderApp("/preset/nonexistent");
   assert.match(missing, /未找到该练习/);
@@ -349,7 +361,8 @@ test("账号详情未登录时要求登录，已登录也不会用同 ID 的本�
 test("已登录打开旧本地链接仍读取本地题目，不隐式改为账号来源", async (t) => {
   mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
   const html = await renderPage("/custom/tapping/saved-tapping", "/custom/:mode/:exerciseId", { state: { status: "authenticated", user: { id: 1 } }, busy: false });
-  assert.match(html, /本地练习/);
+  assert.match(html, /<h1>tapping题目<\/h1>/);
+  assert.doesNotMatch(html, /class="eyebrow"/);
   assert.match(html, /tapping题目/);
 });
 
@@ -397,7 +410,7 @@ test("题目不存在或模式不匹配不启动训练", async (t) => {
   for (const id of ["missing", "saved-dictation"]) {
     const html = await renderPage(`/custom/tapping/${id}`, "/custom/:mode/:exerciseId");
     assert.match(html, /未找到该练习/);
-    assert.match(html, /返回题目列表/);
+    assert.match(html, /href="\/custom\/tapping"[^>]*>← 题目列表/);
     assert.doesNotMatch(html, /击拍训练区|节奏听写区|速度滑块/);
   }
 });

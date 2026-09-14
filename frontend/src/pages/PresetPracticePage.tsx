@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { ReturnLink } from "../navigation/PageNavigation";
+import { PracticeHeading } from "../practice/PracticeHeading";
 import { useVisitState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
 import {
@@ -41,11 +41,7 @@ function PresetExercisePage({ questionId }: { questionId: string }) {
   return (
     <div className="design-system practice-page">
       <title>{`${selected.question.title} · ${modeLabel}`}</title>
-      <ReturnLink className="back-link" to="/preset">← 返回预设练习</ReturnLink>
-      <header className="page-heading practice-heading">
-        <p className="eyebrow">{selected.topic.title} / {modeLabel}</p>
-        <h1>{selected.question.title}</h1>
-      </header>
+      <PracticeHeading backTo="/preset" backLabel="预设练习" title={selected.question.title} />
       {selected.mode === "tapping" || selected.mode === "dictation" ? (
         <Suspense fallback={<p className="loading-message" role="status" data-navigation-pending>正在加载练习…</p>}>
           {/* 路由参数变化不一定卸载页面，题目 key 明确结束旧题并重置配置。 */}

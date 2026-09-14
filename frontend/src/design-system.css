@@ -219,6 +219,9 @@
 .practice-page { max-width: var(--site-content-width); margin: 0 auto; }
 .practice-page:is(.custom-library, .custom-status) { max-width: 1080px; }
 .practice-page h1 { overflow-wrap: anywhere; }
+.practice-titlebar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin: 0 0 24px; }
+.practice-titlebar .practice-return { display: inline-flex; align-items: center; min-height: 44px; font-size: 18px; font-weight: 650; color: var(--ds-muted); flex: 0 0 auto; }
+.practice-titlebar h1 { flex: 0 1 auto; min-width: 0; max-width: 100%; margin: 0; font-size: 28px; line-height: 1.4; font-weight: 650; overflow-wrap: anywhere; }
 .custom-status > p { margin: var(--ds-space-4) 0; color: var(--ds-muted); }
 .custom-status > a:not(.back-link) { display: inline-flex; align-items: center; min-height: 44px; color: var(--ds-primary); font-weight: 650; }
 .custom-detail > p { color: var(--ds-muted); }
