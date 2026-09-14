@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BarlineType, Beam, Formatter, Renderer, Tuplet } from "vexflow";
 import { expandRhythmElements, type RhythmElement, type RhythmExercise } from "../RhythmModel";
 import { createRhythmStave, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
-import { createDraftScoreLayout, getBeatBeamGroups } from "./RhythmScoreLayout";
+import { createDraftScoreLayout, getBeatBeamGroups, getDraftMeasureScrollLeft } from "./RhythmScoreLayout";
 
 type RhythmDraftScoreProps = {
   measures: readonly (readonly RhythmElement[])[];
@@ -11,9 +11,10 @@ type RhythmDraftScoreProps = {
   onSelectMeasure?: (index: number) => void;
   measureFeedback?: readonly ReactNode[];
   overlay?: ReactNode;
+  navigationLabel?: string;
 };
 
-// 原样显示草稿或参考答案，不自动补休止符；未传选择回调时仅展示谱面。
+// 原样显示草稿或参考答案，不自动补休止符；未传选择回调时导航只改变独立的浏览位置。
 export function RhythmDraftScore({
   measures,
   timeSignature,
@@ -21,10 +22,13 @@ export function RhythmDraftScore({
   onSelectMeasure,
   measureFeedback,
   overlay,
+  navigationLabel = "小节",
 }: RhythmDraftScoreProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState(0);
+  const [browsingMeasure, setBrowsingMeasure] = useState(0);
+  const activeMeasure = selectedMeasureIndex ?? Math.min(browsingMeasure, measures.length - 1);
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -95,7 +99,24 @@ export function RhythmDraftScore({
     return () => container.replaceChildren();
   }, [score]);
 
+  function selectMeasure(index: number) {
+    if (onSelectMeasure) onSelectMeasure(index);
+    else setBrowsingMeasure(index);
+    const viewport = viewportRef.current;
+    if (viewport) viewport.scrollLeft = getDraftMeasureScrollLeft(layout, index, viewport.scrollLeft, viewport.clientWidth);
+  }
+
   return (
+    <div className="rhythm-draft-score">
+      <div className="draft-measure-navigation" role="group" aria-label="小节导航">
+        <span>{navigationLabel}</span>
+        {measures.map((_, index) => (
+          <button key={index} type="button" aria-label={`跳到小节 ${index + 1}`}
+            aria-pressed={index === activeMeasure} onClick={() => selectMeasure(index)}>
+            {index + 1}
+          </button>
+        ))}
+      </div>
     <div style={{ position: "relative", minWidth: 0 }}>
     <div ref={viewportRef} className="rhythm-draft-viewport" role="region" aria-label="节奏谱面，可左右滚动" tabIndex={0}
       style={{ width: "100%", minWidth: 0, overflowX: "auto" }}>
@@ -114,8 +135,8 @@ export function RhythmDraftScore({
                 type="button"
                 className="rhythm-measure-selection"
                 aria-label={`小节 ${index + 1}`}
-                aria-pressed={index === selectedMeasureIndex}
-                onClick={() => onSelectMeasure(index)}
+                aria-pressed={index === activeMeasure}
+                onClick={() => selectMeasure(index)}
                 style={{
                   position: "absolute",
                   left: x * score.scale,
@@ -127,7 +148,7 @@ export function RhythmDraftScore({
                   borderRadius: 0,
                   outlineOffset: -3,
                   backgroundColor:
-                    index === selectedMeasureIndex ? "var(--rhythm-selected-measure, #f0efff)" : "transparent",
+                    index === activeMeasure ? "var(--rhythm-selected-measure, #f0efff)" : "transparent",
                 }}
               />
             ))}
@@ -150,6 +171,7 @@ export function RhythmDraftScore({
       </div>
     </div>
     {overlay && <div className="rhythm-score-overlay">{overlay}</div>}
+    </div>
     </div>
   );
 }

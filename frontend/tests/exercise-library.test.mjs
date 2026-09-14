@@ -229,6 +229,18 @@ test("基础听写题包含两小节三种音符，时间线连续且归属于�
   assert.equal(timeline.finishOffsetMs, 8000);
 });
 
+test("首个主题的第二道听写题包含四个完整小节", () => {
+  const { topic, mode, question } = catalog.findPresetQuestion("dictation-basic-values-02");
+  assert.equal(topic, catalog.presetTopics[0]);
+  assert.equal(mode, "dictation");
+  assert.equal(question.title, "练习 2");
+  assert.deepEqual(question.exercise.measures.map(({ elements }) => elements.map(event => event.noteValue)),
+    [["quarter", "quarter", "quarter", "quarter"], ["half", "quarter", "quarter"], ["half", "half"], ["whole"]]);
+  const timeline = timing.createExerciseTimeline(question.exercise, 60, 4, { perfectMs: 50, hitMs: 150 });
+  assert.equal(timeline.finishOffsetMs, 16000);
+  assert.deepEqual(timeline.measures.map(measure => measure.endOffsetMs), [4000, 8000, 12000, 16000]);
+});
+
 test("查找题目按实际所属模式返回，而不是默认当作击拍题", () => {
   const topic = catalog.presetTopics[0];
   const group = topic.modes.find((group) => group.mode === "dictation");

@@ -336,14 +336,12 @@
 .rhythm-playback .rhythm-playback-buttons button[data-action="stop"]:hover:not(:disabled) { background: var(--ds-error-bg); }
 .rhythm-playback .rhythm-playback-buttons button:active:not(:disabled), .rhythm-dictation .dictation-verify:active:not(:disabled) { box-shadow: none; }
 .rhythm-dictation .dictation-scope { min-height: 48px; color: var(--ds-muted); font-size: var(--ds-text-sm); gap: var(--ds-space-3); }
-.rhythm-dictation .dictation-scope-options { gap: var(--ds-space-1); padding: var(--ds-space-1); border-radius: var(--ds-radius-sm); background: var(--ds-subtle); }
-.rhythm-dictation .dictation-scope-options button { min-height: 40px; padding: 6px 12px; border: 2px solid transparent; border-radius: 8px; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; }
-.rhythm-dictation .dictation-scope-options button[aria-pressed="true"]:not(:disabled) { border-color: var(--ds-line); background: var(--ds-surface); color: var(--ds-primary); }
-.rhythm-dictation .dictation-scope-options button:hover:not(:disabled) { background: var(--ds-tint); }
+.dictation-scope-toggle { display: inline-flex; align-items: center; gap: var(--ds-space-2); min-height: 44px; cursor: pointer; }
+.dictation-scope-toggle input { width: 18px; height: 18px; flex: 0 0 auto; margin: 0; accent-color: var(--ds-primary); }
+.dictation-scope-toggle:has(input:disabled) { color: var(--ds-muted); cursor: default; opacity: 0.6; }
 .rhythm-editor button.rhythm-measure-selection { box-shadow: none; transform: none; transition: none; }
 .rhythm-editor button.rhythm-measure-selection:active:not(:disabled) { transform: none; box-shadow: none; }
 .rhythm-editor button.rhythm-measure-selection[aria-pressed="true"] { box-shadow: inset 0 -2px 0 var(--ds-primary); }
-.rhythm-dictation .dictation-scope-options button:active:not(:disabled) { transform: none; box-shadow: none; }
 .rhythm-editor .rhythm-editor-controls { margin-top: var(--ds-space-4); }
 .rhythm-editor .rhythm-editor-current-measure { margin-bottom: var(--ds-space-4); font-size: var(--ds-text-sm); font-weight: 750; }
 .rhythm-editor .rhythm-editor-symbol-row { margin-top: var(--ds-space-3); }
@@ -360,7 +358,16 @@
 .rhythm-dictation .dictation-verification-result { gap: var(--ds-space-3); }
 .rhythm-dictation [data-verdict="correct"] { color: var(--ds-success); background: var(--ds-success-bg); }
 .rhythm-dictation [data-verdict="incorrect"] { color: var(--ds-error); background: var(--ds-error-bg); }
-.rhythm-dictation .dictation-reference { margin-top: var(--ds-space-6); padding-top: var(--ds-space-6); border-top: 2px solid var(--ds-line); }
+.rhythm-editor-score-stack { position: relative; min-width: 0; }
+.rhythm-editor-preview { position: absolute; inset: 0; min-width: 0; }
+.dictation-reference { position: relative; }
+.rhythm-draft-score { min-width: 0; }
+.draft-measure-navigation { display: flex; align-items: center; gap: 4px; min-height: 44px; margin-bottom: 8px; overflow-x: auto; color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.draft-measure-navigation > span { flex: 0 0 auto; margin-right: 8px; }
+.design-system .draft-measure-navigation button { flex: 0 0 auto; min-width: 36px; min-height: 36px; padding: 4px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; font-size: inherit; }
+.design-system .draft-measure-navigation button:hover:not(:disabled) { background: var(--ds-subtle); }
+.design-system .draft-measure-navigation button[aria-pressed="true"] { background: var(--ds-tint); color: var(--ds-primary); }
+.design-system .draft-measure-navigation button:active:not(:disabled) { box-shadow: none; transform: none; }
 .rhythm-dictation [role="alert"] { color: var(--ds-error); font-size: var(--ds-text-sm); }
 @media (max-width: 600px) {
   .rhythm-dictation .rhythm-playback { width: 100%; }

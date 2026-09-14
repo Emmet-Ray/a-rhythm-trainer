@@ -39,6 +39,31 @@ test("窄屏草稿保留可读尺寸和稳定小节边界", () => {
   }
 });
 
+test("同宽窗口的一、二、多小节保持相同符号倍率和显示高度", () => {
+  for (const width of [320, 768, 1134, 1500, 2000]) {
+    const two = layout.createDraftScoreLayout(2, width, 4);
+    for (const count of [1, 2, 4, 8]) {
+      const draft = layout.createDraftScoreLayout(count, width, 4);
+      assert.equal(draft.scale, two.scale);
+      assert.equal(draft.height * draft.scale, two.height * two.scale);
+      assert.equal(draft.measures[0].width, two.measures[0].width);
+      assert.ok(draft.measures.every(measure => measure.y === two.measures[0].y));
+    }
+  }
+});
+
+test("小节定位只在需要时滚动，窄屏对齐左端并限制末尾位置", () => {
+  const draft = layout.createDraftScoreLayout(4, 1180, 4);
+  assert.equal(layout.getDraftMeasureScrollLeft(draft, 0, 0, 1180), 0);
+  assert.equal(layout.getDraftMeasureScrollLeft(draft, 1, 0, 1180), 0);
+  const next = layout.getDraftMeasureScrollLeft(draft, 2, 0, 1180);
+  assert.equal(next, 570);
+  assert.equal(layout.getDraftMeasureScrollLeft(draft, 2, next, 1180), next);
+  assert.equal(layout.getDraftMeasureScrollLeft(draft, 0, 570, 1180), 10);
+  assert.equal(layout.getDraftMeasureScrollLeft(draft, 3, 0, 320), 1750);
+  assert.equal(layout.getDraftMeasureScrollLeft(draft, 99, 150, 320), 150);
+});
+
 test("节奏谱只显示中线，首小节使用打击乐谱号，后续小节不重复谱号", () => {
   const first = notation.createRhythmStave(10, 40, 300, true);
   const next = notation.createRhythmStave(310, 40, 300, false);

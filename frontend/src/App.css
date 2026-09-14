@@ -79,8 +79,6 @@ main:focus { outline: none; }
 .rhythm-playback-buttons, .dictation-scope, .rhythm-editor-edit-actions, .dictation-verification-result { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .rhythm-playback-status { display: block; min-height: 24px; margin-top: 6px; color: var(--muted); font-size: 13px; }
 .dictation-scope { font-size: 13px; color: var(--muted); }
-.dictation-scope-options { display: flex; gap: 2px; padding: 3px; background: #f5f4f8; border-radius: 6px; }
-.dictation-scope-options button { border-color: transparent; background: transparent; padding: 7px 12px; font-size: 13px; }
 .rhythm-editor button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .rhythm-editor { min-width: 0; }
 .rhythm-draft-viewport { overflow-y: hidden; }
@@ -95,8 +93,6 @@ main:focus { outline: none; }
 .dictation-verification-result [role="status"] { font-size: 14px; }
 .dictation-verify { background: var(--accent); color: white; border-color: var(--accent); }
 .dictation-verify:hover:not(:disabled) { background: #45409e; }
-.dictation-reference { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 20px; }
-.dictation-reference h3 { margin: 0 0 8px; font-size: 16px; }
 .rhythm-playback [role="alert"] { color: #b33131; font-size: 13px; }
 .loading-message { color: var(--muted); padding: 40px 0; }
 .random-mode-selection, .custom-mode-selection { padding-top: 24px; }

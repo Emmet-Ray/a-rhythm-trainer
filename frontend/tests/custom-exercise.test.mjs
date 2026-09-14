@@ -20,6 +20,20 @@ const { default: App } = await server.ssrLoadModule("/src/App.tsx");
 const { default: RhythmScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmScore.tsx");
 const { createExerciseTimeline } = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
 
+test("共用谱面列出所有小节导航，受控选择与只读浏览独立", () => {
+  for (const count of [1, 2, 4]) {
+    const props = { measures: Array.from({ length: count }, () => []), timeSignature: { beats: 4, beatType: 4 } };
+    const html = renderToStaticMarkup(createElement(RhythmDraftScore, { ...props, selectedMeasureIndex: count - 1, onSelectMeasure() {} }));
+    assert.equal((html.match(/aria-label="跳到小节 /g) ?? []).length, count);
+    assert.match(html, new RegExp(`aria-label="跳到小节 ${count}" aria-pressed="true"`));
+    assert.ok(html.indexOf('aria-label="小节导航"') < html.indexOf('class="rhythm-draft-viewport"'));
+    const reference = renderToStaticMarkup(createElement(RhythmDraftScore, { ...props, navigationLabel: "参考答案" }));
+    assert.match(reference, /参考答案/);
+    assert.match(reference, /aria-label="跳到小节 1" aria-pressed="true"/);
+    assert.doesNotMatch(reference, /class="rhythm-measure-selection"/);
+  }
+});
+
 async function renderApp(path) {
   const stream = await renderToReadableStream(createElement(MemoryRouter, { initialEntries: [path] }, createElement(App)));
   await stream.allReady;
@@ -424,6 +438,10 @@ test("击拍使用侧栏布局，空态与真实题目均将操作按钮放在�
     assert.doesNotMatch(html, /practice-layout--stacked/);
     const body = html.indexOf('class="practice-body"');
     assert.ok(html.indexOf('aria-label="播放范围"') < body);
+    assert.match(html, /class="dictation-scope-toggle"><input type="checkbox"/);
+    assert.match(html, /仅播放当前小节/);
+    assert.doesNotMatch(html, /dictation-scope-options|class="dictation-scope-toggle"><input[^>]*checked/);
+    if (path.startsWith("/random")) assert.match(html, /type="checkbox" disabled=""/);
     assert.ok(html.indexOf('data-source="question"') < body);
     assert.ok(html.indexOf('aria-label="练习设置"') > body);
     assert.equal((html.match(/aria-label="速度 BPM"/g) ?? []).length, 1);

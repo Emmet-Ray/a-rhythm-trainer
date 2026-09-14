@@ -58,14 +58,15 @@ export type ScoreLayout = {
 
 /** 草稿始终单行。按最短可编辑时值（十六分音符）预留宽度，
  * 而非根据当前答案伸缩；宽屏优先显示两个完整小节，余下横向滚动。
+ * 缩放始终以双小节阅读宽度为基准，不随题目小节数量改变；
+ * 单小节也保持双小节布局中的宽度，左对齐留白。
  * 不读取题目答案，空小节与填满后使用相同坐标。
  */
 export function createDraftScoreLayout(measureCount: number, containerWidth: number, quarterBeats: number): ScoreLayout {
   const minimumWidth = Math.max(360, 100 + Math.ceil(quarterBeats * 4) * 30);
   const viewport = Math.max(0, containerWidth);
-  const visibleCount = Math.max(1, Math.min(2, measureCount));
-  const scale = Math.max(1, Math.min(1.6, viewport / (minimumWidth * visibleCount + 20)));
-  const measureWidth = Math.max(minimumWidth, (viewport / scale - 20) / visibleCount);
+  const scale = Math.max(1, Math.min(1.6, viewport / (minimumWidth * 2 + 20)));
+  const measureWidth = Math.max(minimumWidth, (viewport / scale - 20) / 2);
   return {
     width: measureCount * measureWidth + 20,
     height: 150,
@@ -74,6 +75,19 @@ export function createDraftScoreLayout(measureCount: number, containerWidth: num
       x: 10 + index * measureWidth, y: 40, width: measureWidth, isRowStart: index === 0,
     })),
   };
+}
+
+/** 仅显式定位时调用：完整可见则不移动，宽于窗口的小节对齐左端。
+ * 返回显示像素坐标，不参与选中状态管理，手动滚动不触发选择。
+ */
+export function getDraftMeasureScrollLeft(layout: ScoreLayout, index: number, scrollLeft: number, viewportWidth: number): number {
+  const measure = layout.measures[index];
+  if (!measure || viewportWidth <= 0) return scrollLeft;
+  const left = measure.x * layout.scale;
+  const right = (measure.x + measure.width) * layout.scale;
+  if (left >= scrollLeft && right <= scrollLeft + viewportWidth) return scrollLeft;
+  const target = left < scrollLeft || right - left > viewportWidth ? left : right - viewportWidth;
+  return Math.max(0, Math.min(target, layout.width * layout.scale - viewportWidth));
 }
 
 /** 按完整小节换行；最小小节宽度可由记谱库测量提供。

@@ -58,6 +58,8 @@ export function canEditRhythmElements(
 type RhythmEditorProps = {
   ref?: Ref<RhythmEditorHandle>;
   emptyContent?: ReactNode;
+  /** 在原谱面位置展示只读内容；草稿保持挂载，编辑工具隐藏但保留占位。 */
+  preview?: ReactNode;
   scoreOverlay?: ReactNode;
   measureFeedback?: readonly ReactNode[];
   measures: readonly (readonly RhythmElement[])[];
@@ -80,6 +82,7 @@ export type RhythmEditorHandle = {
 export function RhythmEditor({
   ref,
   emptyContent,
+  preview,
   scoreOverlay,
   measureFeedback,
   measures,
@@ -157,6 +160,8 @@ export function RhythmEditor({
 
   return (
     <div className="rhythm-editor design-system">
+      <div className="rhythm-editor-score-stack">
+      <div className="rhythm-editor-draft" inert={!!preview} style={preview ? { visibility: "hidden" } : undefined}>
       {measures.length === 0 ? (
         emptyContent
       ) : (
@@ -172,7 +177,10 @@ export function RhythmEditor({
           }}
         />
       )}
-      <div className="rhythm-editor-controls">
+      </div>
+      {preview && <div className="rhythm-editor-preview">{preview}</div>}
+      </div>
+      <div className="rhythm-editor-controls" inert={!!preview} style={preview ? { visibility: "hidden" } : undefined}>
         <p className="rhythm-editor-input-message" role="status">
           {addEventMessage}
         </p>

@@ -148,6 +148,39 @@ export const presetTopics: PracticeTopic[] = [
               ],
             },
           },
+          // QQQQ | HQQ | HH | W
+          {
+            id: "dictation-basic-values-02",
+            title: "练习 2",
+            description: "",
+            exercise: {
+              timeSignature: { beats: 4, beatType: 4 },
+              measures: [
+                {
+                  elements: [
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "quarter" },
+                    { kind: "note", noteValue: "quarter" },
+                  ],
+                },
+                {
+                  elements: [
+                    { kind: "note", noteValue: "half" },
+                    { kind: "note", noteValue: "half" },
+                  ],
+                },
+                { elements: [{ kind: "note", noteValue: "whole" }] },
+              ],
+            },
+          },
         ],
       },
       { mode: "geometry", questions: [] },

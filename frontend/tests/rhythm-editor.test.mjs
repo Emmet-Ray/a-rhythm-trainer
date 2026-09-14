@@ -26,6 +26,17 @@ test("输入限制提示保留在音符工具之前，不放在删除按钮之�
   assert.equal((html.match(/class="rhythm-editor-input-message"/g) ?? []).length, 1);
 });
 
+test("只读预览保留草稿和工具占位，但阻止操作隐藏内容", () => {
+  const html = renderToStaticMarkup(createElement(editor.RhythmEditor, {
+    measures: [[]], timeSignature: { beats: 4, beatType: 4 }, selectedMeasureIndex: 0,
+    onSelectMeasure() {}, onChange() {}, preview: createElement("section", null, "参考答案"),
+  }));
+  assert.match(html, /class="rhythm-editor-draft" inert="" style="visibility:hidden"/);
+  assert.match(html, /class="rhythm-editor-controls" inert="" style="visibility:hidden"/);
+  assert.match(html, /class="rhythm-editor-preview"><section>参考答案<\/section>/);
+  assert.match(html, /aria-label="小节 1" aria-pressed="true"/);
+});
+
 test("编辑器支持五种音符和休止符，以及四分、八分音符的单附点", () => {
   for (const kind of ["note", "rest"]) {
     for (const noteValue of ["whole", "half", "quarter", "eighth", "sixteenth"]) {

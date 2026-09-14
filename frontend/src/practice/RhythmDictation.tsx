@@ -1,11 +1,9 @@
+import { useId, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import { RhythmEditor, canEditRhythmElements, type RhythmEditorHandle } from "./RhythmEditor";
+  RhythmEditor,
+  canEditRhythmElements,
+  type RhythmEditorHandle,
+} from "./RhythmEditor";
 import { RhythmDraftScore } from "../rhythm/notation/RhythmDraftScore";
 
 import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
@@ -90,12 +88,12 @@ export function RhythmDictation({
     [exercise],
   );
   // 只取标准答案的小节数量，绝不把标准答案的音符复制到草稿。
-  const [answerMeasures, setAnswerMeasures] = useState<RhythmElement[][]>(() =>
-    exercise?.measures.map(() => []) ?? [],
+  const [answerMeasures, setAnswerMeasures] = useState<RhythmElement[][]>(
+    () => exercise?.measures.map(() => []) ?? [],
   );
   const hasSelectedMeasure = answerMeasures[selectedMeasureIndex] !== undefined;
-  const [measureVerdicts, setMeasureVerdicts] = useState<MeasureVerdict[]>(() =>
-    exercise?.measures.map(() => "unchecked") ?? [],
+  const [measureVerdicts, setMeasureVerdicts] = useState<MeasureVerdict[]>(
+    () => exercise?.measures.map(() => "unchecked") ?? [],
   );
   // 不把编辑器尚不能作答的题判成用户错误。
   const expectedMeasures = useMemo(
@@ -119,130 +117,168 @@ export function RhythmDictation({
       expectedMeasure,
     );
     const nextVerdicts = measureVerdicts.map((verdict, index) =>
-        index === selectedMeasureIndex
-          ? correct
-            ? "correct"
-            : "incorrect"
-          : verdict,
-      );
+      index === selectedMeasureIndex
+        ? correct
+          ? "correct"
+          : "incorrect"
+        : verdict,
+    );
     setMeasureVerdicts(nextVerdicts);
-    if (nextVerdicts.every(verdict => verdict === "correct")) setResultVisible(true);
+    if (nextVerdicts.every((verdict) => verdict === "correct"))
+      setResultVisible(true);
   }
-
 
   return (
     <div className="rhythm-dictation design-system">
-      <PracticeFrame settingsPanel={settingsPanel} toolbar={
-      <div className="dictation-playbar">
-        {/* 只重建播放器：切换范围/小节取消旧排程，草稿和验证结果仍保留。 */}
-        <RhythmPlayback
-          key={[bpm, playbackScope, selectedMeasureIndex].join("-")}
-          bpm={bpm}
-          metronomeEnabled={metronomeEnabled}
-          onCountInChange={setCountdown}
-          onStart={() => setResultVisible(false)}
-          extraActions={extraActions}
-          timeSignature={exercise?.timeSignature ?? null}
-          options={[
-            {
-              id: "question", label: "播放题目", stopLabel: "停止题目",
-              measures: !exercise ? null : playbackScope === "all"
-                ? referenceMeasures
-                : referenceMeasures.slice(selectedMeasureIndex, selectedMeasureIndex + 1),
-            },
-            {
-              id: "answer", label: "播放我的答案", stopLabel: "停止答案",
-              measures: playbackScope === "all"
-                ? answerMeasures
-                : answerMeasures.slice(selectedMeasureIndex, selectedMeasureIndex + 1),
-            },
-          ]}
-          controls={
-        <div className="dictation-scope" role="group" aria-label="播放范围">
-          <span>范围</span>
-          <div className="dictation-scope-options">
-            {(["all", "measure"] as const).map((scope) => (
-              <button
-                key={scope}
-                type="button"
-                aria-pressed={playbackScope === scope}
-                disabled={!exercise}
-                onClick={() => setPlaybackScope(scope)}
-              >
-                {scope === "all" ? "整题" : "当前小节"}
-              </button>
-            ))}
+      <PracticeFrame
+        settingsPanel={settingsPanel}
+        toolbar={
+          <div className="dictation-playbar">
+            {/* 只重建播放器：切换范围/小节取消旧排程，草稿和验证结果仍保留。 */}
+            <RhythmPlayback
+              key={[bpm, playbackScope, selectedMeasureIndex].join("-")}
+              bpm={bpm}
+              metronomeEnabled={metronomeEnabled}
+              onCountInChange={setCountdown}
+              onStart={() => setResultVisible(false)}
+              extraActions={extraActions}
+              timeSignature={exercise?.timeSignature ?? null}
+              options={[
+                {
+                  id: "question",
+                  label: "播放题目",
+                  stopLabel: "停止题目",
+                  measures: !exercise
+                    ? null
+                    : playbackScope === "all"
+                      ? referenceMeasures
+                      : referenceMeasures.slice(
+                          selectedMeasureIndex,
+                          selectedMeasureIndex + 1,
+                        ),
+                },
+                {
+                  id: "answer",
+                  label: "播放我的答案",
+                  stopLabel: "停止答案",
+                  measures:
+                    playbackScope === "all"
+                      ? answerMeasures
+                      : answerMeasures.slice(
+                          selectedMeasureIndex,
+                          selectedMeasureIndex + 1,
+                        ),
+                },
+              ]}
+              controls={
+                <div
+                  className="dictation-scope"
+                  role="group"
+                  aria-label="播放范围"
+                >
+                  <label className="dictation-scope-toggle">
+                    <input
+                      type="checkbox"
+                      checked={playbackScope === "measure"}
+                      disabled={!exercise}
+                      onChange={(event) =>
+                        setPlaybackScope(
+                          event.target.checked ? "measure" : "all",
+                        )
+                      }
+                    />
+                    <span>仅播放当前小节</span>
+                  </label>
+                </div>
+              }
+            />
           </div>
-        </div>
+        }
+      >
+        <RhythmEditor
+          preview={isReferenceAnswerVisible && exercise ? (
+            <section id={referenceAnswerId} className="dictation-reference" aria-label="参考答案">
+              <RhythmDraftScore
+                navigationLabel="参考答案"
+                measures={referenceMeasures}
+                timeSignature={exercise.timeSignature}
+                overlay={countdown !== null ? <PracticeCue countdown={countdown} /> : null}
+              />
+            </section>
+          ) : null}
+          scoreOverlay={
+            countdown !== null ? (
+              <PracticeCue countdown={countdown} />
+            ) : isComplete && resultVisible ? (
+              <PracticeCue passed onDismiss={() => setResultVisible(false)} />
+            ) : null
           }
+          measureFeedback={measureVerdicts.map((verdict, index) =>
+            verdict === "unchecked" ? null : (
+              <span
+                key={index}
+                role="status"
+                aria-label={`小节 ${index + 1} 验证结果`}
+                data-verdict={verdict}
+              >
+                {verdict === "correct" ? "✓ 正确" : "× 有错误"}
+              </span>
+            ),
+          )}
+          ref={editorRef}
+          emptyContent={
+            <div className="empty-practice-score" role="status">
+              请先生成题目
+            </div>
+          }
+          measures={answerMeasures}
+          timeSignature={exercise?.timeSignature ?? { beats: 4, beatType: 4 }}
+          selectedMeasureIndex={selectedMeasureIndex}
+          onSelectMeasure={setSelectedMeasureIndex}
+          onChange={(measureIndex, elements) => {
+            setResultVisible(false);
+            setAnswerMeasures((previous) =>
+              previous.map((measure, index) =>
+                index === measureIndex ? elements : measure,
+              ),
+            );
+            setMeasureVerdicts((previous) =>
+              previous.map((verdict, index) =>
+                index === measureIndex ? "unchecked" : verdict,
+              ),
+            );
+          }}
         />
-      </div>
-      }>
-
-      <RhythmEditor
-        scoreOverlay={countdown !== null ? <PracticeCue countdown={countdown} />
-          : isComplete && resultVisible ? <PracticeCue passed onDismiss={() => setResultVisible(false)} /> : null}
-        measureFeedback={measureVerdicts.map((verdict, index) => verdict === "unchecked" ? null : (
-          <span key={index} role="status" aria-label={`小节 ${index + 1} 验证结果`} data-verdict={verdict}>
-            {verdict === "correct" ? "✓ 正确" : "× 有错误"}
-          </span>
-        ))}
-        ref={editorRef}
-        emptyContent={<div className="empty-practice-score" role="status">请先生成题目</div>}
-        measures={answerMeasures}
-        timeSignature={exercise?.timeSignature ?? { beats: 4, beatType: 4 }}
-        selectedMeasureIndex={selectedMeasureIndex}
-        onSelectMeasure={setSelectedMeasureIndex}
-        onChange={(measureIndex, elements) => {
-          setResultVisible(false);
-          setAnswerMeasures((previous) => previous.map((measure, index) =>
-            index === measureIndex ? elements : measure,
-          ));
-          setMeasureVerdicts((previous) => previous.map((verdict, index) =>
-            index === measureIndex ? "unchecked" : verdict,
-          ));
-        }}
-      />
-      <div className="dictation-verification">
-        <div className="dictation-verification-result">
+        <div className="dictation-verification">
+          <div className="dictation-verification-result" inert={isReferenceAnswerVisible}
+            style={isReferenceAnswerVisible ? { visibility: "hidden" } : undefined}>
+            <button
+              className="dictation-verify"
+              type="button"
+              disabled={!hasSelectedMeasure || !expectedMeasure}
+              onClick={verifySelectedMeasure}
+            >
+              验证当前小节
+            </button>
+          </div>
           <button
-            className="dictation-verify"
             type="button"
-            disabled={!hasSelectedMeasure || !expectedMeasure}
-            onClick={verifySelectedMeasure}
+            aria-pressed={isReferenceAnswerVisible}
+            disabled={!exercise}
+            aria-controls={referenceAnswerId}
+            onClick={() => {
+              setResultVisible(false);
+              setIsReferenceAnswerVisible((previous) => !previous);
+            }}
           >
-            验证当前小节
+            {isReferenceAnswerVisible ? "返回作答" : "查看答案"}
           </button>
         </div>
-        <button
-          type="button"
-          aria-expanded={isReferenceAnswerVisible}
-          disabled={!exercise}
-          aria-controls={referenceAnswerId}
-          onClick={() => setIsReferenceAnswerVisible((previous) => !previous)}
-        >
-          {isReferenceAnswerVisible ? "收起答案" : "查看答案"}
-        </button>
-      </div>
-      {expectedMeasures.some((measure) => measure === null) && (
-        <p role="alert">本题包含当前编辑器暂不支持的节奏，暂时无法完成作答。</p>
-      )}
-      <section
-        className="dictation-reference"
-        id={referenceAnswerId}
-        aria-label="参考答案"
-        hidden={!isReferenceAnswerVisible}
-      >
-        {isReferenceAnswerVisible && exercise && (
-          <>
-            <h3>参考答案</h3>
-            <RhythmDraftScore
-              measures={referenceMeasures}
-              timeSignature={exercise.timeSignature}
-            />
-          </>
+        {expectedMeasures.some((measure) => measure === null) && (
+          <p role="alert">
+            本题包含当前编辑器暂不支持的节奏，暂时无法完成作答。
+          </p>
         )}
-      </section>
       </PracticeFrame>
     </div>
   );
