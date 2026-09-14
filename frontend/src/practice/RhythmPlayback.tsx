@@ -25,12 +25,14 @@ type PlaybackOption = {
  * BPM、播放范围或小节数量改变时，调用方用 key 重建；卸载取消排程、RAF 和异步启动并关闭音频。
  * 节拍器开关实时生效，不参与 key，也不影响预备拍和钢琴。
  */
-export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, extraActions }: {
+export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, extraActions, controls }: {
   options: readonly PlaybackOption[];
   timeSignature: RhythmExercise["timeSignature"] | null;
   bpm: number;
   metronomeEnabled?: boolean;
   extraActions?: (busy: boolean) => ReactNode;
+  /** 与播放按钮成组的控制项，例如播放范围；不参与播放状态管理。 */
+  controls?: ReactNode;
 }) {
   const metronomePlayback = useContext(MetronomePlaybackContext);
   const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
@@ -173,22 +175,27 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
 
   return (
     <div className="rhythm-playback design-system">
-      <div className="rhythm-playback-buttons">
-        {options.map((option) => {
-          const playing = isActive && playbackSource === option.id;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              data-action={playing ? "stop" : "play"}
-              data-source={option.id}
-              disabled={!playing && (!timeSignature || !option.measures?.some((elements) => elements.length > 0))}
-              onClick={() => void togglePlayback(option)}
-            >
-              {playing ? option.stopLabel : option.label}
-            </button>
-          );
-        })}
+      <div className="rhythm-playback-toolbar">
+        <div className="rhythm-playback-controls">
+          <div className="rhythm-playback-buttons">
+            {options.map((option) => {
+              const playing = isActive && playbackSource === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  data-action={playing ? "stop" : "play"}
+                  data-source={option.id}
+                  disabled={!playing && (!timeSignature || !option.measures?.some((elements) => elements.length > 0))}
+                  onClick={() => void togglePlayback(option)}
+                >
+                  {playing ? option.stopLabel : option.label}
+                </button>
+              );
+            })}
+          </div>
+          {controls}
+        </div>
         {extraActions?.(isActive)}
       </div>
       <span className="rhythm-playback-status" role="status">{text}</span>

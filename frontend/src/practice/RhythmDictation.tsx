@@ -10,6 +10,7 @@ import { RhythmDraftScore } from "../rhythm/notation/RhythmDraftScore";
 
 import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
 import RhythmPlayback from "./RhythmPlayback";
+import PracticeFrame from "./PracticeFrame";
 
 {
   /*
@@ -61,6 +62,7 @@ type RhythmDictationProps = {
   bpm: number;
   metronomeEnabled?: boolean;
   extraActions?: (busy: boolean) => ReactNode;
+  settingsPanel?: ReactNode;
 };
 
 type MeasureVerdict = "unchecked" | "correct" | "incorrect";
@@ -72,6 +74,7 @@ export function RhythmDictation({
   bpm,
   metronomeEnabled = true,
   extraActions,
+  settingsPanel,
 }: RhythmDictationProps) {
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
   const editorRef = useRef<RhythmEditorHandle>(null);
@@ -127,6 +130,7 @@ export function RhythmDictation({
 
   return (
     <div className="rhythm-dictation design-system">
+      <PracticeFrame settingsPanel={settingsPanel} toolbar={
       <div className="dictation-playbar">
         {/* 只重建播放器：切换范围/小节取消旧排程，草稿和验证结果仍保留。 */}
         <RhythmPlayback
@@ -149,7 +153,7 @@ export function RhythmDictation({
                 : answerMeasures.slice(selectedMeasureIndex, selectedMeasureIndex + 1),
             },
           ]}
-        />
+          controls={
         <div className="dictation-scope" role="group" aria-label="播放范围">
           <span>范围</span>
           <div className="dictation-scope-options">
@@ -166,7 +170,10 @@ export function RhythmDictation({
             ))}
           </div>
         </div>
+          }
+        />
       </div>
+      }>
 
       <RhythmEditor
         ref={editorRef}
@@ -238,6 +245,7 @@ export function RhythmDictation({
           </>
         )}
       </section>
+      </PracticeFrame>
     </div>
   );
 }

@@ -81,8 +81,11 @@ main:focus { outline: none; }
 .dictation-scope { font-size: 13px; color: var(--muted); }
 .dictation-scope-options { display: flex; gap: 2px; padding: 3px; background: #f5f4f8; border-radius: 6px; }
 .dictation-scope-options button { border-color: transparent; background: transparent; padding: 7px 12px; font-size: 13px; }
-.rhythm-dictation button[aria-pressed="true"], .rhythm-editor button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.rhythm-editor button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .rhythm-editor { min-width: 0; }
+.rhythm-draft-viewport { overflow-y: hidden; }
+/* SVG 不保留行内文字基线留白，避免单行谱面产生多余的纵向溢出。 */
+.rhythm-answer-notation > svg { display: block; }
 .rhythm-editor-controls { margin-top: 12px; }
 .rhythm-editor-current-measure { margin: 0 0 14px; font-size: 14px; font-weight: 600; }
 .rhythm-editor-symbol-row { margin-top: 10px; }

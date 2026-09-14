@@ -164,8 +164,8 @@
 .random-settings-drawer .random-generation-actions { align-items: stretch; flex-direction: column; }
 .random-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-left: auto; }
 .design-system .random-settings-trigger { border-color: transparent; background: transparent; box-shadow: none; }
-.rhythm-playback:has(.random-toolbar-actions) { flex: 1 1 520px; min-width: 0; }
-.rhythm-playback .rhythm-playback-buttons:has(.random-toolbar-actions) { width: 100%; flex-wrap: wrap; }
+.rhythm-playback-toolbar, .rhythm-playback-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; min-width: 0; }
+.rhythm-playback-toolbar { justify-content: space-between; }
 @media (prefers-reduced-motion: no-preference) {
   .random-settings-drawer[open] { animation: random-settings-enter 160ms ease-out; }
   @keyframes random-settings-enter { from { transform: translateX(32px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -173,7 +173,8 @@
 @media (max-width: 600px) {
   .random-settings-drawer { padding: 16px; }
   .random-toolbar-actions { width: 100%; margin-left: 0; }
-  .rhythm-playback-buttons > .random-toolbar-actions { grid-column: 1 / -1; }
+  .rhythm-playback-controls { width: 100%; }
+  .rhythm-playback-controls > .rhythm-playback-buttons { width: 100%; }
 }
 .random-generation .random-topics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ds-space-2); }
 .random-generation .random-topics legend { font-weight: 750; margin-bottom: var(--ds-space-4); }
@@ -283,10 +284,10 @@
 .random-generation .random-topics label, :is(.random-index, .custom-index, .custom-library) a.question-link, .settings-options label { background: var(--ds-surface); }
 .rhythm-trainer:has(.practice-layout--sidebar) { padding-top: 0; text-align: left; }
 .practice-layout--sidebar { min-width: 0; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-lg); background: var(--ds-surface); }
-.practice-layout--sidebar .trainer-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--ds-space-4); padding: var(--ds-space-6) var(--ds-space-8); border-bottom: 1px solid var(--ds-line); }
+.practice-layout--sidebar .practice-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--ds-space-4); padding: var(--ds-space-6) var(--ds-space-8); border-bottom: 1px solid var(--ds-line); }
 .practice-layout--sidebar .trainer-actions { justify-content: flex-start; flex-wrap: wrap; }
-.trainer-body { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "settings" "score"; }
-.trainer-score-area { grid-area: score; display: flex; flex-direction: column; justify-content: center; gap: var(--ds-space-4); min-width: 0; padding: var(--ds-space-6) var(--ds-space-8); }
+.practice-body { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "settings" "score"; }
+.practice-content { grid-area: score; display: flex; flex-direction: column; justify-content: center; gap: var(--ds-space-4); min-width: 0; padding: var(--ds-space-6) var(--ds-space-8); }
 .rhythm-score { min-width: 0; }
 .rhythm-score-stage { position: relative; min-width: 0; }
 .rhythm-score-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(34 30 46 / 32%); z-index: 1; }
@@ -301,10 +302,10 @@
 .rhythm-score-viewport { width: 100%; min-width: 0; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; overscroll-behavior-y: contain; overflow-anchor: none; }
 .score-follow-controls { display: flex; justify-content: flex-end; min-height: 36px; }
 .design-system .score-follow-controls button { min-height: 32px; padding: 2px 10px; font-size: var(--ds-text-sm); box-shadow: none; transform: none; }
-.trainer-body > .practice-settings { grid-area: settings; min-width: 0; margin: 0; padding: var(--ds-space-4) var(--ds-space-8); border: 0; border-bottom: 1px solid var(--ds-line); background: var(--ds-input); }
+.practice-body > .practice-settings { grid-area: settings; min-width: 0; margin: 0; padding: var(--ds-space-4) var(--ds-space-8); border: 0; border-bottom: 1px solid var(--ds-line); background: var(--ds-input); }
 @media (min-width: 960px) {
-  .trainer-body { grid-template-columns: minmax(0, 1fr) 240px; grid-template-areas: "score settings"; }
-  .trainer-body > .practice-settings { flex-direction: column; flex-wrap: nowrap; justify-content: flex-start; gap: var(--ds-space-4); padding: var(--ds-space-6); border: 0; border-left: 1px solid var(--ds-line); border-radius: 0 0 var(--ds-radius-lg) 0; }
+  .practice-body { grid-template-columns: minmax(0, 1fr) 240px; grid-template-areas: "score settings"; }
+  .practice-body > .practice-settings { flex-direction: column; flex-wrap: nowrap; justify-content: flex-start; gap: var(--ds-space-4); padding: var(--ds-space-6); border: 0; border-left: 1px solid var(--ds-line); border-radius: 0 0 var(--ds-radius-lg) 0; }
   .practice-layout--sidebar .mechanical-metronome { width: 136px; }
   .practice-layout--sidebar .mechanical-metronome svg { width: 112px; height: 130px; }
   .practice-layout--sidebar .tempo-settings { width: 100%; grid-template-columns: minmax(0, 1fr); }
@@ -313,13 +314,16 @@
 }
 @media (max-width: 600px) {
   .practice-layout--stacked, .custom-exercise-editor { padding: var(--ds-space-4); }
-  .practice-layout--sidebar .trainer-toolbar, .trainer-score-area,
-  .trainer-body > .practice-settings { padding: var(--ds-space-4); }
+  .practice-layout--sidebar .practice-toolbar, .practice-content,
+  .practice-body > .practice-settings { padding: var(--ds-space-4); }
   .practice-layout--sidebar .trainer-actions { width: 100%; }
 }
 
 /* 听写负责播放与验证；rhythm-editor 独立负责共享编辑工具和小节选择。 */
-.rhythm-dictation { padding-top: var(--ds-space-6); }
+.rhythm-dictation { padding-top: 0; }
+.rhythm-dictation .practice-content { justify-content: flex-start; }
+.rhythm-dictation .dictation-playbar, .dictation-playbar > .rhythm-playback { width: 100%; min-width: 0; }
+.rhythm-dictation .dictation-completion:empty { display: none; }
 .rhythm-editor.design-system { --rhythm-selected-measure: var(--ds-tint); }
 .rhythm-dictation .dictation-playbar { gap: var(--ds-space-4) var(--ds-space-6); }
 .rhythm-playback .rhythm-playback-buttons { gap: var(--ds-space-3); }

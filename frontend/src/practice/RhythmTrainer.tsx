@@ -1,5 +1,6 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MetronomePlaybackContext } from "./MetronomePlayback";
+import PracticeFrame from "./PracticeFrame";
 
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import { DEFAULT_TAPPING_PRECISION, getTappingTimingWindows } from "../settings/tappingPrecision";
@@ -385,7 +386,8 @@ function RhythmTrainer({
   ]);
 
   return (
-    <TrainerFrame settingsPanel={settingsPanel} error={audioError} extraActions={extraActions?.(isStarting || isRunning)} actions={
+    <div className="rhythm-trainer design-system">
+    <PracticeFrame settingsPanel={settingsPanel} toolbar={<>
       <div className="trainer-actions">
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
         <button
@@ -413,7 +415,9 @@ function RhythmTrainer({
           {startingMode === "listen" ? "准备中…" : isRunning && mode === "listen" ? "停止" : "试听"}
         </button>
       </div>
-    }>
+      {extraActions?.(isStarting || isRunning)}
+      {audioError && <p className="trainer-audio-error" role="alert">{audioError}</p>}
+    </>}>
       <RhythmScore
         exercise={exercise}
         activeEventIndex={activeEventIndex}
@@ -440,7 +444,8 @@ function RhythmTrainer({
           </section>
         ) : null}
       />
-    </TrainerFrame>
+    </PracticeFrame>
+    </div>
   );
 }
 
@@ -448,40 +453,20 @@ function RhythmTrainer({
 export default function RhythmTrainerWorkspace(props: Omit<RhythmTrainerProps, "exercise"> & { exercise: RhythmExercise | null }) {
   if (props.exercise) return <RhythmTrainer {...props} exercise={props.exercise} />;
   return (
-    <TrainerFrame settingsPanel={props.settingsPanel} extraActions={props.extraActions?.(false)} actions={
+    <div className="rhythm-trainer design-system">
+    <PracticeFrame settingsPanel={props.settingsPanel} toolbar={<>
       <div className="trainer-actions">
         <button type="button" disabled>击拍练习</button>
         <button type="button" disabled>试听</button>
       </div>
-    }>
+      {props.extraActions?.(false)}
+    </>}>
       <div className="empty-practice-score" role="region" aria-label="空白节奏乐谱">
         <svg width="100%" height="180" aria-hidden="true">
           <line x1="10%" x2="90%" y1="90" y2="90" stroke="currentColor" />
         </svg>
       </div>
-    </TrainerFrame>
-  );
-}
-
-/** 空态与真实练习共用：整行操作栏，下方才分成谱面和设置两栏。 */
-function TrainerFrame({ actions, extraActions, settingsPanel, error, children }: {
-  actions: ReactNode;
-  extraActions?: ReactNode;
-  settingsPanel?: ReactNode;
-  error?: string | null;
-  children: ReactNode;
-}) {
-  return <div className="rhythm-trainer design-system">
-    <div className="practice-layout practice-layout--sidebar">
-      <div className="trainer-toolbar">
-        {actions}
-        {extraActions}
-        {error && <p className="trainer-audio-error" role="alert">{error}</p>}
-      </div>
-      <div className="trainer-body">
-        <div className="trainer-score-area">{children}</div>
-        {settingsPanel}
-      </div>
+    </PracticeFrame>
     </div>
-  </div>;
+  );
 }

@@ -20,12 +20,12 @@ export default function PracticeWorkspace({
   extraActions?: (busy: boolean) => ReactNode;
 }) {
   return (
-    <PracticeSettings layout={mode === "tapping" ? "sidebar" : "stacked"}>
+    <PracticeSettings layout="sidebar">
       {({ bpm, metronomeEnabled }, settingsPanel) => (
         <section aria-label={mode === "dictation" ? "节奏听写区" : "击拍训练区"}>
           {mode === "dictation" ? (
             // BPM 改变只重建听写内部播放器，保留草稿、验证结果和参考答案状态。
-            <RhythmDictation key={exerciseKey} exercise={exercise} bpm={bpm} metronomeEnabled={metronomeEnabled} extraActions={extraActions} />
+            <RhythmDictation key={exerciseKey} exercise={exercise} bpm={bpm} metronomeEnabled={metronomeEnabled} extraActions={extraActions} settingsPanel={settingsPanel} />
           ) : (
             // 换题重建；调速由训练组件原地停止旧轮次，保留谱面。
             <RhythmTrainer

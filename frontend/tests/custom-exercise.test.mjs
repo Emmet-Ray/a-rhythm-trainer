@@ -199,7 +199,7 @@ test("自定义练习复用组件自身样式，不需要页面开启设计开�
     assert.match(html, mode === "tapping"
       ? /class="rhythm-trainer design-system"/
       : /class="rhythm-dictation design-system"/);
-    assert.match(html, mode === "tapping" ? /practice-layout--sidebar/ : /practice-layout--stacked/);
+    assert.match(html, /practice-layout--sidebar/);
   }
 });
 
@@ -391,8 +391,8 @@ test("击拍使用侧栏布局，空态与真实题目均将操作按钮放在�
     const score = html.indexOf(path.startsWith("/preset") ? 'aria-label="节奏乐谱"' : 'aria-label="空白节奏乐谱"');
     assert.ok(actions >= 0 && actions < score);
     assert.doesNotMatch(html, /trainer-feedback|试听中|试听结束|trainer-result|trainer-countdown/);
-    const toolbar = html.indexOf('class="trainer-toolbar"');
-    const body = html.indexOf('class="trainer-body"');
+    const toolbar = html.indexOf('class="practice-toolbar"');
+    const body = html.indexOf('class="practice-body"');
     assert.ok(toolbar < actions && actions < body);
     assert.doesNotMatch(html, /keyboard-hint|键敲击/);
     assert.ok(html.indexOf('aria-label="练习设置"') > body);
@@ -401,8 +401,13 @@ test("击拍使用侧栏布局，空态与真实题目均将操作按钮放在�
   }
   for (const path of ["/preset/dictation-basic-values-01", "/random/dictation"]) {
     const html = await renderApp(path);
-    assert.match(html, /practice-layout--stacked/);
-    assert.doesNotMatch(html, /practice-layout--sidebar/);
+    assert.match(html, /practice-layout--sidebar/);
+    assert.doesNotMatch(html, /practice-layout--stacked/);
+    const body = html.indexOf('class="practice-body"');
+    assert.ok(html.indexOf('aria-label="播放范围"') < body);
+    assert.ok(html.indexOf('data-source="question"') < body);
+    assert.ok(html.indexOf('aria-label="练习设置"') > body);
+    assert.equal((html.match(/aria-label="速度 BPM"/g) ?? []).length, 1);
   }
 });
 

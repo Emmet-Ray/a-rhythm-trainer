@@ -56,6 +56,26 @@ export type ScoreLayout = {
   measures: MeasurePlacement[];
 };
 
+/** 草稿始终单行。按最短可编辑时值（十六分音符）预留宽度，
+ * 而非根据当前答案伸缩；宽屏优先显示两个完整小节，余下横向滚动。
+ * 不读取题目答案，空小节与填满后使用相同坐标。
+ */
+export function createDraftScoreLayout(measureCount: number, containerWidth: number, quarterBeats: number): ScoreLayout {
+  const minimumWidth = Math.max(360, 100 + Math.ceil(quarterBeats * 4) * 30);
+  const viewport = Math.max(0, containerWidth);
+  const visibleCount = Math.max(1, Math.min(2, measureCount));
+  const scale = Math.max(1, Math.min(1.6, viewport / (minimumWidth * visibleCount + 20)));
+  const measureWidth = Math.max(minimumWidth, (viewport / scale - 20) / visibleCount);
+  return {
+    width: measureCount * measureWidth + 20,
+    height: 150,
+    scale,
+    measures: Array.from({ length: measureCount }, (_, index) => ({
+      x: 10 + index * measureWidth, y: 40, width: measureWidth, isRowStart: index === 0,
+    })),
+  };
+}
+
 /** 按完整小节换行；最小小节宽度可由记谱库测量提供。
  * preferredScale 指定期望记谱倍率；先换算逻辑宽度再排版，音符与反馈共用 scale。
  * 末行等宽左对齐；放不下一个小节时统一缩小；未测得容器宽度时不排版。

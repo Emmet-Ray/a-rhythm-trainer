@@ -18,6 +18,27 @@ try {
   await server.close();
 }
 
+test("草稿谱单行铺满双小节，长题横向扩展而不增加高度", () => {
+  const short = layout.createDraftScoreLayout(2, 1500, 4);
+  const long = layout.createDraftScoreLayout(8, 1500, 4);
+  assert.equal(short.width * short.scale, 1500);
+  assert.equal(long.height, short.height);
+  assert.equal(long.scale, short.scale);
+  assert.deepEqual(long.measures.slice(0, 2), short.measures);
+  assert.ok(long.width * long.scale > 1500);
+  assert.ok(long.measures.every(m => m.y === 40));
+});
+
+test("窄屏草稿保留可读尺寸和稳定小节边界", () => {
+  const draft = layout.createDraftScoreLayout(4, 320, 4);
+  assert.equal(draft.scale, 1);
+  assert.ok(draft.width > 320);
+  assert.ok(draft.measures[0].width >= 100 + 16 * 30);
+  for (let i = 1; i < draft.measures.length; i++) {
+    assert.equal(draft.measures[i].x, draft.measures[i - 1].x + draft.measures[i - 1].width);
+  }
+});
+
 test("节奏谱只显示中线，首小节使用打击乐谱号，后续小节不重复谱号", () => {
   const first = notation.createRhythmStave(10, 40, 300, true);
   const next = notation.createRhythmStave(310, 40, 300, false);
