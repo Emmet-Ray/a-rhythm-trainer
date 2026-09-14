@@ -25,6 +25,7 @@ import {
 import type { RhythmEditorHandle } from "../practice/RhythmEditor";
 import PracticeSettings, { type PracticeSettingsValue } from "../practice/PracticeSettings";
 import RhythmPlayback from "../practice/RhythmPlayback";
+import PracticeCue from "../practice/PracticeCue";
 import {
   listCustomExercises,
   saveCustomExercise,
@@ -91,13 +92,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
     return (
       <div className="design-system practice-page custom-create">
         <title>{`新建${selectedMode.label} · 节奏训练`}</title>
-        <ReturnLink className="back-link" to={`/custom/${selectedMode.id}`}>
-          ← 返回题目列表
-        </ReturnLink>
-        <header className="page-heading practice-heading">
-          <p className="eyebrow">自定义练习 / {selectedMode.label}</p>
-          <h1>新建练习</h1>
-        </header>
+        <PracticeHeading backTo={`/custom/${selectedMode.id}`} backLabel="题目列表" title="新建练习" />
         <Suspense
           fallback={
             <p className="loading-message" role="status" data-navigation-pending>
@@ -469,6 +464,7 @@ function CustomExerciseEditor({
 }) {
   const navigate = useNavigate();
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [draft, setDraft, forgetDraft] = useVisitState<{
     name: string;
     measures: RhythmElement[][];
@@ -564,9 +560,21 @@ function CustomExerciseEditor({
   }
 
   return (
-    <section className="custom-exercise-editor" aria-label="编辑自定义练习">
+    <section className="custom-exercise-editor practice-layout--sidebar" aria-label="编辑自定义练习">
       <fieldset className="custom-exercise-fields" disabled={saving}>
-        <div className="custom-settings">
+        <PracticeSettings layout="sidebar" initialValue={draft.settings} onChange={rememberSettings}
+          extraControls={
+            <div className="custom-measure-count" role="group" aria-label="小节数量">
+              <span>小节数量</span>
+              <div className="custom-measure-stepper">
+                <button type="button" aria-label="减少小节" disabled={measures.length === 1} onClick={removeMeasure}>−</button>
+                <output aria-label="当前小节数量">{measures.length}</output>
+                <button type="button" aria-label="增加小节" onClick={addMeasure}>+</button>
+              </div>
+            </div>
+          }>
+          {({ bpm, metronomeEnabled }, settingsPanel) => <>
+        <div className="practice-toolbar custom-editor-toolbar">
           <label className="custom-name">
             <span>练习名称</span>
             <input
@@ -578,45 +586,24 @@ function CustomExerciseEditor({
               }}
             />
           </label>
-          <div
-            className="custom-measure-count"
-            role="group"
-            aria-label="小节数量"
-          >
-            <span>小节数量</span>
-            <button
-              type="button"
-              aria-label="减少小节"
-              disabled={measures.length === 1}
-              onClick={removeMeasure}
-            >
-              −
-            </button>
-            <output aria-label="当前小节数量">{measures.length}</output>
-            <button type="button" aria-label="增加小节" onClick={addMeasure}>
-              +
-            </button>
+          <div className="custom-editor-actions" role="group" aria-label="试听与保存">
+          <RhythmPlayback
+            key={[bpm, measures.length].join(":")}
+            bpm={bpm} metronomeEnabled={metronomeEnabled} timeSignature={timeSignature}
+            options={[{ id: "draft", label: "试听", stopLabel: "停止", measures }]}
+            onCountInChange={setCountdown}
+          />
+          <button className="custom-save-button" type="button" disabled={saving || !canSave} onClick={() => void save()}>
+            {saving ? "正在保存…" : "保存练习"}
+          </button>
           </div>
-          <span className="custom-time-signature">4/4 拍</span>
+          {saveError && <p className="custom-save-error" role="alert">{saveError}</p>}
         </div>
-        <PracticeSettings initialValue={draft.settings} onChange={rememberSettings}>
-          {({ bpm, metronomeEnabled }) => (
-            <div className="custom-playback">
-              {/* 速度与小节数改变时仅重建播放器；名称、谱面和选中状态保留。 */}
-              <RhythmPlayback
-                key={[bpm, measures.length].join(":")}
-                bpm={bpm}
-                metronomeEnabled={metronomeEnabled}
-                timeSignature={timeSignature}
-                options={[
-                  { id: "draft", label: "试听", stopLabel: "停止", measures },
-                ]}
-              />
-            </div>
-          )}
-        </PracticeSettings>
+        <div className="practice-body">
+        <div className="practice-content">
         <RhythmEditor
           ref={editorRef}
+          scoreOverlay={countdown !== null ? <PracticeCue countdown={countdown} /> : null}
           measures={measures}
           timeSignature={timeSignature}
           selectedMeasureIndex={selectedMeasureIndex}
@@ -631,17 +618,11 @@ function CustomExerciseEditor({
             }));
           }}
         />
-        <div className="custom-save-actions">
-          <button
-            className="custom-save-button"
-            type="button"
-            disabled={saving || !canSave}
-            onClick={() => void save()}
-          >
-            {saving ? "正在保存…" : "保存练习"}
-          </button>
-          {saveError && <p role="alert">{saveError}</p>}
         </div>
+        {settingsPanel}
+        </div>
+          </>}
+        </PracticeSettings>
       </fieldset>
     </section>
   );

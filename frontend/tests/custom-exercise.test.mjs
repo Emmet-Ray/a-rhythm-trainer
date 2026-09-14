@@ -479,7 +479,10 @@ test("新建草稿默认两节、空名称、4/4，提供公共设置但全空�
   assert.match(html, /aria-label="小节 1"/);
   assert.match(html, /aria-label="小节 2"/);
   assert.match(html, /value=""/);
-  assert.match(html, /4\/4 拍/);
+  assert.doesNotMatch(html, /custom-time-signature|class="eyebrow"/);
+  assert.ok(html.indexOf('class="custom-save-button"') < html.indexOf('class="practice-body"'));
+  assert.ok(html.indexOf('aria-label="练习设置"') < html.indexOf('aria-label="小节数量"'));
+  assert.match(html, /practice-layout--sidebar/);
   assert.doesNotMatch(html, /class="custom-draft-notice"/);
   assert.match(html, /添加休止符/);
   assert.match(html, /保存练习/);
@@ -489,8 +492,8 @@ test("新建草稿默认两节、空名称、4/4，提供公共设置但全空�
   assert.match(html, /aria-label="节拍器" aria-pressed="true"/);
   assert.match(html, /<button[^>]*disabled=""[^>]*>试听<\/button>/);
   assert.doesNotMatch(html, /验证当前小节|播放题目|播放我的答案|查看答案/);
-  assert.match(html, /practice-layout--stacked/);
-  assert.doesNotMatch(html, /practice-layout--sidebar/);
+  assert.doesNotMatch(html, /rhythm-playback-status/);
+  assert.doesNotMatch(html, /practice-layout--stacked/);
 });
 
 test("公共速度控件提供整数滑块与数值输入，不再要求点击应用", () => {

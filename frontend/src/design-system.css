@@ -281,7 +281,7 @@
 .rhythm-trainer kbd { border: 2px solid var(--ds-line); border-bottom-width: 4px; border-radius: 8px; padding: 3px 12px; color: var(--ds-ink); background: var(--ds-surface); }
 
 /* 工作区用白色底面区分页面背景；听写与编辑保留各自的内部排列。 */
-.practice-layout--stacked, .custom-exercise-editor { min-width: 0; padding: var(--ds-space-8); border: 1px solid var(--ds-line); border-radius: var(--ds-radius-lg); background: var(--ds-surface); }
+.practice-layout--stacked { min-width: 0; padding: var(--ds-space-8); border: 1px solid var(--ds-line); border-radius: var(--ds-radius-lg); background: var(--ds-surface); }
 .custom-exercise-editor .practice-layout--stacked { padding: 0; border: 0; border-radius: 0; }
 .practice-layout--stacked > .practice-settings { border-top: 0; padding-top: 0; }
 .random-generation .random-topics label, :is(.random-index, .custom-index, .custom-library) a.question-link, .settings-options label { background: var(--ds-surface); }
@@ -316,7 +316,7 @@
   .practice-layout--sidebar .tempo-value input[type="number"] { width: 88px; min-height: 56px; font-size: 32px; }
 }
 @media (max-width: 600px) {
-  .practice-layout--stacked, .custom-exercise-editor { padding: var(--ds-space-4); }
+  .practice-layout--stacked { padding: var(--ds-space-4); }
   .practice-layout--sidebar .practice-toolbar, .practice-content,
   .practice-body > .practice-settings { padding: var(--ds-space-4); }
   .practice-layout--sidebar .trainer-actions { width: 100%; }
@@ -469,23 +469,27 @@
 .login-page .login-form > button[type="submit"]:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
 .login-page .login-form > button[type="submit"]:active:not(:disabled) { box-shadow: none; }
 /* 新建页只负责外层表单；谱面、设置和播放仍由共享组件负责。 */
-.custom-create .custom-settings { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-4) var(--ds-space-6); margin-bottom: var(--ds-space-6); }
-.custom-create .custom-name { flex: 1 1 300px; flex-wrap: wrap; gap: var(--ds-space-3); font-weight: 650; }
-.custom-create .custom-name input { flex: 1 1 180px; width: auto; min-height: 48px; padding: 10px 12px; border: 2px solid var(--ds-line); border-radius: var(--ds-radius-sm); background: var(--ds-surface); color: var(--ds-ink); }
-.custom-create .custom-measure-count { gap: var(--ds-space-3); font-weight: 650; }
+.custom-create .custom-name { flex: 0 1 396px; flex-wrap: nowrap; gap: var(--ds-space-3); font-weight: 650; }
+.custom-create .custom-name > span { flex-shrink: 0; }
+.custom-create .custom-name input { flex: 1 1 320px; width: 320px; min-height: 48px; padding: 10px 12px; border: 2px solid var(--ds-line); border-radius: var(--ds-radius-sm); background: var(--ds-surface); color: var(--ds-ink); }
+.custom-create .custom-measure-count { flex-direction: column; align-items: center; gap: var(--ds-space-3); font-weight: 650; border-top: 1px solid var(--ds-line); padding-top: var(--ds-space-4); width: 100%; }
+.custom-measure-stepper { display: flex; align-items: center; gap: var(--ds-space-3); }
 .custom-create .custom-measure-count button { width: 48px; padding: 8px; }
-.custom-create .custom-time-signature { color: var(--ds-muted); font-size: var(--ds-text-sm); white-space: nowrap; }
-.custom-create .custom-playback { padding-top: var(--ds-space-6); }
-.custom-create .custom-save-actions { align-items: flex-start; gap: var(--ds-space-4); margin-top: var(--ds-space-6); padding-top: var(--ds-space-6); border-top: 2px solid var(--ds-line); }
 .custom-create .custom-save-button:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 4px 0 var(--ds-primary-base); }
 .custom-create .custom-save-button:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
 .custom-create .custom-save-button:active:not(:disabled) { box-shadow: none; }
-.custom-create .custom-save-actions [role="alert"] { flex: 1 1 240px; margin: 0; padding: 12px 16px; border-radius: var(--ds-radius-sm); color: var(--ds-error); background: var(--ds-error-bg); font-size: var(--ds-text-sm); }
+.custom-create .custom-save-error { flex-basis: 100%; margin: 0; color: var(--ds-error); font-size: var(--ds-text-sm); }
+.custom-editor-actions { display: flex; align-items: flex-start; gap: var(--ds-space-3); margin-left: auto; min-width: 0; max-width: 100%; }
+.custom-editor-actions > .rhythm-playback { min-width: 0; }
+.custom-editor-actions > .custom-save-button { flex-shrink: 0; }
+.custom-create .custom-editor-toolbar { justify-content: flex-start; }
+.custom-editor-toolbar .rhythm-playback-status:empty { display: none; }
+.custom-editor-toolbar .rhythm-playback-buttons button { min-width: 112px; }
 .rhythm-playback.design-system [role="alert"] { color: var(--ds-error); font-size: var(--ds-text-sm); }
 @media (max-width: 600px) {
   .custom-create .custom-name { flex-basis: 100%; align-items: stretch; flex-direction: column; }
   .custom-create .custom-name input { flex: auto; width: 100%; }
-  .custom-create .custom-save-button { width: 100%; }
+  .custom-editor-actions { width: 100%; justify-content: flex-end; }
 }
 .custom-library .custom-list-heading { align-items: center; flex-wrap: wrap; gap: var(--ds-space-4); }
 .custom-library .custom-new-link { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 24px; border: 2px solid var(--ds-primary); border-radius: var(--ds-radius-sm); background: var(--ds-primary); color: white; font-weight: 750; box-shadow: 0 4px 0 var(--ds-primary-base); transition: background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }

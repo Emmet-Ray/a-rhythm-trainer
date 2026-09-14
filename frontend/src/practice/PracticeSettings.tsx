@@ -43,11 +43,14 @@ export default function PracticeSettings({
   layout = "stacked",
   initialValue,
   onChange,
+  extraControls,
 }: {
   children: (settings: PracticeSettingsValue, settingsPanel: ReactNode) => ReactNode;
   layout?: "stacked" | "sidebar";
   initialValue?: PracticeSettingsValue;
   onChange?: (value: PracticeSettingsValue) => void;
+  /** 工作区专属设置，置于节拍器和速度之后，不参与速度状态管理。 */
+  extraControls?: ReactNode;
 }) {
   const inputId = useId();
   const errorId = useId();
@@ -201,6 +204,7 @@ export default function PracticeSettings({
           </p>
         )}
       </form>
+      {extraControls}
     </section>
   );
 
