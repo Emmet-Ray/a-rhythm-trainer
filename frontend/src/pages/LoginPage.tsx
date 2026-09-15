@@ -14,12 +14,21 @@ export default function LoginPage({
   const [pending, setPending] = useState<"sending" | "login" | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [codeError, setCodeError] = useState("");
+  const phoneInput = useRef<HTMLInputElement>(null);
+  const codeInput = useRef<HTMLInputElement>(null);
   const [remaining, setRemaining] = useState(0);
   const deadline = useRef(0);
   const locked = useRef(false);
   const mounted = useRef(false);
   const navigate = useNavigate();
   const disabled = pending !== null || auth.busy;
+
+  // 发送成功的状态提交后，输入框已解除禁用；失败与倒计时更新不抢焦点。
+  useEffect(() => {
+    if (requestId) codeInput.current?.focus();
+  }, [requestId]);
 
   useEffect(() => {
     document.title = "登录 · 节奏训练";
@@ -43,11 +52,14 @@ export default function LoginPage({
   async function send() {
     if (locked.current || disabled || remaining > 0) return;
     if (!/^1[3-9][0-9]{9}$/.test(phone)) {
-      setError("请输入 11 位中国大陆手机号，不含国家码或空格。");
+      setPhoneError("请输入 11 位中国大陆手机号，不含国家码或空格。");
+      phoneInput.current?.focus();
       return;
     }
     locked.current = true;
     setPending("sending");
+    setPhoneError("");
+    setCodeError("");
     setError("");
     setMessage("");
     // 新发送可能使旧请求失效，即使最终没有收到成功响应也不再使用旧 ID。
@@ -77,11 +89,15 @@ export default function LoginPage({
       return;
     }
     if (!/^[0-9]{6}$/.test(code)) {
-      setError("请输入 6 位数字验证码。");
+      setCodeError("请输入 6 位数字验证码。");
+      setError("");
+      setMessage("");
+      codeInput.current?.focus();
       return;
     }
     locked.current = true;
     setPending("login");
+    setCodeError("");
     setError("");
     setMessage("");
     try {
@@ -112,6 +128,9 @@ export default function LoginPage({
         <label htmlFor="login-phone">手机号</label>
         <input
           id="login-phone"
+          ref={phoneInput}
+          aria-invalid={!!phoneError}
+          aria-describedby={phoneError ? "login-phone-error" : undefined}
           name="phone"
           type="tel"
           inputMode="numeric"
@@ -125,12 +144,18 @@ export default function LoginPage({
             setCode("");
             setMessage("");
             setError("");
+            setPhoneError("");
+            setCodeError("");
           }}
         />
+        {phoneError && <p id="login-phone-error" className="login-field-error" role="alert">{phoneError}</p>}
         <label htmlFor="login-code">验证码</label>
         <div className="login-code-row">
           <input
             id="login-code"
+            ref={codeInput}
+            aria-invalid={!!codeError}
+            aria-describedby={codeError ? "login-code-error" : undefined}
             name="code"
             type="text"
             inputMode="numeric"
@@ -138,7 +163,11 @@ export default function LoginPage({
             maxLength={6}
             value={code}
             disabled={disabled}
-            onChange={(event) => setCode(event.target.value)}
+            onChange={(event) => {
+              setCode(event.target.value);
+              setCodeError("");
+              setError("");
+            }}
           />
           <button
             type="button"
@@ -152,6 +181,7 @@ export default function LoginPage({
                 : "发送验证码"}
           </button>
         </div>
+        {codeError && <p id="login-code-error" className="login-field-error" role="alert">{codeError}</p>}
         <div className="login-feedback">
           {error ? (
             <p role="alert" className="auth-error">

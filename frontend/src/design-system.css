@@ -517,7 +517,9 @@
 .login-page .login-form input:disabled { color: var(--ds-muted); background: var(--ds-disabled); }
 .login-page .login-code-row { grid-template-columns: minmax(0, 1fr) 140px; gap: var(--ds-space-3); }
 .login-page .login-code-row button { padding-inline: var(--ds-space-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.login-page .login-feedback { min-height: 80px; padding: var(--ds-space-3) 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.login-page .login-feedback { min-height: 40px; padding: var(--ds-space-2) 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.login-page .login-field-error { margin: 0; color: var(--ds-error); font-size: var(--ds-text-sm); overflow-wrap: anywhere; }
+.login-page .login-form input[aria-invalid="true"] { border-color: var(--ds-error); }
 .login-page .login-feedback p { margin: 0; overflow-wrap: anywhere; }
 .login-page .auth-error { color: var(--ds-error); font-size: inherit; }
 .login-page .login-form > button[type="submit"]:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 4px 0 var(--ds-primary-base); }

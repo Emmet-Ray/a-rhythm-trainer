@@ -235,6 +235,9 @@ test("登录表单保留标签、自动填充和反馈语义，未发送验证�
   assert.match(html, /type="tel"[^>]*autoComplete="tel-national"/);
   assert.match(html, /for="login-code"/);
   assert.match(html, /autoComplete="one-time-code"/);
+  assert.match(html, /id="login-phone"[^>]*aria-invalid="false"/);
+  assert.match(html, /id="login-code"[^>]*aria-invalid="false"/);
+  assert.doesNotMatch(html, /id="login-(?:phone|code)-error"/);
   assert.match(html, /class="login-feedback"><p role="status"/);
   assert.match(html, /<button type="submit" disabled="">登录/);
 });
