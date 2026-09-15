@@ -687,6 +687,7 @@ function CustomExerciseEditor({
                 )}
               </div>
               <div className="practice-body">
+                {settingsPanel}
                 <div className="practice-content">
                   <RhythmEditor
                     ref={editorRef}
@@ -715,7 +716,6 @@ function CustomExerciseEditor({
                     }}
                   />
                 </div>
-                {settingsPanel}
               </div>
             </>
           )}

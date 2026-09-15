@@ -664,6 +664,18 @@ test("预设与随机击拍都有题目，侧栏布局将操作按钮放在谱�
   }
 });
 
+test("练习设置在谱面之前且只渲染一份，窄屏不靠视觉重排改变键盘顺序", async () => {
+  for (const path of ["/preset/basic-values-01", "/preset/dictation-basic-values-01", "/random/tapping", "/random/dictation", "/custom/tapping/new", "/custom/dictation/new"]) {
+    const html = path.startsWith("/custom/")
+      ? await renderPage(path, "/custom/:mode/new")
+      : await renderApp(path);
+    const settings = html.indexOf('aria-label="练习设置"');
+    const content = html.indexOf('class="practice-content"');
+    assert.ok(settings >= 0 && settings < content, path);
+    assert.equal((html.match(/aria-label="速度 BPM"/g) ?? []).length, 1, path);
+  }
+});
+
 test("谱面临时提示位于滚动内容之外，省略提示时不渲染浮层", () => {
   const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [
     { elements: [{ kind: "note", noteValue: "whole" }] },

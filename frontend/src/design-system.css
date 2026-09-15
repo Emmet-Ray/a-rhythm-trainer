@@ -402,9 +402,10 @@
 .rhythm-editor .rhythm-editor-controls { margin-top: var(--ds-space-4); }
 .rhythm-editor .rhythm-editor-current-measure { margin-bottom: var(--ds-space-4); font-size: var(--ds-text-sm); font-weight: 750; }
 .rhythm-editor .rhythm-editor-symbol-row { margin-top: var(--ds-space-3); }
-.rhythm-editor-input-groups { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px 40px; }
-.rhythm-editor-basic-input { width: 444px; max-width: 100%; }
-.rhythm-editor-pattern-input { width: 440px; max-width: 100%; }
+/* 按编辑区可用宽度排布，不把侧栏占位隐含在屏幕断点里。按钮尺寸保持不变。 */
+.rhythm-editor-input-groups { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
+.rhythm-editor-basic-input { flex: 1 1 352px; min-width: 0; max-width: 444px; }
+.rhythm-editor-pattern-input { flex: 1 1 288px; min-width: 0; max-width: 440px; }
 .rhythm-editor-basic-input .rhythm-editor-symbol-row:first-of-type { margin-top: 0; }
 .rhythm-editor-pattern-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px 8px; }
 .rhythm-editor .rhythm-editor-pattern-buttons button { display: flex; align-items: center; justify-content: center; height: 52px; padding: 2px; min-width: 0; }
@@ -537,6 +538,19 @@
 .custom-create .custom-measure-count { flex-direction: column; align-items: center; gap: var(--ds-space-3); font-weight: 650; border-top: 1px solid var(--ds-line); padding-top: var(--ds-space-4); width: 100%; }
 .custom-measure-stepper { display: flex; align-items: center; gap: var(--ds-space-3); }
 .custom-create .custom-measure-count button { display: grid; place-items: center; width: 48px; padding: 8px; }
+/* 横向设置区保持紧凑；谱面前只放必要的速度与小节控制。 */
+@media (max-width: 1199px) {
+  .practice-body > .practice-settings { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px 16px; align-items: center; }
+  .practice-body > .practice-settings .mechanical-metronome { width: 52px; padding: 4px; }
+  .practice-body > .practice-settings .mechanical-metronome svg { width: 40px; height: 46px; }
+  .practice-body > .practice-settings .tempo-settings { width: 100%; max-width: 420px; }
+  .custom-create .custom-measure-count { grid-column: 1 / -1; flex-direction: row; justify-content: flex-start; flex-wrap: wrap; gap: 12px; width: auto; padding-top: 0; border-top: 0; }
+}
+@media (max-width: 480px) {
+  .practice-body > .practice-settings .tempo-settings { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .practice-body > .practice-settings .tempo-value { justify-content: flex-end; }
+  .practice-body > .practice-settings .tempo-value input[type="number"] { width: 64px; }
+}
 .custom-create .custom-save-button:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 4px 0 var(--ds-primary-base); }
 .custom-create .custom-save-button:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
 .custom-create .custom-save-button:active:not(:disabled) { box-shadow: none; }
