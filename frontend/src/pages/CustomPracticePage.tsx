@@ -1,6 +1,5 @@
 import { ArrowLeft, ArrowRight, Hand, Ear, LoaderCircle, Minus, Plus, Save } from "lucide-react";
 import {
-  lazy,
   Suspense,
   useCallback,
   useEffect,
@@ -17,6 +16,8 @@ import {
 import NotFoundPage from "./NotFoundPage";
 import { ReturnLink } from "../navigation/PageNavigation";
 import { PracticeHeading } from "../practice/PracticeHeading";
+import { editorModule, workspaceModule } from "../practice/practiceModules";
+import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
 import { useVisitState } from "../navigation/usePageNavigation";
 import {
   parseRhythmExercise,
@@ -44,12 +45,8 @@ import {
 } from "../exercises/customExercises";
 
 // 选择训练方式时不加载 VexFlow；进入新建页面后才加载编辑器。
-const RhythmEditor = lazy(() =>
-  import("../practice/RhythmEditor").then((module) => ({
-    default: module.RhythmEditor,
-  })),
-);
-const PracticeWorkspace = lazy(() => import("../practice/PracticeWorkspace"));
+const RhythmEditor = editorModule.Component;
+const PracticeWorkspace = workspaceModule.Component;
 
 // 自定义的开放范围不依赖预设题库；每个模式的草稿独立创建。
 const customModes = [
@@ -114,13 +111,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
         />
         <Suspense
           fallback={
-            <p
-              className="loading-message"
-              role="status"
-              data-navigation-pending
-            >
-              正在加载编辑器…
-            </p>
+            <LoadingPlaceholder workspace label="正在加载编辑器…" />
           }
         >
           {/* 换模式即新草稿，不把一道题自动共享给两种训练方式。 */}
@@ -444,13 +435,7 @@ function CustomExercisePractice({
       ) : result.item ? (
         <Suspense
           fallback={
-            <p
-              className="loading-message"
-              role="status"
-              data-navigation-pending
-            >
-              正在加载练习…
-            </p>
+            <LoadingPlaceholder workspace label="正在加载练习…" />
           }
         >
           <PracticeWorkspace

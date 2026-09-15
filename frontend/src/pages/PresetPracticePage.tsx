@@ -1,4 +1,6 @@
-import { lazy, Suspense, useLayoutEffect, useRef, type UIEvent } from "react";
+import { Suspense, useLayoutEffect, useRef, type UIEvent } from "react";
+import { workspaceModule } from "../practice/practiceModules";
+import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
 import { ArrowRight } from "lucide-react";
 import { PracticeHeading } from "../practice/PracticeHeading";
 import { useVisitState } from "../navigation/usePageNavigation";
@@ -12,7 +14,7 @@ import {
 import NotFoundPage from "./NotFoundPage";
 
 // 预设列表不加载训练组件及 VexFlow，进入具体题目后才加载。
-const PracticeWorkspace = lazy(() => import("../practice/PracticeWorkspace"));
+const PracticeWorkspace = workspaceModule.Component;
 
 export default function PresetPracticePage() {
   const { questionId } = useParams();
@@ -109,7 +111,7 @@ function PresetExercisePage({ questionId }: { questionId: string }) {
       <title>{`${selected.question.title} · ${modeLabel}`}</title>
       <PracticeHeading backTo="/preset" backLabel="预设练习" title={selected.question.title} />
       {selected.mode === "tapping" || selected.mode === "dictation" ? (
-        <Suspense fallback={<p className="loading-message" role="status" data-navigation-pending>正在加载练习…</p>}>
+        <Suspense fallback={<LoadingPlaceholder workspace label="正在加载练习…" />}>
           {/* 路由参数变化不一定卸载页面，题目 key 明确结束旧题并重置配置。 */}
           <PracticeWorkspace key={selected.question.id} exercise={selected.question.exercise} mode={selected.mode} />
         </Suspense>

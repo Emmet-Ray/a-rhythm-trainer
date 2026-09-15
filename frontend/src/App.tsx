@@ -1,4 +1,6 @@
-import { lazy, Suspense, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
+import { routeModules, preloadDestination, preloadLinkIntent } from "./navigation/routeModules";
+import { LoadingPlaceholder } from "./navigation/LoadingPlaceholder";
 import { Navigate, Route, Routes, useLocation } from "react-router";
 import HomePage from "./pages/HomePage";
 import SiteNavigation from "./navigation/SiteNavigation";
@@ -10,11 +12,10 @@ import "./App.css";
 import "./design-system.css";
 
 // 首页只展示入口；题库和训练代码进入对应页面后再加载。
-// todo: 这个lazy是干嘛的？
-const RandomPracticePage = lazy(() => import("./pages/RandomPracticePage"));
-const PresetPracticePage = lazy(() => import("./pages/PresetPracticePage"));
-const CustomPracticePage = lazy(() => import("./pages/CustomPracticePage"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const RandomPracticePage = routeModules.random.Component;
+const PresetPracticePage = routeModules.preset.Component;
+const CustomPracticePage = routeModules.custom.Component;
+const SettingsPage = routeModules.settings.Component;
 
 function App() {
   return <PageNavigation><AppShell /></PageNavigation>;
@@ -23,23 +24,22 @@ function App() {
 function AppShell() {
   const auth = useAuth();
   const { pathname, key } = useLocation();
+  useEffect(() => { void preloadDestination(pathname); }, [pathname]);
   const mainRef = useRef<HTMLElement>(null);
   const identity = auth.state.status === "authenticated" ? `account:${auth.state.user.id}` : auth.state.status;
   useNavigationScroll(pathname.startsWith("/custom") ? identity : "public");
 
   return (
-    <div className="site-shell">
+    <div className="site-shell" onPointerOver={preloadLinkIntent} onFocusCapture={preloadLinkIntent} onPointerDownCapture={preloadLinkIntent}>
       <a className="skip-link" href="#main-content">
         跳到主要内容
       </a>
       <SiteNavigation />
       <main id="main-content" ref={mainRef} tabIndex={-1}>
-        {/* todo: 这个suspense是干嘛的 */}
+        {/* 按历史记录重挂载以恢复访问快照；预加载缓存不随此 key 重置。 */}
         <Suspense key={key}
           fallback={
-            <p className="loading-message" role="status" data-navigation-pending>
-              正在加载…
-            </p>
+            <LoadingPlaceholder />
           }
         >
           <Routes>

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/page-navigation.test.mjs tests/rhythm-time.test.mjs tests/exercise-library.test.mjs tests/rhythm-dictation-judge.test.mjs tests/rhythm-audio.test.mjs tests/rhythm-notation.test.mjs tests/exercise-generator.test.mjs tests/rhythm-editor.test.mjs tests/custom-exercise.test.mjs tests/custom-exercise-storage.test.mjs tests/auth-api.test.mjs tests/custom-exercise-api.test.mjs tests/appearance.test.mjs tests/tapping-precision.test.mjs",
+    "test": "node --test tests/module-loading.test.mjs tests/page-navigation.test.mjs tests/rhythm-time.test.mjs tests/exercise-library.test.mjs tests/rhythm-dictation-judge.test.mjs tests/rhythm-audio.test.mjs tests/rhythm-notation.test.mjs tests/exercise-generator.test.mjs tests/rhythm-editor.test.mjs tests/custom-exercise.test.mjs tests/custom-exercise-storage.test.mjs tests/auth-api.test.mjs tests/custom-exercise-api.test.mjs tests/appearance.test.mjs tests/tapping-precision.test.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

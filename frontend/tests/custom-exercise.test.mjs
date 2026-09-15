@@ -83,7 +83,8 @@ test("共用谱面列出所有小节导航，受控选择与只读浏览独立",
 async function renderApp(path) {
   const stream = await renderToReadableStream(createElement(MemoryRouter, { initialEntries: [path] }, createElement(App)));
   await stream.allReady;
-  return (await new Response(stream).text()).replaceAll("<!-- -->", "");
+  // 只验证组件标记，不让 React 流式传输脚本里的字符串被误当成 HTML 控件。
+  return (await new Response(stream).text()).replace(/<script\b[^]*?<\/script>/g, "").replaceAll("<!-- -->", "");
 }
 
 test("结果图标不参与朗读，正确与错误都保留文字及关闭按钮名称", () => {

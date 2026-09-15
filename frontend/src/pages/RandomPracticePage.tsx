@@ -1,4 +1,6 @@
 import { lazy, memo, Suspense, useEffect, useId, useRef, useState } from "react";
+import { workspaceModule } from "../practice/practiceModules";
+import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
 import { ArrowRight, Hand, Ear, RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import { PracticeHeading } from "../practice/PracticeHeading";
 import { useVisitState } from "../navigation/usePageNavigation";
@@ -8,7 +10,7 @@ import { generateRandomExercise, randomMaterials, defaultRandomMaterials, random
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 
 // 进入对应模式后加载完整工作区。
-const PracticeWorkspace = lazy(() => import("../practice/PracticeWorkspace"));
+const PracticeWorkspace = workspaceModule.Component;
 const RhythmSymbol = lazy(() => import("../rhythm/notation/RhythmSymbol").then(module => ({ default: module.RhythmSymbol })));
 const materialGroups = ["音符", "休止符", "节奏型"] as const;
 
@@ -182,7 +184,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
         </div>
       </section>
       </dialog>
-        <Suspense fallback={<p className="loading-message" role="status" data-navigation-pending>正在加载练习…</p>}>
+        <Suspense fallback={<LoadingPlaceholder workspace label="正在加载练习…" />}>
           <PracticeWorkspace exerciseKey={generated.id} exercise={generated.exercise} mode={mode}
             extraActions={busy => (
               <div className="random-toolbar-actions">
