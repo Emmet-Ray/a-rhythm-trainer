@@ -508,6 +508,10 @@
 }
 /* 登录沿用基础控件；固定发送按钮宽度和反馈区高度，避免状态切换挤动表单。 */
 .login-page.design-system { max-width: 400px; }
+.account-login { margin: 24px 0 0; }
+.settings-section > .account-description { max-width: 400px; font-size: var(--ds-text-sm); line-height: 1.6; }
+.account-connection { max-width: 480px; margin-bottom: 24px; }
+.account-connection p { color: var(--ds-muted); margin: 0 0 12px; }
 .login-page .back-link { color: var(--ds-muted); font-size: var(--ds-text-sm); font-weight: 650; }
 .login-page h1 { margin: var(--ds-space-4) 0 var(--ds-space-8); }
 .login-page .login-form { gap: var(--ds-space-2); }

@@ -17,6 +17,7 @@ const { default: RhythmPlayback } = await server.ssrLoadModule("/src/practice/Rh
 const { default: PracticeCue } = await server.ssrLoadModule("/src/practice/PracticeCue.tsx");
 const { RhythmDraftScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmDraftScore.tsx");
 const { default: App } = await server.ssrLoadModule("/src/App.tsx");
+const { default: SettingsPage } = await server.ssrLoadModule("/src/pages/SettingsPage.tsx");
 const { VisitsContext } = await server.ssrLoadModule("/src/navigation/usePageNavigation.ts");
 const { PageVisits } = await server.ssrLoadModule("/src/navigation/PageVisits.ts");
 const { default: PracticeWorkspace } = await server.ssrLoadModule("/src/practice/PracticeWorkspace.tsx");
@@ -181,10 +182,10 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
   const customIndex = await renderApp("/custom");
   assert.match(customIndex, /class="design-system custom-index"/);
   assert.match(customIndex, /class="question-link custom-mode-unavailable" aria-disabled="true"/);
-  for (const path of ["/login"]) {
+  for (const path of ["/settings"]) {
     const html = await renderApp(path);
     assert.match(html, /class="site-header design-system"/);
-    assert.match(html, /class="design-system login-page"/);
+    assert.match(html, /class="design-system settings-page"/);
   }
 });
 
@@ -200,7 +201,7 @@ test("404 状态页提供与错误类型对应的主要返回入口", async () =
 });
 
 test("设置页不要求登录，显示三套配色与恢复默认入口", async () => {
-  const html = await renderApp("/settings");
+  const html = await renderApp("/settings?category=appearance");
   assert.match(html, /class="design-system settings-page"/);
   assert.match(html, /aria-current="page" href="\/settings"/);
   assert.equal((html.match(/type="radio"/g) ?? []).length, 3);
@@ -212,25 +213,47 @@ test("设置页不要求登录，显示三套配色与恢复默认入口", async
   assert.doesNotMatch(html, /请登录后/);
 });
 
-test("设置页提供四个分类，默认只展示外观内容", async () => {
+test("设置页提供五个分类，默认只展示账号内容", async () => {
   const html = await renderApp("/settings");
   for (const [id, title] of [
-    ["appearance", "外观"], ["local-data", "本地数据"],
+    ["account", "账号"], ["appearance", "外观"], ["local-data", "本地数据"],
     ["sound", "声音"], ["tapping-precision", "击拍精度"],
   ]) {
     const badge = id === "sound" ? '<span class="settings-unavailable">未开放</span>' : "";
-    assert.match(html, new RegExp(`<button[^>]*aria-pressed="${id === "appearance"}"[^>]*>${title}${badge}</button>`));
+    assert.match(html, new RegExp(`<button[^>]*aria-pressed="${id === "account"}"[^>]*>${title}${badge}</button>`));
   }
   for (const id of ["local-data", "sound", "tapping-precision"]) {
     assert.doesNotMatch(html, new RegExp(`id="${id}-heading"`));
   }
   assert.match(html, /aria-label="设置分类"/);
-  assert.match(html, /<h2 id="appearance-heading">外观<\/h2>/);
+  assert.match(html, /<h2 id="account-heading">账号<\/h2>/);
+});
+
+function renderSettings(state, error = "") {
+  const auth = { state, error, busy: false, refresh() {}, login() {}, logout() {} };
+  return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ["/settings?category=account"] }, createElement(SettingsPage, { auth })));
+}
+
+test("账号设置统一承载会话状态、重试和退出，顶部不再显示登录入口", async () => {
+  const checking = renderSettings({ status: "checking" });
+  assert.match(checking, /正在确认登录/);
+  assert.doesNotMatch(checking, /login-form/);
+  const loggedIn = renderSettings({ status: "authenticated", user: { id: 1 } });
+  assert.match(loggedIn, /已登录/);
+  assert.match(loggedIn, /退出登录/);
+  assert.doesNotMatch(loggedIn, /login-form/);
+  const unavailable = renderSettings({ status: "unavailable" }, "无法确认退出结果。");
+  assert.match(unavailable, /重新检查/);
+  assert.match(unavailable, /无法确认退出结果/);
+  assert.match(unavailable, /login-form/);
+  const html = await renderApp("/settings");
+  const header = html.match(/<header class="site-header[\s\S]*?<\/header>/)?.[0] ?? "";
+  assert.doesNotMatch(header, /登录|退出|auth-status/);
 });
 
 test("登录表单保留标签、自动填充和反馈语义，未发送验证码时不能登录", async () => {
-  const html = await renderApp("/login");
-  assert.match(html, /aria-labelledby="login-heading"/);
+  const html = renderSettings({ status: "guest" });
+  assert.match(html, /aria-label="登录"/);
   assert.match(html, /for="login-phone"/);
   assert.match(html, /type="tel"[^>]*autoComplete="tel-national"/);
   assert.match(html, /for="login-code"/);

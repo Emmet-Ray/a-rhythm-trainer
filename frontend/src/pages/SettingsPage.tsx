@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { useVisitState } from "../navigation/usePageNavigation";
+import { useSearchParams } from "react-router";
+import type { useAuth } from "../auth/useAuth";
+import LoginForm from "../settings/LoginForm";
 import {
   DEFAULT_THEME,
   getAppearance,
@@ -19,16 +21,22 @@ import {
 } from "../settings/tappingPrecision";
 
 const categories = [
+  { id: "account", label: "账号" },
   { id: "appearance", label: "外观" },
   { id: "local-data", label: "本地数据" },
   { id: "sound", label: "声音" },
   { id: "tapping-precision", label: "击拍精度" },
 ] as const;
 
-export default function SettingsPage() {
-  const [category, setCategory] = useVisitState<
-    (typeof categories)[number]["id"]
-  >("settings:category", "appearance");
+export default function SettingsPage({
+  auth,
+}: {
+  auth: ReturnType<typeof useAuth>;
+}) {
+  const [params, setParams] = useSearchParams();
+  const category =
+    categories.find((item) => item.id === params.get("category"))?.id ??
+    "account";
   const [appearance, setAppearance] = useState(getAppearance);
 
   function choose(theme: Theme) {
@@ -52,7 +60,16 @@ export default function SettingsPage() {
               type="button"
               aria-pressed={category === item.id}
               aria-controls="settings-content"
-              onClick={() => setCategory(item.id)}
+              onClick={() =>
+                setParams(
+                  (previous) => {
+                    const next = new URLSearchParams(previous);
+                    next.set("category", item.id);
+                    return next;
+                  },
+                  { replace: true },
+                )
+              }
             >
               {item.label}
               {item.id === "sound" && (
@@ -62,6 +79,7 @@ export default function SettingsPage() {
           ))}
         </nav>
         <div id="settings-content" className="settings-content">
+          {category === "account" && <AccountSettings auth={auth} />}
           {category === "appearance" && (
             <section
               className="settings-section"
@@ -114,6 +132,51 @@ export default function SettingsPage() {
           {category === "tapping-precision" && <TappingPrecisionSettings />}
         </div>
       </div>
+    </section>
+  );
+}
+
+function AccountSettings({ auth }: { auth: ReturnType<typeof useAuth> }) {
+  return (
+    <section className="settings-section" aria-labelledby="account-heading">
+      <h2 id="account-heading">账号</h2>
+      {auth.error && (
+        <p role="alert" className="settings-message">
+          {auth.error}
+        </p>
+      )}
+      {auth.state.status === "checking" ? (
+        <p role="status" data-navigation-pending>
+          正在确认登录…
+        </p>
+      ) : auth.state.status === "authenticated" ? (
+        <>
+          <p role="status">已登录</p>
+          <div className="settings-actions">
+            <button
+              type="button"
+              disabled={auth.busy}
+              onClick={() => void auth.logout()}
+            >
+              {auth.busy ? "正在退出…" : "退出登录"}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          {auth.state.status === "unavailable" && (
+            <div className="account-connection">
+              <p role="status">
+                暂时无法确认登录状态，可以重试检查或重新登录。
+              </p>
+              <button type="button" disabled={auth.busy} onClick={auth.refresh}>
+                重新检查
+              </button>
+            </div>
+          )}
+          <LoginForm auth={auth} />
+        </>
+      )}
     </section>
   );
 }

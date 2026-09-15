@@ -139,7 +139,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
       return (
         <div className="design-system practice-page custom-status">
           <p>请登录后查看账号练习。</p>
-          <Link to="/login">登录</Link> ·{" "}
+          <Link to="/settings?category=account">登录</Link> ·{" "}
           <ReturnLink to={`/custom/${selectedMode.id}`}>
             返回题目列表
           </ReturnLink>

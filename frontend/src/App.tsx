@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
-import { Link, Route, Routes, useLocation } from "react-router";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router";
 import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useAuth } from "./auth/useAuth";
@@ -13,7 +13,6 @@ import "./design-system.css";
 const RandomPracticePage = lazy(() => import("./pages/RandomPracticePage"));
 const PresetPracticePage = lazy(() => import("./pages/PresetPracticePage"));
 const CustomPracticePage = lazy(() => import("./pages/CustomPracticePage"));
-const LoginPage = lazy(() => import("./pages/LoginPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 
 function App() {
@@ -40,52 +39,8 @@ function AppShell() {
           <Link to="/" aria-current={pathname === "/" ? "page" : undefined}>首页</Link>
           <PracticeNavigation key={pathname} pathname={pathname} />
           <Link to="/settings" aria-current={pathname === "/settings" ? "page" : undefined}>设置</Link>
-          {auth.state.status === "checking" ? (
-            <span className="auth-status" role="status">
-              正在确认登录…
-            </span>
-          ) : auth.state.status === "authenticated" ? (
-            <>
-              <span className="auth-status">已登录</span>
-              <button
-                className="nav-button"
-                disabled={auth.busy}
-                onClick={() => void auth.logout()}
-              >
-                {auth.busy ? "正在退出…" : "退出"}
-              </button>
-            </>
-          ) : (
-            <>
-              {auth.state.status === "unavailable" ? (
-                <>
-                  <span className="auth-status" role="status">
-                    登录状态暂不可用
-                  </span>
-                  <button
-                    className="nav-button"
-                    disabled={auth.busy}
-                    onClick={auth.refresh}
-                  >
-                    重试
-                  </button>
-                </>
-              ) : null}
-              <Link
-                to="/login"
-                aria-current={pathname === "/login" ? "page" : undefined}
-              >
-                登录
-              </Link>
-            </>
-          )}
         </nav>
       </header>
-      {auth.error ? (
-        <p role="alert" className="auth-error">
-          {auth.error}
-        </p>
-      ) : null}
       <main id="main-content" ref={mainRef} tabIndex={-1}>
         {/* todo: 这个suspense是干嘛的 */}
         <Suspense key={key}
@@ -96,8 +51,8 @@ function AppShell() {
           }
         >
           <Routes>
-            <Route path="/login" element={<LoginPage auth={auth} />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/login" element={<Navigate to="/settings?category=account" replace />} />
+            <Route path="/settings" element={<SettingsPage auth={auth} />} />
             <Route path="/" element={<HomePage />} />
             <Route path="/preset" element={<PresetPracticePage />} />
             <Route

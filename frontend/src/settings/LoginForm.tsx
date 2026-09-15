@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Navigate, useNavigate } from "react-router";
 import { AuthApiError, authErrorMessage, sendLoginCode } from "../api/auth";
 import type { useAuth } from "../auth/useAuth";
 
-export default function LoginPage({
+export default function LoginForm({
   auth,
 }: {
   auth: ReturnType<typeof useAuth>;
@@ -22,7 +21,6 @@ export default function LoginPage({
   const deadline = useRef(0);
   const locked = useRef(false);
   const mounted = useRef(false);
-  const navigate = useNavigate();
   const disabled = pending !== null || auth.busy;
 
   // 发送成功的状态提交后，输入框已解除禁用；失败与倒计时更新不抢焦点。
@@ -31,7 +29,6 @@ export default function LoginPage({
   }, [requestId]);
 
   useEffect(() => {
-    document.title = "登录 · 节奏训练";
     mounted.current = true;
     const timer = window.setInterval(() => {
       setRemaining(
@@ -102,7 +99,6 @@ export default function LoginPage({
     setMessage("");
     try {
       await auth.login(requestId, code);
-      if (mounted.current) navigate("/", { replace: true });
     } catch (error) {
       if (mounted.current) setError(authErrorMessage(error));
     } finally {
@@ -111,16 +107,13 @@ export default function LoginPage({
     }
   }
 
-  if (auth.state.status === "authenticated") return <Navigate to="/" replace />;
-
   return (
-    <section
-      className="design-system login-page"
-      aria-labelledby="login-heading"
+    <div
+      className="design-system login-page account-login"
     >
-      <h1 id="login-heading">登录</h1>
       <form
         className="login-form"
+        aria-label="登录"
         onSubmit={submit}
         noValidate
         aria-busy={disabled}
@@ -195,6 +188,6 @@ export default function LoginPage({
           {pending === "login" ? "正在登录…" : "登录"}
         </button>
       </form>
-    </section>
+    </div>
   );
 }
