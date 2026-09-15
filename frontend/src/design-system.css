@@ -269,7 +269,7 @@
 .home-page .question-link:active { transform: translateY(var(--ds-depth)); box-shadow: none; }
 .home-page .question-meta { color: var(--ds-muted); font-size: var(--ds-text-sm); margin-top: var(--ds-space-1); }
 .home-page .question-action { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 750; }
-.home-page .source-symbol { width: 64px; height: 64px; display: grid; place-items: center; color: var(--ds-primary); background: var(--ds-tint); border-radius: var(--ds-radius-lg); }
+.home-page .source-symbol { width: 64px; height: 64px; display: grid; place-items: center; color: var(--ds-primary); }
 
 /* 击拍样板：谱面固定在操作与反馈上方，不对谱面或时钟做动画。 */
 .practice-page { max-width: var(--site-content-width); margin: 0 auto; }

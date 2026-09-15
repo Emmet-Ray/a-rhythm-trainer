@@ -130,6 +130,9 @@ test("首页独立展示三个平等入口，不显示预设主题或训练区",
   const html = await renderApp("/");
   assert.match(html, /<title>首页 · 节奏训练<\/title>/);
   assert.match(html, /aria-label="练习入口"/);
+  for (const description of ["按主题循序练习，逐步熟悉不同节奏", "选择想巩固的节奏，随机出题反复练习", "编写自己的节奏题目，保存后随时练习"]) {
+    assert.ok(html.includes(description));
+  }
   for (const path of ["preset", "random", "custom"]) assert.ok(html.includes(`href="/${path}"`));
   assert.match(html, /aria-current="page"[^>]*>首页/);
   assert.doesNotMatch(html, /topic-section|击拍训练区|节奏听写区/);
