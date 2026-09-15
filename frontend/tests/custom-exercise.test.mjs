@@ -137,7 +137,7 @@ test("首页独立展示三个平等入口，不显示预设主题或训练区",
     assert.ok(html.includes(description));
   }
   for (const path of ["preset", "random", "custom"]) assert.ok(html.includes(`href="/${path}"`));
-  assert.match(html, /aria-current="page"[^>]*>首页/);
+  assert.match(withoutSvg(html), /aria-current="page"[^>]*>首页/);
   assert.doesNotMatch(html, /topic-section|击拍训练区|节奏听写区/);
 });
 
@@ -170,7 +170,7 @@ test("三个来源页面不再展示来源切换栏，保留首页返回入口�
   for (const path of ["/preset", "/random", "/custom"]) {
     const html = await renderApp(path);
     assert.doesNotMatch(html, /aria-label="内容来源"/);
-    assert.match(html, /href="\/"[^>]*>首页/);
+    assert.match(withoutSvg(html), /href="\/"[^>]*>首页/);
     assert.match(html, /击拍练习/);
     assert.match(html, /节奏听写/);
     if (path === "/preset") {
@@ -181,20 +181,20 @@ test("三个来源页面不再展示来源切换栏，保留首页返回入口�
       assert.doesNotMatch(html, /几何游戏|未开放|href="\/preset\/eighths-01"/);
     }
   }
-  assert.match(await renderApp("/login"), /href="\/"[^>]*>首页/);
+  assert.match(withoutSvg(await renderApp("/login")), /href="\/"[^>]*>首页/);
 });
 
-test("顶部练习下拉默认收起，在列表和题目页标识所属栏目", async () => {
-  for (const [path, active, current] of [["/", null, null], ["/preset", "/preset", "page"],
+test("侧栏直接展示所有栏目，移动菜单默认关闭，题目页标识所属栏目", async () => {
+  for (const [path, active, current] of [["/", "/", "page"], ["/preset", "/preset", "page"],
     ["/preset/basic-values-01", "/preset", "location"], ["/random/tapping", "/random", "location"],
     ["/custom/dictation", "/custom", "location"]]) {
     const html = await renderApp(path);
-    const dropdown = html.match(/<details class="practice-navigation"[\s\S]*?<\/details>/)?.[0];
-    assert.ok(dropdown);
-    assert.doesNotMatch(dropdown, /<details[^>]*\bopen/);
-    for (const target of ["/preset", "/random", "/custom"]) assert.ok(dropdown.includes(`href="${target}"`));
-    if (active) assert.match(dropdown, new RegExp(`<a(?=[^>]*href="${active}")(?=[^>]*aria-current="${current}")[^>]*>`));
-    else assert.doesNotMatch(dropdown, /aria-current/);
+    const sidebar = html.match(/<aside class="site-sidebar[\s\S]*?<\/aside>/)?.[0];
+    assert.ok(sidebar);
+    assert.doesNotMatch(html, /practice-navigation|<dialog[^>]*\bopen/);
+    assert.match(html, /aria-label="打开导航菜单" aria-expanded="false" aria-controls="site-menu"/);
+    for (const target of ["/", "/preset", "/random", "/custom", "/settings"]) assert.ok(sidebar.includes(`href="${target}"`));
+    assert.match(sidebar, new RegExp(`<a(?=[^>]*href="${active}")(?=[^>]*aria-current="${current}")[^>]*>`));
   }
 });
 
@@ -228,7 +228,7 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
   assert.doesNotMatch(customIndex, /href="\/custom\/geometry"/);
   for (const path of ["/settings"]) {
     const html = await renderApp(path);
-    assert.match(html, /class="site-header design-system"/);
+    assert.match(html, /class="site-sidebar design-system"/);
     assert.match(html, /class="design-system settings-page"/);
   }
 });
@@ -304,7 +304,7 @@ test("账号设置统一承载会话状态、重试和退出，顶部不再显�
   assert.match(unavailable, /无法确认退出结果/);
   assert.match(unavailable, /login-form/);
   const html = await renderApp("/settings");
-  const header = html.match(/<header class="site-header[\s\S]*?<\/header>/)?.[0] ?? "";
+  const header = html.match(/<aside class="site-sidebar[\s\S]*?<\/aside>/)?.[0] ?? "";
   assert.doesNotMatch(header, /登录|退出|auth-status/);
 });
 

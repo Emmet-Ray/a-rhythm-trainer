@@ -1,5 +1,5 @@
 import { lazy, memo, Suspense, useEffect, useId, useRef, useState } from "react";
-import { ArrowRight, RefreshCw, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, Hand, Ear, RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import { PracticeHeading } from "../practice/PracticeHeading";
 import { useVisitState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
@@ -23,8 +23,8 @@ const MaterialPreview = memo(function MaterialPreview({ material }: { material: 
 
 // 随机练习的开放范围独立于预设题库；这里只列出已有子页面的模式。
 const randomModes = [
-  { id: "tapping", label: "击拍练习" },
-  { id: "dictation", label: "节奏听写" },
+  { id: "tapping", label: "击拍练习", icon: Hand },
+  { id: "dictation", label: "节奏听写", icon: Ear },
 ] as const;
 
 export default function RandomPracticePage() {
@@ -54,7 +54,7 @@ export default function RandomPracticePage() {
           {randomModes.map(item => (
             <li key={item.id}>
               <Link className="question-link" to={`/random/${item.id}`}>
-                <h3>{item.label}</h3>
+                <h3 className="mode-entry-label"><item.icon className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />{item.label}</h3>
                 <span className="question-action">开始练习 <ArrowRight className="ui-icon" aria-hidden="true" focusable="false" /></span>
               </Link>
             </li>

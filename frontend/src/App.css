@@ -1,20 +1,8 @@
-/* 外壳不依赖页面内容或加载状态；页头与工作区共享同一条外侧对齐线。 */
-:root { --site-content-width: 1440px; --site-gutter: 40px; --site-sidebar-width: 260px; --site-column-gap: 32px; --site-heading-gap: 32px; }
+/* 全站侧栏独立于正文滚动；各页面从同一条正文基准线开始。 */
+:root { --site-content-width: 1440px; --site-gutter: 32px; --site-nav-width: 208px; --site-sidebar-width: 220px; --site-column-gap: 24px; --site-heading-gap: 32px; }
 body { background: var(--ds-subtle); }
-.site-shell { min-height: 100svh; display: flex; flex-direction: column; }
-.site-header { display: flex; justify-content: space-between; align-items: center; min-height: 76px; padding-inline: max(var(--site-gutter), calc((100% - var(--site-content-width)) / 2)); border-bottom: 1px solid var(--line); background: var(--ds-surface); }
+.site-shell { min-height: 100svh; padding-left: var(--site-nav-width); }
 .brand { font-size: 21px; font-weight: 700; letter-spacing: .03em; }
-.site-header nav a { color: var(--accent); }
-.site-header nav { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px 16px; }
-.site-header nav a { padding: 10px 0; }
-.practice-navigation { position: relative; }
-.practice-navigation summary { padding: 10px 0; color: var(--accent); cursor: pointer; }
-.practice-navigation summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 2px; }
-.practice-navigation-links { position: absolute; right: 0; top: 100%; z-index: 20; min-width: 156px; margin: 0; padding: 6px; list-style: none; border: 1px solid var(--line); border-radius: 6px; background: #fff; box-shadow: 0 6px 18px #00000012; }
-.site-header .practice-navigation-links a { display: block; padding: 10px 12px; white-space: nowrap; border-radius: 3px; color: inherit; }
-.practice-navigation-links a:hover, .practice-navigation-links a:focus-visible, .practice-navigation-links a[aria-current] { background: var(--accent-soft); color: var(--accent); }
-.practice-navigation-links a[aria-current] { font-weight: 600; }
-.site-header { gap: 16px; }
 .brand { flex-shrink: 0; }
 .auth-status { color: var(--muted); font-size: 13px; }
 .nav-button { padding: 8px 0; border: 0; color: var(--accent); background: transparent; }
@@ -27,7 +15,7 @@ body { background: var(--ds-subtle); }
 .login-code-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
 .login-feedback { min-height: 36px; padding: 4px 0; color: var(--muted); font-size: 13px; }
 .login-form > button[type="submit"]:not(:disabled) { background: var(--accent); border-color: var(--accent); color: white; }
-.site-shell > main { display: flow-root; flex: 1; min-width: 0; width: 100%; max-width: calc(var(--site-content-width) + 2 * var(--site-gutter)); margin-inline: auto; padding: 28px var(--site-gutter) 48px; }
+.site-shell > main { display: flow-root; min-width: 0; width: 100%; max-width: calc(var(--site-content-width) + 2 * var(--site-gutter)); margin: 0; padding: 32px var(--site-gutter) 48px; }
 .site-shell > .auth-error { width: 100%; max-width: calc(var(--site-content-width) + 2 * var(--site-gutter)); margin: 12px auto 0; padding-inline: var(--site-gutter); }
 main:focus { outline: none; }
 .page-heading { margin-bottom: 20px; }
@@ -116,7 +104,6 @@ main:focus { outline: none; }
 .skip-link:focus { transform: translateY(0); }
 @media (max-width: 680px) {
   :root { --site-gutter: 20px; }
-  .site-header { min-height: 72px; }
   .site-shell > main { padding-top: 26px; }
   .option-strip { gap: 20px; }
   .option-strip > * { font-size: 14px; }

@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, LoaderCircle, Minus, Plus, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, Hand, Ear, LoaderCircle, Minus, Plus, Save } from "lucide-react";
 import {
   lazy,
   Suspense,
@@ -53,8 +53,8 @@ const PracticeWorkspace = lazy(() => import("../practice/PracticeWorkspace"));
 
 // 自定义的开放范围不依赖预设题库；每个模式的草稿独立创建。
 const customModes = [
-  { id: "tapping", label: "击拍练习" },
-  { id: "dictation", label: "节奏听写" },
+  { id: "tapping", label: "击拍练习", icon: Hand },
+  { id: "dictation", label: "节奏听写", icon: Ear },
 ] as const;
 
 type Auth = ReturnType<typeof useAuth>;
@@ -185,7 +185,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
           {customModes.map((item) => (
             <li key={item.id}>
               <Link className="question-link" to={`/custom/${item.id}`}>
-                <h3>{item.label}</h3>
+                <h3 className="mode-entry-label"><item.icon className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />{item.label}</h3>
                 <span className="question-action">
                   查看题目 <ArrowRight className="ui-icon" aria-hidden="true" focusable="false" />
                 </span>

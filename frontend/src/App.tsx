@@ -1,8 +1,7 @@
-import { lazy, Suspense, useEffect, useRef } from "react";
-import { Check, ChevronDown } from "lucide-react";
-import { Link, Navigate, Route, Routes, useLocation } from "react-router";
+import { lazy, Suspense, useRef } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router";
 import HomePage from "./pages/HomePage";
-import BrandMark from "./brand/BrandMark";
+import SiteNavigation from "./navigation/SiteNavigation";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useAuth } from "./auth/useAuth";
 import { PageNavigation } from "./navigation/PageNavigation";
@@ -33,17 +32,7 @@ function AppShell() {
       <a className="skip-link" href="#main-content">
         跳到主要内容
       </a>
-      <header className="site-header design-system">
-        <Link to="/" className="brand">
-          <BrandMark className="brand-mark" />
-          节奏训练
-        </Link>
-        <nav aria-label="主导航">
-          <Link to="/" aria-current={pathname === "/" ? "page" : undefined}>首页</Link>
-          <PracticeNavigation key={pathname} pathname={pathname} />
-          <Link to="/settings" aria-current={pathname === "/settings" ? "page" : undefined}>设置</Link>
-        </nav>
-      </header>
+      <SiteNavigation />
       <main id="main-content" ref={mainRef} tabIndex={-1}>
         {/* todo: 这个suspense是干嘛的 */}
         <Suspense key={key}
@@ -93,63 +82,3 @@ function AppShell() {
 }
 
 export default App;
-
-function PracticeNavigation({ pathname }: { pathname: string }) {
-  const ref = useRef<HTMLDetailsElement>(null);
-  const mouseInside = useRef(false);
-  useEffect(() => {
-    function closeOutside(event: PointerEvent) {
-      if (ref.current && event.target instanceof Node && !ref.current.contains(event.target)) ref.current.open = false;
-    }
-    document.addEventListener("pointerdown", closeOutside);
-    return () => document.removeEventListener("pointerdown", closeOutside);
-  }, []);
-
-  return (
-    <details className="practice-navigation" ref={ref}
-      onPointerEnter={(event) => {
-        if (event.pointerType === "mouse") {
-          mouseInside.current = true;
-          event.currentTarget.open = true;
-        }
-      }}
-      onPointerLeave={(event) => {
-        if (event.pointerType === "mouse") {
-          mouseInside.current = false;
-          event.currentTarget.open = false;
-        }
-      }}
-      onPointerDown={(event) => {
-        mouseInside.current = event.pointerType === "mouse";
-      }}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && event.currentTarget.open) {
-          event.preventDefault();
-          event.currentTarget.open = false;
-          event.currentTarget.querySelector("summary")?.focus();
-        }
-      }}>
-      <summary onClick={(event) => {
-        // 鼠标悬停已展开时，点击不反向关闭；键盘和触屏保留原生切换。
-        if (event.detail > 0 && mouseInside.current && ref.current?.open) event.preventDefault();
-      }}>练习<ChevronDown className="ui-icon practice-navigation-chevron" aria-hidden="true" focusable="false" /></summary>
-      <ul className="practice-navigation-links" aria-label="练习来源">
-        {[
-          { path: "/preset", label: "预设练习" },
-          { path: "/random", label: "随机练习" },
-          { path: "/custom", label: "自定义练习" },
-        ].map(({ path, label }) => (
-          <li key={path}>
-            <Link to={path} aria-current={pathname === path ? "page" : pathname.startsWith(`${path}/`) ? "location" : undefined}
-              onClick={() => { if (ref.current) ref.current.open = false; }}>{label}
-              {(pathname === path || pathname.startsWith(`${path}/`)) && <Check className="ui-icon" aria-hidden="true" focusable="false" />}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </details>
-  );
-}
