@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { Square } from "lucide-react";
 import { MetronomePlaybackContext } from "./MetronomePlayback";
 import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
 import { createRhythmPlaybackTimeline } from "../rhythm/RhythmTiming";
@@ -196,7 +197,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
                   disabled={!playing && (!timeSignature || !option.measures?.some((elements) => elements.length > 0))}
                   onClick={() => void togglePlayback(option)}
                 >
-                  {playing && status !== "starting" && <span className="playback-stop-icon" aria-hidden="true" />}
+                  {playing && status !== "starting" && <Square className="ui-icon ui-icon--stop" aria-hidden="true" focusable="false" />}
                   {playing ? status === "starting" ? "准备中" : option.stopLabel : option.label}
                 </button>
               );

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
+import { Check, ChevronDown } from "lucide-react";
 import { Link, Navigate, Route, Routes, useLocation } from "react-router";
 import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -132,7 +133,7 @@ function PracticeNavigation({ pathname }: { pathname: string }) {
       <summary onClick={(event) => {
         // 鼠标悬停已展开时，点击不反向关闭；键盘和触屏保留原生切换。
         if (event.detail > 0 && mouseInside.current && ref.current?.open) event.preventDefault();
-      }}>练习</summary>
+      }}>练习<ChevronDown className="ui-icon practice-navigation-chevron" aria-hidden="true" focusable="false" /></summary>
       <ul className="practice-navigation-links" aria-label="练习来源">
         {[
           { path: "/preset", label: "预设练习" },
@@ -141,7 +142,9 @@ function PracticeNavigation({ pathname }: { pathname: string }) {
         ].map(({ path, label }) => (
           <li key={path}>
             <Link to={path} aria-current={pathname === path ? "page" : pathname.startsWith(`${path}/`) ? "location" : undefined}
-              onClick={() => { if (ref.current) ref.current.open = false; }}>{label}</Link>
+              onClick={() => { if (ref.current) ref.current.open = false; }}>{label}
+              {(pathname === path || pathname.startsWith(`${path}/`)) && <Check className="ui-icon" aria-hidden="true" focusable="false" />}
+            </Link>
           </li>
         ))}
       </ul>

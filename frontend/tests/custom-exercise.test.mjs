@@ -26,11 +26,15 @@ const { default: RhythmScore } = await server.ssrLoadModule("/src/rhythm/notatio
 const { createExerciseTimeline } = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
 const { PracticeHeading } = await server.ssrLoadModule("/src/practice/PracticeHeading.tsx");
 
+// 导航和状态文案不依赖图标库生成的 SVG 路径与属性顺序。
+const withoutSvg = html => html.replace(/<svg\b[^]*?<\/svg>/g, "");
+
 test("共用题头只显示返回入口和原题名，无题名时不补模式标题", () => {
   for (const title of [undefined, "练习 1", "很长的自定义题目".repeat(12)]) {
     const html = renderToStaticMarkup(createElement(MemoryRouter, null,
       createElement(PracticeHeading, { backTo: "/random", backLabel: "随机练习", title })));
-    assert.match(html, /href="\/random"[^>]*>← 随机练习/);
+    assert.match(withoutSvg(html), /href="\/random"[^>]*>随机练习/);
+    assert.match(html, /<svg[^>]*aria-hidden="true"[^>]*focusable="false"/);
     if (title) assert.ok(html.includes(`<h1>${title}</h1>`));
     else assert.doesNotMatch(html, /<h1/);
     assert.doesNotMatch(html, /eyebrow|击拍练习|节奏听写/);
@@ -57,6 +61,15 @@ async function renderApp(path) {
   return (await new Response(stream).text()).replaceAll("<!-- -->", "");
 }
 
+test("结果图标不参与朗读，正确与错误都保留文字及关闭按钮名称", () => {
+  for (const passed of [true, false]) {
+    const html = renderToStaticMarkup(createElement(PracticeCue, { passed, onDismiss() {} }));
+    assert.match(html, /aria-label="关闭练习结果"/);
+    assert.match(html, /<svg[^>]*aria-hidden="true"[^>]*focusable="false"/);
+    assert.match(withoutSvg(html), new RegExp(`data-passed="${passed}">${passed ? "通过" : "未通过"}`));
+  }
+});
+
 test("共用提示支持倒数和可关闭结果，听写反馈位于小节内而遮罩位于滚动窗口之外", () => {
   for (const countdown of [4, 3, 2, 1]) {
     const html = renderToStaticMarkup(createElement(PracticeCue, { countdown }));
@@ -71,7 +84,7 @@ test("共用提示支持倒数和可关闭结果，听写反馈位于小节内�
   assert.match(html, /draft-measure-feedback[^]*data-verdict="correct"/);
   assert.match(html, /<\/div><\/div><\/div><div class="rhythm-score-overlay">/);
   assert.match(html, /aria-label="关闭练习结果"/);
-  assert.match(html, /data-passed="true"><span aria-hidden="true">✓<\/span>通过/);
+  assert.match(withoutSvg(html), /data-passed="true">通过/);
 });
 
 test("听写小节反馈与导航同步，未验证或清除后不显示结果", () => {
@@ -112,7 +125,7 @@ test("预设列表与详情都在 preset 下，旧 practice 地址不再兼容",
   assert.match(list, /href="\/preset\/basic-values-01"/);
   assert.doesNotMatch(list, /href="\/practice\//);
   const detail = await renderApp("/preset/basic-values-01");
-  assert.match(detail, /href="\/preset"[^>]*>← 预设练习/);
+  assert.match(withoutSvg(detail), /href="\/preset"[^>]*>预设练习/);
   assert.match(detail, /击拍训练区/);
   const missing = await renderApp("/preset/nonexistent");
   assert.match(missing, /未找到该练习/);
@@ -473,7 +486,7 @@ test("题目不存在或模式不匹配不启动训练", async (t) => {
   for (const id of ["missing", "saved-dictation"]) {
     const html = await renderPage(`/custom/tapping/${id}`, "/custom/:mode/:exerciseId");
     assert.match(html, /未找到该练习/);
-    assert.match(html, /href="\/custom\/tapping"[^>]*>← 题目列表/);
+    assert.match(withoutSvg(html), /href="\/custom\/tapping"[^>]*>题目列表/);
     assert.doesNotMatch(html, /击拍训练区|节奏听写区|速度滑块/);
   }
 });
@@ -563,8 +576,9 @@ test("公共速度控件提供整数滑块与数值输入，不再要求点击�
   const html = renderToStaticMarkup(createElement(PracticeSettings, { children: () => null }));
   assert.match(html, /type="range" min="40" max="240" step="1" aria-label="速度滑块" aria-valuetext="60 BPM"/);
   assert.match(html, /type="number" min="40" max="240" step="1"/);
-  assert.match(html, /aria-hidden="true" title="慢">🐢/);
-  assert.match(html, /aria-hidden="true" title="快">🐇/);
+  assert.match(html, /aria-hidden="true" title="慢"><svg[^>]*focusable="false"/);
+  assert.match(html, /aria-hidden="true" title="快"><svg[^>]*focusable="false"/);
+  assert.doesNotMatch(html, /🐢|🐇/);
   assert.match(html, /class="tempo-value"><input[^>]*aria-label="速度 BPM"[^>]*\/><label[^>]*class="unit">BPM<\/label><\/div>/);
   assert.equal((html.match(/>BPM<\/label>/g) ?? []).length, 1);
   assert.doesNotMatch(html, />速度\s/);

@@ -1,4 +1,5 @@
 import { lazy, memo, Suspense, useEffect, useId, useRef, useState } from "react";
+import { ArrowRight, X } from "lucide-react";
 import { PracticeHeading } from "../practice/PracticeHeading";
 import { useVisitState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
@@ -54,7 +55,7 @@ export default function RandomPracticePage() {
             <li key={item.id}>
               <Link className="question-link" to={`/random/${item.id}`}>
                 <h3>{item.label}</h3>
-                <span className="question-action">开始练习 <span aria-hidden="true">→</span></span>
+                <span className="question-action">开始练习 <ArrowRight className="ui-icon" aria-hidden="true" focusable="false" /></span>
               </Link>
             </li>
           ))}
@@ -138,7 +139,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
         }}>
       <header className="random-settings-heading">
         <h2 id={drawerTitleId}>生成设置</h2>
-        <button type="button" aria-label="关闭生成设置" onClick={closeSettings}>×</button>
+        <button type="button" aria-label="关闭生成设置" title="关闭生成设置" onClick={closeSettings}><X className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" /></button>
       </header>
       <section className="design-system random-generation" aria-label="生成配置">
         <div className="random-config">

@@ -1,3 +1,4 @@
+import { ArrowLeft, ArrowRight, Minus, Plus } from "lucide-react";
 import {
   lazy,
   Suspense,
@@ -81,7 +82,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
     return (
       <div className="design-system practice-page custom-status">
         <ReturnLink className="back-link" to="/custom">
-          ← 返回自定义练习
+          <ArrowLeft className="ui-icon" aria-hidden="true" focusable="false" /> 返回自定义练习
         </ReturnLink>
         <p
           role="status"
@@ -186,7 +187,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
               <Link className="question-link" to={`/custom/${item.id}`}>
                 <h3>{item.label}</h3>
                 <span className="question-action">
-                  查看题目 <span aria-hidden="true">→</span>
+                  查看题目 <ArrowRight className="ui-icon" aria-hidden="true" focusable="false" />
                 </span>
               </Link>
             </li>
@@ -279,7 +280,7 @@ function CustomExerciseList({
       <title>{`自定义${label} · 节奏训练`}</title>
       <header className="practice-titlebar custom-list-heading">
         <ReturnLink className="practice-return" to="/custom">
-          ← 自定义练习
+          <ArrowLeft className="ui-icon" aria-hidden="true" focusable="false" /> 自定义练习
         </ReturnLink>
         <h1>{label}</h1>
       </header>
@@ -325,7 +326,7 @@ function CustomExerciseList({
                   )}
                 </div>
                 <span className="question-action">
-                  开始练习 <span aria-hidden="true">→</span>
+                  开始练习 <ArrowRight className="ui-icon" aria-hidden="true" focusable="false" />
                 </span>
               </Link>
             </li>
@@ -631,7 +632,7 @@ function CustomExerciseEditor({
                   disabled={measures.length === 1}
                   onClick={removeMeasure}
                 >
-                  −
+                  <Minus className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />
                 </button>
                 <output aria-label="当前小节数量">{measures.length}</output>
                 <button
@@ -639,7 +640,7 @@ function CustomExerciseEditor({
                   aria-label="增加小节"
                   onClick={addMeasure}
                 >
-                  +
+                  <Plus className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />
                 </button>
               </div>
             </div>

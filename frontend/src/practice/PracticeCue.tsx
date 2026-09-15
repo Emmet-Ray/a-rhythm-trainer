@@ -1,3 +1,5 @@
+import { Check, X } from "lucide-react";
+
 /** 谱面遮罩内容；计时与完成条件归调用方所有，点击结果只关闭提示。 */
 export default function PracticeCue(props:
   | { countdown: number }
@@ -14,7 +16,7 @@ export default function PracticeCue(props:
     }}>
       <button type="button" className="trainer-result-dismiss" aria-label="关闭练习结果" onClick={props.onDismiss}>
         <span className="trainer-result" role="status" data-passed={props.passed}>
-          <span aria-hidden="true">{props.passed ? "✓" : "×"}</span>
+          {props.passed ? <Check className="ui-icon ui-icon--result" aria-hidden="true" focusable="false" /> : <X className="ui-icon ui-icon--result" aria-hidden="true" focusable="false" />}
           {props.passed ? "通过" : "未通过"}
         </span>
       </button>

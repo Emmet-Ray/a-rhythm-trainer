@@ -1,3 +1,4 @@
+import { Rabbit, Turtle } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -133,7 +134,7 @@ export default function PracticeSettings({
       >
         <div className="tempo-slider">
           <span className="tempo-endpoint" aria-hidden="true" title="慢">
-            🐢
+            <Turtle className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />
           </span>
           <input
             type="range"
@@ -169,7 +170,7 @@ export default function PracticeSettings({
             }}
           />
           <span className="tempo-endpoint" aria-hidden="true" title="快">
-            🐇
+            <Rabbit className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />
           </span>
         </div>
         <div className="tempo-value">

@@ -1,4 +1,5 @@
 import { useImperativeHandle, useState, type ReactNode, type Ref } from "react";
+import { Delete, Eraser } from "lucide-react";
 import {
   expandRhythmElements,
   rhythmEventToDurationInQuarterNotes,
@@ -301,10 +302,7 @@ export function RhythmEditor({
             }
             onClick={removeLastEvent}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-              <path d="M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-7-7Z" />
-              <path d="m12 9 6 6m0-6-6 6" />
-            </svg>
+            <Delete className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />
           </button>
           <button
             type="button"
@@ -314,10 +312,7 @@ export function RhythmEditor({
             }
             onClick={clearSelectedMeasure}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-              <path d="m14 3 7 7a1 1 0 0 1 0 2l-8 8H7l-5-5a1 1 0 0 1 0-2L12 3a1 1 0 0 1 2 0Z" />
-              <path d="m7 8 9 9M7 21h14" />
-            </svg>
+            <Eraser className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />
           </button>
         </div>
       </div>

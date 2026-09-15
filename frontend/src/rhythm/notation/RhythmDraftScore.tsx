@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Check, X } from "lucide-react";
 import { BarlineType, Beam, Formatter, Renderer, Tuplet } from "vexflow";
 import { expandRhythmElements, type RhythmElement, type RhythmExercise } from "../RhythmModel";
 import { createRhythmStave, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
@@ -130,7 +131,7 @@ export function RhythmDraftScore({
           return <button key={index} type="button" aria-label={`跳到小节 ${index + 1}${checked ? `，${feedbackLabels[verdict]}` : ""}`}
             aria-pressed={index === activeMeasure} onClick={() => selectMeasure(index)}>
             {index + 1}
-            {checked && <span className="draft-navigation-verdict" data-verdict={verdict} aria-hidden="true">{verdict === "correct" ? "✓" : "×"}</span>}
+            {checked && <span className="draft-navigation-verdict" data-verdict={verdict} aria-hidden="true">{verdict === "correct" ? <Check className="ui-icon" focusable="false" /> : <X className="ui-icon" focusable="false" />}</span>}
           </button>;
         })}
       </div>
@@ -183,7 +184,7 @@ export function RhythmDraftScore({
           return feedback && feedback !== "unchecked" && placement ? <div key={index} className="draft-measure-feedback"
             style={{ left: placement.x * score.scale, width: placement.width * score.scale }}>
             <span role="status" aria-label={`小节 ${index + 1} 验证结果`} data-verdict={feedback}>
-              {feedback === "correct" ? "✓" : "×"} {feedbackLabels[feedback]}
+              {feedback === "correct" ? <Check className="ui-icon" aria-hidden="true" focusable="false" /> : <X className="ui-icon" aria-hidden="true" focusable="false" />} {feedbackLabels[feedback]}
             </span>
           </div> : null;
         })}

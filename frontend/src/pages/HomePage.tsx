@@ -1,16 +1,19 @@
 import { Link } from "react-router";
+import { ArrowRight, FileText, Shuffle, PencilLine } from "lucide-react";
 
 const sources = [
-  { path: "/preset", title: "预设练习", description: "按节奏主题选择题目。" },
+  { path: "/preset", title: "预设练习", description: "按节奏主题选择题目。", icon: FileText },
   {
     path: "/random",
     title: "随机练习",
     description: "选择节奏范围，生成练习。",
+    icon: Shuffle,
   },
   {
     path: "/custom",
     title: "自定义练习",
     description: "编写、保存并练习自己的节奏。",
+    icon: PencilLine,
   },
 ];
 
@@ -30,22 +33,18 @@ export default function HomePage() {
       </header>
       <nav aria-label="练习入口">
         <ul className="question-list home-sources">
-          {sources.map((source, index) => (
+          {sources.map((source) => (
             <li key={source.path}>
               <Link className="question-link" to={source.path}>
                 <span className="source-symbol" aria-hidden="true">
-                  <svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    {index === 0 ? <><rect x="7" y="4" width="19" height="24" rx="3" /><path d="M12 11h9M12 17h9M12 23h5" /></>
-                      : index === 1 ? <><path d="M4 8h4c8 0 8 16 16 16h4M23 19l5 5-5 4M4 24h4c3 0 5-3 7-7M18 10c2-2 3-2 6-2h4M23 3l5 5-5 5" /></>
-                      : <><path d="m8 21-2 6 6-2L27 10l-4-4L8 21ZM19 10l4 4M6 29h21" /></>}
-                  </svg>
+                  <source.icon className="ui-icon ui-icon--entry" aria-hidden="true" focusable="false" />
                 </span>
                 <div>
                   <h2>{source.title}</h2>
                   <p className="question-meta">{source.description}</p>
                 </div>
                 <span className="question-action">
-                  进入 <span aria-hidden="true">→</span>
+                  进入 <ArrowRight className="ui-icon" aria-hidden="true" focusable="false" />
                 </span>
               </Link>
             </li>

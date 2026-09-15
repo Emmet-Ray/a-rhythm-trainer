@@ -1,4 +1,5 @@
 import { lazy, Suspense, useLayoutEffect, useRef, type UIEvent } from "react";
+import { ArrowRight } from "lucide-react";
 import { PracticeHeading } from "../practice/PracticeHeading";
 import { useVisitState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
@@ -71,7 +72,7 @@ function PresetLibrary() {
               <li key={question.id}>
                 <Link className="question-link" to={`/preset/${question.id}`}>
                   <div className="question-copy"><h3>{question.title}</h3></div>
-                  <span className="question-action">开始练习 <span aria-hidden="true">→</span></span>
+                  <span className="question-action">开始练习 <ArrowRight className="ui-icon" aria-hidden="true" focusable="false" /></span>
                 </Link>
               </li>
             ))}
