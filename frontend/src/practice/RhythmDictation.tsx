@@ -1,4 +1,12 @@
-import { useId, useMemo, useRef, useState, type ReactNode, type Dispatch, type SetStateAction } from "react";
+import {
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { createDictationState, type DictationState } from "./DictationState";
 import {
   RhythmEditor,
@@ -64,7 +72,10 @@ type RhythmDictationProps = {
   extraActions?: (busy: boolean) => ReactNode;
   settingsPanel?: ReactNode;
   /** 可选受控作答；工作区负责历史恢复，听写组件不依赖路由或存储。 */
-  session?: { state: DictationState; onChange: Dispatch<SetStateAction<DictationState>> };
+  session?: {
+    state: DictationState;
+    onChange: Dispatch<SetStateAction<DictationState>>;
+  };
 };
 
 // 核心的节奏听写组件
@@ -77,8 +88,15 @@ export function RhythmDictation({
   settingsPanel,
   session,
 }: RhythmDictationProps) {
-  const [localState, setLocalState] = useState(() => createDictationState(exercise));
-  const { selectedMeasureIndex, playbackScope, answerMeasures, measureVerdicts } = session?.state ?? localState;
+  const [localState, setLocalState] = useState(() =>
+    createDictationState(exercise),
+  );
+  const {
+    selectedMeasureIndex,
+    playbackScope,
+    answerMeasures,
+    measureVerdicts,
+  } = session?.state ?? localState;
   const updateState = session?.onChange ?? setLocalState;
   const [countdown, setCountdown] = useState<number | null>(null);
   const [resultVisible, setResultVisible] = useState(false);
@@ -112,14 +130,15 @@ export function RhythmDictation({
       answerMeasures[selectedMeasureIndex],
       expectedMeasure,
     );
-    const nextVerdicts = measureVerdicts.map((verdict, index): DictationState["measureVerdicts"][number] =>
-      index === selectedMeasureIndex
-        ? correct
-          ? "correct"
-          : "incorrect"
-        : verdict,
+    const nextVerdicts = measureVerdicts.map(
+      (verdict, index): DictationState["measureVerdicts"][number] =>
+        index === selectedMeasureIndex
+          ? correct
+            ? "correct"
+            : "incorrect"
+          : verdict,
     );
-    updateState(previous => ({ ...previous, measureVerdicts: nextVerdicts }));
+    updateState((previous) => ({ ...previous, measureVerdicts: nextVerdicts }));
     if (nextVerdicts.every((verdict) => verdict === "correct"))
       setResultVisible(true);
   }
@@ -143,7 +162,7 @@ export function RhythmDictation({
                 {
                   id: "question",
                   label: "播放题目",
-                  stopLabel: "停止题目",
+                  stopLabel: "停止",
                   measures: !exercise
                     ? null
                     : playbackScope === "all"
@@ -156,7 +175,7 @@ export function RhythmDictation({
                 {
                   id: "answer",
                   label: "播放我的答案",
-                  stopLabel: "停止答案",
+                  stopLabel: "停止",
                   measures:
                     playbackScope === "all"
                       ? answerMeasures
@@ -178,8 +197,13 @@ export function RhythmDictation({
                       checked={playbackScope === "measure"}
                       disabled={!exercise}
                       onChange={(event) => {
-                        const playbackScope = event.target.checked ? "measure" : "all";
-                        updateState(previous => ({ ...previous, playbackScope }));
+                        const playbackScope = event.target.checked
+                          ? "measure"
+                          : "all";
+                        updateState((previous) => ({
+                          ...previous,
+                          playbackScope,
+                        }));
                       }}
                     />
                     <span>仅播放当前小节</span>
@@ -191,16 +215,26 @@ export function RhythmDictation({
         }
       >
         <RhythmEditor
-          preview={isReferenceAnswerVisible && exercise ? (
-            <section id={referenceAnswerId} className="dictation-reference" aria-label="参考答案">
-              <RhythmDraftScore
-                navigationLabel="参考答案"
-                measures={referenceMeasures}
-                timeSignature={exercise.timeSignature}
-                overlay={countdown !== null ? <PracticeCue countdown={countdown} /> : null}
-              />
-            </section>
-          ) : null}
+          preview={
+            isReferenceAnswerVisible && exercise ? (
+              <section
+                id={referenceAnswerId}
+                className="dictation-reference"
+                aria-label="参考答案"
+              >
+                <RhythmDraftScore
+                  navigationLabel="参考答案"
+                  measures={referenceMeasures}
+                  timeSignature={exercise.timeSignature}
+                  overlay={
+                    countdown !== null ? (
+                      <PracticeCue countdown={countdown} />
+                    ) : null
+                  }
+                />
+              </section>
+            ) : null
+          }
           scoreOverlay={
             countdown !== null ? (
               <PracticeCue countdown={countdown} />
@@ -218,7 +252,9 @@ export function RhythmDictation({
           measures={answerMeasures}
           timeSignature={exercise?.timeSignature ?? { beats: 4, beatType: 4 }}
           selectedMeasureIndex={selectedMeasureIndex}
-          onSelectMeasure={selectedMeasureIndex => updateState(previous => ({ ...previous, selectedMeasureIndex }))}
+          onSelectMeasure={(selectedMeasureIndex) =>
+            updateState((previous) => ({ ...previous, selectedMeasureIndex }))
+          }
           onChange={(measureIndex, elements) => {
             setResultVisible(false);
             updateState((previous) => ({
@@ -233,8 +269,13 @@ export function RhythmDictation({
           }}
         />
         <div className="dictation-verification">
-          <div className="dictation-verification-result" inert={isReferenceAnswerVisible}
-            style={isReferenceAnswerVisible ? { visibility: "hidden" } : undefined}>
+          <div
+            className="dictation-verification-result"
+            inert={isReferenceAnswerVisible}
+            style={
+              isReferenceAnswerVisible ? { visibility: "hidden" } : undefined
+            }
+          >
             <button
               className="dictation-verify"
               type="button"

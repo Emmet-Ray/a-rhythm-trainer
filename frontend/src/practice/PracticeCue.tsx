@@ -14,6 +14,7 @@ export default function PracticeCue(props:
     }}>
       <button type="button" className="trainer-result-dismiss" aria-label="关闭练习结果" onClick={props.onDismiss}>
         <span className="trainer-result" role="status" data-passed={props.passed}>
+          <span aria-hidden="true">{props.passed ? "✓" : "×"}</span>
           {props.passed ? "通过" : "未通过"}
         </span>
       </button>

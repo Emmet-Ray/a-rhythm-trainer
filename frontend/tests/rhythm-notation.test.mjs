@@ -10,13 +10,37 @@ const server = await createServer({
 let notation;
 let layout;
 let timing;
+let markers;
 try {
   notation = await server.ssrLoadModule("/src/rhythm/notation/RhythmNotation.ts");
   layout = await server.ssrLoadModule("/src/rhythm/notation/RhythmScoreLayout.ts");
   timing = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
+  markers = await server.ssrLoadModule("/src/rhythm/notation/RhythmTimingMarker.ts");
 } finally {
   await server.close();
 }
+
+test("击拍反馈不依赖红绿区分：命中实心圆、误敲叉号、漏拍空心圆", () => {
+  for (const kind of ["hit", "wrongTap", "miss"]) {
+    const calls = [];
+    const context = Object.fromEntries(["save", "restore", "setFillStyle", "setStrokeStyle", "setLineWidth", "beginPath", "arc", "moveTo", "lineTo", "fill", "stroke"].map(name => [name, (...args) => {
+      calls.push([name, ...args]);
+      return context;
+    }]));
+    markers.drawTimingMarker(context, 100, 120, kind);
+    assert.equal(calls.some(([name]) => name === "fill"), kind === "hit");
+    assert.equal(calls.some(([name]) => name === "stroke"), kind !== "hit");
+    if (kind === "wrongTap") {
+      assert.equal(calls.some(([name]) => name === "arc"), false);
+      assert.deepEqual(calls.filter(([name]) => name === "moveTo" || name === "lineTo"), [
+        ["moveTo", 96, 116], ["lineTo", 104, 124], ["moveTo", 104, 116], ["lineTo", 96, 124],
+      ]);
+    } else {
+      assert.deepEqual(calls.find(([name]) => name === "arc").slice(1, 4), [100, 120, kind === "hit" ? 6 : 5]);
+    }
+    assert.equal(calls.at(-1)[0], "restore");
+  }
+});
 
 test("草稿谱单行铺满双小节，长题横向扩展而不增加高度", () => {
   const short = layout.createDraftScoreLayout(2, 1500, 4);

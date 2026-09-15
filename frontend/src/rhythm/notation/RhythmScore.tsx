@@ -13,6 +13,7 @@ import {
 import { expandRhythmElements, type RhythmExercise } from "../RhythmModel";
 import { createRhythmStave, getRhythmLineY, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
 import type { ExerciseTimeline, TimingEvent } from "../RhythmTiming";
+import { drawTimingMarker } from "./RhythmTimingMarker";
 import {
   createScoreLayout,
   createTimingFeedbackLayout,
@@ -26,8 +27,6 @@ import {
 } from "./RhythmScoreLayout";
 
 const ACTIVE_NOTE_COLOR = "var(--ds-primary, #7052d6)";
-const HIT_MARKER_COLOR = "#65a94b";
-const ERROR_MARKER_COLOR = "#df4438";
 const MARKER_Y_OFFSET = 32;
 // 为页头、标题与操作栏预留高度；极矮窗口仍至少保留一行可读谱面。
 const PAGE_CHROME_HEIGHT = 400;
@@ -260,29 +259,6 @@ function RhythmScore({
 
 function getNoteCenterX(note: StaveNote): number {
   return (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2;
-}
-
-// 实心表示发生了敲击（绿：命中，红：误敲），空心红圆表示漏拍。
-function drawTimingMarker(
-  context: RenderContext,
-  x: number,
-  y: number,
-  kind: TimingEvent["kind"],
-): void {
-  const color = kind === "hit" ? HIT_MARKER_COLOR : ERROR_MARKER_COLOR;
-  const lineWidth = 2;
-  // 空心圆的描边向两侧延伸，缩小路径半径以保持相同的外径。
-  const radius = kind === "miss" ? 6 - lineWidth / 2 : 6;
-  context
-    .save()
-    .setFillStyle(color)
-    .setStrokeStyle(color)
-    .setLineWidth(lineWidth)
-    .beginPath()
-    .arc(x, y, radius, 0, Math.PI * 2, false);
-  if (kind === "miss") context.stroke();
-  else context.fill();
-  context.restore();
 }
 
 export default RhythmScore;

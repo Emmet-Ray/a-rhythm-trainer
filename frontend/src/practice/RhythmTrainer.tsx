@@ -401,6 +401,7 @@ function RhythmTrainer({
             void handlePlay("practice");
           }}
         >
+          {isRunning && mode === "practice" && <span className="playback-stop-icon" aria-hidden="true" />}
           {startingMode === "practice" ? "准备中…" : isRunning && mode === "practice" ? "停止" : "击拍练习"}
         </button>
         {/* 点击试听之后，该按钮变为停止状态，先播放预备拍，然后系统自动播放击拍，高亮当前击拍音符，播放声音 */}
@@ -413,6 +414,7 @@ function RhythmTrainer({
             void handlePlay("listen");
           }}
         >
+          {isRunning && mode === "listen" && <span className="playback-stop-icon" aria-hidden="true" />}
           {startingMode === "listen" ? "准备中…" : isRunning && mode === "listen" ? "停止" : "试听"}
         </button>
       </div>

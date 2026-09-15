@@ -71,7 +71,7 @@ test("共用提示支持倒数和可关闭结果，听写反馈位于小节内�
   assert.match(html, /draft-measure-feedback[^]*data-verdict="correct"/);
   assert.match(html, /<\/div><\/div><\/div><div class="rhythm-score-overlay">/);
   assert.match(html, /aria-label="关闭练习结果"/);
-  assert.match(html, /data-passed="true">通过/);
+  assert.match(html, /data-passed="true"><span aria-hidden="true">✓<\/span>通过/);
 });
 
 test("听写小节反馈与导航同步，未验证或清除后不显示结果", () => {

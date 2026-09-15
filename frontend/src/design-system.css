@@ -1,12 +1,13 @@
 /* 配色在根节点定义，嵌套组件只继承；预览色块使用相同配色，不重复保存色值。 */
 :root, [data-theme-preview="purple"] {
   --ds-ink: #343044;
-  --ds-muted: #716b80;
+  --ds-muted: #6b657a;
   --ds-primary: #7052d6;
   --ds-primary-hover: #6344c8;
   --ds-primary-base: #4b329e;
   --ds-tint: #f4efff;
   --ds-line: #e2ddea;
+  --ds-field-border: #898294;
   --ds-base: #c8c1d5;
   --ds-surface: #fff;
   --ds-disabled: #f0edf4;
@@ -15,12 +16,13 @@
 }
 :root[data-theme="blue"], [data-theme-preview="blue"] {
   --ds-ink: #29364b;
-  --ds-muted: #66758b;
+  --ds-muted: #5c6b81;
   --ds-primary: #2864c7;
   --ds-primary-hover: #2055ad;
   --ds-primary-base: #173c80;
   --ds-tint: #edf4ff;
   --ds-line: #dbe3ef;
+  --ds-field-border: #7d8999;
   --ds-base: #bccadc;
   --ds-disabled: #edf1f6;
   --ds-subtle: #f3f6fa;
@@ -28,18 +30,21 @@
 }
 :root[data-theme="teal"], [data-theme-preview="teal"] {
   --ds-ink: #293d3b;
-  --ds-muted: #627b77;
+  --ds-muted: #566f6b;
   --ds-primary: #087d72;
   --ds-primary-hover: #076b62;
   --ds-primary-base: #064c46;
   --ds-tint: #eaf7f4;
   --ds-line: #d7e7e2;
+  --ds-field-border: #7c8b86;
   --ds-base: #b8cec7;
   --ds-disabled: #ecf3f0;
   --ds-subtle: #f2f7f5;
   --ds-input: #f8fbfa;
 }
 :root {
+  /* 悬停只提示可操作；主题浅底留给持续的选中状态。 */
+  --ds-hover: color-mix(in srgb, var(--ds-ink) 5%, transparent);
   /* 判定颜色表达固定语义，不跟随主题。 */
   --ds-success: #287343;
   --ds-success-bg: #edf8ef;
@@ -85,7 +90,7 @@
 .design-system button:hover:not(:disabled) { border-color: var(--ds-primary); background: var(--ds-tint); }
 .design-system button:active:not(:disabled) { transform: translateY(var(--ds-depth)); box-shadow: 0 0 0 var(--ds-base); }
 .design-system button:disabled { color: var(--ds-muted); background: var(--ds-disabled); border-color: var(--ds-line); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); }
-.design-system input[type="number"] { width: 88px; min-height: 48px; border: var(--ds-border) solid var(--ds-line); border-radius: var(--ds-radius-sm); background: var(--ds-input); color: var(--ds-ink); font-weight: 750; text-align: center; font-variant-numeric: tabular-nums; }
+.design-system input[type="number"] { width: 88px; min-height: 48px; border: var(--ds-border) solid var(--ds-field-border); border-radius: var(--ds-radius-sm); background: var(--ds-input); color: var(--ds-ink); font-weight: 750; text-align: center; font-variant-numeric: tabular-nums; }
 .design-system input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
 .design-system input[type="number"]::-webkit-inner-spin-button, .design-system input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .design-system input[aria-invalid="true"] { border-color: var(--ds-error); background: var(--ds-error-bg); }
@@ -126,8 +131,8 @@
 .preset-topics { display: grid; gap: 4px; border-right: 1px solid var(--ds-line); padding-right: 20px; }
 .preset-library .preset-topics button { display: flex; align-items: baseline; gap: 12px; text-align: left; min-height: 48px; padding: 12px; border: 0; box-shadow: none; background: transparent; color: var(--ds-muted); font-size: 16px; font-weight: 550; line-height: 1.5; }
 .preset-library .preset-topics button > span:first-child { flex-shrink: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
-.preset-library .preset-topics button:hover { background: var(--ds-subtle); color: var(--ds-ink); }
-.preset-library .preset-topics button[aria-current] { background: var(--ds-tint); color: var(--ds-primary); font-weight: 650; }
+.preset-library .preset-topics button:hover:not(:disabled) { background: var(--ds-hover); color: var(--ds-ink); }
+.preset-library .preset-topics button[aria-current], .preset-library .preset-topics button[aria-current]:hover:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); font-weight: 650; }
 .preset-library .preset-topics button:active { transform: none; }
 .preset-topic-select { display: none; }
 .preset-questions { min-width: 0; width: 100%; max-width: 720px; }
@@ -156,8 +161,8 @@
 }
 .preset-library .topic-modes { display: flex; flex-wrap: wrap; gap: var(--ds-space-1); padding: var(--ds-space-1); margin-bottom: var(--ds-space-4); border: 0; border-radius: var(--ds-radius-sm); background: var(--ds-subtle); }
 .preset-library .topic-modes button { flex: 1 1 auto; min-height: 44px; padding: 8px 10px; border: 2px solid transparent; border-radius: 8px; background: transparent; box-shadow: none; color: var(--ds-muted); font-size: var(--ds-text-sm); }
-.preset-library .topic-modes button:hover:not(:disabled) { background: var(--ds-tint); border-color: var(--ds-line); color: var(--ds-primary); }
-.preset-library .topic-modes button[aria-pressed="true"] { background: var(--ds-surface); color: var(--ds-primary); border-color: var(--ds-line); box-shadow: 0 2px 0 var(--ds-line); }
+.preset-library .topic-modes button:hover:not(:disabled) { background: var(--ds-hover); border-color: transparent; color: var(--ds-ink); }
+.preset-library .topic-modes button[aria-pressed="true"], .preset-library .topic-modes button[aria-pressed="true"]:hover:not(:disabled) { background: var(--ds-surface); color: var(--ds-primary); border-color: var(--ds-line); box-shadow: 0 2px 0 var(--ds-line); }
 .preset-library .topic-modes button:active:not(:disabled) { transform: none; box-shadow: none; }
 .preset-library .topic-modes button:disabled { color: var(--ds-muted); background: transparent; box-shadow: none; }
 .preset-library .topic-modes small { display: inline; font-size: 10px; color: var(--ds-muted); margin-left: 4px; }
@@ -288,7 +293,7 @@
 /* 透明边框保留占位，悬停和编辑时显露控件，不改变点击区域或布局。 */
 .practice-settings .tempo-value input[type="number"] { width: 72px; min-height: 44px; padding: 8px 10px; border-color: transparent; background: transparent; }
 .practice-settings .tempo-value input[type="number"]:hover { background: var(--ds-subtle); }
-.practice-settings .tempo-value input[type="number"]:focus { border-color: var(--ds-line); background: var(--ds-input); }
+.practice-settings .tempo-value input[type="number"]:focus { border-color: var(--ds-field-border); background: var(--ds-input); }
 .practice-settings .tempo-value input[type="number"][aria-invalid="true"] { border-color: var(--ds-error); background: var(--ds-error-bg); }
 .tempo-slider { display: flex; align-items: center; gap: var(--ds-space-2); min-width: 0; }
 .tempo-endpoint { flex-shrink: 0; font-size: 24px; line-height: 1; }
@@ -320,8 +325,11 @@
 .rhythm-trainer .trainer-actions button:first-child:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 var(--ds-depth) 0 var(--ds-primary-base); }
 .rhythm-trainer .trainer-actions button:first-child:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
 .rhythm-trainer .trainer-actions button:disabled { color: var(--ds-muted); background: var(--ds-disabled); border-color: var(--ds-line); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); }
-.rhythm-trainer .trainer-actions button[data-action="stop"]:not(:disabled) { background: var(--ds-surface); color: var(--ds-error); border-color: var(--ds-error); box-shadow: 0 var(--ds-depth) 0 var(--ds-error); }
-.rhythm-trainer .trainer-actions button[data-action="stop"]:hover:not(:disabled) { background: var(--ds-error-bg); }
+/* 停止是普通播放操作，不使用错误或破坏性操作的红色。 */
+:is(.rhythm-trainer .trainer-actions, .rhythm-playback .rhythm-playback-buttons) button[data-action="stop"]:not(:disabled) { background: var(--ds-surface); color: var(--ds-primary); border-color: var(--ds-line); box-shadow: 0 var(--ds-depth) 0 var(--ds-base); }
+:is(.rhythm-trainer .trainer-actions, .rhythm-playback .rhythm-playback-buttons) button[data-action="stop"]:hover:not(:disabled) { background: var(--ds-tint); border-color: var(--ds-primary); }
+:is(.rhythm-trainer .trainer-actions, .rhythm-playback .rhythm-playback-buttons) button[data-action="stop"]:active:not(:disabled) { box-shadow: none; }
+.playback-stop-icon { display: inline-block; width: 10px; height: 10px; margin-right: 8px; vertical-align: 1px; background: currentColor; }
 .rhythm-trainer .trainer-actions button:active:not(:disabled) { box-shadow: none; }
 .rhythm-trainer kbd { border: 2px solid var(--ds-line); border-bottom-width: 4px; border-radius: 8px; padding: 3px 12px; color: var(--ds-ink); background: var(--ds-surface); }
 
@@ -344,9 +352,9 @@
 /* 整层是一个原生按钮，空白和结果文字共享点击与键盘行为。 */
 .design-system .trainer-result-dismiss, .design-system .trainer-result-dismiss:hover:not(:disabled), .design-system .trainer-result-dismiss:active:not(:disabled) { display: grid; place-items: center; width: 100%; height: 100%; min-height: 0; padding: 12px; border: 0; border-radius: 0; background: transparent; box-shadow: none; transform: none; }
 .design-system .trainer-result-dismiss:focus-visible { outline-offset: -4px; }
-/* 遮罩上的结果用独立亮色，深色字影将文字与背后的谱线分开。 */
-.trainer-result { font-size: clamp(32px, 5vw, 56px); font-weight: 800; line-height: 1.2; color: #ff8a80; text-align: center; text-shadow: 0 1px 2px rgb(20 18 28 / 70%), 0 2px 8px rgb(20 18 28 / 35%); }
-.trainer-result[data-passed="true"] { color: #86efac; }
+/* 实色底隔开谱线与反馈，沿用听写的语义色，不依赖字影增加可读性。 */
+.trainer-result { display: inline-flex; align-items: center; justify-content: center; gap: 12px; max-width: 100%; padding: 16px 24px; border-radius: var(--ds-radius-sm); background: var(--ds-error-bg); color: var(--ds-error); font-size: clamp(24px, 3vw, 32px); font-weight: 750; line-height: 1.4; text-align: center; }
+.trainer-result[data-passed="true"] { background: var(--ds-success-bg); color: var(--ds-success); }
 .rhythm-score-viewport { width: 100%; min-width: 0; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; overscroll-behavior-y: contain; overflow-anchor: none; }
 .score-follow-controls { display: flex; justify-content: flex-end; min-height: 36px; }
 .design-system .score-follow-controls button { min-height: 32px; padding: 2px 10px; font-size: var(--ds-text-sm); box-shadow: none; transform: none; }
@@ -381,8 +389,6 @@
 .rhythm-playback .rhythm-playback-status { min-height: 28px; margin-top: var(--ds-space-2); color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .rhythm-dictation .rhythm-playback-buttons button[data-source="question"][data-action="play"]:not(:disabled), .rhythm-dictation .dictation-verify:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 4px 0 var(--ds-primary-base); }
 .rhythm-dictation .rhythm-playback-buttons button[data-source="question"][data-action="play"]:hover:not(:disabled), .rhythm-dictation .dictation-verify:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
-.rhythm-playback .rhythm-playback-buttons button[data-action="stop"]:not(:disabled) { background: var(--ds-surface); color: var(--ds-error); border-color: var(--ds-error); box-shadow: 0 4px 0 var(--ds-error); }
-.rhythm-playback .rhythm-playback-buttons button[data-action="stop"]:hover:not(:disabled) { background: var(--ds-error-bg); }
 .rhythm-playback .rhythm-playback-buttons button:active:not(:disabled), .rhythm-dictation .dictation-verify:active:not(:disabled) { box-shadow: none; }
 .rhythm-dictation .dictation-scope { min-height: 48px; color: var(--ds-muted); font-size: var(--ds-text-sm); gap: var(--ds-space-3); }
 .dictation-scope-toggle { display: inline-flex; align-items: center; gap: var(--ds-space-2); min-height: 44px; cursor: pointer; }
@@ -471,8 +477,8 @@
 .settings-layout { display: grid; grid-template-columns: var(--site-sidebar-width) minmax(0, 1fr); gap: var(--site-column-gap); }
 .settings-navigation { display: flex; flex-direction: column; gap: var(--ds-space-2); border-right: 1px solid var(--ds-line); padding: 4px 20px 4px 0; }
 .design-system .settings-navigation button { text-align: left; white-space: nowrap; border-color: transparent; box-shadow: none; background: transparent; color: var(--ds-muted); transform: none; }
-.design-system .settings-navigation button:hover { background: var(--ds-subtle); color: var(--ds-ink); }
-.design-system .settings-navigation button[aria-pressed="true"] { background: var(--ds-tint); color: var(--ds-primary); }
+.design-system .settings-navigation button:hover:not(:disabled) { border-color: transparent; background: var(--ds-hover); color: var(--ds-ink); }
+.design-system .settings-navigation button[aria-pressed="true"], .design-system .settings-navigation button[aria-pressed="true"]:hover:not(:disabled) { border-color: transparent; background: var(--ds-tint); color: var(--ds-primary); }
 .settings-unavailable { margin-left: 8px; font-size: 12px; font-weight: 400; color: var(--ds-muted); }
 .settings-content { min-width: 0; min-height: 360px; max-width: 768px; padding: 4px; }
 .local-data-summary { max-width: 480px; margin: var(--ds-space-6) 0; }
@@ -517,7 +523,7 @@
 .login-page .login-form { gap: var(--ds-space-2); }
 .login-page .login-form > label { font-weight: 650; }
 .login-page .login-form > label:not(:first-child) { margin-top: var(--ds-space-4); }
-.login-page .login-form input { min-height: 48px; padding: 10px 12px; border: 2px solid var(--ds-line); border-radius: var(--ds-radius-sm); color: var(--ds-ink); background: var(--ds-surface); font-size: var(--ds-text); font-variant-numeric: tabular-nums; }
+.login-page .login-form input { min-height: 48px; padding: 10px 12px; border: 2px solid var(--ds-field-border); border-radius: var(--ds-radius-sm); color: var(--ds-ink); background: var(--ds-surface); font-size: var(--ds-text); font-variant-numeric: tabular-nums; }
 .login-page .login-form input:disabled { color: var(--ds-muted); background: var(--ds-disabled); }
 .login-page .login-code-row { grid-template-columns: minmax(0, 1fr) 140px; gap: var(--ds-space-3); }
 .login-page .login-code-row button { padding-inline: var(--ds-space-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -532,7 +538,7 @@
 /* 新建页只负责外层表单；谱面、设置和播放仍由共享组件负责。 */
 .custom-create .custom-name { flex: 0 1 396px; flex-wrap: nowrap; gap: var(--ds-space-3); font-weight: 650; }
 .custom-create .custom-name > span { flex-shrink: 0; }
-.custom-create .custom-name input { flex: 1 1 320px; width: 320px; min-height: 48px; padding: 10px 12px; border: 2px solid var(--ds-line); border-radius: var(--ds-radius-sm); background: var(--ds-surface); color: var(--ds-ink); }
+.custom-create .custom-name input { flex: 1 1 320px; width: 320px; min-height: 48px; padding: 10px 12px; border: 2px solid var(--ds-field-border); border-radius: var(--ds-radius-sm); background: var(--ds-surface); color: var(--ds-ink); }
 .custom-create .custom-measure-count { flex-direction: column; align-items: center; gap: var(--ds-space-3); font-weight: 650; border-top: 1px solid var(--ds-line); padding-top: var(--ds-space-4); width: 100%; }
 .custom-measure-stepper { display: flex; align-items: center; gap: var(--ds-space-3); }
 .custom-create .custom-measure-count button { width: 48px; padding: 8px; }

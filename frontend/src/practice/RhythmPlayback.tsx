@@ -196,6 +196,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
                   disabled={!playing && (!timeSignature || !option.measures?.some((elements) => elements.length > 0))}
                   onClick={() => void togglePlayback(option)}
                 >
+                  {playing && status !== "starting" && <span className="playback-stop-icon" aria-hidden="true" />}
                   {playing ? status === "starting" ? "准备中" : option.stopLabel : option.label}
                 </button>
               );
