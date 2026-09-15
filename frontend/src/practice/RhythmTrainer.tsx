@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Square } from "lucide-react";
+import { Hand, LoaderCircle, Play, Square } from "lucide-react";
 import { MetronomePlaybackContext } from "./MetronomePlayback";
 import PracticeFrame from "./PracticeFrame";
 import PracticeCue from "./PracticeCue";
@@ -402,7 +402,7 @@ function RhythmTrainer({
             void handlePlay("practice");
           }}
         >
-          {isRunning && mode === "practice" && <Square className="ui-icon ui-icon--stop" aria-hidden="true" focusable="false" />}
+          {startingMode === "practice" ? <LoaderCircle className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" /> : isRunning && mode === "practice" ? <Square className="ui-icon ui-icon--stop" aria-hidden="true" focusable="false" /> : <Hand className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />}
           {startingMode === "practice" ? "准备中…" : isRunning && mode === "practice" ? "停止" : "击拍练习"}
         </button>
         {/* 点击试听之后，该按钮变为停止状态，先播放预备拍，然后系统自动播放击拍，高亮当前击拍音符，播放声音 */}
@@ -415,7 +415,7 @@ function RhythmTrainer({
             void handlePlay("listen");
           }}
         >
-          {isRunning && mode === "listen" && <Square className="ui-icon ui-icon--stop" aria-hidden="true" focusable="false" />}
+          {startingMode === "listen" ? <LoaderCircle className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" /> : isRunning && mode === "listen" ? <Square className="ui-icon ui-icon--stop" aria-hidden="true" focusable="false" /> : <Play className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />}
           {startingMode === "listen" ? "准备中…" : isRunning && mode === "listen" ? "停止" : "试听"}
         </button>
       </div>
@@ -446,8 +446,8 @@ export default function RhythmTrainerWorkspace(props: Omit<RhythmTrainerProps, "
     <div className="rhythm-trainer design-system">
     <PracticeFrame settingsPanel={props.settingsPanel} toolbar={<>
       <div className="trainer-actions">
-        <button type="button" disabled>击拍练习</button>
-        <button type="button" disabled>试听</button>
+        <button type="button" disabled><Hand className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />击拍练习</button>
+        <button type="button" disabled><Play className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />试听</button>
       </div>
       {props.extraActions?.(false)}
     </>}>

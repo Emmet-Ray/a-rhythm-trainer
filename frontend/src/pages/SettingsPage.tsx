@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Database, Palette, Target, UserRound, Volume2 } from "lucide-react";
 import { useSearchParams } from "react-router";
 import type { useAuth } from "../auth/useAuth";
 import LoginForm from "../settings/LoginForm";
@@ -21,11 +22,11 @@ import {
 } from "../settings/tappingPrecision";
 
 const categories = [
-  { id: "account", label: "账号" },
-  { id: "appearance", label: "外观" },
-  { id: "local-data", label: "本地数据" },
-  { id: "sound", label: "声音" },
-  { id: "tapping-precision", label: "击拍精度" },
+  { id: "account", label: "账号", icon: UserRound },
+  { id: "appearance", label: "外观", icon: Palette },
+  { id: "local-data", label: "本地数据", icon: Database },
+  { id: "sound", label: "声音", icon: Volume2 },
+  { id: "tapping-precision", label: "击拍精度", icon: Target },
 ] as const;
 
 export default function SettingsPage({
@@ -71,6 +72,7 @@ export default function SettingsPage({
                 )
               }
             >
+              <item.icon className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />
               {item.label}
               {item.id === "sound" && (
                 <span className="settings-unavailable">未开放</span>

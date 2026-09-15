@@ -1,3 +1,4 @@
+import { Check, Eye, EyeOff } from "lucide-react";
 import {
   useId,
   useMemo,
@@ -282,7 +283,7 @@ export function RhythmDictation({
               disabled={!hasSelectedMeasure || !expectedMeasure}
               onClick={verifySelectedMeasure}
             >
-              验证当前小节
+              <Check className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />验证当前小节
             </button>
           </div>
           <button
@@ -295,6 +296,7 @@ export function RhythmDictation({
               setIsReferenceAnswerVisible((previous) => !previous);
             }}
           >
+            {isReferenceAnswerVisible ? <EyeOff className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" /> : <Eye className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />}
             {isReferenceAnswerVisible ? "返回作答" : "查看答案"}
           </button>
         </div>

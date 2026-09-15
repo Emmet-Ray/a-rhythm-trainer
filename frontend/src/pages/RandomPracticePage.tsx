@@ -1,5 +1,5 @@
 import { lazy, memo, Suspense, useEffect, useId, useRef, useState } from "react";
-import { ArrowRight, X } from "lucide-react";
+import { ArrowRight, RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import { PracticeHeading } from "../practice/PracticeHeading";
 import { useVisitState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
@@ -191,9 +191,9 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
           <PracticeWorkspace exerciseKey={generated.id} exercise={generated.exercise} mode={mode}
             extraActions={busy => (
               <div className="random-toolbar-actions">
-                <button type="button" disabled={busy || config.materials.length === 0} onClick={generate}>换一题</button>
+                <button type="button" disabled={busy || config.materials.length === 0} onClick={generate}><RefreshCw className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />换一题</button>
                 <button ref={settingsButtonRef} className="random-settings-trigger" type="button" disabled={busy}
-                  aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}>生成设置</button>
+                  aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}><SlidersHorizontal className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />生成设置</button>
               </div>
             )} />
         </Suspense>

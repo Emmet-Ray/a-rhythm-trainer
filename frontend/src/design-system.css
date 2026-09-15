@@ -80,7 +80,8 @@
 .ui-icon--control { width: 24px; height: 24px; }
 .ui-icon--entry { width: 30px; height: 30px; }
 .ui-icon--result { width: 1em; height: 1em; }
-.ui-icon--stop { width: 14px; height: 14px; margin-right: 8px; vertical-align: -1px; fill: currentColor; }
+.ui-icon--action { margin-right: 8px; }
+.ui-icon--stop { margin-right: 8px; fill: currentColor; padding: 2px; }
 .question-action, .practice-return, .back-link { gap: 8px; }
 .question-action { display: inline-flex; align-items: center; }
 .design-system :focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; }

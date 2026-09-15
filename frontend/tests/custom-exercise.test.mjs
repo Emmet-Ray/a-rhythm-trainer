@@ -29,6 +29,30 @@ const { PracticeHeading } = await server.ssrLoadModule("/src/practice/PracticeHe
 // 导航和状态文案不依赖图标库生成的 SVG 路径与属性顺序。
 const withoutSvg = html => html.replace(/<svg\b[^]*?<\/svg>/g, "");
 
+test("高频操作在各模式保留文字并提供不参与朗读的图标", async () => {
+  for (const [path, labels] of [
+    ["/preset/basic-values-01", ["击拍练习", "试听"]],
+    ["/preset/dictation-basic-values-01", ["播放题目", "播放我的答案"]],
+    ["/random/tapping", ["击拍练习", "试听", "换一题", "生成设置"]],
+    ["/random/dictation", ["播放题目", "播放我的答案", "换一题", "生成设置", "验证当前小节", "查看答案"]],
+    ["/custom/tapping", ["新建练习"]],
+    ["/custom/dictation", ["新建练习"]],
+    ["/custom/tapping/new", ["试听", "保存练习"]],
+    ["/custom/dictation/new", ["试听", "保存练习"]],
+  ]) {
+    const html = path.startsWith("/custom/")
+      ? await renderPage(path, path.endsWith("/new") ? "/custom/:mode/new" : "/custom/:mode")
+      : await renderApp(path);
+    const controls = html.match(/<(?:button|a)\b[^]*?<\/(?:button|a)>/g) ?? [];
+    for (const label of labels) {
+      const control = controls.find(item => withoutSvg(item).replace(/<[^>]*>/g, "").trim() === label);
+      assert.ok(control, `${path}: ${label}`);
+      assert.match(control, /<svg[^>]*aria-hidden="true"[^>]*focusable="false"/);
+      assert.equal((control.match(/<svg\b/g) ?? []).length, 1);
+    }
+  }
+});
+
 test("共用题头只显示返回入口和原题名，无题名时不补模式标题", () => {
   for (const title of [undefined, "练习 1", "很长的自定义题目".repeat(12)]) {
     const html = renderToStaticMarkup(createElement(MemoryRouter, null,
@@ -233,7 +257,7 @@ test("设置页提供五个分类，默认只展示账号内容", async () => {
     ["sound", "声音"], ["tapping-precision", "击拍精度"],
   ]) {
     const badge = id === "sound" ? '<span class="settings-unavailable">未开放</span>' : "";
-    assert.match(html, new RegExp(`<button[^>]*aria-pressed="${id === "account"}"[^>]*>${title}${badge}</button>`));
+    assert.match(withoutSvg(html), new RegExp(`<button[^>]*aria-pressed="${id === "account"}"[^>]*>${title}${badge}</button>`));
   }
   for (const id of ["local-data", "sound", "tapping-precision"]) {
     assert.doesNotMatch(html, new RegExp(`id="${id}-heading"`));
@@ -246,6 +270,19 @@ function renderSettings(state, error = "") {
   const auth = { state, error, busy: false, refresh() {}, login() {}, logout() {} };
   return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ["/settings?category=account"] }, createElement(SettingsPage, { auth })));
 }
+
+test("设置分类图标保留文字名称且不参与朗读", async () => {
+  const cases = [
+    [await renderApp("/settings?category=appearance"), ["账号", "外观", "本地数据", "声音未开放", "击拍精度"]],
+  ];
+  for (const [html, labels] of cases) {
+    for (const label of labels) {
+      const button = (html.match(/<button\b[^]*?<\/button>/g) ?? []).find(item => withoutSvg(item).replace(/<[^>]*>/g, "").trim() === label);
+      assert.ok(button, label);
+      assert.match(button, /<svg[^>]*aria-hidden="true"[^>]*focusable="false"/);
+    }
+  }
+});
 
 test("账号设置统一承载会话状态、重试和退出，顶部不再显示登录入口", async () => {
   const checking = renderSettings({ status: "checking" });
@@ -275,7 +312,7 @@ test("登录表单保留标签、自动填充和反馈语义，未发送验证�
   assert.match(html, /id="login-code"[^>]*aria-invalid="false"/);
   assert.doesNotMatch(html, /id="login-(?:phone|code)-error"/);
   assert.match(html, /class="login-feedback"><p role="status"/);
-  assert.match(html, /<button type="submit" disabled="">登录/);
+  assert.match(withoutSvg(html), /<button type="submit" disabled="">登录/);
 });
 
 async function renderPage(path, route, auth = { state: { status: "guest" }, busy: false }, visits = null, state = null) {
@@ -566,7 +603,7 @@ test("新建草稿默认两节、空名称、4/4，提供公共设置但全空�
   assert.doesNotMatch(html, /应用速度|未应用/);
   assert.match(html, /value="60"/);
   assert.match(html, /aria-label="节拍器" aria-pressed="true"/);
-  assert.match(html, /<button[^>]*disabled=""[^>]*>试听<\/button>/);
+  assert.match(withoutSvg(html), /<button[^>]*disabled=""[^>]*>试听<\/button>/);
   assert.doesNotMatch(html, /验证当前小节|播放题目|播放我的答案|查看答案/);
   assert.doesNotMatch(html, /rhythm-playback-status/);
   assert.doesNotMatch(html, /practice-layout--stacked/);

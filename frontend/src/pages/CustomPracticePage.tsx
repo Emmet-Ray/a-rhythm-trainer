@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Minus, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, LoaderCircle, Minus, Plus, Save } from "lucide-react";
 import {
   lazy,
   Suspense,
@@ -287,7 +287,7 @@ function CustomExerciseList({
       <section className="custom-catalog" aria-label="题目列表">
       <div className="custom-catalog-actions">
         <Link className="custom-new-link" to={`/custom/${mode}/new`}>
-          新建练习
+          <Plus className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />新建练习
         </Link>
       </div>
       {result.error ? (
@@ -686,6 +686,7 @@ function CustomExerciseEditor({
                     disabled={saving || !canSave}
                     onClick={() => void save()}
                   >
+                    {saving ? <LoaderCircle className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" /> : <Save className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />}
                     {saving ? "正在保存…" : "保存练习"}
                   </button>
                 </div>
