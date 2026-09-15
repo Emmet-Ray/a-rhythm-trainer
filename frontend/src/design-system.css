@@ -43,6 +43,8 @@
   --ds-input: #f8fbfa;
 }
 :root {
+  --ds-on-primary: #fff;
+  --ds-score: #19171f;
   /* 悬停只提示可操作；主题浅底留给持续的选中状态。 */
   --ds-hover: color-mix(in srgb, var(--ds-ink) 5%, transparent);
   /* 判定颜色表达固定语义，不跟随主题。 */
@@ -51,6 +53,62 @@
   --ds-error: #ad3838;
   --ds-error-bg: #fff0ef;
 }
+/* 明暗和色相分离；深色用提亮的强调色，实色按钮配深色文字。 */
+:root[data-color-mode="dark"] {
+  color-scheme: dark;
+  --ds-ink: #eceaf2;
+  --ds-muted: #b1acbe;
+  --ds-primary: #b29aff;
+  --ds-primary-hover: #c2afff;
+  --ds-primary-base: #514177;
+  --ds-on-primary: #171320;
+  --ds-tint: #302741;
+  --ds-line: #3a3647;
+  --ds-field-border: #817b91;
+  --ds-base: #100e16;
+  --ds-surface: #211e2a;
+  --ds-disabled: #292532;
+  --ds-subtle: #18161e;
+  --ds-input: #25212e;
+  --ds-score: #eceaf2;
+  --ds-success: #8ed8a4;
+  --ds-success-bg: #1c3527;
+  --ds-error: #ffa5a0;
+  --ds-error-bg: #3d2427;
+  --ds-hover: color-mix(in srgb, var(--ds-ink) 9%, transparent);
+}
+:root[data-color-mode="dark"][data-theme="blue"] {
+  --ds-primary: #8fb9ff;
+  --ds-primary-hover: #b0cdff;
+  --ds-primary-base: #304d7c;
+  --ds-tint: #24334c;
+  --ds-ink: #e8edf5;
+  --ds-muted: #aab6c9;
+  --ds-line: #344154;
+  --ds-field-border: #788aa2;
+  --ds-subtle: #151a22;
+  --ds-surface: #1d2530;
+  --ds-input: #222c38;
+  --ds-disabled: #273140;
+}
+:root[data-color-mode="dark"][data-theme="teal"] {
+  --ds-primary: #74d3c3;
+  --ds-primary-hover: #9be2d7;
+  --ds-primary-base: #295c53;
+  --ds-tint: #203c36;
+  --ds-ink: #e6efec;
+  --ds-muted: #a8beb7;
+  --ds-line: #344940;
+  --ds-field-border: #78948a;
+  --ds-subtle: #151d1a;
+  --ds-surface: #1d2925;
+  --ds-input: #22312b;
+  --ds-disabled: #283a32;
+}
+.settings-options.appearance-modes { margin-bottom: 24px; }
+:root[data-color-mode="dark"] [data-theme-preview="purple"] { --ds-primary: #b29aff; }
+:root[data-color-mode="dark"] [data-theme-preview="blue"] { --ds-primary: #8fb9ff; }
+:root[data-color-mode="dark"] [data-theme-preview="teal"] { --ds-primary: #74d3c3; }
 /* 字体、形状和间距仍显式启用，不给未使用设计系统的元素附加控件样式。 */
 .design-system {
   --ds-radius-sm: 12px;
@@ -115,6 +173,18 @@
 .site-navigation a[aria-current] { background: var(--ds-tint); color: var(--ds-primary); }
 .site-navigation a:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: -2px; }
 .site-navigation .site-settings-link { margin-top: auto; }
+.design-system .site-sidebar-toggle { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 10px 16px; flex-shrink: 0; border: 0; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; font-weight: 650; }
+.design-system .site-sidebar-toggle:hover { background: var(--ds-hover); color: var(--ds-ink); }
+.design-system .site-sidebar-toggle:active { transform: none; box-shadow: none; }
+.site-sidebar-toggle:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: -2px; }
+.site-sidebar { gap: 8px; }
+.site-sidebar > .brand { margin-bottom: 28px; }
+@media (min-width: 1001px) {
+  .site-shell:has(.site-sidebar[data-collapsed="true"]) { --site-nav-width: 72px; }
+  .site-sidebar[data-collapsed="true"] { padding-inline: 12px; }
+  .site-sidebar[data-collapsed="true"] .brand { justify-content: center; min-height: 32px; }
+  .site-sidebar[data-collapsed="true"] :is(.site-navigation a, .site-sidebar-toggle) { justify-content: center; padding-inline: 0; }
+}
 .site-mobile-header { display: none; }
 .site-menu-drawer { margin: 0; padding: 20px 16px; width: min(288px, calc(100% - 40px)); max-width: none; height: 100dvh; max-height: none; border: 0; border-right: 1px solid var(--ds-line); background: var(--ds-surface); }
 .site-menu-drawer[open] { display: flex; flex-direction: column; gap: 24px; }
@@ -281,7 +351,7 @@
 .not-found { display: flex; flex-direction: column; align-items: center; max-width: 520px; margin: 0 auto; padding: clamp(32px, 10svh, 96px) 0 var(--ds-space-12); text-align: center; }
 .not-found .not-found-code { margin-bottom: var(--ds-space-6); color: var(--ds-primary); font-size: clamp(72px, 12vw, 104px); font-weight: 800; line-height: 1; letter-spacing: .04em; }
 .not-found h1 { font-size: clamp(26px, 4vw, 32px); text-wrap: balance; }
-.not-found .not-found-action { display: inline-flex; justify-content: center; align-items: center; min-height: 48px; min-width: 180px; max-width: 100%; margin-top: var(--ds-space-8); padding: 10px var(--ds-space-6); border: 2px solid var(--ds-primary); border-radius: var(--ds-radius-sm); background: var(--ds-primary); color: white; font-weight: 750; box-shadow: 0 4px 0 var(--ds-primary-base); transition: background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
+.not-found .not-found-action { display: inline-flex; justify-content: center; align-items: center; min-height: 48px; min-width: 180px; max-width: 100%; margin-top: var(--ds-space-8); padding: 10px var(--ds-space-6); border: 2px solid var(--ds-primary); border-radius: var(--ds-radius-sm); background: var(--ds-primary); color: var(--ds-on-primary); font-weight: 750; box-shadow: 0 4px 0 var(--ds-primary-base); transition: background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
 .not-found .not-found-action:hover { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
 .not-found .not-found-action:active { transform: translateY(4px); box-shadow: none; }
 @media (prefers-reduced-motion: reduce) {
@@ -325,7 +395,7 @@
 .trainer-audio-error { flex-basis: 100%; color: var(--ds-error); font-size: var(--ds-text-sm); }
 .rhythm-trainer .trainer-actions { gap: var(--ds-space-4); margin-top: 0; }
 .rhythm-trainer .trainer-actions button { min-width: 156px; min-height: 52px; }
-.rhythm-trainer .trainer-actions button:first-child:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 var(--ds-depth) 0 var(--ds-primary-base); }
+.rhythm-trainer .trainer-actions button:first-child:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: var(--ds-on-primary); box-shadow: 0 var(--ds-depth) 0 var(--ds-primary-base); }
 .rhythm-trainer .trainer-actions button:first-child:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
 .rhythm-trainer .trainer-actions button:disabled { color: var(--ds-muted); background: var(--ds-disabled); border-color: var(--ds-line); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); }
 /* 停止是普通播放操作，不使用错误或破坏性操作的红色。 */
@@ -347,6 +417,7 @@
 .practice-body { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "settings" "score"; }
 .practice-content { grid-area: score; display: flex; flex-direction: column; justify-content: center; gap: var(--ds-space-4); min-width: 0; padding: var(--ds-space-6) var(--ds-space-8); }
 .rhythm-score { min-width: 0; }
+.rhythm-score svg, .rhythm-answer-notation svg { color: var(--ds-score); }
 .rhythm-score-stage { position: relative; min-width: 0; }
 .rhythm-score-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(34 30 46 / 32%); z-index: 1; }
 .trainer-countdown { color: #fff; font-size: clamp(64px, 8vw, 96px); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 2px 8px rgb(0 0 0 / 24%); }
@@ -389,7 +460,7 @@
 .rhythm-playback .rhythm-playback-buttons { gap: var(--ds-space-3); }
 .rhythm-playback .rhythm-playback-buttons button { min-width: 144px; }
 .rhythm-playback .rhythm-playback-status { min-height: 28px; margin-top: var(--ds-space-2); color: var(--ds-muted); font-size: var(--ds-text-sm); }
-.rhythm-dictation .rhythm-playback-buttons button[data-source="question"][data-action="play"]:not(:disabled), .rhythm-dictation .dictation-verify:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 4px 0 var(--ds-primary-base); }
+.rhythm-dictation .rhythm-playback-buttons button[data-source="question"][data-action="play"]:not(:disabled), .rhythm-dictation .dictation-verify:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: var(--ds-on-primary); box-shadow: 0 4px 0 var(--ds-primary-base); }
 .rhythm-dictation .rhythm-playback-buttons button[data-source="question"][data-action="play"]:hover:not(:disabled), .rhythm-dictation .dictation-verify:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
 .rhythm-playback .rhythm-playback-buttons button:active:not(:disabled), .rhythm-dictation .dictation-verify:active:not(:disabled) { box-shadow: none; }
 .rhythm-dictation .dictation-scope { min-height: 48px; color: var(--ds-muted); font-size: var(--ds-text-sm); gap: var(--ds-space-3); }
@@ -507,6 +578,8 @@
 @media (max-width: 480px) {
   .settings-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .design-system .settings-navigation button { padding-inline: 12px; }
+  .settings-options { flex-direction: column; }
+  .settings-options label { flex-basis: auto; width: 100%; }
 }
 /* 登录沿用基础控件；固定发送按钮宽度和反馈区高度，避免状态切换挤动表单。 */
 .login-page.design-system { max-width: 400px; }
@@ -528,7 +601,7 @@
 .login-page .login-form input[aria-invalid="true"] { border-color: var(--ds-error); }
 .login-page .login-feedback p { margin: 0; overflow-wrap: anywhere; }
 .login-page .auth-error { color: var(--ds-error); font-size: inherit; }
-.login-page .login-form > button[type="submit"]:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 4px 0 var(--ds-primary-base); }
+.login-page .login-form > button[type="submit"]:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: var(--ds-on-primary); box-shadow: 0 4px 0 var(--ds-primary-base); }
 .login-page .login-form > button[type="submit"]:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
 .login-page .login-form > button[type="submit"]:active:not(:disabled) { box-shadow: none; }
 /* 新建页只负责外层表单；谱面、设置和播放仍由共享组件负责。 */
@@ -551,7 +624,7 @@
   .practice-body > .practice-settings .tempo-value { justify-content: flex-end; }
   .practice-body > .practice-settings .tempo-value input[type="number"] { width: 64px; }
 }
-.custom-create .custom-save-button:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: white; box-shadow: 0 4px 0 var(--ds-primary-base); }
+.custom-create .custom-save-button:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: var(--ds-on-primary); box-shadow: 0 4px 0 var(--ds-primary-base); }
 .custom-create .custom-save-button:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
 .custom-create .custom-save-button:active:not(:disabled) { box-shadow: none; }
 .custom-create .custom-save-error { flex-basis: 100%; margin: 0; color: var(--ds-error); font-size: var(--ds-text-sm); }
@@ -569,7 +642,7 @@
 }
 .custom-library .custom-list-heading { justify-content: flex-start; }
 .custom-library .custom-new-link { margin-left: auto; }
-.custom-library .custom-new-link { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 24px; border: 2px solid var(--ds-primary); border-radius: var(--ds-radius-sm); background: var(--ds-primary); color: white; font-weight: 750; box-shadow: 0 4px 0 var(--ds-primary-base); transition: background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
+.custom-library .custom-new-link { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 24px; border: 2px solid var(--ds-primary); border-radius: var(--ds-radius-sm); background: var(--ds-primary); color: var(--ds-on-primary); font-weight: 750; box-shadow: 0 4px 0 var(--ds-primary-base); transition: background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
 .custom-library .custom-new-link:hover { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
 .custom-library .custom-new-link:active { transform: translateY(4px); box-shadow: none; }
 .custom-library .custom-draft-notice { margin: 0 0 var(--ds-space-6); color: var(--ds-muted); font-size: var(--ds-text-sm); }

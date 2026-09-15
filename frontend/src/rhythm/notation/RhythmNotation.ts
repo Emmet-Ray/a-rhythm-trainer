@@ -43,6 +43,8 @@ export function rhythmEventToVexFlowStaveNote(event: RhythmEvent): StaveNote {
     duration: event.kind === "rest" ? `${duration}r` : duration,
     dots: event.dots ?? 0,
   });
+  // VexFlow 的符干默认黑色，不继承绘图上下文；跟随 SVG 的谱面/高亮颜色。
+  note.setStemStyle({ strokeStyle: "currentColor" });
   // dots 决定 VexFlow 内部时值；Dot modifier 才负责画出可见的点。
   if (event.dots === 1) Dot.buildAndAttach([note]);
   return note;

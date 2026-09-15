@@ -4,8 +4,10 @@ import { useSearchParams } from "react-router";
 import type { useAuth } from "../auth/useAuth";
 import LoginForm from "../settings/LoginForm";
 import {
-  DEFAULT_THEME,
+  colorModes,
   getAppearance,
+  resetAppearance,
+  selectColorMode,
   selectTheme,
   themes,
   type Theme,
@@ -88,7 +90,19 @@ export default function SettingsPage({
               aria-labelledby="appearance-heading"
             >
               <h2 id="appearance-heading">外观</h2>
+              <fieldset className="settings-options appearance-modes">
+                <legend>明暗模式</legend>
+                {colorModes.map(mode => (
+                  <label key={mode.id}>
+                    <input type="radio" name="color-mode" value={mode.id}
+                      checked={appearance.colorMode === mode.id}
+                      onChange={() => setAppearance(selectColorMode(mode.id))} />
+                    <span>{mode.label}</span>
+                  </label>
+                ))}
+              </fieldset>
               <fieldset className="settings-options">
+                <legend>配色主题</legend>
                 {themes.map((theme) => (
                   <label key={theme.id}>
                     <input
@@ -108,13 +122,13 @@ export default function SettingsPage({
                 ))}
               </fieldset>
               <div className="settings-actions">
-                <button type="button" onClick={() => choose(DEFAULT_THEME)}>
+                <button type="button" onClick={() => setAppearance(resetAppearance())}>
                   恢复默认
                 </button>
               </div>
               <p className="settings-message" role="status">
                 {!appearance.storageAvailable &&
-                  "浏览器存储不可用，本次配色仍会生效，但刷新后可能恢复默认。"}
+                  "浏览器存储不可用，本次外观设置仍会生效，但刷新后可能恢复默认。"}
               </p>
             </section>
           )}

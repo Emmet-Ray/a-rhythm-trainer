@@ -17,6 +17,7 @@ const { default: RhythmPlayback } = await server.ssrLoadModule("/src/practice/Rh
 const { default: PracticeCue } = await server.ssrLoadModule("/src/practice/PracticeCue.tsx");
 const { RhythmDraftScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmDraftScore.tsx");
 const { default: App } = await server.ssrLoadModule("/src/App.tsx");
+const { default: SiteNavigation } = await server.ssrLoadModule("/src/navigation/SiteNavigation.tsx");
 const { default: SettingsPage } = await server.ssrLoadModule("/src/pages/SettingsPage.tsx");
 const { VisitsContext } = await server.ssrLoadModule("/src/navigation/usePageNavigation.ts");
 const { PageVisits } = await server.ssrLoadModule("/src/navigation/PageVisits.ts");
@@ -191,10 +192,37 @@ test("侧栏直接展示所有栏目，移动菜单默认关闭，题目页标�
     const html = await renderApp(path);
     const sidebar = html.match(/<aside class="site-sidebar[\s\S]*?<\/aside>/)?.[0];
     assert.ok(sidebar);
+    assert.match(sidebar, /data-collapsed="false"/);
+    assert.match(sidebar, /aria-label="收起导航" aria-expanded="true"/);
     assert.doesNotMatch(html, /practice-navigation|<dialog[^>]*\bopen/);
     assert.match(html, /aria-label="打开导航菜单" aria-expanded="false" aria-controls="site-menu"/);
     for (const target of ["/", "/preset", "/random", "/custom", "/settings"]) assert.ok(sidebar.includes(`href="${target}"`));
     assert.match(sidebar, new RegExp(`<a(?=[^>]*href="${active}")(?=[^>]*aria-current="${current}")[^>]*>`));
+  }
+});
+
+test("折叠导航恢复偏好，保留入口名称，移动抽屉仍显示文字", () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  try {
+    Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
+      getItem: key => key === "rhythm-trainer.sidebar-collapsed" ? "true" : null,
+    } });
+    const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ["/random/tapping"] }, createElement(SiteNavigation)));
+    const sidebar = html.match(/<aside[^]*?<\/aside>/)[0];
+    assert.match(sidebar, /data-collapsed="true"/);
+    assert.match(sidebar, /aria-label="展开导航" aria-expanded="false"/);
+    for (const name of ["首页", "预设练习", "随机练习", "自定义练习", "设置"]) {
+      assert.ok(sidebar.includes(`aria-label="${name}"`));
+    }
+    assert.match(sidebar, /aria-current="location"[^>]*title="随机练习"/);
+    const drawer = withoutSvg(html.match(/<dialog[^]*?<\/dialog>/)[0]);
+    assert.match(drawer, />随机练习<\/a>/);
+    Object.defineProperty(globalThis, "localStorage", { configurable: true, get() { throw new Error("blocked"); } });
+    const fallback = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(SiteNavigation)));
+    assert.match(fallback, /data-collapsed="false"/);
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, "localStorage", descriptor);
+    else delete globalThis.localStorage;
   }
 });
 
@@ -244,11 +272,12 @@ test("404 状态页提供与错误类型对应的主要返回入口", async () =
   }
 });
 
-test("设置页不要求登录，显示三套配色与恢复默认入口", async () => {
+test("设置页不要求登录，明暗模式与三套配色独立选择", async () => {
   const html = await renderApp("/settings?category=appearance");
   assert.match(html, /class="design-system settings-page"/);
   assert.match(html, /aria-current="page" href="\/settings"/);
-  assert.equal((html.match(/type="radio"/g) ?? []).length, 3);
+  assert.equal((html.match(/type="radio"/g) ?? []).length, 6);
+  for (const label of ["明暗模式", "配色主题", "跟随系统", "浅色", "深色"]) assert.ok(html.includes(label));
   assert.match(html, /紫色/);
   assert.match(html, /蓝色/);
   assert.match(html, /青绿色/);

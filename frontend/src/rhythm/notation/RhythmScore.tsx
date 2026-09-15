@@ -119,6 +119,8 @@ function RhythmScore({
     const renderer = new Renderer(container, Renderer.Backends.SVG);
     renderer.resize(containerWidth, scoreLayout.height * scoreLayout.scale);
     const context = renderer.getContext();
+    context.setFillStyle("var(--ds-score)");
+    context.setStrokeStyle("var(--ds-score)");
     context.scale(scoreLayout.scale, scoreLayout.scale);
     const rendered: RenderedScore = { context, notes: [], eventPositions: [], measures: [], layout: scoreLayout };
 
@@ -205,6 +207,7 @@ function RhythmScore({
     if (activeNote) {
       activeNote.style.fill = ACTIVE_NOTE_COLOR;
       activeNote.style.stroke = ACTIVE_NOTE_COLOR;
+      activeNote.style.color = ACTIVE_NOTE_COLOR;
     }
     // 复用音符实际排版坐标，只有误敲的位置插值需要当前 BPM 的时间线。
     const layouts = createTimingFeedbackLayout(timeline, rendered.measures);
@@ -226,6 +229,7 @@ function RhythmScore({
       feedback.remove();
       activeNote?.style.removeProperty("fill");
       activeNote?.style.removeProperty("stroke");
+      activeNote?.style.removeProperty("color");
     };
   }, [containerWidth, measures, timeSignature.beats, timeSignature.beatType, activeEventIndex, timeline, timingEvents]);
 

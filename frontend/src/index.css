@@ -1,7 +1,7 @@
 :root {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  color: #272631;
-  background: #fff;
+  color: var(--ds-ink);
+  background: var(--ds-subtle);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -18,16 +18,16 @@ button, input { font: inherit; }
 button {
   min-height: 42px;
   padding: 8px 18px;
-  border: 1px solid #d8d6e0;
+  border: 1px solid var(--ds-line);
   border-radius: 6px;
   color: inherit;
-  background: #fff;
+  background: var(--ds-surface);
   cursor: pointer;
   transition: background-color 140ms ease, border-color 140ms ease;
 }
 button:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); }
-button:disabled { cursor: not-allowed; color: #777580; background: #fafafa; }
-input { min-height: 42px; border: 1px solid #d8d6e0; border-radius: 6px; padding: 7px 10px; }
+button:disabled { cursor: not-allowed; color: var(--ds-muted); background: var(--ds-disabled); }
+input { min-height: 42px; border: 1px solid var(--ds-field-border); border-radius: 6px; padding: 7px 10px; color: var(--ds-ink); background: var(--ds-input); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 /* VexFlow 的透明命中框会显式启用 pointer-events，答案谱面统一交由小节按钮接收点击。 */
 .rhythm-answer-notation svg * { pointer-events: none; }
@@ -35,7 +35,7 @@ h1, h2, h3, p { margin: 0; }
 h1 { font-size: clamp(28px, 4vw, 36px); line-height: 1.35; font-weight: 650; letter-spacing: -.04em; }
 h2 { font-size: 19px; font-weight: 600; }
 h3 { font-size: 16px; font-weight: 600; }
-kbd { padding: 2px 7px; border: 1px solid #d8d6e0; border-bottom-width: 2px; border-radius: 4px; font: inherit; color: #45434e; }
+kbd { padding: 2px 7px; border: 1px solid var(--ds-line); border-bottom-width: 2px; border-radius: 4px; font: inherit; color: var(--ds-ink); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
 }

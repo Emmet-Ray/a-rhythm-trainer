@@ -99,6 +99,8 @@ export function RhythmDraftScore({
     const renderer = new Renderer(container, Renderer.Backends.SVG);
     renderer.resize(score.width * score.scale, score.height * score.scale);
     const context = renderer.getContext();
+    context.setFillStyle("var(--ds-score)");
+    context.setStrokeStyle("var(--ds-score)");
     context.scale(score.scale, score.scale);
     score.measures.forEach(({ stave, notes, beams, tuplets }) => {
       context.save();

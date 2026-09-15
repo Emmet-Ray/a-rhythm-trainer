@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { House, FileText, Shuffle, PencilLine, Settings, Menu, X } from "lucide-react";
+import { House, FileText, Shuffle, PencilLine, Settings, Menu, X, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import BrandMark from "../brand/BrandMark";
 
 const destinations = [
@@ -11,24 +11,37 @@ const destinations = [
   { path: "/settings", label: "设置", icon: Settings },
 ];
 
-function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavigationLinks({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
   const { pathname } = useLocation();
   return <nav className="site-navigation" aria-label="主导航">
     {destinations.map(({ path, label, icon: Icon }) => <Link key={path} to={path}
       className={path === "/settings" ? "site-settings-link" : undefined}
       aria-current={pathname === path ? "page" : path !== "/" && pathname.startsWith(`${path}/`) ? "location" : undefined}
-      onClick={onNavigate}><Icon className="ui-icon" aria-hidden="true" focusable="false" />{label}</Link>)}
+      title={compact ? label : undefined} aria-label={compact ? label : undefined}
+      onClick={onNavigate}><Icon className="ui-icon" aria-hidden="true" focusable="false" />{!compact && label}</Link>)}
   </nav>;
 }
 
-function Brand() {
-  return <Link to="/" className="brand"><BrandMark className="brand-mark" />节奏训练</Link>;
+function Brand({ compact = false }: { compact?: boolean }) {
+  return <Link to="/" className="brand" aria-label={compact ? "节奏训练首页" : undefined} title={compact ? "节奏训练首页" : undefined}><BrandMark className="brand-mark" />{!compact && "节奏训练"}</Link>;
 }
+
+const collapsedStorageKey = "rhythm-trainer.sidebar-collapsed";
 
 /** 桌面固定导航与移动端模态菜单共用入口；关闭抽屉后交还浏览器焦点。 */
 export default function SiteNavigation() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem(collapsedStorageKey) === "true"; }
+    catch { return false; }
+  });
+  const toggleSidebar = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    // 存储不可用时仍可在本次会话中折叠，不影响导航。
+    try { localStorage.setItem(collapsedStorageKey, String(next)); } catch { /* Session-only preference. */ }
+  };
   const location = useLocation();
   useEffect(() => {
     dialog.current?.close();
@@ -46,7 +59,15 @@ export default function SiteNavigation() {
     return () => { document.body.style.overflow = previous; };
   }, [open]);
   return <>
-    <aside className="site-sidebar design-system"><Brand /><NavigationLinks /></aside>
+    <aside className="site-sidebar design-system" data-collapsed={collapsed}>
+      <Brand compact={collapsed} /><NavigationLinks compact={collapsed} />
+      <button type="button" className="site-sidebar-toggle" onClick={toggleSidebar}
+        aria-label={collapsed ? "展开导航" : "收起导航"} aria-expanded={!collapsed}
+        title={collapsed ? "展开导航" : "收起导航"}>
+        {collapsed ? <PanelLeftOpen className="ui-icon" aria-hidden="true" /> : <PanelLeftClose className="ui-icon" aria-hidden="true" />}
+        {!collapsed && "收起导航"}
+      </button>
+    </aside>
     <header className="site-mobile-header design-system">
       <Brand />
       <button className="site-menu-button" type="button" aria-label="打开导航菜单"
