@@ -141,11 +141,11 @@ test("首页独立展示三个平等入口，不显示预设主题或训练区",
   assert.doesNotMatch(html, /topic-section|击拍训练区|节奏听写区/);
 });
 
-test("随机练习三种方式同级展示，几何游戏未开放且没有跳转入口", async () => {
+test("随机练习展示两个可用入口，几何游戏仅作未开放提示", async () => {
   const html = await renderApp("/random");
   assert.match(html, /href="\/random\/tapping"/);
   assert.match(html, /href="\/random\/dictation"/);
-  assert.match(html, /<div class="question-link random-mode-unavailable" aria-disabled="true"><h3>几何游戏<\/h3><span class="question-action">未开放<\/span><\/div>/);
+  assert.match(html, /<p class="mode-unavailable">几何游戏暂未开放<\/p>/);
   assert.doesNotMatch(html, /href="\/random\/geometry"/);
 });
 
@@ -224,7 +224,8 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
   }
   const customIndex = await renderApp("/custom");
   assert.match(customIndex, /class="design-system custom-index"/);
-  assert.match(customIndex, /class="question-link custom-mode-unavailable" aria-disabled="true"/);
+  assert.match(customIndex, /<p class="mode-unavailable">几何游戏暂未开放<\/p>/);
+  assert.doesNotMatch(customIndex, /href="\/custom\/geometry"/);
   for (const path of ["/settings"]) {
     const html = await renderApp(path);
     assert.match(html, /class="site-header design-system"/);
@@ -426,8 +427,8 @@ test("已保存列表链接到所属模式的题目", async (t) => {
     assert.match(html, /开始练习/);
     assert.doesNotMatch(html, /question-meta|4\/4 拍|\d+ 小节/);
     assert.match(html, /practice-titlebar custom-list-heading/);
-    assert.match(html, /<section class="custom-catalog" aria-label="题目列表">[\s\S]*class="custom-new-link"[\s\S]*aria-label="已保存的自定义练习"/);
-    assert.doesNotMatch(html.match(/<header class="practice-titlebar custom-list-heading">[\s\S]*?<\/header>/)?.[0] ?? "", /custom-new-link/);
+    assert.match(html, /<section class="custom-catalog" aria-label="题目列表">[\s\S]*aria-label="已保存的自定义练习"/);
+    assert.match(html.match(/<header class="practice-titlebar custom-list-heading">[\s\S]*?<\/header>/)?.[0] ?? "", /custom-new-link/);
     assert.doesNotMatch(html, /未开放|eyebrow/);
     assert.doesNotMatch(html, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
   }

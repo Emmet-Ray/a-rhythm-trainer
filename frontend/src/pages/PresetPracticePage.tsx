@@ -67,7 +67,7 @@ function PresetLibrary() {
           </header>
           <section id="preset-question-list" className="preset-question-scroll" aria-label="题目列表"
             ref={questionScrollRef} onScroll={onQuestionScroll} tabIndex={0}>
-          <ul className="question-list">
+          <ul className="question-list navigation-list">
             {questions.map(question => (
               <li key={question.id}>
                 <Link className="question-link" to={`/preset/${question.id}`}>

@@ -181,7 +181,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
         aria-labelledby="custom-mode-heading"
       >
         <h2 id="custom-mode-heading">选择训练方式</h2>
-        <ul className="question-list">
+        <ul className="question-list navigation-list">
           {customModes.map((item) => (
             <li key={item.id}>
               <Link className="question-link" to={`/custom/${item.id}`}>
@@ -192,16 +192,8 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
               </Link>
             </li>
           ))}
-          <li>
-            <div
-              className="question-link custom-mode-unavailable"
-              aria-disabled="true"
-            >
-              <h3>几何游戏</h3>
-              <span className="question-action">未开放</span>
-            </div>
-          </li>
         </ul>
+        <p className="mode-unavailable">几何游戏暂未开放</p>
       </section>
     </div>
   );
@@ -283,13 +275,11 @@ function CustomExerciseList({
           <ArrowLeft className="ui-icon" aria-hidden="true" focusable="false" /> 自定义练习
         </ReturnLink>
         <h1>{label}</h1>
-      </header>
-      <section className="custom-catalog" aria-label="题目列表">
-      <div className="custom-catalog-actions">
         <Link className="custom-new-link" to={`/custom/${mode}/new`}>
           <Plus className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />新建练习
         </Link>
-      </div>
+      </header>
+      <section className="custom-catalog" aria-label="题目列表">
       {result.error ? (
         <div className="custom-storage-error">
           <p role="alert">{result.error}</p>
@@ -306,7 +296,7 @@ function CustomExerciseList({
           还没有练习，点击上方「新建练习」开始创建。
         </p>
       ) : (
-        <ul className="question-list" aria-label="已保存的自定义练习">
+        <ul className="question-list navigation-list" aria-label="已保存的自定义练习">
           {result.items.map((item) => (
             <li
               className="custom-saved-question"

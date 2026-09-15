@@ -27,7 +27,7 @@ export default function HomePage() {
     <div className="design-system home-page">
       <title>首页 · 节奏训练</title>
       <nav aria-label="练习入口">
-        <ul className="question-list home-sources">
+        <ul className="question-list navigation-list home-sources">
           {sources.map((source) => (
             <li key={source.path}>
               <Link className="question-link" to={source.path}>

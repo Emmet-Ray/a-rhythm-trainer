@@ -50,7 +50,7 @@ export default function RandomPracticePage() {
       <header className="page-heading"><h1>随机练习</h1></header>
       <section className="random-mode-selection" aria-labelledby="random-mode-heading">
         <h2 id="random-mode-heading">选择训练方式</h2>
-        <ul className="question-list">
+        <ul className="question-list navigation-list">
           {randomModes.map(item => (
             <li key={item.id}>
               <Link className="question-link" to={`/random/${item.id}`}>
@@ -59,13 +59,8 @@ export default function RandomPracticePage() {
               </Link>
             </li>
           ))}
-          <li>
-            <div className="question-link random-mode-unavailable" aria-disabled="true">
-              <h3>几何游戏</h3>
-              <span className="question-action">未开放</span>
-            </div>
-          </li>
         </ul>
+        <p className="mode-unavailable">几何游戏暂未开放</p>
       </section>
     </div>
   );
