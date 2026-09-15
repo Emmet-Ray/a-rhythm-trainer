@@ -26,34 +26,6 @@ export default function HomePage() {
   return (
     <div className="design-system home-page">
       <title>首页 · 节奏训练</title>
-      <header className="page-heading">
-        <svg
-          className="home-rhythm-mark"
-          width="116"
-          height="64"
-          viewBox="0 0 116 64"
-          aria-hidden="true"
-        >
-          <path
-            d="M8 46H108"
-            stroke="currentColor"
-            strokeWidth="3"
-            opacity=".18"
-          />
-          {[16, 44, 72, 100].map((x, i) => (
-            <g key={x}>
-              <path
-                d={`M${x + 6} 44V${12 + (i % 2) * 8}`}
-                stroke="currentColor"
-                strokeWidth="4"
-                strokeLinecap="round"
-              />
-              <ellipse cx={x} cy="46" rx="9" ry="7" fill="currentColor" />
-            </g>
-          ))}
-        </svg>
-        <h1>节奏训练</h1>
-      </header>
       <nav aria-label="练习入口">
         <ul className="question-list home-sources">
           {sources.map((source) => (
@@ -71,7 +43,6 @@ export default function HomePage() {
                   <p className="question-meta">{source.description}</p>
                 </div>
                 <span className="question-action">
-                  进入{" "}
                   <ArrowRight
                     className="ui-icon"
                     aria-hidden="true"

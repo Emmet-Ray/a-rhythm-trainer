@@ -107,7 +107,8 @@
 
 /* 公共页头：导航不使用主操作按钮的厚度，始终保留清楚的焦点和栏目状态。 */
 .site-header.design-system { min-height: 88px; border-bottom: var(--ds-border) solid var(--ds-line); gap: var(--ds-space-4); }
-.site-header.design-system .brand { color: var(--ds-primary); font-size: 24px; font-weight: 800; letter-spacing: -.025em; }
+.site-header.design-system .brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ds-primary); font-size: 24px; font-weight: 800; letter-spacing: -.025em; }
+.brand-mark { width: 28px; height: 32px; flex-shrink: 0; }
 .site-header.design-system nav { gap: var(--ds-space-2); }
 .site-header.design-system nav > a, .site-header.design-system summary { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; border: 2px solid transparent; border-radius: var(--ds-radius-sm); color: var(--ds-muted); font-weight: 650; transition: background-color var(--ds-motion); }
 .site-header.design-system nav > a:hover, .site-header.design-system summary:hover, .site-header.design-system details[open] summary { background: var(--ds-subtle); }
@@ -258,18 +259,18 @@
   :is(.random-index, .custom-index) .question-link { padding: var(--ds-space-4); }
 }
 
-/* 首页：三个同等权重的可点击入口，描边和底部厚度表达可操作性。 */
-.home-page { max-width: 760px; margin: var(--ds-space-4) auto var(--ds-space-8); }
-.home-page .page-heading { text-align: center; margin-bottom: var(--ds-space-8); }
-.home-rhythm-mark { color: var(--ds-primary); margin-bottom: var(--ds-space-2); }
-.home-page .home-sources { display: grid; gap: var(--ds-space-4); }
-.home-page .home-sources li + li { border: 0; }
-.home-page .question-link { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: var(--ds-space-6); min-height: 116px; padding: var(--ds-space-6); border: var(--ds-border) solid var(--ds-line); border-radius: var(--ds-radius-lg); box-shadow: 0 var(--ds-depth) 0 var(--ds-line); background: var(--ds-surface); transition: border-color var(--ds-motion), background-color var(--ds-motion), transform var(--ds-motion), box-shadow var(--ds-motion); }
-.home-page .question-link:hover { background: var(--ds-tint); border-color: var(--ds-primary); }
-.home-page .question-link:active { transform: translateY(var(--ds-depth)); box-shadow: none; }
-.home-page .question-meta { color: var(--ds-muted); font-size: var(--ds-text-sm); margin-top: var(--ds-space-1); }
-.home-page .question-action { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 750; }
-.home-page .source-symbol { width: 64px; height: 64px; display: grid; place-items: center; color: var(--ds-primary); }
+/* 首页聚焦练习选择；入口高亮独立于全站的持续选中状态。 */
+.home-page { max-width: 680px; margin: var(--ds-space-8) auto; }
+.home-page nav { min-width: 0; }
+.home-page .home-sources { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+.home-page .home-sources li + li { border-top: 1px solid var(--ds-line); }
+.home-page .question-link { display: grid; grid-template-columns: 32px minmax(0, 1fr) 20px; align-items: center; gap: 20px; min-height: 116px; padding: 24px 16px; border: 0; border-radius: var(--ds-radius-sm); box-shadow: none; background: transparent; transition: background-color var(--ds-motion); }
+.home-page .question-link:hover, .home-page .question-link:focus-visible { background: color-mix(in srgb, var(--ds-primary) 12%, var(--ds-subtle)); }
+.home-page .question-link:active { background: color-mix(in srgb, var(--ds-primary) 18%, var(--ds-subtle)); transform: none; box-shadow: none; }
+.home-page .question-meta { color: var(--ds-muted); font-size: var(--ds-text-sm); margin-top: var(--ds-space-2); line-height: 1.7; }
+.home-page .question-action { color: var(--ds-primary); }
+.home-page .question-action .ui-icon { width: 20px; height: 20px; }
+.home-page .source-symbol { width: 32px; height: 32px; display: grid; place-items: center; color: var(--ds-primary); }
 
 /* 击拍样板：谱面固定在操作与反馈上方，不对谱面或时钟做动画。 */
 .practice-page { max-width: var(--site-content-width); margin: 0 auto; }
@@ -457,14 +458,13 @@
   .preset-library .topic-modes small { display: block; margin-left: 0; }
   .preset-library .question-action { font-size: 12px; }
 }
-@media (max-width: 600px) {
+@media (max-width: 760px) {
   .home-page { margin-top: 0; }
-  .home-page .question-link { grid-template-columns: 48px minmax(0, 1fr) auto; gap: var(--ds-space-3); padding: var(--ds-space-4); min-height: 106px; }
-  .home-page .source-symbol { width: 48px; height: 48px; border-radius: var(--ds-radius-sm); }
+  .home-page .question-link { gap: var(--ds-space-3); padding: 20px 12px; min-height: 106px; }
   .home-page h2 { font-size: 18px; }
   .home-page .question-meta { font-size: 13px; }
-  .home-page .question-action { font-size: 0; }
-  .home-page .question-action .ui-icon { width: 20px; height: 20px; }
+}
+@media (max-width: 600px) {
   .practice-page .practice-heading { margin-bottom: var(--ds-space-6); }
   .practice-settings .tempo-settings { width: 100%; gap: var(--ds-space-2); }
   .rhythm-trainer .trainer-actions { display: grid; grid-template-columns: 1fr 1fr; }

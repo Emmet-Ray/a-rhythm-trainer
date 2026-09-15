@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { Link, Navigate, Route, Routes, useLocation } from "react-router";
 import HomePage from "./pages/HomePage";
+import BrandMark from "./brand/BrandMark";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useAuth } from "./auth/useAuth";
 import { PageNavigation } from "./navigation/PageNavigation";
@@ -34,6 +35,7 @@ function AppShell() {
       </a>
       <header className="site-header design-system">
         <Link to="/" className="brand">
+          <BrandMark className="brand-mark" />
           节奏训练
         </Link>
         <nav aria-label="主导航">
