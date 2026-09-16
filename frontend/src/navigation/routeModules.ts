@@ -1,6 +1,7 @@
 import type { SyntheticEvent } from "react";
 import { preloadable } from "./preloadable";
 import { editorModule, workspaceModule } from "../practice/practiceModules";
+import { presetCatalogStore } from "../exercises/presetCatalogStore";
 
 export const routeModules = {
   preset: preloadable(() => import("../pages/PresetPracticePage")),
@@ -26,7 +27,9 @@ export function destinationModules(pathname: string) {
 }
 
 export function preloadDestination(pathname: string) {
-  return Promise.all(destinationModules(pathname).map(module => module.preload()));
+  const pending = destinationModules(pathname).map(module => module.preload());
+  if (pathname.split("/").filter(Boolean)[0] === "preset") pending.push(presetCatalogStore.load());
+  return Promise.all(pending);
 }
 
 /** 在应用壳委托所有内部链接的意图事件，包括 ReturnLink；不改变链接导航行为。 */

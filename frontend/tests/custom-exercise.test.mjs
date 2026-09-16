@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToReadableStream, renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { createServer } from "vite";
+import { readFile } from "node:fs/promises";
 
 const server = await createServer({
   configFile: false,
@@ -26,6 +27,16 @@ const { dictationBinding } = await server.ssrLoadModule("/src/practice/Dictation
 const { default: RhythmScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmScore.tsx");
 const { createExerciseTimeline } = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
 const { PracticeHeading } = await server.ssrLoadModule("/src/practice/PracticeHeading.tsx");
+// SSR 不运行 effect；先通过真实读取入口准备题库，再验证就绪页的标记。
+const { presetCatalogStore } = await server.ssrLoadModule("/src/exercises/presetCatalogStore.ts");
+const originalFetch = globalThis.fetch;
+try {
+  const json = await readFile(new URL("../../content/preset-exercises.json", import.meta.url), "utf8");
+  globalThis.fetch = async () => new Response(json);
+  await presetCatalogStore.load();
+} finally {
+  globalThis.fetch = originalFetch;
+}
 
 // 导航和状态文案不依赖图标库生成的 SVG 路径与属性顺序。
 const withoutSvg = html => html.replace(/<svg\b[^]*?<\/svg>/g, "");

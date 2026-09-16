@@ -61,7 +61,7 @@
 
 组件通过 `useMemo` 根据练习、BPM、预备拍数和判定窗口生成时间线。判定窗口按 `perfectMs`、`hitMs` 两个数值建立依赖，因此传入等值新对象不会重建时间线。练习内容不变时，父组件应保持 `exercise` 引用稳定；修改内容时应创建新对象，不要原地修改。
 
-`exercises/presetExercises.ts` 按“主题 → 模式 → 题目”组织十三个主题的 58 道击拍题目（分别为 3、6、5、5、4、4、4、5、4、4、4、5、5 道，包含 2、3、4、5、6、8 小节的练习）。每个主题的听写和几何游戏题库独立维护。练习库在主题内选择模式并列出其题目；`PresetExercisePage` 从 `/preset/:questionId` 查找题目及所属模式，按模式进入共用的 PracticeWorkspace，并提供 BPM 滑块与数值输入（40–240 的整数）。拖动松手、数值输入失焦或回车后生效，不再提供“应用速度”按钮。预备拍数使用组件默认值，击拍窗口按所选精度取值。
+项目根目录的 `content/preset-exercises.json` 按“主题 → 模式 → 题目”组织十三个主题的 58 道击拍题目（分别为 3、6、5、5、4、4、4、5、4、4、4、5、5 道，包含 2、3、4、5、6、8 小节的练习），另有 3 道听写题目；几何游戏仅保留空题组。`exercises/presetCatalog.ts` 定义题库结构、校验与查找规则，`exercises/presetCatalogStore.ts` 负责独立 JSON 的读取、缓存和重试。练习库在主题内选择模式并列出其题目；`PresetExercisePage` 从 `/preset/:questionId` 查找题目及所属模式，按模式进入共用的 PracticeWorkspace，并提供 BPM 滑块与数值输入（40–240 的整数）。拖动松手、数值输入失焦或回车后生效，不再提供“应用速度”按钮。预备拍数使用组件默认值，击拍窗口按所选精度取值。
 
 `PresetExercisePage` 使用题目 ID 重建配置区域；工作区只在换题时重建击拍组件，不再把 BPM 放进 `key`。`RhythmTrainer` 在题目、BPM 或预备拍数真正改变时原地清空本轮状态，并在布局 effect 的清理中废弃旧时钟、停止声音、关闭音频上下文、作废异步启动；RAF 随运行状态重置取消，不自动开始新一轮。渲染子级前清空旧判定，避免旧记录被新时间线解释。应用相同 BPM 或只编辑草稿不打断。返回或离开练习页仍卸载训练；刷新、换题及重新进入页面恢复默认 60 BPM，不保存进行中的一轮。
 
@@ -127,7 +127,7 @@ clock.inputTimeMs(timeStamp)  // 输入发生的相对毫秒；无效或跨段�
 
 - `rhythm/RhythmModel.ts`：扩展 NoteValue，以及到四分音符单位时值的换算。
 - `rhythm/notation/RhythmScore.tsx`：增加 VexFlow duration 映射；whole → w、half → h、quarter → q、eighth → 8、sixteenth → 16，休止符追加 r。保持乐谱库编码位于显示层，不放入核心模型。
-- `exercises/presetExercises.ts`：按需增加预设练习，不是底层支持的必要步骤。
+- 项目根目录的 `content/preset-exercises.json`：按需增加预设练习，不是底层支持的必要步骤；修改后运行 `npm run validate:content` 校验。
 - 测试：验证时间线、目标数量、混合时值、休止符、BPM 缩放及结束边界；谱面另做渲染验证。
 
 新增普通时值无需改动音频时钟、声音排程、匹配、漏拍与结果统计：它们使用展开后的偏移时间和目标记录。试听高亮也沿用事件终点。这一约定不自动覆盖连音线、复附点或其他连音组等额外记谱语义。

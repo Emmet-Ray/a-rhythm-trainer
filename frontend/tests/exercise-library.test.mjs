@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createServer } from "vite";
+import { readFile } from "node:fs/promises";
 
 const server = await createServer({
   configFile: false,
@@ -10,7 +11,9 @@ const server = await createServer({
 let catalog;
 let timing;
 try {
-  catalog = await server.ssrLoadModule("/src/exercises/presetExercises.ts");
+  const model = await server.ssrLoadModule("/src/exercises/presetCatalog.ts");
+  const data = model.parsePresetCatalog(JSON.parse(await readFile(new URL("../../content/preset-exercises.json", import.meta.url), "utf8")));
+  catalog = { ...model, presetTopics: data.topics, findPresetQuestion: id => model.findPresetQuestion(id, data.topics) };
   timing = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
 } finally {
   await server.close();

@@ -1,4 +1,5 @@
-import { Suspense, useLayoutEffect, useRef, type UIEvent } from "react";
+import { Suspense, useEffect, useSyncExternalStore, useLayoutEffect, useRef, type UIEvent } from "react";
+import { presetCatalogStore } from "../exercises/presetCatalogStore";
 import { workspaceModule } from "../practice/practiceModules";
 import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
 import { ArrowRight } from "lucide-react";
@@ -7,10 +8,10 @@ import { useVisitState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
 import {
   practiceModes,
-  presetTopics,
+  type PracticeTopic,
   findPresetQuestion,
   type PracticeMode,
-} from "../exercises/presetExercises";
+} from "../exercises/presetCatalog";
 import NotFoundPage from "./NotFoundPage";
 
 // 预设列表不加载训练组件及 VexFlow，进入具体题目后才加载。
@@ -18,12 +19,33 @@ const PracticeWorkspace = workspaceModule.Component;
 
 export default function PresetPracticePage() {
   const { questionId } = useParams();
-  if (questionId !== undefined) return <PresetExercisePage questionId={questionId} />;
+  const state = useSyncExternalStore(presetCatalogStore.subscribe, presetCatalogStore.getSnapshot, presetCatalogStore.getSnapshot);
+  useEffect(() => { void presetCatalogStore.load(); }, []);
+  if (state.status === "idle" || state.status === "loading") return <LoadingPlaceholder label="正在读取题库…" />;
+  if (state.status === "error") return (
+    <div className="design-system practice-page">
+      <title>题库读取失败 · 节奏训练</title>
+      <h1>预设练习</h1>
+      <div className="custom-storage-error">
+        <p role="alert">{state.message}</p>
+        <button type="button" onClick={() => void presetCatalogStore.load(true)}>重新读取题库</button>
+      </div>
+    </div>
+  );
+  const presetTopics = state.catalog.topics;
+  if (questionId !== undefined) return <PresetExercisePage questionId={questionId} presetTopics={presetTopics} />;
+  if (presetTopics.length === 0) return (
+    <div className="design-system practice-page">
+      <title>预设练习 · 节奏训练</title>
+      <h1>预设练习</h1>
+      <p role="status">题库暂时没有练习。</p>
+    </div>
+  );
 
-  return <PresetLibrary />;
+  return <PresetLibrary presetTopics={presetTopics} />;
 }
 
-function PresetLibrary() {
+function PresetLibrary({ presetTopics }: { presetTopics: PracticeTopic[] }) {
   const [selectedMode, setSelectedMode] = useVisitState<PracticeMode>("preset:mode", "tapping");
   const [topicId, setTopicId] = useVisitState("preset:topic", presetTopics[0].id);
   const topic = presetTopics.find(item => item.id === topicId) ?? presetTopics[0];
@@ -101,8 +123,8 @@ function useListScroll(field: string, content: string) {
   return [ref, onScroll] as const;
 }
 
-function PresetExercisePage({ questionId }: { questionId: string }) {
-  const selected = findPresetQuestion(questionId);
+function PresetExercisePage({ questionId, presetTopics }: { questionId: string; presetTopics: PracticeTopic[] }) {
+  const selected = findPresetQuestion(questionId, presetTopics);
   if (!selected) return <NotFoundPage isQuestion />;
   const modeLabel = practiceModes.find(mode => mode.id === selected.mode)!.label;
 
