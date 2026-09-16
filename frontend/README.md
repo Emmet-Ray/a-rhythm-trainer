@@ -138,11 +138,41 @@ src/
 
 测试位于 [tests/](tests/)，音频等静态资源位于 [public/](public/)。函数与组件的具体约定见对应代码。
 
-## 联调与部署
+## 本地开发与联调
 
-本地 Vite 已将 `/api` 请求代理到 `http://127.0.0.1:8000`；启动后端和验证代理的方法见 [联调说明](../联调.md)。
+先按 [后端说明](../backend/README.md#本地运行) 在一个终端启动后端，再从仓库根目录另开终端运行：
 
-生产环境需要单独配置：
+```sh
+cd frontend
+npm ci
+npm run dev
+```
+
+访问 Vite 输出的地址，默认 `http://localhost:5173`。[vite.config.ts](vite.config.ts) 将 `/api` 和 `/api/` 下的请求转发到 `http://127.0.0.1:8000`，保留路径。前端始终请求同源 `/api/...`，不要硬编码后端地址或额外开放凭证跨域。
+
+在前端页面的浏览器控制台验证完整链路：
+
+```js
+const response = await fetch('/api/health');
+console.log(response.status, await response.json());
+// 200 { status: 'ok' }
+```
+
+直接访问后端健康检查不能验证 Vite 代理。代理失败时先确认后端已启动；8000 端口被占用时先检查现有进程，不重复启动。修改代理配置后重启 Vite。登录配置、Origin 与接口约定统一见 [后端说明](../backend/README.md#本地开启账号功能)。
+
+### 页面验收
+
+1. 账号关闭时，设置 → 账号显示关闭说明；击拍和听写均可新建、保存并刷新读取本地题目。
+2. 账号开启后，游客仍可使用本地题库。在设置 → 账号登录，成功后原位显示账号状态，刷新仍保持登录；退出后原位恢复登录表单。
+3. 登录后保存题目，返回账号列表并刷新，确认可进入对应模式；退出后显示原本地题库，不自动迁移或合并。
+4. 账号详情 `/custom/:mode/account/:exerciseId` 不得读取本地同 ID 题目；其他账号、不存在或模式不匹配的题目不应启动训练。切换身份后不能残留旧账号内容或被旧请求覆盖。
+5. 身份查询故障应暂停自定义练习读取和保存；账号保存失败保留草稿，不回退本地。响应丢失时先检查账号列表，避免重复提交。退出失败不能假定已经退出。
+
+手动发送验证码会产生真实短信请求；费用与测试配置注意事项见后端说明。请求封装位于 [src/api/customExercises.ts](src/api/customExercises.ts)：错误状态 0 表示网络失败，502 也用于非法响应，取消读取保留 `AbortError`。
+
+## 部署
+
+Docker 启动见 [项目 README](../README.md#快速启动)，仓库中的 [Nginx 配置](nginx.conf) 已处理静态文件、独立题库和 API 转发。手动部署时需注意：
 
 - 发布 `dist/` 中的构建产物；Vite 的本地开发代理不会随构建产物部署。
 - React Router 使用普通路径，页面请求需回退到 `index.html`，保证直接打开或刷新 `/preset/:questionId` 等地址可以正常显示。
@@ -151,9 +181,6 @@ src/
 
 ## 相关文档
 
-- [UI／UX 调整流程与任务模板](UI-UX-WORKFLOW.md)
-- [UI／UX 历史复盘与提交依据](UI-UX-RETROSPECTIVE.md)
 - [界面设计系统](DESIGN.md)
 - [计时与音频生命周期](TIMING.md)
-- [前后端联调](../联调.md)
 - [后端运行与维护](../backend/README.md)
