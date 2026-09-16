@@ -363,6 +363,31 @@ test("登录表单保留标签、自动填充和反馈语义，未发送验证�
   assert.match(withoutSvg(html), /<button type="submit" disabled="">登录/);
 });
 
+test("账号关闭时设置说明本地使用，不显示登录和退出操作", () => {
+  const html = renderSettings({ status: "disabled" });
+  assert.match(html, /此站点未启用账号功能/);
+  assert.match(html, /当前浏览器/);
+  assert.doesNotMatch(html, /login-form|发送验证码|退出登录|正在确认登录/);
+});
+
+test("账号关闭时两种模式可以读取本地题目、新建并提供可用的保存按钮", async (t) => {
+  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
+  const auth = { state: { status: "disabled" }, busy: false };
+  for (const mode of ["tapping", "dictation"]) {
+    const list = await renderPage(`/custom/${mode}`, "/custom/:mode", auth);
+    assert.match(list, new RegExp(`saved-${mode}`));
+    const detail = await renderPage(`/custom/${mode}/saved-${mode}`, "/custom/:mode/:exerciseId", auth);
+    assert.match(detail, new RegExp(`${mode}题目`));
+    const editor = await renderPage(`/custom/${mode}/new`, "/custom/:mode/new", auth);
+    assert.match(editor, /编辑自定义练习/);
+    assert.match(withoutSvg(editor), /<button[^>]*>保存练习<\/button>/);
+    assert.doesNotMatch(withoutSvg(editor), /<button[^>]*disabled[^>]*>保存练习<\/button>/);
+  }
+  const account = await renderPage("/custom/tapping/account/saved-tapping", "/custom/:mode/account/:exerciseId", auth);
+  assert.match(account, /此站点未启用账号功能，无法读取账号练习/);
+  assert.doesNotMatch(account, /tapping题目|击拍训练区|>登录<\/a>/);
+});
+
 async function renderPage(path, route, auth = { state: { status: "guest" }, busy: false }, visits = null, state = null) {
   const stream = await renderToReadableStream(createElement(VisitsContext, { value: visits }, createElement(MemoryRouter, { initialEntries: [{ pathname: path, key: "test-visit", state }] },
     createElement(Routes, null,

@@ -1,5 +1,8 @@
 /** 只访问同源接口；凭证由浏览器 Cookie 管理，不读取或存储 token，不自动重试。 */
 export type CurrentUser = { id: number };
+export type SessionState =
+  | { status: "disabled" | "guest" }
+  | { status: "authenticated"; user: CurrentUser };
 
 export class AuthApiError extends Error {
   readonly status: number;
@@ -17,14 +20,18 @@ export class AuthApiError extends Error {
   }
 }
 
-export async function getCurrentUser(
+export async function getSessionState(
   signal?: AbortSignal,
-): Promise<CurrentUser | null> {
+): Promise<SessionState> {
   try {
-    return await readUser(await request("me", undefined, signal));
+    const value = await (await request("me", undefined, signal)).json();
+    if (typeof value !== "object" || value === null || Array.isArray(value)) throw new AuthApiError(502);
+    if (value?.auth_enabled === false && Object.keys(value).length === 1) return { status: "disabled" };
+    if ("auth_enabled" in value) throw new AuthApiError(502);
+    return { status: "authenticated", user: parseUser(value) };
   } catch (error) {
     // 只有 401 能确认未登录；网络错误与 503 必须保留为未知状态。
-    if (error instanceof AuthApiError && error.status === 401) return null;
+    if (error instanceof AuthApiError && error.status === 401) return { status: "guest" };
     throw error;
   }
 }
@@ -82,8 +89,13 @@ async function request(
 }
 
 async function readUser(response: Response): Promise<CurrentUser> {
-  const value = await response.json();
-  if (!Number.isSafeInteger(value?.id) || value.id <= 0)
+  return parseUser(await response.json());
+}
+
+function parseUser(value: unknown): CurrentUser {
+  if (typeof value !== "object" || value === null || !("id" in value)) throw new AuthApiError(502);
+  const id = value.id;
+  if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0)
     throw new AuthApiError(502);
-  return { id: value.id };
+  return { id };
 }

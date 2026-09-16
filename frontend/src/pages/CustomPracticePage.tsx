@@ -130,8 +130,8 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
     if (isAccount && source !== "account")
       return (
         <div className="design-system practice-page custom-status">
-          <p>请登录后查看账号练习。</p>
-          <Link to="/settings?category=account">登录</Link> ·{" "}
+          <p>{auth.state.status === "disabled" ? "此站点未启用账号功能，无法读取账号练习。" : "请登录后查看账号练习。"}</p>
+          {auth.state.status !== "disabled" && <><Link to="/settings?category=account">登录</Link> ·{" "}</>}
           <ReturnLink to={`/custom/${selectedMode.id}`}>
             返回题目列表
           </ReturnLink>
@@ -502,7 +502,7 @@ function CustomExerciseEditor({
   const saveGeneration = useRef(0);
   const canSave =
     !auth.busy &&
-    (auth.state.status === "guest" || auth.state.status === "authenticated");
+    (auth.state.status === "guest" || auth.state.status === "disabled" || auth.state.status === "authenticated");
   useEffect(() => {
     // 身份变化或卸载后，旧保存仍可能在服务器完成，但不能再导航或覆盖当前草稿提示。
     return () => {

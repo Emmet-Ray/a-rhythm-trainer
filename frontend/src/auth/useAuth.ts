@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AuthApiError, authErrorMessage, getCurrentUser, loginWithCode, logoutSession, type CurrentUser } from "../api/auth";
+import { AuthApiError, authErrorMessage, getSessionState, loginWithCode, logoutSession, type SessionState } from "../api/auth";
 
 type AuthState =
-  | { status: "checking" | "guest" | "unavailable" }
-  | { status: "authenticated"; user: CurrentUser };
+  | { status: "checking" | "unavailable" }
+  | SessionState;
 
 /** 由 App 持有一份状态；旧的 /me 响应不能覆盖后来的登录或退出结果。 */
 export function useAuth() {
@@ -15,8 +15,8 @@ export function useAuth() {
 
   const restore = useCallback(async (version: number, signal?: AbortSignal) => {
     try {
-      const user = await getCurrentUser(signal);
-      if (!signal?.aborted && version === revision.current) setState(user ? { status: "authenticated", user } : { status: "guest" });
+      const session = await getSessionState(signal);
+      if (!signal?.aborted && version === revision.current) setState(session);
     } catch {
       if (!signal?.aborted && version === revision.current) setState({ status: "unavailable" });
     }

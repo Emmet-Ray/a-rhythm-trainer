@@ -16,7 +16,7 @@ try {
 
 test("当前用户仅将 401 解释为未登录，查询使用同源 Cookie", async (t) => {
   const fetch = t.mock.method(globalThis, "fetch", async () => new Response("", { status: 401 }));
-  assert.equal(await api.getCurrentUser(), null);
+  assert.deepEqual(await api.getSessionState(), { status: "guest" });
   const [url, options] = fetch.mock.calls[0].arguments;
   assert.equal(url, "/api/auth/me");
   assert.equal(options.credentials, "same-origin");
@@ -27,7 +27,7 @@ test("当前用户仅将 401 解释为未登录，查询使用同源 Cookie", as
 for (const status of [403, 500, 503]) {
   test(`/me 的 ${status} 不被当作未登录，不自动重试`, async (t) => {
     const fetch = t.mock.method(globalThis, "fetch", async () => new Response("secret", { status }));
-    await assert.rejects(api.getCurrentUser(), (error) => error.status === status && !error.message.includes("secret"));
+    await assert.rejects(api.getSessionState(), (error) => error.status === status && !error.message.includes("secret"));
     assert.equal(fetch.mock.callCount(), 1);
   });
 }
@@ -37,7 +37,7 @@ test("网络故障和取消保持异常，不返回未登录", async (t) => {
   const fetch = t.mock.method(globalThis, "fetch", async () => { throw failure; });
   const controller = new AbortController();
   controller.abort();
-  await assert.rejects(api.getCurrentUser(controller.signal), (error) => error === failure);
+  await assert.rejects(api.getSessionState(controller.signal), (error) => error === failure);
   assert.equal(fetch.mock.calls[0].arguments[1].signal, controller.signal);
   assert.equal(api.authErrorMessage(failure), "网络连接失败，请检查网络后重试。");
 });
@@ -68,12 +68,21 @@ test("错误响应不回显后端原始正文", async (t) => {
   await assert.rejects(api.sendLoginCode("13800138000"), (error) => error.status === 429 && api.authErrorMessage(error) === "发送过于频繁，请稍后再试。");
 });
 
-for (const value of [null, {}, { id: "1" }, { id: -1 }, { id: 1.5 }]) {
+for (const value of [null, {}, { id: "1" }, { id: -1 }, { id: 1.5 }, { auth_enabled: "false" }, { auth_enabled: false, id: 1 }, { auth_enabled: true }]) {
   test(`拒绝非法用户响应 ${JSON.stringify(value)}`, async (t) => {
     t.mock.method(globalThis, "fetch", async () => Response.json(value));
-    await assert.rejects(api.getCurrentUser(), (error) => error.status === 502);
+    await assert.rejects(api.getSessionState(), (error) => error.status === 502);
   });
 }
+
+test("身份查询区分明确关闭与已登录，错误响应即使有关闭字段也不能降级", async (t) => {
+  const fetch = t.mock.method(globalThis, "fetch", async () => Response.json({ auth_enabled: false }));
+  assert.deepEqual(await api.getSessionState(), { status: "disabled" });
+  fetch.mock.mockImplementation(async () => Response.json({ id: 7 }));
+  assert.deepEqual(await api.getSessionState(), { status: "authenticated", user: { id: 7 } });
+  fetch.mock.mockImplementation(async () => Response.json({ auth_enabled: false }, { status: 503 }));
+  await assert.rejects(api.getSessionState(), error => error.status === 503);
+});
 
 test("拒绝非法请求 ID 与非预期退出响应", async (t) => {
   t.mock.method(globalThis, "fetch", async () => Response.json({ request_id: "bad" }));

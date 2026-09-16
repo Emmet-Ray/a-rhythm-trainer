@@ -186,8 +186,22 @@ def test_disabled_auth_keeps_health_available(monkeypatch):
     monkeypatch.setenv("AUTH_ENABLED", "false")
     with TestClient(create_app()) as client:
         assert client.get("/api/health").json() == {"status": "ok"}
-        assert client.get("/api/auth/me").status_code == 503
+        response = client.get("/api/auth/me")
+        assert response.status_code == 200
+        assert response.json() == {"auth_enabled": False}
+        assert response.headers["cache-control"] == "no-store"
+        assert "set-cookie" not in response.headers
         assert client.post("/api/auth/sms-code", json={"phone_number": PHONE}).status_code == 503
+        assert client.post("/api/auth/login", json={}).status_code == 503
+        assert client.post("/api/auth/logout").status_code == 503
+        assert client.get("/api/custom-exercises?mode=tapping").status_code == 503
+        assert client.post("/api/custom-exercises", json={}).status_code == 503
+
+
+def test_missing_enabled_runtime_is_not_reported_as_disabled(http):
+    client, _, _ = http
+    client.app.state.resources = None
+    assert client.get("/api/auth/me").status_code == 503
 
 
 def test_local_http_cookie(migrated_db):

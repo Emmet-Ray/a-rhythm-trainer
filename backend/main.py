@@ -25,8 +25,10 @@ def create_app(*, resources: AppResources | None = None) -> FastAPI:
                     engine = create_database_engine()
                     active_resources = AppResources(engine, Auth(engine, sms, session_lifetime=SESSION_LIFETIME), settings)
             app.state.resources = active_resources
+            app.state.auth_enabled = active_resources is not None
             yield
         finally:
+            app.state.auth_enabled = None
             app.state.resources = None
             if engine is not None:
                 engine.dispose()

@@ -21,8 +21,8 @@ class SessionApiRoute(APIRoute):
         async def handle(request: Request):
             # 包住参数解析，在读取请求体前检查来源；默认 422 可能回显敏感输入。
             try:
-                settings = get_http_settings(request)
                 if request.method not in ("GET", "HEAD", "OPTIONS"):
+                    settings = get_http_settings(request)
                     origins = request.headers.getlist("origin")
                     if len(origins) != 1 or origins[0] not in settings.allowed_origins:
                         raise HTTPException(403, "请求来源不受允许。")

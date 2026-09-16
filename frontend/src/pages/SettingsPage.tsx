@@ -165,6 +165,8 @@ function AccountSettings({ auth }: { auth: ReturnType<typeof useAuth> }) {
         <p role="status" data-navigation-pending>
           正在确认登录…
         </p>
+      ) : auth.state.status === "disabled" ? (
+        <p role="status">此站点未启用账号功能。你仍可使用预设、随机和本地自定义练习；本地题目保存在当前浏览器中。</p>
       ) : auth.state.status === "authenticated" ? (
         <>
           <p role="status">已登录</p>

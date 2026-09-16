@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from domain.auth import InvalidVerificationCode, LoginRequestBlocked, LoginRequestUnavailable
 from db.sessions import revoke_login_session
-from api.dependencies import AuthenticatedUser, CurrentUser, DatabaseEngine, HttpSettings, LoginService
+from api.dependencies import AuthDisabled, CurrentUser, DatabaseEngine, HttpSettings, LoginService, SessionStatus
 from api.http_policy import SessionApiRoute
 from settings import SESSION_LIFETIME
 from integrations.sms import SmsServiceError
@@ -64,8 +64,8 @@ async def login(body: LoginBody, response: Response, auth: LoginService, setting
     return CurrentUser(id=result.user_id)
 
 
-@router.get("/me", response_model=CurrentUser)
-def me(user: AuthenticatedUser):
+@router.get("/me", response_model=CurrentUser | AuthDisabled)
+def me(user: SessionStatus):
     return user
 
 

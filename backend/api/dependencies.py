@@ -10,7 +10,7 @@
 """
 
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -72,3 +72,17 @@ def get_current_user(request: Request, engine: DatabaseEngine, settings: HttpSet
 
 
 AuthenticatedUser = Annotated[CurrentUser, Depends(get_current_user)]
+
+
+class AuthDisabled(BaseModel):
+    auth_enabled: Literal[False] = False
+
+
+def get_session_status(request: Request) -> CurrentUser | AuthDisabled:
+    """仅身份查询允许返回功能关闭；缺失运行时或数据库故障仍按错误处理。"""
+    if getattr(request.app.state, "auth_enabled", None) is False:
+        return AuthDisabled()
+    return get_current_user(request, get_database_engine(request), get_http_settings(request))
+
+
+SessionStatus = Annotated[CurrentUser | AuthDisabled, Depends(get_session_status)]
