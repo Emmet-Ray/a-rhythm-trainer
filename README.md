@@ -41,7 +41,7 @@ docker compose up
 
 打开 <http://localhost:8080>访问网页内容
 
-## 后续计划
+## TODO
 
 - [ ] 丰富预设题库
 - [ ] 调整随机出题策略
