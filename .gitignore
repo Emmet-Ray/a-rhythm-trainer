@@ -1,1 +1,5 @@
 ignoreme/
+.env
+.env.*
+!.env.example
+backups/

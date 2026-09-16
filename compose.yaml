@@ -1,0 +1,46 @@
+services:
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-8080}:80"
+    volumes:
+      - type: bind
+        source: ./content
+        target: /srv/content
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/index.html"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      AUTH_ENABLED: "${AUTH_ENABLED:-false}"
+      AUTH_ALLOWED_ORIGINS: "${AUTH_ALLOWED_ORIGINS:-}"
+      AUTH_COOKIE_SECURE: "${AUTH_COOKIE_SECURE:-true}"
+      DATABASE_URL: sqlite:////var/lib/rhythm-trainer/rhythm_trainer.db
+      ALIBABA_CLOUD_ACCESS_KEY_ID: "${ALIBABA_CLOUD_ACCESS_KEY_ID:-}"
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: "${ALIBABA_CLOUD_ACCESS_KEY_SECRET:-}"
+      SMS_SIGN_NAME: "${SMS_SIGN_NAME:-}"
+      SMS_TEMPLATE_CODE: "${SMS_TEMPLATE_CODE:-}"
+      SMS_SCHEME_NAME: "${SMS_SCHEME_NAME:-}"
+    volumes:
+      - backend-data:/var/lib/rhythm-trainer
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  backend-data:
