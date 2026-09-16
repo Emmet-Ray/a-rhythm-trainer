@@ -18,6 +18,7 @@ const { SuccessToast } = await server.ssrLoadModule("/src/navigation/SuccessToas
 const { default: PracticeSettings } = await server.ssrLoadModule("/src/practice/PracticeSettings.tsx");
 const { default: RhythmPlayback } = await server.ssrLoadModule("/src/practice/RhythmPlayback.tsx");
 const { default: PracticeCue } = await server.ssrLoadModule("/src/practice/PracticeCue.tsx");
+const { default: PracticeResult } = await server.ssrLoadModule("/src/practice/PracticeResult.tsx");
 const { RhythmDraftScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmDraftScore.tsx");
 const { default: App } = await server.ssrLoadModule("/src/App.tsx");
 const { default: SiteNavigation } = await server.ssrLoadModule("/src/navigation/SiteNavigation.tsx");
@@ -108,30 +109,39 @@ async function renderApp(path) {
   return (await new Response(stream).text()).replace(/<script\b[^]*?<\/script>/g, "").replaceAll("<!-- -->", "");
 }
 
-test("结果图标不参与朗读，正确与错误都保留文字及关闭按钮名称", () => {
+test("工具栏结果有图标与文字，不再使用遮罩或关闭按钮", () => {
   for (const passed of [true, false]) {
-    const html = renderToStaticMarkup(createElement(PracticeCue, { passed, onDismiss() {} }));
-    assert.match(html, /aria-label="关闭练习结果"/);
+    const html = renderToStaticMarkup(createElement(PracticeResult, { passed }));
+    assert.doesNotMatch(html, /<button|trainer-result|关闭练习结果/);
     assert.match(html, /<svg[^>]*aria-hidden="true"[^>]*focusable="false"/);
-    assert.match(withoutSvg(html), new RegExp(`data-passed="${passed}">${passed ? "通过" : "未通过"}`));
+    assert.match(withoutSvg(html), new RegExp(`data-passed="${passed}">${passed ? "本次通过" : "本次未通过"}`));
   }
 });
 
-test("共用提示支持倒数和可关闭结果，听写反馈位于小节内而遮罩位于滚动窗口之外", () => {
+test("未判定时保留空结果区域，听写完成显示全部通过", () => {
+  const empty = renderToStaticMarkup(createElement(PracticeResult, { passed: null }));
+  assert.match(empty, /role="status"/);
+  assert.doesNotMatch(empty, /<svg|data-passed|通过/);
+  const complete = renderToStaticMarkup(createElement(PracticeResult, { passed: true, complete: true }));
+  assert.match(complete, /全部通过/);
+  assert.doesNotMatch(complete, /本次通过/);
+});
+
+test("谱面仅保留倒数遮罩，听写小节反馈保持原位", () => {
   for (const countdown of [4, 3, 2, 1]) {
     const html = renderToStaticMarkup(createElement(PracticeCue, { countdown }));
     assert.match(html, new RegExp(`aria-label="预备拍：${countdown}"`));
     assert.doesNotMatch(html, /关闭练习结果/);
   }
-  const cue = createElement(PracticeCue, { passed: true, onDismiss() {} });
+  const cue = createElement(PracticeCue, { countdown: 3 });
   const html = renderToStaticMarkup(createElement(RhythmDraftScore, {
     measures: [[]], timeSignature: { beats: 4, beatType: 4 },
     measureFeedback: ["correct"], overlay: cue,
   }));
   assert.match(html, /draft-measure-feedback[^]*data-verdict="correct"/);
   assert.match(html, /<\/div><\/div><\/div><div class="rhythm-score-overlay">/);
-  assert.match(html, /aria-label="关闭练习结果"/);
-  assert.match(withoutSvg(html), /data-passed="true">通过/);
+  assert.match(html, /aria-label="预备拍：3"/);
+  assert.doesNotMatch(html, /关闭练习结果|trainer-result/);
 });
 
 test("听写小节反馈与导航同步，未验证或清除后不显示结果", () => {

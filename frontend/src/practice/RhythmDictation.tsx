@@ -20,6 +20,7 @@ import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
 import RhythmPlayback from "./RhythmPlayback";
 import PracticeFrame from "./PracticeFrame";
 import PracticeCue from "./PracticeCue";
+import PracticeResult from "./PracticeResult";
 
 {
   /*
@@ -149,6 +150,7 @@ export function RhythmDictation({
       <PracticeFrame
         settingsPanel={settingsPanel}
         toolbar={
+          <>
           <div className="dictation-playbar">
             {/* 只重建播放器：切换范围/小节取消旧排程，草稿和验证结果仍保留。 */}
             <RhythmPlayback
@@ -213,6 +215,8 @@ export function RhythmDictation({
               }
             />
           </div>
+          <PracticeResult passed={isComplete && resultVisible ? true : null} complete />
+          </>
         }
       >
         <RhythmEditor
@@ -239,8 +243,6 @@ export function RhythmDictation({
           scoreOverlay={
             countdown !== null ? (
               <PracticeCue countdown={countdown} />
-            ) : isComplete && resultVisible ? (
-              <PracticeCue passed onDismiss={() => setResultVisible(false)} />
             ) : null
           }
           measureFeedback={measureVerdicts}

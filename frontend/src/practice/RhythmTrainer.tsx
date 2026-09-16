@@ -3,6 +3,7 @@ import { Hand, LoaderCircle, Play, Square } from "lucide-react";
 import { MetronomePlaybackContext } from "./MetronomePlayback";
 import PracticeFrame from "./PracticeFrame";
 import PracticeCue from "./PracticeCue";
+import PracticeResult from "./PracticeResult";
 
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import { DEFAULT_TAPPING_PRECISION, getTappingTimingWindows } from "../settings/tappingPrecision";
@@ -98,8 +99,6 @@ function RhythmTrainer({
   const [timingEvents, setTimingEvents] = useState<TimingEvent[]>([]);
   const [startingMode, setStartingMode] = useState<PlaybackMode | null>(null);
   const isStarting = startingMode !== null;
-  const [dismissedResultRound, setDismissedResultRound] = useState<number | null>(null);
-  const practiceButtonRef = useRef<HTMLButtonElement>(null);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [configuration, setConfiguration] = useState({ exercise, bpm, countInBeatCount });
   if (configuration.exercise !== exercise || configuration.bpm !== bpm || configuration.countInBeatCount !== countInBeatCount) {
@@ -171,11 +170,6 @@ function RhythmTrainer({
   const countInRemaining = phase === "countIn" && countInBeat >= 0
     ? timeline.countInOffsetsMs.length - countInBeat
     : null;
-
-  function dismissResult() {
-    setDismissedResultRound(roundId);
-    practiceButtonRef.current?.focus({ preventScroll: true });
-  }
 
   useEffect(() => {
     if (!isRunning) return;
@@ -393,7 +387,6 @@ function RhythmTrainer({
       <div className="trainer-actions">
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
         <button
-          ref={practiceButtonRef}
           type="button"
           data-action={isRunning && mode === "practice" ? "stop" : "start"}
           disabled={isStarting || (isRunning && mode !== "practice")}
@@ -420,6 +413,7 @@ function RhythmTrainer({
         </button>
       </div>
       {extraActions?.(isStarting || isRunning)}
+      <PracticeResult passed={result?.passed ?? null} />
       {audioError && <p className="trainer-audio-error" role="alert">{audioError}</p>}
     </>}>
       <RhythmScore
@@ -430,8 +424,6 @@ function RhythmTrainer({
         playback={isRunning ? { roundId, eventIndex: phase === "countIn" ? 0 : playingBeatIndex } : null}
         overlay={countInRemaining !== null ? (
           <PracticeCue countdown={countInRemaining} />
-        ) : result !== null && dismissedResultRound !== roundId ? (
-          <PracticeCue passed={result.passed} onDismiss={dismissResult} />
         ) : null}
       />
     </PracticeFrame>
