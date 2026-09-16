@@ -98,3 +98,35 @@ export function saveCustomExercise(input: Omit<CustomExercise, "id">, storage?: 
   }
   return item;
 }
+
+/** 原位更新且不改变模式；每次读取最新题库，不把已删除的题目重新创建。 */
+export function updateCustomExercise(id: string, input: Omit<CustomExercise, "id">, storage?: StorageAccess): CustomExercise {
+  requireMode(input.mode);
+  if (typeof input.name !== "string" || !input.name.trim()) throw new Error("请输入练习名称。");
+  const exercise = parseRhythmExercise(input.exercise);
+  const target = getStorage(storage);
+  const { exercises } = readAll(target);
+  const index = exercises.findIndex(item => item.id === id && item.mode === input.mode);
+  if (index < 0) throw new Error("练习已不存在，请返回列表检查。");
+  const item = { id, name: input.name.trim(), mode: input.mode, exercise };
+  exercises[index] = item;
+  writeExercises(target, exercises);
+  return item;
+}
+
+/** 仅删除指定模式的原题；调用方确认后执行，写入失败不报告成功。 */
+export function deleteCustomExercise(id: string, mode: CustomMode, storage?: StorageAccess): void {
+  requireMode(mode);
+  const target = getStorage(storage);
+  const { exercises } = readAll(target);
+  if (!exercises.some(item => item.id === id && item.mode === mode)) throw new Error("练习已不存在，请返回列表检查。");
+  writeExercises(target, exercises.filter(item => item.id !== id));
+}
+
+function writeExercises(storage: StorageAccess, exercises: CustomExercise[]) {
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, exercises }));
+  } catch {
+    throw new Error("修改失败，浏览器存储可能已满或不可用；原题未修改，请检查后重试。");
+  }
+}

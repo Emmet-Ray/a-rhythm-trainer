@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,7 @@ from api.dependencies import AuthenticatedUser, DatabaseEngine
 from api.http_policy import SessionApiRoute
 from db.custom_exercises import (
     CustomExercise, create_custom_exercise, get_custom_exercise, list_custom_exercises,
+    update_custom_exercise, delete_custom_exercise,
 )
 
 
@@ -31,6 +32,12 @@ class ExerciseSummary(BaseModel):
     name: str
     mode: Mode
     created_at: datetime
+
+
+class UpdateExerciseBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    name: str
+    exercise: dict
 
 
 class ExerciseResponse(ExerciseSummary):
@@ -88,3 +95,24 @@ def read_exercise(exercise_id: str, user: AuthenticatedUser, engine: DatabaseEng
         if item is None:
             raise HTTPException(404, "练习不存在。")
         return _detail(item)
+
+
+@router.put("/{exercise_id}", response_model=ExerciseResponse)
+def update_exercise(exercise_id: str, body: UpdateExerciseBody, user: AuthenticatedUser, engine: DatabaseEngine):
+    with Session(engine) as session, session.begin():
+        try:
+            item = update_custom_exercise(session, user.id, exercise_id, name=body.name, exercise=body.exercise)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from None
+        if item is None:
+            raise HTTPException(404, "练习不存在。")
+        result = _detail(item)
+    return result
+
+
+@router.delete("/{exercise_id}", status_code=204)
+def delete_exercise(exercise_id: str, user: AuthenticatedUser, engine: DatabaseEngine):
+    with Session(engine) as session, session.begin():
+        if not delete_custom_exercise(session, user.id, exercise_id):
+            raise HTTPException(404, "练习不存在。")
+    return Response(status_code=204)

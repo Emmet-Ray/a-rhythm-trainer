@@ -71,6 +71,36 @@ def test_create_list_read_and_isolation(http):
     assert foreign.json() == missing.json()
 
 
+@pytest.mark.parametrize("mode", ["tapping", "dictation"])
+def test_update_delete_and_ownership(http, mode):
+    client, (a, b), _ = http
+    original = client.post(PATH, json=payload(mode), headers=headers(a)).json()
+    path = f"{PATH}/{original['id']}"
+    body = {"name": " 修改后 ", "exercise": payload()["exercise"]}
+    body["exercise"]["measures"] *= 2
+    for method in ("put", "delete"):
+        kwargs = {"json": body} if method == "put" else {}
+        assert getattr(client, method)(path, headers=headers(b), **kwargs).status_code == 404
+        assert getattr(client, method)(path, **kwargs).status_code == 401
+        assert getattr(client, method)(path, headers={**headers(a), "Origin": "https://evil.example"}, **kwargs).status_code == 403
+    for invalid in ({**body, "mode": "dictation"}, {**body, "name": " "}, {**body, "exercise": {}}, {**body, "user_id": 1}):
+        assert client.put(path, json=invalid, headers=headers(a)).status_code == 422
+        assert client.get(path, headers=headers(a)).json() == original
+    response = client.put(path, json=body, headers=headers(a))
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    updated = response.json()
+    assert updated == {**original, "name": "修改后", "exercise": body["exercise"]}
+    assert client.get(path, headers=headers(a)).json() == updated
+    response = client.delete(path, headers=headers(a))
+    assert response.status_code == 204 and response.content == b""
+    assert response.headers["cache-control"] == "no-store"
+    assert client.get(path, headers=headers(a)).status_code == 404
+    assert client.put(path, json=body, headers=headers(a)).status_code == 404
+    assert client.delete(path, headers=headers(a)).status_code == 404
+    assert client.get(PATH, params={"mode": mode}, headers=headers(a)).json()["items"] == []
+
+
 @pytest.mark.parametrize("cookie", [None, "invalid", "a" * 43])
 def test_requires_valid_session(http, cookie):
     client, _, _ = http
@@ -196,3 +226,23 @@ def test_query_failure_is_not_empty_list_or_not_found(http, monkeypatch):
     for url in (f"{PATH}?mode=tapping", f"{PATH}/missing"):
         response = client.get(url, headers=headers(a))
         assert response.status_code == 503 and "secret" not in response.text
+
+
+@pytest.mark.parametrize("method", ["put", "delete"])
+def test_mutation_commit_failure_preserves_original(http, method):
+    client, (a, _), _ = http
+    original = client.post(PATH, json=payload(), headers=headers(a)).json()
+    path = f"{PATH}/{original['id']}"
+
+    def fail(session):
+        raise OperationalError("secret sql", {}, Exception("secret database path"))
+
+    event.listen(Session, "before_commit", fail)
+    try:
+        kwargs = {"json": {"name": "修改", "exercise": payload()["exercise"]}} if method == "put" else {}
+        response = getattr(client, method)(path, headers=headers(a), **kwargs)
+    finally:
+        event.remove(Session, "before_commit", fail)
+    assert response.status_code == 503
+    assert "secret" not in response.text
+    assert client.get(path, headers=headers(a)).json() == original

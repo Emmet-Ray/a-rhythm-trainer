@@ -1,7 +1,7 @@
 """账号下的完整自定义练习；不处理 HTTP、不读取登录状态、不自动提交事务。
 
 调用方必须从已认证会话取得 user_id，不能采用请求体中的用户 ID。
-本模块提供新建及用户范围内的查询，暂无更新、删除或本地数据导入。
+本模块提供用户范围内的增删改查，不导入本地数据。
 节奏规则由 domain.rhythm 负责，保存函数调用它校验，不要求调用方预先校验。
 节奏内容整体保存为 JSON；将来更新时应重新校验并整体赋值，不原地修改嵌套 JSON。
 """
@@ -100,6 +100,30 @@ def get_custom_exercise(session: Session, user_id: int, exercise_id: str) -> Cus
 def _require_user(user_id):
     if type(user_id) is not int or user_id <= 0:
         raise ValueError("必须提供有效的当前用户 ID。")
+
+
+def update_custom_exercise(session: Session, user_id: int, exercise_id: str, *, name: str, exercise: object) -> CustomExercise | None:
+    """覆盖当前用户的原题；保留 ID、模式与创建时间，不存在时不新建。"""
+    item = get_custom_exercise(session, user_id, exercise_id)
+    if item is None:
+        return None
+    if not isinstance(name, str) or not 1 <= len(name.strip()) <= MAX_NAME_LENGTH:
+        raise ValueError("练习名称须为 1–100 个字符。")
+    normalized = parse_rhythm_exercise(exercise)
+    item.name = name.strip()
+    item.exercise = normalized
+    session.flush()
+    return item
+
+
+def delete_custom_exercise(session: Session, user_id: int, exercise_id: str) -> bool:
+    """只删除当前用户的题目；不存在/不属于当前用户均返回 False，由调用方提交。"""
+    item = get_custom_exercise(session, user_id, exercise_id)
+    if item is None:
+        return False
+    session.delete(item)
+    session.flush()
+    return True
 
 
 def _require_mode(mode):

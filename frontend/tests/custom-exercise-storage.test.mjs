@@ -7,9 +7,9 @@ const server = await createServer({
   server: { middlewareMode: true, watch: null, ws: false },
   optimizeDeps: { noDiscovery: true, include: [] },
 });
-let saveCustomExercise, listCustomExercises, getCustomExerciseSummary, clearCustomExercises;
+let saveCustomExercise, listCustomExercises, getCustomExerciseSummary, clearCustomExercises, updateCustomExercise, deleteCustomExercise;
 try {
-  ({ saveCustomExercise, listCustomExercises, getCustomExerciseSummary, clearCustomExercises } = await server.ssrLoadModule("/src/exercises/customExercises.ts"));
+  ({ saveCustomExercise, listCustomExercises, getCustomExerciseSummary, clearCustomExercises, updateCustomExercise, deleteCustomExercise } = await server.ssrLoadModule("/src/exercises/customExercises.ts"));
 } finally {
   await server.close();
 }
@@ -26,6 +26,41 @@ const note = (noteValue, dots) => ({ kind: "note", noteValue, ...(dots === undef
 const candidate = (mode = "tapping") => ({
   name: "  我的练习  ", mode,
   exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [note("whole")] }] },
+});
+
+test("编辑保留 ID、模式、顺序和其他题目，删除只移除目标", () => {
+  const storage = memoryStorage();
+  const first = saveCustomExercise(candidate(), storage);
+  const other = saveCustomExercise(candidate(), storage);
+  const dictation = saveCustomExercise(candidate("dictation"), storage);
+  const updated = updateCustomExercise(first.id, {...candidate(), name: " 修改后 "}, storage);
+  assert.equal(updated.id, first.id);
+  assert.equal(updated.name, "修改后");
+  assert.deepEqual(listCustomExercises("tapping", storage), [other, updated]);
+  deleteCustomExercise(first.id, "tapping", storage);
+  assert.deepEqual(listCustomExercises("tapping", storage), [other]);
+  assert.deepEqual(listCustomExercises("dictation", storage), [dictation]);
+  assert.throws(() => updateCustomExercise(first.id, candidate(), storage), /不存在/);
+  assert.throws(() => deleteCustomExercise(first.id, "tapping", storage), /不存在/);
+});
+
+test("错误模式、非法内容及写入失败不改变原题", () => {
+  const storage = memoryStorage();
+  const item = saveCustomExercise(candidate(), storage);
+  const before = storage.raw;
+  assert.throws(() => updateCustomExercise(item.id, candidate("dictation"), storage), /不存在/);
+  assert.throws(() => deleteCustomExercise(item.id, "dictation", storage), /不存在/);
+  assert.throws(() => updateCustomExercise(item.id, {...candidate(), exercise: {}}, storage));
+  storage.setItem = () => { throw Error("quota"); };
+  assert.throws(() => updateCustomExercise(item.id, candidate(), storage), /修改失败/);
+  assert.throws(() => deleteCustomExercise(item.id, "tapping", storage), /修改失败/);
+  assert.equal(storage.raw, before);
+  for (const raw of ["broken", '{"version":2,"exercises":[]}']) {
+    const broken = memoryStorage(raw);
+    assert.throws(() => deleteCustomExercise(item.id, "tapping", broken), /损坏/);
+    assert.throws(() => updateCustomExercise(item.id, candidate(), broken), /损坏/);
+    assert.equal(broken.raw, raw);
+  }
 });
 
 test("本地概览汇总两种模式，空题库为零，损坏和读取失败不返回零", () => {

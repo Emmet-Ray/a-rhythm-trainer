@@ -9,12 +9,12 @@ export class CustomExerciseApiError extends Error {
   readonly status: number;
   constructor(status: number) {
     const messages: Record<number, string> = {
-      0: "网络请求失败；如果正在保存，结果可能尚未确认，请先检查账号练习列表。",
+      0: "网络请求失败；保存或删除的结果可能尚未确认，请先检查账号练习列表。",
       401: "尚未登录或登录已过期，请重新登录。",
       403: "请求来源不受允许，请检查网站配置。",
       404: "练习不存在或不属于当前账号。",
       422: "练习内容或请求参数不合法，请检查名称、模式和小节内容。",
-      502: "练习服务响应格式异常；如果正在保存，请先检查账号练习列表。",
+      502: "练习服务响应格式异常；保存或删除的结果可能尚未确认，请先检查账号练习列表。",
       503: "练习服务暂不可用，请稍后再试。",
     };
     super(messages[status] ?? "练习请求失败，请稍后再试。");
@@ -73,12 +73,29 @@ async function request(path: string, options: RequestInit, expectedStatus: numbe
   }
   if (!response.ok) throw new CustomExerciseApiError(response.status);
   if (response.status !== expectedStatus) throw new CustomExerciseApiError(502);
+  if (expectedStatus === 204) return;
   try {
     return await response.json();
   } catch (error) {
     if (options.signal?.aborted || (error instanceof Error && error.name === "AbortError")) throw error;
     throw new CustomExerciseApiError(502);
   }
+}
+
+/** 更新原题，不允许切换模式；失败时不自动重试或回退本地。 */
+export async function updateAccountExercise(id: string, input: Omit<CustomExercise, "id">): Promise<AccountExercise> {
+  if (!id.trim()) throw new CustomExerciseApiError(422);
+  const item = parseDetail(await request(`/${encodeURIComponent(id)}`, {
+    method: "PUT", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: input.name, exercise: input.exercise }),
+  }, 200));
+  if (item.id !== id || item.mode !== input.mode) throw new CustomExerciseApiError(502);
+  return item;
+}
+
+export async function deleteAccountExercise(id: string): Promise<void> {
+  if (!id.trim()) throw new CustomExerciseApiError(422);
+  await request(`/${encodeURIComponent(id)}`, { method: "DELETE" }, 204);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

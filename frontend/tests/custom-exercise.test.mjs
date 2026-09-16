@@ -13,6 +13,8 @@ const server = await createServer({
 });
 after(() => server.close());
 const { default: CustomPracticePage } = await server.ssrLoadModule("/src/pages/CustomPracticePage.tsx");
+const { SuccessToast } = await server.ssrLoadModule("/src/navigation/SuccessToast.tsx");
+
 const { default: PracticeSettings } = await server.ssrLoadModule("/src/practice/PracticeSettings.tsx");
 const { default: RhythmPlayback } = await server.ssrLoadModule("/src/practice/RhythmPlayback.tsx");
 const { default: PracticeCue } = await server.ssrLoadModule("/src/practice/PracticeCue.tsx");
@@ -40,6 +42,14 @@ try {
 
 // 导航和状态文案不依赖图标库生成的 SVG 路径与属性顺序。
 const withoutSvg = html => html.replace(/<svg\b[^]*?<\/svg>/g, "");
+
+test("保存通知保留状态朗读并提供有名称的关闭按钮", () => {
+  const html = renderToStaticMarkup(createElement(SuccessToast, { message: "修改已保存" }));
+  assert.match(html, /role="status" aria-live="polite"/);
+  assert.match(html, /修改已保存/);
+  assert.match(html, /<button[^>]*type="button" aria-label="关闭提示"/);
+  assert.match(html, /lucide-x[^>]*aria-hidden="true"/);
+});
 
 test("高频操作在各模式保留文字并提供不参与朗读的图标", async () => {
   for (const [path, labels] of [
@@ -432,7 +442,7 @@ test("原访问恢复草稿内容和生效设置，身份及模式不同不载�
     selectedMeasureIndex: 2,
     settings: { bpm: 93, metronomeEnabled: false },
   };
-  const field = "custom:account:1:tapping:draft";
+  const field = "custom:account:1:account:tapping:new:draft";
   visits.write("test-visit", field, draft);
   const auth = { state: { status: "authenticated", user: { id: 1 } }, busy: false };
   const html = await renderPage("/custom/tapping/new", "/custom/:mode/new", auth, visits);
@@ -500,12 +510,13 @@ test("已保存列表链接到所属模式的题目", async (t) => {
   }
 });
 
-test("保存返回仅突出匹配题目，失效保存标记不显示反馈", async (t) => {
+test("历史保存标记不再产生常驻提示或高亮，返回列表不重播创建通知", async (t) => {
   mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
   for (const mode of ["tapping", "dictation"]) {
     const html = await renderPage(`/custom/${mode}`, "/custom/:mode", undefined, null, { savedExerciseId: `saved-${mode}` });
-    assert.equal((html.match(/data-just-saved="true"/g) ?? []).length, 1);
-    assert.match(html, /class="custom-saved-notice" role="status">已保存/);
+    assert.doesNotMatch(html, /data-just-saved|custom-saved-notice|>已保存</);
+    const returned = await renderPage(`/custom/${mode}`, "/custom/:mode", undefined, null, { createdExercise: true });
+    assert.doesNotMatch(returned, /练习已创建/);
     const stale = await renderPage(`/custom/${mode}`, "/custom/:mode", undefined, null, { savedExerciseId: "missing" });
     assert.doesNotMatch(stale, /data-just-saved|custom-saved-notice/);
   }
@@ -628,6 +639,39 @@ test("模式列表保留新建入口，空存储引导创建", async (t) => {
     assert.match(html, /还没有练习，点击上方「新建练习」开始创建。/);
     assert.doesNotMatch(html, /已保存的自定义练习|编辑自定义练习/);
   }
+});
+
+test("自定义列表管理操作与练习链接独立，编辑读取原题且拒绝错误模式", async (t) => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const item = {id: "edit-test", name: "原题", mode: "tapping", exercise: {
+    timeSignature: {beats: 4, beatType: 4}, measures: [{elements: [{kind: "note", noteValue: "whole"}]}],
+  }};
+  Object.defineProperty(globalThis, "localStorage", {configurable: true, value: {
+    getItem: () => JSON.stringify({version: 1, exercises: [item]}),
+  }});
+  t.after(() => previous ? Object.defineProperty(globalThis, "localStorage", previous) : delete globalThis.localStorage);
+  const list = await renderPage("/custom/tapping", "/custom/:mode");
+  assert.match(list, /href="\/custom\/tapping\/edit-test\/edit"/);
+  assert.doesNotMatch(list, /class="question-link"/);
+  for (const label of ["开始练习", "编辑", "删除"]) {
+    const control = (list.match(/<(?:a|button)\b[^]*?<\/(?:a|button)>/g) ?? [])
+      .find(item => withoutSvg(item).replace(/<[^>]*>/g, "").trim() === label);
+    assert.ok(control, label);
+    assert.match(control, new RegExp(`<svg[^]*<\\/svg>${label}`));
+  }
+  assert.match(withoutSvg(list), /<button[^>]*>删除<\/button>/);
+  for (const anchor of list.match(/<a\b[^]*?<\/a>/g) ?? []) assert.doesNotMatch(anchor, /<button/);
+  const edit = await renderPage("/custom/tapping/edit-test/edit", "/custom/:mode/:exerciseId/edit");
+  assert.match(edit, /编辑：原题/);
+  assert.match(edit, /value="原题"/);
+  assert.match(edit, /保存修改/);
+  assert.match(edit, /aria-label="当前小节数量">1/);
+  const wrongMode = await renderPage("/custom/dictation/edit-test/edit", "/custom/:mode/:exerciseId/edit");
+  assert.match(wrongMode, /没有该模式/);
+  assert.doesNotMatch(wrongMode, /保存修改/);
+  const account = await renderPage("/custom/tapping/account/edit-test/edit", "/custom/:mode/account/:exerciseId/edit");
+  assert.match(account, /请登录后/);
+  assert.doesNotMatch(account, /保存修改|value="原题"/);
 });
 
 test("存储访问失败时列表显示错误与重试，不显示空题库", async (t) => {

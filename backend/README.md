@@ -4,7 +4,7 @@ Python 3.12+、FastAPI，使用 uv 管理依赖，SQLite 存储数据，SQLAlche
 
 已提供健康检查、短信登录、当前用户查询及退出接口，使用服务端会话和 HttpOnly Cookie，并接入前端登录页面。登录接口默认关闭；公开接入前仍需补齐 IP 限流、短信发送预算等反滥用保护。
 
-账号自定义练习支持保存、分页列表和单题读取，本地练习不会自动导入。保存上限为名称 100 字符、64 个完整 4/4 小节；三个接口都要求有效会话，并强制按用户范围执行。具体约定见下方“接口约定”，参数和响应结构以运行后的 `/docs` 为准。
+账号自定义练习支持新建、编辑、删除、分页列表和单题读取，本地练习不会自动导入。保存上限为名称 100 字符、64 个完整 4/4 小节；所有题目接口都要求有效会话，并强制按用户范围执行。具体约定见下方“接口约定”，参数和响应结构以运行后的 `/docs` 为准。
 
 ## 本地运行
 
@@ -111,12 +111,14 @@ uv run --locked --env-file .env alembic revision --autogenerate -m "describe cha
 | `POST /api/custom-exercises` | 提交 `name`、`mode`、`exercise`，事务提交后返回 201 和完整题目 |
 | `GET /api/custom-exercises?mode=tapping&limit=50&offset=0` | 返回 `{items, limit, offset}`，items 仅含摘要 |
 | `GET /api/custom-exercises/{exercise_id}` | 返回当前账号的一道完整题目 |
+| `PUT /api/custom-exercises/{exercise_id}` | 提交 `name`、`exercise`，覆盖原题并返回 200 和完整题目；ID、模式和创建时间不变 |
+| `DELETE /api/custom-exercises/{exercise_id}` | 删除当前账号的原题，提交成功后返回 204，无响应体 |
 
-- 不接受客户端指定 `user_id`、`id` 或 `created_at`；每次保存新建一道题目，同名不覆盖。
+- 不接受客户端指定 `user_id`、`id` 或 `created_at`；POST 新建一道题目，同名不覆盖；PUT 不接受 `mode`，原题不存在时不会重新创建。
 - 完整题目包含 `id`、`name`、`mode`、`exercise`、`created_at`；摘要不含 `exercise`，时间为 UTC，不返回归属用户 ID。
 - 列表必填 `mode=tapping` 或 `mode=dictation`，默认每页 50 条、最多 100 条，按创建时间和 ID 降序排列。不返回总数，读取不足一页时结束；并发新增时 offset 分页不保证跨请求快照。
-- 未登录返回 401，POST 来源不允许返回 403，不存在或不属于当前账号的题目统一返回 404，非法内容返回 422，数据库异常返回 503，不伪装成空列表。
-- 保存响应丢失不代表保存失败，应先查看账号列表，不自动重发或回退本地保存。暂不提供编辑、删除或本地题目导入接口。
+- 未登录返回 401，写请求来源不允许返回 403，不存在或不属于当前账号的题目统一返回 404，非法内容返回 422，数据库异常返回 503，不伪装成空列表。
+- 写请求响应丢失不代表操作失败，应先查看账号列表，不自动重发或回退本地保存。删除不可恢复；暂不提供本地题目导入接口。
 
 接口实现见 [api/auth.py](api/auth.py)、[api/custom_exercises.py](api/custom_exercises.py)，节奏内容校验见 [domain/rhythm.py](domain/rhythm.py)。
 

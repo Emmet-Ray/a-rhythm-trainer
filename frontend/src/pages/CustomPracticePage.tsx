@@ -1,4 +1,7 @@
-import { ArrowLeft, ArrowRight, Hand, Ear, LoaderCircle, Minus, Plus, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, Hand, Ear, LoaderCircle, Minus, Plus, Save, Pencil, Trash2, Play } from "lucide-react";
+import { SuccessToast } from "../navigation/SuccessToast";
+import { flushSync } from "react-dom";
+import { UnsavedChanges } from "../navigation/UnsavedChanges";
 import {
   Suspense,
   useCallback,
@@ -9,6 +12,7 @@ import {
 import {
   Link,
   useLocation,
+  useNavigationType,
   useMatch,
   useNavigate,
   useParams,
@@ -29,6 +33,8 @@ import {
   getAccountExercise,
   listAccountExercises,
   saveAccountExercise,
+  updateAccountExercise,
+  deleteAccountExercise,
   type AccountExerciseSummary,
 } from "../api/customExercises";
 import type { RhythmEditorHandle } from "../practice/RhythmEditor";
@@ -40,6 +46,8 @@ import PracticeCue from "../practice/PracticeCue";
 import {
   listCustomExercises,
   saveCustomExercise,
+  updateCustomExercise,
+  deleteCustomExercise,
   type CustomExercise,
   type CustomMode,
 } from "../exercises/customExercises";
@@ -60,7 +68,10 @@ type Source = "local" | "account";
 export default function CustomPracticePage({ auth }: { auth: Auth }) {
   const { mode, exerciseId } = useParams();
   const isNew = useMatch("/custom/:mode/new") !== null;
-  const isAccount = useMatch("/custom/:mode/account/:exerciseId") !== null;
+  const accountMatch = useMatch("/custom/:mode/account/:exerciseId/*");
+  const isAccount = accountMatch !== null;
+  const isLocalEdit = useMatch("/custom/:mode/:exerciseId/edit") !== null;
+  const isEdit = isLocalEdit || accountMatch?.params["*"] === "edit";
   const source: Source =
     auth.state.status === "authenticated" ? "account" : "local";
   const identity =
@@ -146,6 +157,8 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
         mode={selectedMode.id}
         label={selectedMode.label}
         exerciseId={exerciseId}
+        editing={isEdit}
+        auth={auth}
       />
     );
   }
@@ -202,6 +215,7 @@ function CustomExerciseList({
   identity: string;
 }) {
   const { state } = useLocation();
+  const navigationType = useNavigationType();
   type ListResult = {
     items: (CustomExercise | AccountExerciseSummary)[];
     error: string | null;
@@ -225,6 +239,34 @@ function CustomExerciseList({
     0,
   );
   const [revision, setRevision] = useState(0);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [mutationMessage, setMutationMessage] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+  const mutationActive = useRef(false);
+  const lifetime = useRef(0);
+  useEffect(() => () => { lifetime.current += 1; }, []);
+  async function remove(item: CustomExercise | AccountExerciseSummary) {
+    if (mutationActive.current || !window.confirm(`确定删除「${item.name}」吗？删除后无法恢复。`)) return;
+    mutationActive.current = true;
+    const generation = lifetime.current;
+    setDeleting(item.id);
+    setMutationError(null);
+    setMutationMessage(null);
+    try {
+      if (source === "account") await deleteAccountExercise(item.id);
+      else deleteCustomExercise(item.id, mode);
+      if (generation !== lifetime.current) return;
+      setMutationMessage(`已删除「${item.name}」。`);
+      reload();
+    } catch (error) {
+      if (generation === lifetime.current) setMutationError(error instanceof Error ? error.message : "删除失败，请重试。");
+    } finally {
+      if (generation === lifetime.current) {
+        mutationActive.current = false;
+        setDeleting(null);
+      }
+    }
+  }
   useEffect(() => {
     if (source !== "account") return;
     const controller = new AbortController();
@@ -261,6 +303,7 @@ function CustomExerciseList({
   return (
     <div className="design-system practice-page custom-library">
       <title>{`自定义${label} · 节奏训练`}</title>
+      {navigationType !== "POP" && state?.createdExercise === true && <SuccessToast message="练习已创建" />}
       <header className="practice-titlebar custom-list-heading">
         <ReturnLink className="practice-return" to="/custom">
           <ArrowLeft className="ui-icon" aria-hidden="true" focusable="false" /> 自定义练习
@@ -271,6 +314,8 @@ function CustomExerciseList({
         </Link>
       </header>
       <section className="custom-catalog" aria-label="题目列表">
+      {mutationError && <p className="custom-mutation-error" role="alert">{mutationError}</p>}
+      {mutationMessage && <p role="status">{mutationMessage}</p>}
       {result.error ? (
         <div className="custom-storage-error">
           <p role="alert">{result.error}</p>
@@ -292,24 +337,21 @@ function CustomExerciseList({
             <li
               className="custom-saved-question"
               key={item.id}
-              data-just-saved={item.id === state?.savedExerciseId || undefined}
             >
-              <Link
-                className="question-link"
-                to={`/custom/${mode}/${source === "account" ? "account/" : ""}${encodeURIComponent(item.id)}`}
-              >
-                <div>
+                <div className="custom-question-name">
                   <h2>{item.name}</h2>
-                  {item.id === state?.savedExerciseId && (
-                    <span className="custom-saved-notice" role="status">
-                      已保存
-                    </span>
-                  )}
                 </div>
-                <span className="question-action">
-                  开始练习 <ArrowRight className="ui-icon" aria-hidden="true" focusable="false" />
-                </span>
-              </Link>
+              <div className="custom-question-actions" aria-label={`${item.name}的管理操作`}>
+                <Link className="custom-start-action" to={`/custom/${mode}/${source === "account" ? "account/" : ""}${encodeURIComponent(item.id)}`}>
+                  <Play className="ui-icon" aria-hidden="true" focusable="false" />开始练习
+                </Link>
+                <Link to={`/custom/${mode}/${source === "account" ? "account/" : ""}${encodeURIComponent(item.id)}/edit`}>
+                  <Pencil className="ui-icon" aria-hidden="true" />编辑
+                </Link>
+                <button type="button" disabled={deleting !== null} onClick={() => void remove(item)}>
+                  <Trash2 className="ui-icon" aria-hidden="true" />{deleting === item.id ? "正在删除…" : "删除"}
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -318,7 +360,7 @@ function CustomExerciseList({
         <nav aria-label="题目分页">
           <button
             type="button"
-            disabled={result.loading || offset === 0}
+            disabled={result.loading || deleting !== null || offset === 0}
             onClick={() => reload(Math.max(0, offset - 50))}
           >
             上一页
@@ -327,7 +369,7 @@ function CustomExerciseList({
           <button
             type="button"
             disabled={
-              result.loading || !!result.error || result.items.length < 50
+              result.loading || deleting !== null || !!result.error || result.items.length < 50
             }
             onClick={() => reload(offset + 50)}
           >
@@ -346,12 +388,16 @@ function CustomExercisePractice({
   exerciseId,
   source,
   identity,
+  editing,
+  auth,
 }: {
   mode: CustomMode;
   label: string;
   exerciseId: string;
   source: Source;
   identity: string;
+  editing: boolean;
+  auth: Auth;
 }) {
   function readExercise(): {
     item: CustomExercise | undefined;
@@ -401,13 +447,13 @@ function CustomExercisePractice({
     return () => controller.abort();
   }, [source, exerciseId, mode, revision]);
   return (
-    <div className="design-system practice-page custom-detail">
+    <div className={`design-system practice-page ${editing ? "custom-create" : "custom-detail"}`}>
       <title>{`${result.item?.name ?? "自定义练习"} · ${label}`}</title>
       <PracticeHeading
         backTo={`/custom/${mode}`}
         backLabel="题目列表"
         title={
-          result.item?.name ??
+          (result.item ? (editing ? `编辑：${result.item.name}` : result.item.name) : undefined) ??
           (result.loading
             ? "正在读取练习…"
             : result.error
@@ -438,12 +484,13 @@ function CustomExercisePractice({
             <LoadingPlaceholder workspace label="正在加载练习…" />
           }
         >
-          <PracticeWorkspace
+          {editing ? <CustomExerciseEditor mode={mode} auth={auth} identity={identity} initial={result.item} source={source}
+            onSaved={(item) => setResult({ item, error: null, loading: false })} /> : <PracticeWorkspace
             recoveryScope={`custom:${identity}:${source}:${mode}:${result.item.id}`}
             exercise={result.item.exercise}
             mode={mode}
             exerciseKey={result.item.id}
-          />
+          />}
         </Suspense>
       ) : (
         <p>
@@ -470,10 +517,16 @@ function CustomExerciseEditor({
   mode,
   auth,
   identity,
+  initial,
+  onSaved,
+  source = auth.state.status === "authenticated" ? "account" : "local",
 }: {
   mode: CustomMode;
   auth: Auth;
   identity: string;
+  initial?: CustomExercise;
+  onSaved?: (item: CustomExercise) => void;
+  source?: Source;
 }) {
   const navigate = useNavigate();
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -483,13 +536,21 @@ function CustomExerciseEditor({
     measures: RhythmElement[][];
     selectedMeasureIndex: number;
     settings: PracticeSettingsValue;
-  }>(`custom:${identity}:${mode}:draft`, {
-    name: "",
-    measures: [[], []],
+  }>(`custom:${identity}:${source}:${mode}:${initial?.id ?? "new"}:draft`, {
+    name: initial?.name ?? "",
+    measures: initial?.exercise.measures.map(measure => measure.elements) ?? [[], []],
     selectedMeasureIndex: 0,
     settings: { bpm: 60, metronomeEnabled: true },
   });
   const { name, measures, selectedMeasureIndex } = draft;
+  const [savedSuccessfully, setSavedSuccessfully] = useState(false);
+  const [saveNotice, setSaveNotice] = useState(0);
+  const [savedContent, setSavedContent] = useState(() => ({
+    name: initial?.name ?? "",
+    measures: initial?.exercise.measures.map(measure => measure.elements) ?? [[], []],
+  }));
+  const dirty = !(!initial && savedSuccessfully) && (name !== savedContent.name
+    || JSON.stringify(measures) !== JSON.stringify(savedContent.measures));
   const rememberSettings = useCallback(
     (settings: PracticeSettingsValue) => {
       setDraft((previous) => ({ ...previous, settings }));
@@ -561,16 +622,29 @@ function CustomExerciseEditor({
       if (!candidate.name) throw new Error("请输入练习名称。");
       candidate.exercise = parseRhythmExercise(candidate.exercise);
       const saved =
-        auth.state.status === "authenticated"
-          ? await saveAccountExercise(candidate)
-          : saveCustomExercise(candidate);
+        initial
+          ? source === "account" ? await updateAccountExercise(initial.id, candidate) : updateCustomExercise(initial.id, candidate)
+          : source === "account" ? await saveAccountExercise(candidate) : saveCustomExercise(candidate);
       // 即使已离开，确认保存成功也清除原提交快照；后来修改的新版本不会被清除。
       forgetDraft(draft);
       if (generation !== saveGeneration.current) return;
+      const content = { name: saved.name, measures: saved.exercise.measures.map(measure => measure.elements) };
+      if (initial) {
+        setSavedContent(content);
+        setDraft(previous => ({ ...previous, ...content }));
+        setSavedSuccessfully(true);
+        setSaveNotice(value => value + 1);
+        onSaved?.(saved);
+        return;
+      }
+      flushSync(() => {
+        setSavedContent(content);
+        setSavedSuccessfully(true);
+      });
       // 写入成功才离开编辑页，卸载播放器会取消旧声音和异步启动。
       navigate(`/custom/${mode}`, {
         replace: true,
-        state: { savedExerciseId: saved.id },
+        state: { createdExercise: true },
       });
     } catch (error) {
       if (generation === saveGeneration.current)
@@ -588,6 +662,8 @@ function CustomExerciseEditor({
       className="custom-exercise-editor practice-layout--sidebar"
       aria-label="编辑自定义练习"
     >
+      <UnsavedChanges dirty={dirty || (saving && !savedSuccessfully)} />
+      {saveNotice > 0 && !saving && !saveError && <SuccessToast key={saveNotice} message="修改已保存" />}
       <fieldset className="custom-exercise-fields" disabled={saving}>
         <PracticeSettings
           layout="sidebar"
@@ -662,7 +738,7 @@ function CustomExerciseEditor({
                     onClick={() => void save()}
                   >
                     {saving ? <LoaderCircle className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" /> : <Save className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />}
-                    {saving ? "正在保存…" : "保存练习"}
+                    {saving ? "正在保存…" : initial ? "保存修改" : "保存练习"}
                   </button>
                 </div>
                 {saveError && (

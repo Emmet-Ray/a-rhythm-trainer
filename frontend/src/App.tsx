@@ -70,6 +70,14 @@ function AppShell() {
               element={<CustomPracticePage auth={auth} />}
             />
             <Route
+              path="/custom/:mode/:exerciseId/edit"
+              element={<CustomPracticePage auth={auth} />}
+            />
+            <Route
+              path="/custom/:mode/account/:exerciseId/edit"
+              element={<CustomPracticePage auth={auth} />}
+            />
+            <Route
               path="/custom/:mode/account/:exerciseId"
               element={<CustomPracticePage auth={auth} />}
             />

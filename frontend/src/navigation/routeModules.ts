@@ -17,12 +17,13 @@ export function destinationModules(pathname: string) {
   const page = section === "login" ? "settings" : section;
   if (!Object.hasOwn(routeModules, page)) return [];
   const modules = [routeModules[page as keyof typeof routeModules]];
+  if (section === "custom" && ["tapping", "dictation"].includes(mode)
+    && (target === "new" || segments.at(-1) === "edit")) return [...modules, editorModule];
   if (section === "preset" && segments.length === 2
     || section === "random" && segments.length === 2 && ["tapping", "dictation"].includes(mode)
     || section === "custom" && ["tapping", "dictation"].includes(mode) && target && target !== "new") {
     return [...modules, workspaceModule];
   }
-  if (section === "custom" && ["tapping", "dictation"].includes(mode) && target === "new") return [...modules, editorModule];
   return modules;
 }
 

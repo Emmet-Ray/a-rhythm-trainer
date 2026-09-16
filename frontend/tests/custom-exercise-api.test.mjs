@@ -14,6 +14,22 @@ const content = { timeSignature: { beats: 4, beatType: 4 }, measures: [
 const detail = { id: "custom-test", name: "练习", mode: "tapping", exercise: content, created_at: "2026-09-12T00:00:00Z" };
 const input = { name: detail.name, mode: detail.mode, exercise: content };
 
+test("更新只提交名称与节奏，验证原 ID 和模式；删除接受无响应体的 204", async (t) => {
+  const fetch = t.mock.method(globalThis, "fetch", async () => Response.json(detail));
+  assert.equal((await api.updateAccountExercise(detail.id, input)).id, detail.id);
+  const [url, options] = fetch.mock.calls[0].arguments;
+  assert.equal(url, `/api/custom-exercises/${detail.id}`);
+  assert.equal(options.method, "PUT");
+  assert.deepEqual(JSON.parse(options.body), {name: input.name, exercise: content});
+  fetch.mock.mockImplementation(async () => Response.json({...detail, mode: "dictation"}));
+  await assert.rejects(api.updateAccountExercise(detail.id, input), error => error.status === 502);
+  fetch.mock.mockImplementation(async () => Response.json({...detail, id: "other"}));
+  await assert.rejects(api.updateAccountExercise(detail.id, input), error => error.status === 502);
+  fetch.mock.mockImplementation(async () => new Response(null, {status: 204}));
+  await api.deleteAccountExercise(detail.id);
+  assert.equal(fetch.mock.calls.at(-1).arguments[1].method, "DELETE");
+});
+
 test("保存只提交题目字段，使用 Cookie，不保存客户端归属", async (t) => {
   const fetch = t.mock.method(globalThis, "fetch", async () => Response.json(detail, { status: 201 }));
   const saved = await api.saveAccountExercise({ ...input, user_id: 99, id: "client-id", created_at: "old" });
@@ -54,10 +70,10 @@ test("读取按路径编码 ID，并支持取消信号", async (t) => {
 for (const status of [401, 403, 404, 422, 503]) {
   test(`${status} 明确抛错，不返回空数据、不回显原文、不重试`, async (t) => {
     const fetch = t.mock.method(globalThis, "fetch", async () => Response.json({detail:"secret"}, {status}));
-    for (const action of [() => api.saveAccountExercise(input), () => api.listAccountExercises("tapping"), () => api.getAccountExercise(detail.id)]) {
+    for (const action of [() => api.saveAccountExercise(input), () => api.listAccountExercises("tapping"), () => api.getAccountExercise(detail.id), () => api.updateAccountExercise(detail.id, input), () => api.deleteAccountExercise(detail.id)]) {
       await assert.rejects(action(), error => error instanceof api.CustomExerciseApiError && error.status === status && !error.message.includes("secret"));
     }
-    assert.equal(fetch.mock.callCount(), 3);
+    assert.equal(fetch.mock.callCount(), 5);
   });
 }
 
