@@ -8,6 +8,7 @@ export const routeModules = {
   random: preloadable(() => import("../pages/RandomPracticePage")),
   custom: preloadable(() => import("../pages/CustomPracticePage")),
   settings: preloadable(() => import("../pages/SettingsPage")),
+  records: preloadable(() => import("../pages/PracticeRecordsPage")),
 };
 
 /** 列表只预加载页面；明确指向练习或新建页时才加载对应的重型模块。 */

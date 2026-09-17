@@ -62,6 +62,8 @@ type RhythmEditorProps = {
   emptyContent?: ReactNode;
   /** 在原谱面位置展示只读内容；草稿保持挂载，编辑工具隐藏但保留占位。 */
   preview?: ReactNode;
+  /** 完成后的答案可浏览小节，但编辑工具不再修改该次作答。 */
+  readOnly?: boolean;
   scoreOverlay?: ReactNode;
   measureFeedback?: readonly MeasureFeedback[];
   measures: readonly (readonly RhythmElement[])[];
@@ -85,6 +87,7 @@ export function RhythmEditor({
   ref,
   emptyContent,
   preview,
+  readOnly = false,
   scoreOverlay,
   measureFeedback,
   measures,
@@ -183,7 +186,7 @@ export function RhythmEditor({
       </div>
       {preview && <div className="rhythm-editor-preview">{preview}</div>}
       </div>
-      <div className="rhythm-editor-controls" inert={!!preview} style={preview ? { visibility: "hidden" } : undefined}>
+      <fieldset disabled={readOnly} className="rhythm-editor-controls" inert={!!preview} style={preview ? { visibility: "hidden" } : undefined}>
         <p className="rhythm-editor-input-message" role="status">
           {addEventMessage}
         </p>
@@ -315,7 +318,7 @@ export function RhythmEditor({
             <Eraser className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />
           </button>
         </div>
-      </div>
+      </fieldset>
     </div>
   );
 }

@@ -198,7 +198,7 @@ test("随机页面首次进入已有默认两小节题目，设置关闭且入�
       assert.match(html, /节拍器/);
       assert.doesNotMatch(html, /固定示例|重新生成/);
       const question = visits.read("default", `random:${mode}:question`, null);
-      assert.equal(question.id, 1);
+      assert.match(question.id, /^[0-9a-f]{8}-[0-9a-f-]{27}$/);
       assert.equal(question.exercise.measures.length, 2);
       assert.doesNotThrow(() => validateRhythmExercise(question.exercise));
       // 返回时即使设置已清空，也必须恢复原题，不能尝试用待应用配置重新生成。

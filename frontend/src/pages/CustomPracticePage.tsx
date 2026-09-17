@@ -490,6 +490,7 @@ function CustomExercisePractice({
             exercise={result.item.exercise}
             mode={mode}
             exerciseKey={result.item.id}
+            recordContext={{ source: "custom", exerciseId: result.item.id, title: result.item.name }}
           />}
         </Suspense>
       ) : (

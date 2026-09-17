@@ -423,7 +423,7 @@ test("工作区恢复听写答案、验证及设置但不恢复结果遮罩，�
   const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: "note", noteValue: "whole" }] }] };
   const scope = "custom:account:1:account:dictation:item";
   visits.write("session", `practice:${scope}:settings`, { bpm: 97, metronomeEnabled: false });
-  visits.write("session", `practice:${scope}:dictation`, {
+  visits.write("session", `practice:checking:${scope}:dictation`, {
     binding: dictationBinding(1, exercise),
     state: { answerMeasures: [exercise.measures[0].elements], selectedMeasureIndex: 0, playbackScope: "measure", measureVerdicts: ["correct"] },
   });
@@ -794,6 +794,14 @@ test("练习设置在谱面之前且只渲染一份，窄屏不靠视觉重排�
     assert.ok(settings >= 0 && settings < content, path);
     assert.equal((html.match(/aria-label="速度 BPM"/g) ?? []).length, 1, path);
   }
+});
+
+test("记录谱面可以隐藏小节导航，不改变练习页默认导航", () => {
+  const props = { measures: [[{ kind: "note", noteValue: "whole" }]], timeSignature: { beats: 4, beatType: 4 } };
+  const preview = renderToStaticMarkup(createElement(RhythmDraftScore, { ...props, showNavigation: false }));
+  assert.doesNotMatch(preview, /小节导航|跳到小节|选择小节/);
+  assert.match(preview, /节奏谱面，可左右滚动/);
+  assert.match(renderToStaticMarkup(createElement(RhythmDraftScore, props)), /小节导航/);
 });
 
 test("谱面临时提示位于滚动内容之外，省略提示时不渲染浮层", () => {

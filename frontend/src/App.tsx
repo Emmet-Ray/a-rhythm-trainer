@@ -10,12 +10,14 @@ import { PageNavigation } from "./navigation/PageNavigation";
 import { useNavigationScroll } from "./navigation/usePageNavigation";
 import "./App.css";
 import "./design-system.css";
+import { RecordAccessContext, recordAccess } from "./practice-records/recordAccess";
 
 // 首页只展示入口；题库和训练代码进入对应页面后再加载。
 const RandomPracticePage = routeModules.random.Component;
 const PresetPracticePage = routeModules.preset.Component;
 const CustomPracticePage = routeModules.custom.Component;
 const SettingsPage = routeModules.settings.Component;
+const PracticeRecordsPage = routeModules.records.Component;
 
 function App() {
   return <PageNavigation><AppShell /></PageNavigation>;
@@ -30,7 +32,7 @@ function AppShell() {
   useNavigationScroll(pathname.startsWith("/custom") ? identity : "public");
 
   return (
-    <div className="site-shell" onPointerOver={preloadLinkIntent} onFocusCapture={preloadLinkIntent} onPointerDownCapture={preloadLinkIntent}>
+    <RecordAccessContext.Provider value={recordAccess(auth)}><div className="site-shell" onPointerOver={preloadLinkIntent} onFocusCapture={preloadLinkIntent} onPointerDownCapture={preloadLinkIntent}>
       <a className="skip-link" href="#main-content">
         跳到主要内容
       </a>
@@ -45,6 +47,7 @@ function AppShell() {
           <Routes>
             <Route path="/login" element={<Navigate to="/settings?category=account" replace />} />
             <Route path="/settings" element={<SettingsPage auth={auth} />} />
+            <Route path="/records" element={<PracticeRecordsPage />} />
             <Route path="/" element={<HomePage />} />
             <Route path="/preset" element={<PresetPracticePage />} />
             <Route
@@ -85,7 +88,7 @@ function AppShell() {
           </Routes>
         </Suspense>
       </main>
-    </div>
+    </div></RecordAccessContext.Provider>
   );
 }
 

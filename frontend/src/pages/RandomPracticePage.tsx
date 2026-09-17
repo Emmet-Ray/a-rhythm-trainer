@@ -76,8 +76,8 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
   const drawerRef = useRef<HTMLDialogElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [config, setConfig] = useVisitState<RandomGenerationConfig>(`random:${mode}:config`, { mode, materials: defaultRandomMaterials, measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
-  const [generated, setGenerated] = useVisitState<{ id: number; exercise: RhythmExercise }>(`random:${mode}:question`, () => ({
-    id: 1,
+  const [generated, setGenerated] = useVisitState<{ id: string; exercise: RhythmExercise }>(`random:${mode}:question`, () => ({
+    id: crypto.randomUUID(),
     exercise: generateRandomExercise({ mode, materials: defaultRandomMaterials, measureCount: DEFAULT_RANDOM_MEASURE_COUNT }),
   }));
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -116,7 +116,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
     try {
       // 手动换题只在事件中执行；先生成成功，再替换题目及作答绑定。
       const exercise = generateRandomExercise(config);
-      setGenerated(previous => ({ id: previous.id + 1, exercise }));
+      setGenerated({ id: crypto.randomUUID(), exercise });
       setError(null);
       closeSettings();
     } catch (error) {
@@ -186,6 +186,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
       </dialog>
         <Suspense fallback={<LoadingPlaceholder workspace label="正在加载练习…" />}>
           <PracticeWorkspace exerciseKey={generated.id} exercise={generated.exercise} mode={mode}
+            recordContext={{ source: "random", exerciseId: String(generated.id), title: "随机练习" }}
             extraActions={busy => (
               <div className="random-toolbar-actions">
                 <button type="button" disabled={busy || config.materials.length === 0} onClick={generate}><RefreshCw className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />换一题</button>

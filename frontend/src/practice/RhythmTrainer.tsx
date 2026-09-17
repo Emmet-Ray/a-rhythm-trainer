@@ -4,6 +4,7 @@ import { MetronomePlaybackContext } from "./MetronomePlayback";
 import PracticeFrame from "./PracticeFrame";
 import PracticeCue from "./PracticeCue";
 import PracticeResult from "./PracticeResult";
+import type { AttemptRecorder } from "../practice-records/usePracticeRecorder";
 
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import { DEFAULT_TAPPING_PRECISION, getTappingTimingWindows } from "../settings/tappingPrecision";
@@ -53,6 +54,8 @@ export type RhythmTrainerProps = {
   /** 公共设置提供的面板，仅负责放置，不拥有第二份设置状态。 */
   settingsPanel?: ReactNode;
   extraActions?: (busy: boolean) => ReactNode;
+  /** 成功启动时固定本轮记录目标；自然结束及迟到输入修正共用返回的回调。 */
+  onAttemptStart?: AttemptRecorder;
 };
 
 /**
@@ -68,6 +71,7 @@ function RhythmTrainer({
   metronomeEnabled = true,
   settingsPanel,
   extraActions,
+  onAttemptStart,
 }: RhythmTrainerProps) {
   const metronomePlayback = useContext(MetronomePlaybackContext);
   const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
@@ -114,6 +118,7 @@ function RhythmTrainer({
 
   const clockRef = useRef<PracticeClock | null>(null);
   const finishedRef = useRef(false);
+  const recordResultRef = useRef<ReturnType<AttemptRecorder>>(undefined);
   // 不捕获某一轮的时钟；状态变化只使当前轮的输入映射换段。
   const resetInputTime = useCallback(() => clockRef.current?.resetInputTime(), []);
   const metronomeRef = useRef<Metronome | null>(null);
@@ -201,13 +206,17 @@ function RhythmTrainer({
         // 保留本轮时钟，接受发生在终点前、却在结束帧之后才送达的输入。
         // 只修正结果，不重启播放。手动停止、新一轮和卸载仍立即废弃旧时钟。
         finishedRef.current = true;
+        if (recordResultRef.current) {
+          const final = judgePractice(timeline, tapOffsetsRef.current, nowMs, effectiveTimingWindows);
+          recordResultRef.current(summarizePractice(timeline.targetTaps.length, final.events));
+        }
         return;
       }
       frameId = window.requestAnimationFrame(update);
     }
     frameId = window.requestAnimationFrame(update);
     return () => window.cancelAnimationFrame(frameId);
-  }, [isRunning, recordExpiredTargets, timeline]);
+  }, [isRunning, recordExpiredTargets, timeline, effectiveTimingWindows]);
 
   useLayoutEffect(() => {
     // 配置变更或卸载时同步废弃旧时钟与异步启动，在下一次输入/RAF 前完成。
@@ -216,6 +225,7 @@ function RhythmTrainer({
       clockRef.current = null;
       startingRef.current = false;
       finishedRef.current = false;
+      recordResultRef.current = undefined;
       nextTargetIndexRef.current = 0;
       tapOffsetsRef.current = [];
       stopScheduledSounds();
@@ -230,6 +240,7 @@ function RhythmTrainer({
     if (clockRef.current !== null && !finishedRef.current) {
       stopScheduledSounds();
       clockRef.current = null;
+      recordResultRef.current = undefined;
       nextTargetIndexRef.current = 0;
       setPlayback(IDLE_PLAYBACK);
       setTimingEvents([]);
@@ -238,6 +249,7 @@ function RhythmTrainer({
     // resume 是异步的；在等待期间阻止重复开始。
     if (startingRef.current) return;
     clockRef.current = null;
+    recordResultRef.current = undefined;
     finishedRef.current = false;
     startingRef.current = true;
     setStartingMode(requestedMode);
@@ -297,6 +309,7 @@ function RhythmTrainer({
 
       nextTargetIndexRef.current = 0;
       tapOffsetsRef.current = [];
+      recordResultRef.current = requestedMode === "practice" ? onAttemptStart?.({ bpm, timingWindows: nextWindows }) : undefined;
       setTimingEvents([]);
       setRoundId(previous => previous + 1);
       setPlayback(getPlaybackPosition(nextTimeline, clock.nowMs()));
@@ -370,6 +383,7 @@ function RhythmTrainer({
 
       nextTargetIndexRef.current = judgement.nextTargetIndex;
       setTimingEvents(judgement.events);
+      if (finishedRef.current) recordResultRef.current?.(summarizePractice(timeline.targetTaps.length, judgement.events));
     }
 
     window.addEventListener("keydown", handleKeyDown);

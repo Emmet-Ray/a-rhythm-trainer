@@ -26,7 +26,7 @@ type PlaybackOption = {
  * BPM、播放范围或小节数量改变时，调用方用 key 重建；卸载取消排程、RAF 和异步启动并关闭音频。
  * 节拍器开关实时生效，不参与 key，也不影响预备拍和钢琴。
  */
-export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, extraActions, controls, onCountInChange, onStart }: {
+export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, extraActions, controls, onCountInChange, onStart, onPlaybackStarted }: {
   options: readonly PlaybackOption[];
   timeSignature: RhythmExercise["timeSignature"] | null;
   bpm: number;
@@ -37,6 +37,8 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
   /** 音频时钟给出的剩余预备拍；取消、正式播放和卸载时清空。 */
   onCountInChange?: (remaining: number | null) => void;
   onStart?: () => void;
+  /** 声音准备与排程成功后通知；停止、准备失败或失效请求不会通知。 */
+  onPlaybackStarted?: (source: string) => void;
 }) {
   const metronomePlayback = useContext(MetronomePlaybackContext);
   const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
@@ -160,6 +162,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
         frameRef.current = requestAnimationFrame(update);
       }
       frameRef.current = requestAnimationFrame(update);
+      onPlaybackStarted?.(source);
     } catch {
       if (request !== requestRef.current) return;
       cancelPlayback();

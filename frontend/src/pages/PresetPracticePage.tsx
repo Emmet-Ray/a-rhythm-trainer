@@ -135,7 +135,8 @@ function PresetExercisePage({ questionId, presetTopics }: { questionId: string; 
       {selected.mode === "tapping" || selected.mode === "dictation" ? (
         <Suspense fallback={<LoadingPlaceholder workspace label="正在加载练习…" />}>
           {/* 路由参数变化不一定卸载页面，题目 key 明确结束旧题并重置配置。 */}
-          <PracticeWorkspace key={selected.question.id} exercise={selected.question.exercise} mode={selected.mode} />
+          <PracticeWorkspace key={selected.question.id} exercise={selected.question.exercise} mode={selected.mode}
+            recordContext={{ source: "preset", exerciseId: selected.question.id, title: selected.question.title }} />
         </Suspense>
       ) : <p>该训练模式尚未开放</p>}
     </div>

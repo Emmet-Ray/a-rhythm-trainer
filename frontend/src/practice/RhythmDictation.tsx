@@ -21,6 +21,7 @@ import RhythmPlayback from "./RhythmPlayback";
 import PracticeFrame from "./PracticeFrame";
 import PracticeCue from "./PracticeCue";
 import PracticeResult from "./PracticeResult";
+import type { DictationRecordEvent } from "../practice-records/PracticeRecord";
 
 {
   /*
@@ -73,6 +74,7 @@ type RhythmDictationProps = {
   metronomeEnabled?: boolean;
   extraActions?: (busy: boolean) => ReactNode;
   settingsPanel?: ReactNode;
+  onRecord?: (event: DictationRecordEvent) => void;
   /** 可选受控作答；工作区负责历史恢复，听写组件不依赖路由或存储。 */
   session?: {
     state: DictationState;
@@ -89,6 +91,7 @@ export function RhythmDictation({
   extraActions,
   settingsPanel,
   session,
+  onRecord,
 }: RhythmDictationProps) {
   const [localState, setLocalState] = useState(() =>
     createDictationState(exercise),
@@ -126,7 +129,7 @@ export function RhythmDictation({
     measureVerdicts.every((verdict) => verdict === "correct");
 
   function verifySelectedMeasure() {
-    if (!hasSelectedMeasure || !expectedMeasure) return;
+    if (!hasSelectedMeasure || !expectedMeasure || isComplete || measureVerdicts[selectedMeasureIndex] !== "unchecked") return;
     editorRef.current?.clearMessage();
     const correct = isMeasureAnswerCorrect(
       answerMeasures[selectedMeasureIndex],
@@ -140,6 +143,7 @@ export function RhythmDictation({
             : "incorrect"
           : verdict,
     );
+    onRecord?.({ type: "verify", measureIndex: selectedMeasureIndex, correct });
     updateState((previous) => ({ ...previous, measureVerdicts: nextVerdicts }));
     if (nextVerdicts.every((verdict) => verdict === "correct"))
       setResultVisible(true);
@@ -159,6 +163,9 @@ export function RhythmDictation({
               metronomeEnabled={metronomeEnabled}
               onCountInChange={setCountdown}
               onStart={() => setResultVisible(false)}
+              onPlaybackStarted={source => {
+                if (source === "question" && !isComplete) onRecord?.({ type: "play", scope: playbackScope === "all" ? "all" : selectedMeasureIndex });
+              }}
               extraActions={extraActions}
               timeSignature={exercise?.timeSignature ?? null}
               options={[
@@ -220,6 +227,7 @@ export function RhythmDictation({
         }
       >
         <RhythmEditor
+          readOnly={isComplete}
           preview={
             isReferenceAnswerVisible && exercise ? (
               <section
@@ -259,6 +267,8 @@ export function RhythmDictation({
             updateState((previous) => ({ ...previous, selectedMeasureIndex }))
           }
           onChange={(measureIndex, elements) => {
+            if (isComplete || JSON.stringify(answerMeasures[measureIndex]) === JSON.stringify(elements)) return;
+            onRecord?.({ type: "edit", measureIndex });
             setResultVisible(false);
             updateState((previous) => ({
               ...previous,
@@ -282,7 +292,7 @@ export function RhythmDictation({
             <button
               className="dictation-verify"
               type="button"
-              disabled={!hasSelectedMeasure || !expectedMeasure}
+              disabled={!hasSelectedMeasure || !expectedMeasure || isComplete}
               onClick={verifySelectedMeasure}
             >
               <Check className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />验证当前小节
@@ -294,6 +304,9 @@ export function RhythmDictation({
             disabled={!exercise}
             aria-controls={referenceAnswerId}
             onClick={() => {
+              if (!isReferenceAnswerVisible && !isComplete) {
+                onRecord?.({ type: "view-answer" });
+              }
               setResultVisible(false);
               setIsReferenceAnswerVisible((previous) => !previous);
             }}

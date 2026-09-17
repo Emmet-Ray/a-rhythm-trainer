@@ -16,6 +16,7 @@ type RhythmDraftScoreProps = {
   measureFeedback?: readonly MeasureFeedback[];
   overlay?: ReactNode;
   navigationLabel?: string;
+  showNavigation?: boolean;
 };
 
 // 原样显示草稿或参考答案，不自动补休止符；未传选择回调时导航只改变独立的浏览位置。
@@ -27,6 +28,7 @@ export function RhythmDraftScore({
   measureFeedback,
   overlay,
   navigationLabel = "小节",
+  showNavigation = true,
 }: RhythmDraftScoreProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -125,7 +127,7 @@ export function RhythmDraftScore({
 
   return (
     <div className="rhythm-draft-score">
-      <div className="draft-measure-navigation" role="group" aria-label="小节导航">
+      {showNavigation && <div className="draft-measure-navigation" role="group" aria-label="小节导航">
         <span>{navigationLabel}</span>
         {measures.map((_, index) => {
           const verdict = measureFeedback?.[index];
@@ -136,7 +138,7 @@ export function RhythmDraftScore({
             {checked && <span className="draft-navigation-verdict" data-verdict={verdict} aria-hidden="true">{verdict === "correct" ? <Check className="ui-icon" focusable="false" /> : <X className="ui-icon" focusable="false" />}</span>}
           </button>;
         })}
-      </div>
+      </div>}
     <div style={{ position: "relative", minWidth: 0 }}>
     <div ref={viewportRef} className="rhythm-draft-viewport" role="region" aria-label="节奏谱面，可左右滚动" tabIndex={0}
       style={{ width: "100%", minWidth: 0, overflowX: "auto" }}>

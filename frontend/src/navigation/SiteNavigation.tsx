@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { House, FileText, Shuffle, PencilLine, Settings, Menu, X, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { House, FileText, Shuffle, PencilLine, History, Settings, Menu, X, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import BrandMark from "../brand/BrandMark";
 
 const destinations = [
@@ -8,6 +8,7 @@ const destinations = [
   { path: "/preset", label: "预设练习", icon: FileText },
   { path: "/random", label: "随机练习", icon: Shuffle },
   { path: "/custom", label: "自定义练习", icon: PencilLine },
+  { path: "/records", label: "练习记录", icon: History },
   { path: "/settings", label: "设置", icon: Settings },
 ];
 

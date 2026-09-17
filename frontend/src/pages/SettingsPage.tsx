@@ -1,8 +1,17 @@
 import { useState } from "react";
-import { Database, Palette, Target, UserRound, Volume2 } from "lucide-react";
+import {
+  Database,
+  Palette,
+  Target,
+  Trash2,
+  UserRound,
+  Volume2,
+} from "lucide-react";
+import { SuccessToast } from "../navigation/SuccessToast";
 import { useSearchParams } from "react-router";
 import type { useAuth } from "../auth/useAuth";
 import LoginForm from "../settings/LoginForm";
+import LocalRecordSettings from "../settings/LocalRecordSettings";
 import {
   colorModes,
   getAppearance,
@@ -74,7 +83,11 @@ export default function SettingsPage({
                 )
               }
             >
-              <item.icon className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />
+              <item.icon
+                className="ui-icon ui-icon--action"
+                aria-hidden="true"
+                focusable="false"
+              />
               {item.label}
               {item.id === "sound" && (
                 <span className="settings-unavailable">未开放</span>
@@ -92,11 +105,15 @@ export default function SettingsPage({
               <h2 id="appearance-heading">外观</h2>
               <fieldset className="settings-options appearance-modes">
                 <legend>明暗模式</legend>
-                {colorModes.map(mode => (
+                {colorModes.map((mode) => (
                   <label key={mode.id}>
-                    <input type="radio" name="color-mode" value={mode.id}
+                    <input
+                      type="radio"
+                      name="color-mode"
+                      value={mode.id}
                       checked={appearance.colorMode === mode.id}
-                      onChange={() => setAppearance(selectColorMode(mode.id))} />
+                      onChange={() => setAppearance(selectColorMode(mode.id))}
+                    />
                     <span>{mode.label}</span>
                   </label>
                 ))}
@@ -122,7 +139,10 @@ export default function SettingsPage({
                 ))}
               </fieldset>
               <div className="settings-actions">
-                <button type="button" onClick={() => setAppearance(resetAppearance())}>
+                <button
+                  type="button"
+                  onClick={() => setAppearance(resetAppearance())}
+                >
                   恢复默认
                 </button>
               </div>
@@ -166,7 +186,9 @@ function AccountSettings({ auth }: { auth: ReturnType<typeof useAuth> }) {
           正在确认登录…
         </p>
       ) : auth.state.status === "disabled" ? (
-        <p role="status">此站点未启用账号功能。你仍可使用预设、随机和本地自定义练习；本地题目保存在当前浏览器中。</p>
+        <p role="status">
+          此站点未启用账号功能。你仍可使用预设、随机和本地自定义练习；本地题目保存在当前浏览器中。
+        </p>
       ) : auth.state.status === "authenticated" ? (
         <>
           <p role="status">已登录</p>
@@ -267,18 +289,21 @@ function readLocalData(): LocalDataState {
 // 每次进入此分类重新读取；不根据登录状态切换数据来源。
 function LocalDataSettings() {
   const [data, setData] = useState(readLocalData);
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState(0);
   const [clearError, setClearError] = useState("");
 
   function clear() {
-    if (!window.confirm("将删除当前浏览器保存的全部自定义练习，确定清空吗？"))
+    if (
+      !window.confirm(
+        "将删除当前浏览器保存的全部自定义题目，无法恢复，确定清空吗？",
+      )
+    )
       return;
-    setMessage("");
     setClearError("");
     try {
       clearCustomExercises();
       setData(readLocalData());
-      setMessage("本地练习已清空。");
+      setNotice((value) => value + 1);
     } catch (error) {
       setClearError(
         error instanceof Error ? error.message : "清空本地练习失败。",
@@ -289,65 +314,66 @@ function LocalDataSettings() {
   return (
     <section className="settings-section" aria-labelledby="local-data-heading">
       <h2 id="local-data-heading">本地数据</h2>
-      {data.summary ? (
-        <dl className="local-data-summary">
-          <div>
-            <dt>击拍练习数量</dt>
-            <dd>{data.summary.tapping} 道</dd>
-          </div>
-          <div>
-            <dt>节奏听写数量</dt>
-            <dd>{data.summary.dictation} 道</dd>
-          </div>
-          <div>
-            <dt>本地练习总数量</dt>
-            <dd>{data.summary.total} 道</dd>
-          </div>
-          <div>
-            <dt title="仅估算本地练习存储文本的大小，不包含主题偏好、账号数据或浏览器缓存。">
-              占用空间
-            </dt>
-            <dd>
-              {data.summary.estimatedBytes > 0 ? "约 " : ""}
-              {formatStorageSize(data.summary.estimatedBytes)}
-            </dd>
-          </div>
-        </dl>
-      ) : (
-        <div className="settings-actions">
-          <p role="alert" className="settings-message">
-            {data.error}
-          </p>
+      <section
+        className="local-data-group"
+        aria-labelledby="local-library-heading"
+      >
+        <div className="local-data-copy">
+          <h3 id="local-library-heading">自定义题库</h3>
+          {data.summary ? (
+            <>
+              <p className="local-data-totals">
+                {data.summary.total} 道题目 <span aria-hidden="true">·</span>{" "}
+                <span title="仅估算自定义题库存储文本的大小">
+                  {data.summary.estimatedBytes > 0 ? "约 " : ""}
+                  {formatStorageSize(data.summary.estimatedBytes)}
+                </span>
+              </p>
+              <p className="local-data-breakdown">
+                <span>击拍 {data.summary.tapping} 道</span>
+                <span>听写 {data.summary.dictation} 道</span>
+              </p>
+            </>
+          ) : (
+            <div className="settings-actions">
+              <p role="alert" className="settings-message">
+                {data.error}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setData(readLocalData());
+                }}
+              >
+                重新读取
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="local-data-actions text-actions">
           <button
             type="button"
-            onClick={() => {
-              setData(readLocalData());
-              setMessage("");
-            }}
+            className="local-data-clear"
+            disabled={data.summary?.total === 0}
+            onClick={clear}
           >
-            重新读取
+            <Trash2 className="ui-icon" aria-hidden="true" />
+            清空题库
           </button>
         </div>
-      )}
-      <div className="settings-actions">
-        <button
-          type="button"
-          className="local-data-clear"
-          aria-describedby="local-data-clear-description"
-          disabled={data.summary?.total === 0}
-          onClick={clear}
-        >
-          清空本地练习
-        </button>
-      </div>
-      {clearError && (
-        <p role="alert" className="settings-message">
-          {clearError}
-        </p>
-      )}
-      <p role="status" className="settings-message settings-message--success">
-        {message}
-      </p>
+        {clearError && (
+          <p role="alert" className="settings-message">
+            {clearError}
+          </p>
+        )}
+        {notice > 0 && (
+          <SuccessToast
+            key={notice}
+            message="自定义题库已清空，练习记录未修改"
+          />
+        )}
+      </section>
+      <LocalRecordSettings />
     </section>
   );
 }
