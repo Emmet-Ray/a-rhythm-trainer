@@ -293,6 +293,17 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
   }
 });
 
+test("关于页仅提供仓库与邮箱，导航保留独立折叠控制", async () => {
+  const html = await renderApp("/about");
+  assert.match(html, /关于 · 节奏训练/);
+  assert.match(html, /aria-current="page" href="\/about"/);
+  assert.match(html, /href="https:\/\/github.com\/Emmet-Ray\/a-rhythm-trainer" target="_blank" rel="noopener noreferrer"/);
+  assert.match(html, /class="site-sidebar-heading"/);
+  assert.match(html, /href="mailto:mengtaoli@bupt.edu.cn"/);
+  assert.doesNotMatch(html, /about-description|逐步建立节奏感/);
+  assert.ok(html.indexOf('class="site-sidebar-toggle"') < html.indexOf('class="site-navigation"'));
+});
+
 test("404 状态页提供与错误类型对应的主要返回入口", async () => {
   for (const path of ["/missing", "/preset/missing"]) {
     const html = await renderApp(path);

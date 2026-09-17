@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { VisitsContext } from "./usePageNavigation";
 import { Link, useLocation } from "react-router";
-import { House, FileText, Shuffle, PencilLine, History, Settings, Menu, X, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { House, FileText, Shuffle, PencilLine, History, Settings, Info, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 import BrandMark from "../brand/BrandMark";
 
 const destinations = [
@@ -11,6 +11,7 @@ const destinations = [
   { path: "/custom", label: "自定义练习", icon: PencilLine },
   { path: "/records", label: "练习记录", icon: History },
   { path: "/settings", label: "设置", icon: Settings },
+  { path: "/about", label: "关于", icon: Info },
 ];
 
 function NavigationLinks({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
@@ -64,13 +65,15 @@ export default function SiteNavigation() {
   }, [open]);
   return <>
     <aside className="site-sidebar design-system" data-collapsed={collapsed}>
-      <Brand compact={collapsed} /><NavigationLinks compact={collapsed} />
+      <div className="site-sidebar-heading">
+      <Brand compact={collapsed} />
       <button type="button" className="site-sidebar-toggle" onClick={toggleSidebar}
         aria-label={collapsed ? "展开导航" : "收起导航"} aria-expanded={!collapsed}
         title={collapsed ? "展开导航" : "收起导航"}>
-        {collapsed ? <PanelLeftOpen className="ui-icon" aria-hidden="true" /> : <PanelLeftClose className="ui-icon" aria-hidden="true" />}
-        {!collapsed && "收起导航"}
+        {collapsed ? <ChevronRight className="ui-icon" aria-hidden="true" /> : <ChevronLeft className="ui-icon" aria-hidden="true" />}
       </button>
+      </div>
+      <NavigationLinks compact={collapsed} />
     </aside>
     <header className="site-mobile-header design-system">
       <Brand />

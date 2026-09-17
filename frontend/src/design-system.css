@@ -178,12 +178,17 @@
 .site-navigation a[aria-current] { background: var(--ds-tint); color: var(--ds-primary); }
 .site-navigation a:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: -2px; }
 .site-navigation .site-settings-link { margin-top: auto; }
-.design-system .site-sidebar-toggle { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 10px 16px; flex-shrink: 0; border: 0; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; font-weight: 650; }
-.design-system .site-sidebar-toggle:hover { background: var(--ds-hover); color: var(--ds-ink); }
-.design-system .site-sidebar-toggle:active { transform: none; box-shadow: none; }
-.site-sidebar-toggle:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: -2px; }
+.design-system .site-sidebar-toggle { position: fixed; z-index: 10; top: 28px; left: calc(var(--site-nav-width) - 16px); display: grid; place-items: center; width: 32px; height: 32px; min-height: 32px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; }
+/* Keep the visible control small without shrinking its pointer target. */
+.site-sidebar-toggle::before { content: ""; position: absolute; inset: 4px; border: 1px solid var(--ds-line); border-radius: 50%; background: var(--ds-surface); transition: border-color var(--ds-motion), background-color var(--ds-motion); }
+.design-system .site-sidebar-toggle .ui-icon { position: relative; width: 14px; height: 14px; }
+.design-system .site-sidebar-toggle:hover:not(:disabled) { background: transparent; color: var(--ds-primary); }
+.site-sidebar-toggle:is(:hover, :focus-visible)::before { background: var(--ds-tint); border-color: var(--ds-primary); }
+.design-system .site-sidebar-toggle:active:not(:disabled) { transform: none; box-shadow: none; }
+.site-sidebar-toggle:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 0; }
 .site-sidebar { gap: 8px; }
-.site-sidebar > .brand { margin-bottom: 28px; }
+.site-sidebar-heading { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 20px; }
+.site-sidebar-heading .brand { white-space: nowrap; }
 @media (min-width: 1001px) {
   .site-shell:has(.site-sidebar[data-collapsed="true"]) { --site-nav-width: 72px; }
   .site-sidebar[data-collapsed="true"] { padding-inline: 12px; }
@@ -191,6 +196,16 @@
   .site-sidebar[data-collapsed="true"] :is(.site-navigation a, .site-sidebar-toggle) { justify-content: center; padding-inline: 0; }
 }
 .site-mobile-header { display: none; }
+.about-content { max-width: 640px; }
+.about-links { list-style: none; margin: 0; padding: 0; }
+.about-link { display: flex; align-items: center; gap: 16px; padding: 20px 12px; border-radius: var(--ds-radius-sm); color: var(--ds-ink); }
+.about-link:hover { background: var(--ds-hover); }
+.about-link:focus-visible { outline: 2px solid var(--ds-primary); }
+.about-link > span:not(.sr-only) { flex: 1; min-width: 0; }
+.about-link strong { display: block; margin-bottom: 6px; }
+.about-link span span { color: var(--ds-muted); font-size: var(--ds-text-sm); overflow-wrap: anywhere; }
+.about-link > .ui-icon { color: var(--ds-primary); }
+.about-link .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .site-menu-drawer { margin: 0; padding: 20px 16px; width: min(288px, calc(100% - 40px)); max-width: none; height: 100dvh; max-height: none; border: 0; border-right: 1px solid var(--ds-line); background: var(--ds-surface); }
 .site-menu-drawer[open] { display: flex; flex-direction: column; gap: 24px; }
 .site-menu-drawer::backdrop { background: rgb(20 25 35 / 35%); }

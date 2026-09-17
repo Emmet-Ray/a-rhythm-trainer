@@ -18,6 +18,7 @@ const PresetPracticePage = routeModules.preset.Component;
 const CustomPracticePage = routeModules.custom.Component;
 const SettingsPage = routeModules.settings.Component;
 const PracticeRecordsPage = routeModules.records.Component;
+const AboutPage = routeModules.about.Component;
 
 function App() {
   return <PageNavigation><AppShell /></PageNavigation>;
@@ -48,6 +49,7 @@ function AppShell() {
             <Route path="/login" element={<Navigate to="/settings?category=account" replace />} />
             <Route path="/settings" element={<SettingsPage auth={auth} />} />
             <Route path="/records" element={<PracticeRecordsPage />} />
+            <Route path="/about" element={<AboutPage />} />
             <Route path="/" element={<HomePage />} />
             <Route path="/preset" element={<PresetPracticePage />} />
             <Route
