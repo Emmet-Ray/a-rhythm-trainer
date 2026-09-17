@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { VisitsContext } from "./usePageNavigation";
 import { Link, useLocation } from "react-router";
 import { House, FileText, Shuffle, PencilLine, History, Settings, Menu, X, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import BrandMark from "../brand/BrandMark";
@@ -13,9 +14,11 @@ const destinations = [
 ];
 
 function NavigationLinks({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  const visits = useContext(VisitsContext);
+  const settingsDestination = pathname === "/settings" ? pathname + search : visits?.destination("/settings") ?? "/settings";
   return <nav className="site-navigation" aria-label="主导航">
-    {destinations.map(({ path, label, icon: Icon }) => <Link key={path} to={path}
+    {destinations.map(({ path, label, icon: Icon }) => <Link key={path} to={path === "/settings" ? settingsDestination : path}
       className={path === "/settings" ? "site-settings-link" : undefined}
       aria-current={pathname === path ? "page" : path !== "/" && pathname.startsWith(`${path}/`) ? "location" : undefined}
       title={compact ? label : undefined} aria-label={compact ? label : undefined}

@@ -8,6 +8,18 @@ export class PageVisits {
   private index = -1;
   private values = new Map<string, unknown>();
   private positions = new Map<string, number>();
+  private browsing = new Map<string, unknown>();
+  private destinations = new Map<string, string>();
+
+  /** 新访问继承最近浏览选择；已有访问始终使用自己的快照，不用于答案或草稿。 */
+  readBrowsing<T>(key: string, field: string, create: () => T): T {
+    return this.readOrCreate(key, field, () =>
+      this.browsing.has(field) ? this.browsing.get(field) as T : create());
+  }
+
+  rememberBrowsing<T>(field: string, value: T) { this.browsing.set(field, value); }
+  rememberDestination(section: string, path: string) { this.destinations.set(section, path); }
+  destination(section: string) { return this.destinations.get(section) ?? section; }
 
   enter(visit: Visit, action: "POP" | "PUSH" | "REPLACE") {
     if (this.history[this.index]?.key === visit.key) return;

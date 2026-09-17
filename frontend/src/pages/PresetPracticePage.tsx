@@ -4,7 +4,7 @@ import { workspaceModule } from "../practice/practiceModules";
 import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
 import { ArrowRight } from "lucide-react";
 import { PracticeHeading } from "../practice/PracticeHeading";
-import { useVisitState } from "../navigation/usePageNavigation";
+import { useBrowsingState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
 import {
   practiceModes,
@@ -46,8 +46,8 @@ export default function PresetPracticePage() {
 }
 
 function PresetLibrary({ presetTopics }: { presetTopics: PracticeTopic[] }) {
-  const [selectedMode, setSelectedMode] = useVisitState<PracticeMode>("preset:mode", "tapping");
-  const [topicId, setTopicId] = useVisitState("preset:topic", presetTopics[0].id);
+  const [selectedMode, setSelectedMode] = useBrowsingState<PracticeMode>("preset:mode", "tapping");
+  const [topicId, setTopicId] = useBrowsingState("preset:topic", presetTopics[0].id);
   const topic = presetTopics.find(item => item.id === topicId) ?? presetTopics[0];
   const questions = topic.modes.find(group => group.mode === selectedMode)?.questions ?? [];
   const [topicScrollRef, onTopicScroll] = useListScroll("preset:topic-scroll", "topics");
@@ -109,10 +109,10 @@ function PresetLibrary({ presetTopics }: { presetTopics: PracticeTopic[] }) {
   );
 }
 
-/** 滚动快照属于当前历史记录；切换内容时归零，返回该记录时恢复。 */
+/** 新访问继承最近浏览位置；切换内容时归零，历史返回使用原快照。 */
 function useListScroll(field: string, content: string) {
   const ref = useRef<HTMLElement>(null);
-  const [position, setPosition] = useVisitState(field, { content, top: 0 });
+  const [position, setPosition] = useBrowsingState(field, { content, top: 0 });
   useLayoutEffect(() => {
     if (ref.current) ref.current.scrollTop = position.content === content ? position.top : 0;
   }, [content, position]);

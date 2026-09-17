@@ -22,7 +22,7 @@ import { ReturnLink } from "../navigation/PageNavigation";
 import { PracticeHeading } from "../practice/PracticeHeading";
 import { editorModule, workspaceModule } from "../practice/practiceModules";
 import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
-import { useVisitState } from "../navigation/usePageNavigation";
+import { useBrowsingState, useVisitState } from "../navigation/usePageNavigation";
 import {
   parseRhythmExercise,
   type RhythmElement,
@@ -234,7 +234,7 @@ function CustomExerciseList({
     }
   }
   const [result, setResult] = useState(readExercises);
-  const [offset, setOffset] = useVisitState(
+  const [offset, setOffset] = useBrowsingState(
     `custom:${identity}:${mode}:offset`,
     0,
   );

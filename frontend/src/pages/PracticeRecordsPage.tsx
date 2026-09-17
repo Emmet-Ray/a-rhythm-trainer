@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { ChevronDown, Eye, Trash2, X } from "lucide-react";
-import { useVisitState } from "../navigation/usePageNavigation";
+import { useBrowsingState } from "../navigation/usePageNavigation";
 import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
 import { SuccessToast } from "../navigation/SuccessToast";
 import type {
@@ -85,11 +85,11 @@ export default function PracticeRecordsPage() {
 type RecordFilter = "all" | "tapping" | "dictation";
 function LocalRecords() {
   const [data, setData] = useState(readRecords);
-  const [filter, setFilter] = useVisitState<RecordFilter>(
+  const [filter, setFilter] = useBrowsingState<RecordFilter>(
     "record-filter",
     "all",
   );
-  const [limit, setLimit] = useVisitState("record-limit", 20);
+  const [limit, setLimit] = useBrowsingState("record-limit", 20);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
   const [deletedCount, setDeletedCount] = useState(0);

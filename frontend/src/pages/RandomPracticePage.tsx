@@ -3,7 +3,7 @@ import { workspaceModule } from "../practice/practiceModules";
 import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
 import { ArrowRight, Hand, Ear, RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import { PracticeHeading } from "../practice/PracticeHeading";
-import { useVisitState } from "../navigation/usePageNavigation";
+import { useBrowsingState, useVisitState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
 import { generateRandomExercise, randomMaterials, defaultRandomMaterials, randomMeasureCounts, DEFAULT_RANDOM_MEASURE_COUNT, type RandomGenerationConfig } from "../exercises/randomExercises";
@@ -75,10 +75,10 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
   const rangeErrorId = useId();
   const drawerRef = useRef<HTMLDialogElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
-  const [config, setConfig] = useVisitState<RandomGenerationConfig>(`random:${mode}:config`, { mode, materials: defaultRandomMaterials, measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
-  const [generated, setGenerated] = useVisitState<{ id: string; exercise: RhythmExercise }>(`random:${mode}:question`, () => ({
+  const [config, setConfig] = useBrowsingState<RandomGenerationConfig>(`random:${mode}:config`, { mode, materials: defaultRandomMaterials, measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
+  const [generated, setGenerated] = useVisitState<{ id: string; exercise: RhythmExercise | null }>(`random:${mode}:question`, () => ({
     id: crypto.randomUUID(),
-    exercise: generateRandomExercise({ mode, materials: defaultRandomMaterials, measureCount: DEFAULT_RANDOM_MEASURE_COUNT }),
+    exercise: config.materials.length > 0 ? generateRandomExercise(config) : null,
   }));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const restoreSettingsFocus = useRef(false);

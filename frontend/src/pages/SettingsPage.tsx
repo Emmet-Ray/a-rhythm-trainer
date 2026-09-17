@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useContext, useLayoutEffect, useState } from "react";
+import { VisitsContext } from "../navigation/usePageNavigation";
 import {
   Database,
   Palette,
@@ -50,6 +51,10 @@ export default function SettingsPage({
     categories.find((item) => item.id === params.get("category"))?.id ??
     "account";
   const [appearance, setAppearance] = useState(getAppearance);
+  const visits = useContext(VisitsContext);
+  useLayoutEffect(() => {
+    visits?.rememberDestination("/settings", `/settings?category=${category}`);
+  }, [visits, category]);
 
   function choose(theme: Theme) {
     setAppearance(selectTheme(theme));

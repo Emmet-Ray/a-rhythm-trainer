@@ -307,7 +307,7 @@ test("404 状态页提供与错误类型对应的主要返回入口", async () =
 test("设置页不要求登录，明暗模式与三套配色独立选择", async () => {
   const html = await renderApp("/settings?category=appearance");
   assert.match(html, /class="design-system settings-page"/);
-  assert.match(html, /aria-current="page" href="\/settings"/);
+  assert.match(html, /aria-current="page" href="\/settings\?category=appearance"/);
   assert.equal((html.match(/type="radio"/g) ?? []).length, 6);
   for (const label of ["明暗模式", "配色主题", "跟随系统", "浅色", "深色"]) assert.ok(html.includes(label));
   assert.match(html, /紫色/);

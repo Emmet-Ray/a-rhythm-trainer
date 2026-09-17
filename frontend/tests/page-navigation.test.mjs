@@ -5,7 +5,40 @@ import { createServer } from "vite";
 const server = await createServer({ configFile: false, server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
 after(() => server.close());
 const { PageVisits } = await server.ssrLoadModule("/src/navigation/PageVisits.ts");
+const { browsingScrollScope } = await server.ssrLoadModule("/src/navigation/usePageNavigation.ts");
 const { createDictationState, dictationBinding, restoreDictation } = await server.ssrLoadModule("/src/practice/DictationState.ts");
+
+test("浏览偏好供新访问继承，原访问快照（包括初值）不受后来选择影响", () => {
+  const visits = new PageVisits();
+  assert.equal(visits.readBrowsing("a", "preset:mode", () => "tapping"), "tapping");
+  visits.rememberBrowsing("preset:mode", "dictation");
+  assert.equal(visits.readBrowsing("b", "preset:mode", () => "tapping"), "dictation");
+  assert.equal(visits.readBrowsing("a", "preset:mode", () => "unused"), "tapping");
+  visits.rememberBrowsing("preset:mode", "tapping");
+  assert.equal(visits.readBrowsing("c", "preset:mode", () => "unused"), "tapping");
+  assert.equal(visits.readBrowsing("b", "preset:mode", () => "unused"), "dictation");
+});
+
+test("浏览状态按身份及字段隔离，不改变作答快照或跨刷新保留", () => {
+  const visits = new PageVisits();
+  visits.rememberBrowsing("custom:account:1:offset", 50);
+  assert.equal(visits.readBrowsing("b", "custom:account:2:offset", () => 0), 0);
+  assert.equal(visits.readBrowsing("b", "custom:account:1:offset", () => 0), 50);
+  visits.write("a", "dictation", { answer: 1 });
+  assert.equal(visits.read("b", "dictation", null), null);
+  assert.equal(new PageVisits().readBrowsing("c", "custom:account:1:offset", () => 0), 0);
+  visits.rememberDestination("/settings", "/settings?category=appearance");
+  assert.equal(visits.destination("/settings"), "/settings?category=appearance");
+  assert.equal(new PageVisits().destination("/settings"), "/settings");
+});
+
+test("只有浏览列表跨访问保留滚动，练习和编辑页面不继承", () => {
+  for (const path of ["/preset", "/records", "/random", "/custom", "/custom/tapping", "/custom/dictation"])
+    assert.ok(browsingScrollScope(path, "guest"));
+  for (const path of ["/preset/question", "/random/tapping", "/custom/tapping/new", "/custom/tapping/test/edit"])
+    assert.equal(browsingScrollScope(path, "guest"), undefined);
+  assert.notEqual(browsingScrollScope("/custom/tapping", "account:1"), browsingScrollScope("/custom/tapping", "account:2"));
+});
 
 test("惰性初值每条访问每个字段只创建一次，返回和后续更新复用原状态", () => {
   const visits = new PageVisits();
