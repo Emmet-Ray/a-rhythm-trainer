@@ -460,6 +460,7 @@ function CustomExercisePractice({
               ? "无法读取练习"
               : "未找到该练习")
         }
+        history={!editing && result.item ? { context: { source: "custom", exerciseId: result.item.id, title: result.item.name }, exercise: result.item.exercise, mode } : undefined}
       />
       {result.error ? (
         <div className="custom-storage-error">

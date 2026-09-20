@@ -11,7 +11,8 @@ const { recordKey, exerciseVersion } = await server.ssrLoadModule("/src/practice
 const { listPracticeRecords, savePracticeActions, deletePracticeRecord, clearPracticeRecords, parsePracticeRecord } = await server.ssrLoadModule("/src/practice-records/practiceRecordStorage.ts");
 const { recordAccess } = await server.ssrLoadModule("/src/practice-records/recordAccess.ts");
 const { RecordAccessContext } = await server.ssrLoadModule("/src/practice-records/recordAccess.ts");
-const { default: PracticeRecordsPage, DictationAttempts, RecordDetail } = await server.ssrLoadModule("/src/pages/PracticeRecordsPage.tsx");
+const { default: PracticeRecordsPage } = await server.ssrLoadModule("/src/pages/PracticeRecordsPage.tsx");
+const { DictationAttempts, RecordDetail } = await server.ssrLoadModule("/src/practice-records/RecordDetail.tsx");
 const { default: LocalRecordSettings } = await server.ssrLoadModule("/src/settings/LocalRecordSettings.tsx");
 const { createDictationState, restoreDictation, dictationBinding } = await server.ssrLoadModule("/src/practice/DictationState.ts");
 

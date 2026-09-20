@@ -1,4 +1,5 @@
-import { useCallback, useContext, useMemo, type ReactNode, type SetStateAction } from "react";
+import { useCallback, useContext, useMemo, type SetStateAction } from "react";
+import PracticeShortcutHelp from "./PracticeShortcutHelp";
 import PracticeSettings, { type PracticeSettingsValue } from "./PracticeSettings";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import RhythmTrainer from "./RhythmTrainer";
@@ -15,7 +16,7 @@ type WorkspaceProps = {
   mode: "tapping" | "dictation";
   recoveryScope?: string;
   recordContext?: ExerciseContext;
-  extraActions?: (busy: boolean) => ReactNode;
+  onBusyChange?: (busy: boolean) => void;
 };
 
 export default function PracticeWorkspace(props: WorkspaceProps) {
@@ -32,7 +33,7 @@ function WorkspaceSession({
   exercise,
   mode,
   exerciseKey = 0,
-  extraActions,
+  onBusyChange,
   recoveryScope = mode,
   recordContext,
   access,
@@ -50,6 +51,7 @@ function WorkspaceSession({
       return { binding, state: typeof next === "function" ? next(current) : next };
     });
   }, [binding, empty, setSnapshot]);
+  const shortcutHelp = <PracticeShortcutHelp mode={mode} source={recordContext?.source} />;
   return (
     <PracticeSettings layout="sidebar" initialValue={settings} onChange={rememberSettings}>
       {({ bpm, metronomeEnabled }, settingsPanel) => (
@@ -58,8 +60,8 @@ function WorkspaceSession({
           {recorder.error && <div className="practice-record-error" role="alert"><span>{recorder.error}</span><button type="button" onClick={recorder.retry}>重试保存</button></div>}
           {mode === "dictation" ? (
             // BPM 改变只重建听写内部播放器，保留草稿、验证结果和参考答案状态。
-            <RhythmDictation key={binding} session={{ state, onChange: update }} exercise={exercise} bpm={bpm} metronomeEnabled={metronomeEnabled} extraActions={extraActions} settingsPanel={settingsPanel}
-              onRecord={recorder.dictation} />
+            <RhythmDictation key={binding} session={{ state, onChange: update }} exercise={exercise} bpm={bpm} metronomeEnabled={metronomeEnabled} onBusyChange={onBusyChange} settingsPanel={settingsPanel}
+              onRecord={recorder.dictation} toolbarEnd={shortcutHelp} />
           ) : (
             // 换题重建；调速由训练组件原地停止旧轮次，保留谱面。
             <RhythmTrainer
@@ -68,8 +70,9 @@ function WorkspaceSession({
               bpm={bpm}
               metronomeEnabled={metronomeEnabled}
               settingsPanel={settingsPanel}
-              extraActions={extraActions}
+              onBusyChange={onBusyChange}
               onAttemptStart={recorder.startAttempt}
+              toolbarEnd={shortcutHelp}
             />
           )}
         </section>

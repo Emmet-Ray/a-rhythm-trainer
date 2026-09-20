@@ -26,12 +26,12 @@ type PlaybackOption = {
  * BPM、播放范围或小节数量改变时，调用方用 key 重建；卸载取消排程、RAF 和异步启动并关闭音频。
  * 节拍器开关实时生效，不参与 key，也不影响预备拍和钢琴。
  */
-export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, extraActions, controls, onCountInChange, onStart, onPlaybackStarted }: {
+export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, onBusyChange, controls, onCountInChange, onStart, onPlaybackStarted }: {
   options: readonly PlaybackOption[];
   timeSignature: RhythmExercise["timeSignature"] | null;
   bpm: number;
   metronomeEnabled?: boolean;
-  extraActions?: (busy: boolean) => ReactNode;
+  onBusyChange?: (busy: boolean) => void;
   /** 与播放按钮成组的控制项，例如播放范围；不参与播放状态管理。 */
   controls?: ReactNode;
   /** 音频时钟给出的剩余预备拍；取消、正式播放和卸载时清空。 */
@@ -184,6 +184,11 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
             ? "播放结束"
             : "";
 
+  useEffect(() => {
+    onBusyChange?.(isActive);
+    return () => onBusyChange?.(false);
+  }, [isActive, onBusyChange]);
+
   return (
     <div className="rhythm-playback design-system">
       <div className="rhythm-playback-toolbar">
@@ -208,7 +213,6 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
           </div>
           {controls}
         </div>
-        {extraActions?.(isActive)}
       </div>
       {!onCountInChange && <span className="rhythm-playback-status" role="status">{text}</span>}
       {error && <span role="alert">{error}</span>}

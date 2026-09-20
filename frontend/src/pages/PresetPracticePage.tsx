@@ -13,6 +13,7 @@ import {
   type PracticeMode,
 } from "../exercises/presetCatalog";
 import NotFoundPage from "./NotFoundPage";
+import { PresetQuestionNavigation } from "../practice/PresetQuestionNavigation";
 
 // 预设列表不加载训练组件及 VexFlow，进入具体题目后才加载。
 const PracticeWorkspace = workspaceModule.Component;
@@ -131,7 +132,10 @@ function PresetExercisePage({ questionId, presetTopics }: { questionId: string; 
   return (
     <div className="design-system practice-page">
       <title>{`${selected.question.title} · ${modeLabel}`}</title>
-      <PracticeHeading backTo="/preset" backLabel="预设练习" title={selected.question.title} />
+      <PracticeHeading backTo="/preset" backLabel="预设练习" title={selected.question.title}
+        history={(selected.mode === "tapping" || selected.mode === "dictation") ? { context: { source: "preset", exerciseId: questionId, title: selected.question.title }, exercise: selected.question.exercise, mode: selected.mode } : undefined}>
+        <PresetQuestionNavigation questionId={questionId} questions={selected.topic.modes.find(group => group.mode === selected.mode)!.questions} />
+      </PracticeHeading>
       {selected.mode === "tapping" || selected.mode === "dictation" ? (
         <Suspense fallback={<LoadingPlaceholder workspace label="正在加载练习…" />}>
           {/* 路由参数变化不一定卸载页面，题目 key 明确结束旧题并重置配置。 */}

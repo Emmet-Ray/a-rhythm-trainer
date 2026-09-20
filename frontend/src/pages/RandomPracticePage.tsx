@@ -3,6 +3,7 @@ import { workspaceModule } from "../practice/practiceModules";
 import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
 import { ArrowRight, Hand, Ear, RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import { PracticeHeading } from "../practice/PracticeHeading";
+import { practiceShortcuts, usePracticeShortcuts } from "../practice/usePracticeShortcuts";
 import { useBrowsingState, useVisitState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
@@ -38,9 +39,6 @@ export default function RandomPracticePage() {
     return (
       <div className="random-page">
         <title>{`随机${selectedMode.label} · 节奏训练`}</title>
-        <div className="design-system practice-page">
-        <PracticeHeading backTo="/random" backLabel="随机练习" />
-        </div>
         <RandomExerciseWorkspace key={selectedMode.id} mode={selectedMode.id} />
       </div>
     );
@@ -81,13 +79,14 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
     exercise: config.materials.length > 0 ? generateRandomExercise(config) : null,
   }));
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const restoreSettingsFocus = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const rangeError = config.materials.length === 0 ? "至少选择一个练习范围。" : error;
 
   useEffect(() => {
     if (!settingsOpen) {
-      // 生成会重建操作栏，提交后的焦点应落到新按钮，而非已卸载的旧节点。
+      // 关闭设置后将键盘焦点还给题头入口。
       if (restoreSettingsFocus.current) {
         settingsButtonRef.current?.focus({ preventScroll: true });
         restoreSettingsFocus.current = false;
@@ -118,12 +117,14 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
       const exercise = generateRandomExercise(config);
       setGenerated({ id: crypto.randomUUID(), exercise });
       setError(null);
-      closeSettings();
+      if (settingsOpen) closeSettings();
     } catch (error) {
       setError(error instanceof Error ? error.message : "生成失败，请重试。");
       setSettingsOpen(true);
     }
   }
+
+  usePracticeShortcuts({ next: !busy && config.materials.length > 0 ? generate : undefined });
 
   return (
     <>
@@ -184,16 +185,19 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
         </div>
       </section>
       </dialog>
+        <div className="design-system practice-page">
+          <PracticeHeading backTo="/random" backLabel="随机练习"
+            history={generated.exercise ? { context: { source: "random", exerciseId: String(generated.id), title: "随机练习" }, exercise: generated.exercise, mode } : undefined}>
+            <div className="practice-question-actions text-actions">
+              <button type="button" title={`换一题（${practiceShortcuts.next.key}）`} aria-keyshortcuts={practiceShortcuts.next.key} disabled={busy || config.materials.length === 0} onClick={generate}><RefreshCw className="ui-icon" aria-hidden="true" focusable="false" />换一题</button>
+              <button ref={settingsButtonRef} type="button" disabled={busy} aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}><SlidersHorizontal className="ui-icon" aria-hidden="true" focusable="false" />生成设置</button>
+            </div>
+          </PracticeHeading>
+        </div>
         <Suspense fallback={<LoadingPlaceholder workspace label="正在加载练习…" />}>
           <PracticeWorkspace exerciseKey={generated.id} exercise={generated.exercise} mode={mode}
             recordContext={{ source: "random", exerciseId: String(generated.id), title: "随机练习" }}
-            extraActions={busy => (
-              <div className="random-toolbar-actions">
-                <button type="button" disabled={busy || config.materials.length === 0} onClick={generate}><RefreshCw className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />换一题</button>
-                <button ref={settingsButtonRef} className="random-settings-trigger" type="button" disabled={busy}
-                  aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}><SlidersHorizontal className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />生成设置</button>
-              </div>
-            )} />
+            onBusyChange={setBusy} />
         </Suspense>
     </>
   );

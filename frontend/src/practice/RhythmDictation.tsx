@@ -72,8 +72,9 @@ type RhythmDictationProps = {
   exercise: RhythmExercise | null;
   bpm: number;
   metronomeEnabled?: boolean;
-  extraActions?: (busy: boolean) => ReactNode;
+  onBusyChange?: (busy: boolean) => void;
   settingsPanel?: ReactNode;
+  toolbarEnd?: ReactNode;
   onRecord?: (event: DictationRecordEvent) => void;
   /** 可选受控作答；工作区负责历史恢复，听写组件不依赖路由或存储。 */
   session?: {
@@ -88,8 +89,9 @@ export function RhythmDictation({
   exercise,
   bpm,
   metronomeEnabled = true,
-  extraActions,
+  onBusyChange,
   settingsPanel,
+  toolbarEnd,
   session,
   onRecord,
 }: RhythmDictationProps) {
@@ -166,7 +168,7 @@ export function RhythmDictation({
               onPlaybackStarted={source => {
                 if (source === "question" && !isComplete) onRecord?.({ type: "play", scope: playbackScope === "all" ? "all" : selectedMeasureIndex });
               }}
-              extraActions={extraActions}
+              onBusyChange={onBusyChange}
               timeSignature={exercise?.timeSignature ?? null}
               options={[
                 {
@@ -223,6 +225,7 @@ export function RhythmDictation({
             />
           </div>
           <PracticeResult passed={isComplete && resultVisible ? true : null} complete />
+          {toolbarEnd}
           </>
         }
       >

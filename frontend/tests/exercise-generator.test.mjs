@@ -190,9 +190,9 @@ test("随机页面首次进入已有默认两小节题目，设置关闭且入�
       assert.doesNotMatch(drawer, /<dialog[^>]*\sopen(?:\s|=|>)/);
       assert.match(html, /<dialog[^>]*class="design-system random-settings-drawer"[^>]*aria-labelledby=/);
       assert.match(html, /aria-label="关闭生成设置"/);
-      assert.match(html, /class="random-toolbar-actions"/);
+      assert.match(html, /class="practice-question-actions text-actions"/);
       assert.match(html, /aria-haspopup="dialog"/);
-      assert.ok(html.indexOf("</dialog>") < html.indexOf('class="random-toolbar-actions"'));
+      assert.ok(html.indexOf("</dialog>") < html.indexOf('class="practice-question-actions text-actions"'));
       assert.match(html, /aria-label="速度滑块"/);
       assert.doesNotMatch(html, /应用速度|未应用/);
       assert.match(html, /节拍器/);

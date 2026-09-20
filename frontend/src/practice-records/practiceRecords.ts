@@ -1,6 +1,15 @@
 import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
 import type { DictationAttempt, DictationRecord, DictationRecordEvent, ExerciseContext, PracticeRecord, TappingAttempt, TappingRecord } from "./PracticeRecord";
 
+/** Historical achievement is separate from the current attempt's result. */
+export function historicalStatus(record: PracticeRecord | undefined): string {
+  if (!record) return "";
+  if (record.mode === "tapping") return record.attempts.some(item => item.passed) ? "已通过" : "";
+  if (record.attempts.some(item => item.completedAt && !item.viewedAnswer)) return "已独立完成";
+  if (record.attempts.some(item => item.completedAt)) return "已完成";
+  return "";
+}
+
 /** 内容版本只比较记谱，不包含名称、速度或对象属性顺序；无附点的两种写法等价。 */
 export function exerciseVersion(exercise: RhythmExercise): string {
   const element = (item: RhythmElement): unknown => item.kind === "triplet"

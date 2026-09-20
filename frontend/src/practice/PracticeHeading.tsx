@@ -1,16 +1,22 @@
 import { ReturnLink } from "../navigation/PageNavigation";
 import { ArrowLeft } from "lucide-react";
+import type { ReactNode } from "react";
+import { ExerciseHistory, type ExerciseHistoryProps } from "../practice-records/ExerciseHistory";
 
-/** 练习题头只展示返回入口和题名；随机题无独立题名，不补重复标题。 */
-export function PracticeHeading({ backTo, backLabel, title }: {
+/** 题头承载返回、题名和题目级操作；随机题不补重复标题。 */
+export function PracticeHeading({ backTo, backLabel, title, children, history }: {
   backTo: string;
   backLabel: string;
   title?: string;
+  children?: ReactNode;
+  history?: Omit<ExerciseHistoryProps, "children">;
 }) {
-  return (
+  const render: ExerciseHistoryProps["children"] = ({ status, action }) => (
     <header className="practice-titlebar">
       <ReturnLink className="practice-return" to={backTo}><ArrowLeft className="ui-icon" aria-hidden="true" focusable="false" />{backLabel}</ReturnLink>
-      {title && <h1>{title}</h1>}
+      <div className="practice-heading-identity">{title && <h1>{title}</h1>}{status}</div>
+      {(children || action) && <div className="practice-heading-actions">{children}{action}</div>}
     </header>
   );
+  return history ? <ExerciseHistory {...history}>{render}</ExerciseHistory> : render({ status: null, action: null });
 }

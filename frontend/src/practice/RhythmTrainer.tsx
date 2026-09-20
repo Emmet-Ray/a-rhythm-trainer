@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { practiceShortcuts, usePracticeShortcuts } from "./usePracticeShortcuts";
 import { Hand, LoaderCircle, Play, Square } from "lucide-react";
 import { MetronomePlaybackContext } from "./MetronomePlayback";
 import PracticeFrame from "./PracticeFrame";
@@ -53,7 +54,8 @@ export type RhythmTrainerProps = {
   metronomeEnabled?: boolean;
   /** 公共设置提供的面板，仅负责放置，不拥有第二份设置状态。 */
   settingsPanel?: ReactNode;
-  extraActions?: (busy: boolean) => ReactNode;
+  toolbarEnd?: ReactNode;
+  onBusyChange?: (busy: boolean) => void;
   /** 成功启动时固定本轮记录目标；自然结束及迟到输入修正共用返回的回调。 */
   onAttemptStart?: AttemptRecorder;
 };
@@ -70,7 +72,8 @@ function RhythmTrainer({
   countInBeatCount,
   metronomeEnabled = true,
   settingsPanel,
-  extraActions,
+  toolbarEnd,
+  onBusyChange,
   onAttemptStart,
 }: RhythmTrainerProps) {
   const metronomePlayback = useContext(MetronomePlaybackContext);
@@ -136,6 +139,11 @@ function RhythmTrainer({
   const startRequestRef = useRef(0);
 
   const isRunning = phase === "countIn" || phase === "playing";
+  const busy = isStarting || isRunning;
+  useEffect(() => {
+    onBusyChange?.(busy);
+    return () => onBusyChange?.(false);
+  }, [busy, onBusyChange]);
   const activeEventIndex =
     mode === "listen" && phase === "playing" ? playingBeatIndex : null;
   // 在状态更新后的渲染中结算，包含结束帧补上的漏拍；不另存结果 state。
@@ -329,8 +337,22 @@ function RhythmTrainer({
     }
   }
 
+  usePracticeShortcuts({
+    practice: !isStarting && !isRunning ? () => { void handlePlay("practice"); } : undefined,
+    listen: !isStarting && !isRunning ? () => { void handlePlay("listen"); } : undefined,
+    stop: isStarting || isRunning ? () => {
+      if (startingRef.current) {
+        startRequestRef.current += 1;
+        startingRef.current = false;
+        setStartingMode(null);
+        stopScheduledSounds();
+      } else { void handlePlay(mode); }
+    } : undefined,
+  });
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (document.querySelector("dialog[open], .practice-shortcuts-panel:popover-open")) return;
       if (event.code !== "Space" || event.repeat) return;
       // 外层配置控件和按钮保留自己的键盘行为，不把操作控件误记为击拍。
       if (
@@ -395,6 +417,8 @@ function RhythmTrainer({
     effectiveTimingWindows,
   ]);
 
+  const practiceShortcut = practiceShortcuts[isRunning && mode === "practice" ? "stop" : "practice"];
+  const listenShortcut = practiceShortcuts[isRunning && mode === "listen" ? "stop" : "listen"];
   return (
     <div className="rhythm-trainer design-system">
     <PracticeFrame settingsPanel={settingsPanel} toolbar={<>
@@ -403,6 +427,8 @@ function RhythmTrainer({
         <button
           type="button"
           data-action={isRunning && mode === "practice" ? "stop" : "start"}
+          title={`${practiceShortcut.label}（${practiceShortcut.key}）`}
+          aria-keyshortcuts={practiceShortcut.key}
           disabled={isStarting || (isRunning && mode !== "practice")}
           onClick={(event) => {
             event.currentTarget.blur();
@@ -416,6 +442,8 @@ function RhythmTrainer({
         <button
           type="button"
           data-action={isRunning && mode === "listen" ? "stop" : "listen"}
+          title={`${listenShortcut.label}（${listenShortcut.key}）`}
+          aria-keyshortcuts={listenShortcut.key}
           disabled={isStarting || (isRunning && mode !== "listen")}
           onClick={(event) => {
             event.currentTarget.blur();
@@ -426,8 +454,8 @@ function RhythmTrainer({
           {startingMode === "listen" ? "准备中…" : isRunning && mode === "listen" ? "停止" : "试听"}
         </button>
       </div>
-      {extraActions?.(isStarting || isRunning)}
       <PracticeResult passed={result?.passed ?? null} />
+      {toolbarEnd}
       {audioError && <p className="trainer-audio-error" role="alert">{audioError}</p>}
     </>}>
       <RhythmScore
@@ -455,7 +483,7 @@ export default function RhythmTrainerWorkspace(props: Omit<RhythmTrainerProps, "
         <button type="button" disabled><Hand className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />击拍练习</button>
         <button type="button" disabled><Play className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />试听</button>
       </div>
-      {props.extraActions?.(false)}
+      {props.toolbarEnd}
     </>}>
       <div className="empty-practice-score" role="region" aria-label="空白节奏乐谱">
         <svg width="100%" height="180" aria-hidden="true">

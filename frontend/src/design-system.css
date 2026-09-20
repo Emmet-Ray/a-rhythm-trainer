@@ -319,8 +319,6 @@
 @media (max-width: 420px) {
   .random-material-options { grid-template-columns: minmax(0, 1fr); }
 }
-.random-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-left: auto; }
-.design-system .random-settings-trigger { border-color: transparent; background: transparent; box-shadow: none; }
 .rhythm-playback-toolbar, .rhythm-playback-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; min-width: 0; }
 .rhythm-playback-toolbar { justify-content: space-between; }
 @media (prefers-reduced-motion: no-preference) {
@@ -329,7 +327,6 @@
 }
 @media (max-width: 600px) {
   .random-settings-drawer { padding: 16px; }
-  .random-toolbar-actions { width: 100%; margin-left: 0; }
   .rhythm-playback-controls { width: 100%; }
   .rhythm-playback-controls > .rhythm-playback-buttons { width: 100%; }
 }
@@ -365,6 +362,30 @@
 .practice-titlebar { display: flex; flex-wrap: wrap; align-items: center; min-height: 49px; gap: 12px 24px; margin: 0 0 var(--site-heading-gap); }
 .practice-titlebar .practice-return { display: inline-flex; align-items: center; min-height: 44px; font-size: 18px; font-weight: 650; color: var(--ds-muted); flex: 0 0 auto; }
 .practice-titlebar h1 { flex: 0 1 auto; min-width: 0; max-width: 100%; margin: 0; font-size: 28px; line-height: 1.4; font-weight: 650; overflow-wrap: anywhere; }
+.practice-heading-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
+.practice-achievement { display: inline-flex; align-items: center; gap: 6px; color: var(--ds-success); font-size: var(--ds-text-sm); white-space: nowrap; }
+.practice-heading-actions { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.practice-question-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.practice-heading-actions > .exercise-history:not(:first-child) { border-left: 1px solid var(--ds-line); padding-left: 16px; }
+.exercise-history, .preset-question-navigation { display: flex; align-items: center; gap: 8px; font-size: var(--ds-text-sm); color: var(--ds-muted); }
+.preset-question-navigation > span { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.practice-shortcuts { flex: 0 0 auto; }
+.design-system button[aria-keyshortcuts] { position: relative; }
+.design-system button[aria-keyshortcuts]:focus-visible::after { content: attr(title); position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 5; padding: 6px 10px; border: 1px solid var(--ds-line); border-radius: 6px; background: var(--ds-surface); color: var(--ds-ink); font-size: 13px; font-weight: 400; white-space: nowrap; pointer-events: none; }
+.practice-shortcuts > button { anchor-name: --practice-shortcuts; }
+.practice-shortcuts-panel { position: fixed; inset: 150px 24px auto auto; margin: 0; width: 260px; max-width: calc(100vw - 32px); padding: 16px; border: 1px solid var(--ds-line); border-radius: 12px; background: var(--ds-surface); color: var(--ds-ink); box-shadow: 0 8px 32px #0002; }
+@supports (top: anchor(bottom)) {
+  .practice-shortcuts-panel { position-anchor: --practice-shortcuts; inset: auto; top: anchor(bottom); right: anchor(right); margin-top: 8px; position-try-fallbacks: flip-block, flip-inline; }
+}
+.practice-shortcuts-panel header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.design-system .practice-shortcuts-panel h2 { margin: 0; font-size: 16px; }
+.practice-shortcuts-panel dl { margin: 12px 0 0; }
+.practice-shortcuts-panel dl > div { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 36px; }
+.practice-shortcuts-panel dd { margin: 0; }
+.practice-shortcuts-panel kbd { display: inline-block; min-width: 28px; padding: 2px 6px; border: 1px solid var(--ds-line); border-radius: 4px; background: var(--ds-subtle); font: inherit; font-size: 13px; text-align: center; }
+@media (max-width: 700px) {
+  .practice-heading-actions { margin-left: 0; width: 100%; justify-content: space-between; }
+}
 .custom-status > p { margin: var(--ds-space-4) 0; color: var(--ds-muted); }
 .custom-status > a:not(.back-link) { display: inline-flex; align-items: center; min-height: 44px; color: var(--ds-primary); font-weight: 650; }
 .custom-detail > p { color: var(--ds-muted); }
@@ -423,7 +444,6 @@
 :is(.rhythm-trainer .trainer-actions, .rhythm-playback .rhythm-playback-buttons) button[data-action="stop"]:hover:not(:disabled) { background: var(--ds-tint); border-color: var(--ds-primary); }
 :is(.rhythm-trainer .trainer-actions, .rhythm-playback .rhythm-playback-buttons) button[data-action="stop"]:active:not(:disabled) { box-shadow: none; }
 .rhythm-trainer .trainer-actions button:active:not(:disabled) { box-shadow: none; }
-.rhythm-trainer kbd { border: 2px solid var(--ds-line); border-bottom-width: 4px; border-radius: 8px; padding: 3px 12px; color: var(--ds-ink); background: var(--ds-surface); }
 
 /* 工作区用白色底面区分页面背景；听写与编辑保留各自的内部排列。 */
 .practice-layout--stacked { min-width: 0; padding: var(--ds-space-8); border: 1px solid var(--ds-line); border-radius: var(--ds-radius-lg); background: var(--ds-surface); }
