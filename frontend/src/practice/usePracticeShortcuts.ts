@@ -12,6 +12,9 @@ export function canUsePracticeShortcut(event: KeyboardEvent): boolean {
 export const practiceShortcuts = {
   practice: { key: "H", label: "击拍练习" },
   listen: { key: "L", label: "试听" },
+  answer: { key: "A", label: "播放我的答案" },
+  verify: { key: "V", label: "验证当前小节" },
+  reference: { key: "R", label: "查看答案／返回作答" },
   stop: { key: "S", label: "停止" },
   previous: { key: "P", label: "上一题" },
   next: { key: "N", label: "下一题" },

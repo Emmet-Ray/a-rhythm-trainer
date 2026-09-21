@@ -21,6 +21,7 @@ import RhythmPlayback from "./RhythmPlayback";
 import PracticeFrame from "./PracticeFrame";
 import PracticeCue from "./PracticeCue";
 import PracticeResult from "./PracticeResult";
+import { practiceShortcuts, usePracticeShortcuts } from "./usePracticeShortcuts";
 import type { DictationRecordEvent } from "../practice-records/PracticeRecord";
 
 {
@@ -131,7 +132,7 @@ export function RhythmDictation({
     measureVerdicts.every((verdict) => verdict === "correct");
 
   function verifySelectedMeasure() {
-    if (!hasSelectedMeasure || !expectedMeasure || isComplete || measureVerdicts[selectedMeasureIndex] !== "unchecked") return;
+    if (isReferenceAnswerVisible || !hasSelectedMeasure || !expectedMeasure || isComplete || measureVerdicts[selectedMeasureIndex] !== "unchecked") return;
     editorRef.current?.clearMessage();
     const correct = isMeasureAnswerCorrect(
       answerMeasures[selectedMeasureIndex],
@@ -150,6 +151,17 @@ export function RhythmDictation({
     if (nextVerdicts.every((verdict) => verdict === "correct"))
       setResultVisible(true);
   }
+
+  function toggleReferenceAnswer() {
+    if (!exercise) return;
+    if (!isReferenceAnswerVisible && !isComplete) {
+      onRecord?.({ type: "view-answer" });
+    }
+    setResultVisible(false);
+    setIsReferenceAnswerVisible((previous) => !previous);
+  }
+
+  usePracticeShortcuts({ verify: verifySelectedMeasure, reference: toggleReferenceAnswer });
 
   return (
     <div className="rhythm-dictation design-system">
@@ -173,6 +185,7 @@ export function RhythmDictation({
               options={[
                 {
                   id: "question",
+                  shortcut: "listen",
                   label: "播放题目",
                   stopLabel: "停止",
                   measures: !exercise
@@ -186,6 +199,7 @@ export function RhythmDictation({
                 },
                 {
                   id: "answer",
+                  shortcut: "answer",
                   label: "播放我的答案",
                   stopLabel: "停止",
                   measures:
@@ -294,6 +308,8 @@ export function RhythmDictation({
           >
             <button
               className="dictation-verify"
+              title={`${practiceShortcuts.verify.label}（${practiceShortcuts.verify.key}）`}
+              aria-keyshortcuts={practiceShortcuts.verify.key}
               type="button"
               disabled={!hasSelectedMeasure || !expectedMeasure || isComplete}
               onClick={verifySelectedMeasure}
@@ -306,13 +322,9 @@ export function RhythmDictation({
             aria-pressed={isReferenceAnswerVisible}
             disabled={!exercise}
             aria-controls={referenceAnswerId}
-            onClick={() => {
-              if (!isReferenceAnswerVisible && !isComplete) {
-                onRecord?.({ type: "view-answer" });
-              }
-              setResultVisible(false);
-              setIsReferenceAnswerVisible((previous) => !previous);
-            }}
+            title={`${isReferenceAnswerVisible ? "返回作答" : "查看答案"}（${practiceShortcuts.reference.key}）`}
+            aria-keyshortcuts={practiceShortcuts.reference.key}
+            onClick={toggleReferenceAnswer}
           >
             {isReferenceAnswerVisible ? <EyeOff className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" /> : <Eye className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />}
             {isReferenceAnswerVisible ? "返回作答" : "查看答案"}

@@ -15,10 +15,25 @@ const { canUsePracticeShortcut, practiceShortcutAction } = await server.ssrLoadM
 const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: "note", noteValue: "whole" }] }] };
 
 test("快捷键映射 H/L/S/P/N，旧映射不再生效", () => {
-  for (const [code, action] of Object.entries({ KeyH: "practice", KeyL: "listen", KeyS: "stop", KeyP: "previous", KeyN: "next" })) {
+  for (const [code, action] of Object.entries({ KeyH: "practice", KeyL: "listen", KeyS: "stop", KeyP: "previous", KeyN: "next", KeyA: "answer", KeyV: "verify", KeyR: "reference" })) {
     assert.equal(practiceShortcutAction(code), action);
   }
   for (const code of ["Escape", "ArrowLeft", "ArrowRight", "Space"]) assert.equal(practiceShortcutAction(code), undefined);
+});
+
+test("听写播放与验证按钮显示共享键位，通用编辑播放器默认不启用快捷键", async () => {
+  const { RhythmDictation } = await server.ssrLoadModule("/src/practice/RhythmDictation.tsx");
+  const { default: Playback } = await server.ssrLoadModule("/src/practice/RhythmPlayback.tsx");
+  const html = renderToStaticMarkup(createElement(RhythmDictation, { exercise, bpm: 60 }));
+  assert.match(html, /title="播放题目（L）" aria-keyshortcuts="L"/);
+  assert.match(html, /title="播放我的答案（A）" aria-keyshortcuts="A" disabled=""/);
+  assert.match(html, /title="验证当前小节（V）" aria-keyshortcuts="V"/);
+  assert.match(html, /title="查看答案（R）" aria-keyshortcuts="R"/);
+  const editor = renderToStaticMarkup(createElement(Playback, {
+    options: [{ id: "preview", label: "试听", stopLabel: "停止", measures: exercise.measures.map(item => item.elements) }],
+    timeSignature: exercise.timeSignature, bpm: 60,
+  }));
+  assert.doesNotMatch(editor, /aria-keyshortcuts/);
 });
 
 test("快捷键说明只展示当前工作区支持的操作", async () => {
@@ -29,7 +44,10 @@ test("快捷键说明只展示当前工作区支持的操作", async () => {
   const random = render("dictation", "random");
   assert.match(random, /换一题/);
   assert.doesNotMatch(random, /上一题|击拍练习/);
-  assert.equal(render("dictation", "custom"), "");
+  const dictation = render("dictation", "custom");
+  for (const key of ["L", "A", "S", "V", "R"]) assert.ok(dictation.includes(">" + key + "<"));
+  assert.doesNotMatch(tapping, /查看答案|返回作答/);
+  assert.doesNotMatch(dictation, /上一题|下一题|击拍练习/);
   assert.doesNotMatch(render("tapping", "custom"), /上一题|下一题/);
 });
 

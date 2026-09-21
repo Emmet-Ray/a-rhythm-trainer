@@ -10,7 +10,7 @@ export default function PracticeShortcutHelp({ mode, source }: {
   const id = useId();
   const items: { label: string; key: string }[] = mode === "tapping"
     ? [practiceShortcuts.practice, practiceShortcuts.listen, practiceShortcuts.stop, { label: "击拍", key: "空格" }]
-    : [];
+    : [{ ...practiceShortcuts.listen, label: "播放题目" }, practiceShortcuts.answer, practiceShortcuts.stop, practiceShortcuts.verify, practiceShortcuts.reference];
   if (source === "preset") items.push(practiceShortcuts.previous, practiceShortcuts.next);
   if (source === "random") items.push({ ...practiceShortcuts.next, label: "换一题" });
   if (!items.length) return null;

@@ -1,6 +1,7 @@
 import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LoaderCircle, Play, Square } from "lucide-react";
 import { MetronomePlaybackContext } from "./MetronomePlayback";
+import { practiceShortcuts, usePracticeShortcuts } from "./usePracticeShortcuts";
 import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
 import { createRhythmPlaybackTimeline } from "../rhythm/RhythmTiming";
 import {
@@ -17,6 +18,8 @@ type PlaybackOption = {
   id: string;
   label: string;
   stopLabel: string;
+  /** Explicit opt-in: custom exercise editors do not acquire practice shortcuts. */
+  shortcut?: "listen" | "answer";
   measures: readonly (readonly RhythmElement[])[] | null;
 };
 
@@ -189,6 +192,22 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
     return () => onBusyChange?.(false);
   }, [isActive, onBusyChange]);
 
+  function playByShortcut(shortcut: PlaybackOption["shortcut"]) {
+    const option = options.find(item => item.shortcut === shortcut);
+    // L/A start playback; pressing the same key again neither stops nor counts another listen.
+    if (option && activeRef.current !== option.id) void togglePlayback(option);
+  }
+  const shortcutsEnabled = options.some(option => option.shortcut);
+  usePracticeShortcuts({
+    listen: shortcutsEnabled ? () => playByShortcut("listen") : undefined,
+    answer: shortcutsEnabled ? () => playByShortcut("answer") : undefined,
+    stop: shortcutsEnabled ? () => {
+      if (activeRef.current === null) return;
+      cancelPlayback();
+      setStatus("idle");
+    } : undefined,
+  });
+
   return (
     <div className="rhythm-playback design-system">
       <div className="rhythm-playback-toolbar">
@@ -196,12 +215,15 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
           <div className="rhythm-playback-buttons">
             {options.map((option) => {
               const playing = isActive && playbackSource === option.id;
+              const shortcut = option.shortcut ? practiceShortcuts[playing ? "stop" : option.shortcut] : undefined;
               return (
                 <button
                   key={option.id}
                   type="button"
                   data-action={playing ? "stop" : "play"}
                   data-source={option.id}
+                  title={shortcut ? `${playing ? option.stopLabel : option.label}（${shortcut.key}）` : undefined}
+                  aria-keyshortcuts={shortcut?.key}
                   disabled={!playing && (!timeSignature || !option.measures?.some((elements) => elements.length > 0))}
                   onClick={() => void togglePlayback(option)}
                 >
