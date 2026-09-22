@@ -119,7 +119,7 @@ export function RecordDetail({
           <p>
             {sources[record.source]} ·{" "}
             {record.mode === "tapping" ? "击拍练习" : "节奏听写"} ·{" "}
-            {recordSummary(record)}
+            全部历史 · {recordSummary(record)}
           </p>
         </div>
         <div className="text-actions">

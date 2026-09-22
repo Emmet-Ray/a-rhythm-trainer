@@ -345,6 +345,10 @@ test("题目记录列表只展示最新十条并提供分页", () => {
     assert.match(html, /分页题目-13/);
     assert.doesNotMatch(html, /分页题目-12/);
     assert.match(html, /题目记录分页/);
+    assert.match(html, /aria-label="记录时间范围"/);
+  assert.match(html, /aria-label="练习统计"/);
+  assert.doesNotMatch(html, /次练习，|次作答，/);
+    assert.match(html, /<dd>23<span>次<\/span><\/dd>/);
     assert.doesNotMatch(html, /加载更多/);
   } finally {
     if (original) Object.defineProperty(globalThis, "localStorage", original);

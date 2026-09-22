@@ -20,7 +20,7 @@ import {
 } from "../practice-records/recordAccess";
 import { RecordDetail } from "../practice-records/RecordDetail";
 import { RecordPagination } from "../practice-records/RecordPagination";
-import { recordPage } from "../practice-records/practiceRecords";
+import { recordPage, recordOverview, type RecordFilter, type RecordPeriod } from "../practice-records/practiceRecords";
 
 const sources = { preset: "预设", random: "随机", custom: "自定义" };
 function readRecords() {
@@ -39,19 +39,16 @@ export default function PracticeRecordsPage() {
   return (
     <section className="design-system practice-records-page">
       <title>练习记录 · 节奏训练</title>
-      <header className="page-heading">
-        <h1>练习记录</h1>
-      </header>
       {access === "guest" ? (
         <LocalRecords />
       ) : (
-        <p role="status">{recordAccessMessage(access)}</p>
+        <><header className="page-heading"><h1>练习记录</h1></header>
+        <p role="status">{recordAccessMessage(access)}</p></>
       )}
     </section>
   );
 }
 
-type RecordFilter = "all" | "tapping" | "dictation";
 function LocalRecords() {
   const [data, setData] = useState(readRecords);
   const [filter, setFilter] = useBrowsingState<RecordFilter>(
@@ -59,21 +56,26 @@ function LocalRecords() {
     "all",
   );
   const [page, setPage] = useBrowsingState("record-page", 1);
+  const [period, setPeriod] = useBrowsingState<RecordPeriod>("record-period", "all");
+  const [now, setNow] = useState(() => new Date());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
   const [deletedCount, setDeletedCount] = useState(0);
   useEffect(() => {
-    const refresh = () => setData(readRecords());
+    const refresh = () => { setData(readRecords()); setNow(new Date()); };
+    const tick = window.setInterval(() => setNow(new Date()), 60000);
+    window.addEventListener("focus", refresh);
     window.addEventListener("storage", refresh);
     window.addEventListener(RECORDS_CHANGED, refresh);
     return () => {
+      window.clearInterval(tick);
+      window.removeEventListener("focus", refresh);
       window.removeEventListener("storage", refresh);
       window.removeEventListener(RECORDS_CHANGED, refresh);
     };
   }, []);
-  const filtered = data.records.filter(
-    (record) => filter === "all" || record.mode === filter,
-  );
+  const overview = recordOverview(data.records, filter, period, now);
+  const filtered = overview.records;
   const selected = data.records.find((record) => record.id === selectedId);
   const pagination = recordPage(filtered.length, page);
   if (page !== pagination.page) setPage(pagination.page);
@@ -97,6 +99,7 @@ function LocalRecords() {
   if (data.error)
     return (
       <>
+        <header className="page-heading"><h1>练习记录</h1></header>
         <p role="alert" className="practice-record-error">
           {data.error}
         </p>
@@ -107,6 +110,16 @@ function LocalRecords() {
     );
   return (
     <>
+      <header className="page-heading record-page-heading">
+        <h1>练习记录</h1>
+        <div className="topic-modes record-period" role="group" aria-label="记录时间范围">
+          {([['week', '近 7 天'], ['month', '近 30 天'], ['all', '全部']] as const).map(([value, label]) => (
+            <button type="button" key={value} aria-pressed={period === value} onClick={() => {
+              setPeriod(value); setPage(1); setNow(new Date());
+            }}>{label}</button>
+          ))}
+        </div>
+      </header>
       {actionError && (
         <p role="alert" className="practice-record-error">
           {actionError}
@@ -137,10 +150,24 @@ function LocalRecords() {
           </button>
         ))}
       </div>
+      <section className="record-overview" aria-label="练习统计">
+        <dl className="record-metrics">
+          <div><dt>{filter === "dictation" ? "作答次数" : "练习次数"}</dt><dd>{overview.count}<span>次</span></dd></div>
+          <div><dt>练习天数</dt><dd>{overview.days}<span>天</span></dd></div>
+          {filter === "tapping" && <>
+            <div><dt>通过次数</dt><dd>{overview.passedCount}<span>次</span></dd></div>
+            <div><dt>通过率</dt><dd>{overview.passRate === null ? "—" : `${overview.passRate}%`}</dd></div>
+          </>}
+          {filter === "dictation" && <>
+            <div><dt>完成次数</dt><dd>{overview.completedCount}<span>次</span></dd></div>
+            <div><dt title="全部验证正确，且完成前未查看答案">独立完成</dt><dd>{overview.independentCount}<span>次</span></dd></div>
+          </>}
+        </dl>
+      </section>
       {filtered.length === 0 ? (
         <p className="records-empty">
-          暂无{filter === "all" ? "" : filter === "tapping" ? "击拍" : "听写"}
-          练习记录。完成一轮击拍，或开始听题、验证听写后，会自动记录。
+          {period === "all" ? "暂无" : "所选时间范围内暂无"}{filter === "all" ? "" : filter === "tapping" ? "击拍" : "听写"}
+          练习记录。
         </p>
       ) : (
         <ul className="record-list navigation-list">

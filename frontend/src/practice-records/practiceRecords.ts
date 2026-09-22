@@ -71,3 +71,55 @@ export function recordPage(total: number, requested: number) {
   const start = (page - 1) * pageSize;
   return { page, pages, start, end: Math.min(total, start + pageSize) };
 }
+
+export type RecordFilter = "all" | PracticeRecord["mode"];
+export type RecordPeriod = "week" | "month" | "all";
+
+/** Counts attempts, not questions. Calendar days use the browser timezone, including today.
+ * Tapping belongs to its end date; dictation belongs to its start date even when completed later.
+ * Returned records remain whole so opening/deleting one retains the existing all-history semantics.
+ */
+export function recordOverview(records: readonly PracticeRecord[], mode: RecordFilter, period: RecordPeriod, now = new Date()) {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (period === "week" ? 6 : 29));
+  const lowerBound = period === "all" ? -Infinity : start.getTime();
+  const days = new Set<string>();
+  const matching: { record: PracticeRecord; latest: number }[] = [];
+  let tappingCount = 0;
+  let passedCount = 0;
+  let dictationCount = 0;
+  let completedCount = 0;
+  let independentCount = 0;
+
+  for (const record of records) {
+    if (mode !== "all" && record.mode !== mode) continue;
+    let latest = -Infinity;
+    for (const attempt of record.attempts) {
+      const date = new Date("startedAt" in attempt ? attempt.startedAt : attempt.completedAt);
+      const time = date.getTime();
+      if (!Number.isFinite(time) || time < lowerBound || time > now.getTime()) continue;
+      latest = Math.max(latest, time);
+      days.add(`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`);
+      if ("passed" in attempt) {
+        tappingCount++;
+        if (attempt.passed) passedCount++;
+      } else {
+        dictationCount++;
+        if (attempt.completedAt !== null) {
+          completedCount++;
+          if (!attempt.viewedAnswer) independentCount++;
+        }
+      }
+    }
+    if (latest !== -Infinity) matching.push({ record, latest });
+  }
+  return {
+    records: matching.sort((a, b) => b.latest - a.latest).map(item => item.record),
+    count: tappingCount + dictationCount,
+    days: days.size,
+    tappingCount, passedCount,
+    passRate: tappingCount ? Math.round(passedCount / tappingCount * 100) : null,
+    dictationCount, completedCount, independentCount,
+  };
+}
