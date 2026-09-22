@@ -1,14 +1,42 @@
-import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
-import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
 import type { DictationAttempt, PracticeRecord } from "./PracticeRecord";
 import { tappingPrecisions } from "../settings/tappingPrecision";
+import { RecordPagination } from "./RecordPagination";
+import { recordPage } from "./practiceRecords";
 
-const Score = lazy(() =>
-  import("../rhythm/notation/RhythmDraftScore").then((module) => ({
-    default: module.RhythmDraftScore,
-  })),
-);
+type ScoreModule = typeof import("../rhythm/notation/RhythmDraftScore");
+let loadedScore: ScoreModule | undefined;
+
+/** Only the heavy score is deferred; loading and retry never replace the dialog shell. */
+function RecordScorePreview({ record }: { record: PracticeRecord }) {
+  const [state, setState] = useState<{ module?: ScoreModule; failed: boolean }>(
+    () => ({ module: loadedScore, failed: false }),
+  );
+  const [request, setRequest] = useState(0);
+  useEffect(() => {
+    let active = true;
+    import("../rhythm/notation/RhythmDraftScore").then(module => {
+      loadedScore = module;
+      if (active) setState({ module, failed: false });
+    }, () => {
+      if (active) setState({ failed: true });
+    });
+    return () => { active = false; };
+  }, [request]);
+  const Score = state.module?.RhythmDraftScore;
+  return <div className="record-score-preview">
+    {Score ? <Score measures={record.exercise.measures.map(measure => measure.elements)}
+      timeSignature={record.exercise.timeSignature} showNavigation={false} />
+      : state.failed ? <div className="record-preview-status">
+        <p role="alert">题目预览加载失败，请重试。</p>
+        <button type="button" onClick={() => {
+          setState({ failed: false });
+          setRequest(value => value + 1);
+        }}>重试加载</button>
+      </div> : <p className="record-preview-status" role="status" aria-busy="true">正在加载题目预览…</p>}
+  </div>;
+}
 const sources = { preset: "预设", random: "随机", custom: "自定义" };
 const dateFormat = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "medium",
@@ -46,6 +74,9 @@ export function RecordDetail({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<"attempts" | "score">("attempts");
+  const [page, setPage] = useState(1);
+  const pagination = recordPage(record.attempts.length, page);
+  if (page !== pagination.page) setPage(pagination.page);
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -107,7 +138,7 @@ export function RecordDetail({
           aria-pressed={tab === "attempts"}
           onClick={() => setTab("attempts")}
         >
-          尝试记录
+          练习明细
         </button>
         <button
           type="button"
@@ -119,26 +150,16 @@ export function RecordDetail({
       </div>
       <div className="record-detail">
         {tab === "score" ? (
-          <div className="record-score-preview">
-            <Suspense fallback={<LoadingPlaceholder />}>
-              <Score
-                measures={record.exercise.measures.map(
-                  (measure) => measure.elements,
-                )}
-                timeSignature={record.exercise.timeSignature}
-                showNavigation={false}
-              />
-            </Suspense>
-          </div>
+          <RecordScorePreview record={record} />
         ) : (
           <>
             {record.mode === "tapping" ? (
               <div className="record-table-scroll">
                 <table>
-                  <caption className="sr-only">击拍尝试明细</caption>
+                  <caption className="sr-only">击拍练习明细</caption>
                   <thead>
                     <tr>
-                      <th>尝试</th>
+                      <th>序号</th>
                       <th>完成时间</th>
                       <th>速度</th>
                       <th>精度</th>
@@ -150,12 +171,12 @@ export function RecordDetail({
                   </thead>
                   <tbody>
                     {record.attempts
-                      .slice()
+                      .slice(record.attempts.length - pagination.end, record.attempts.length - pagination.start)
                       .reverse()
                       .map((attempt, index) => (
                         <tr key={attempt.id}>
                           <th scope="row">
-                            第 {record.attempts.length - index} 次
+                            {pagination.start + index + 1}
                           </th>
                           <td>
                             <RecordTime value={attempt.completedAt} />
@@ -190,8 +211,9 @@ export function RecordDetail({
                 </table>
               </div>
             ) : (
-              <DictationAttempts attempts={record.attempts} />
+              <DictationAttempts attempts={record.attempts} page={pagination.page} />
             )}
+            <RecordPagination {...pagination} onChange={setPage} label="练习明细分页" />
           </>
         )}
       </div>
@@ -201,16 +223,19 @@ export function RecordDetail({
 
 export function DictationAttempts({
   attempts,
+  page = 1,
 }: {
   attempts: readonly DictationAttempt[];
+  page?: number;
 }) {
+  const pagination = recordPage(attempts.length, page);
   return (
     <div className="record-table-scroll">
       <table>
-        <caption className="sr-only">听写尝试明细</caption>
+        <caption className="sr-only">听写练习明细</caption>
         <thead>
           <tr>
-            <th>尝试</th>
+            <th>序号</th>
             <th>开始时间</th>
             <th>完成时间</th>
             <th>状态</th>
@@ -220,13 +245,13 @@ export function DictationAttempts({
         </thead>
         <tbody>
           {attempts
-            .slice()
+            .slice(attempts.length - pagination.end, attempts.length - pagination.start)
             .reverse()
             .map((attempt, index) => (
               <DictationAttemptRow
                 key={attempt.id}
                 attempt={attempt}
-                index={attempts.length - index - 1}
+                index={pagination.start + index}
               />
             ))}
         </tbody>
@@ -248,7 +273,7 @@ function DictationAttemptRow({
   return (
     <>
       <tr>
-        <th scope="row">第 {index + 1} 次</th>
+        <th scope="row">{index + 1}</th>
         <td>
           <RecordTime value={attempt.startedAt} />
         </td>
@@ -270,7 +295,7 @@ function DictationAttemptRow({
             type="button"
             aria-expanded={open}
             aria-controls={detailId}
-            aria-label={`${open ? "收起" : "查看"}第 ${index + 1} 次尝试的小节明细`}
+            aria-label={`${open ? "收起" : "查看"}序号 ${index + 1} 的小节明细`}
             onClick={() => setOpen((value) => !value)}
           >
             <ChevronDown
@@ -286,7 +311,7 @@ function DictationAttemptRow({
           {open && (
             <table>
               <caption className="sr-only">
-                第 {index + 1} 次听写的小节明细
+                序号 {index + 1} 的小节明细
               </caption>
               <thead>
                 <tr>
@@ -315,4 +340,3 @@ function DictationAttemptRow({
     </>
   );
 }
-

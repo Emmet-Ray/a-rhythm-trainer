@@ -1,13 +1,11 @@
-import { lazy, Suspense, useContext, useEffect, useState, type ReactNode } from "react";
+import { useContext, useEffect, useState, type ReactNode } from "react";
 import { Check, History } from "lucide-react";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import type { ExerciseContext, PracticeRecord } from "./PracticeRecord";
 import { RecordAccessContext } from "./recordAccess";
 import { listPracticeRecords, RECORDS_CHANGED } from "./practiceRecordStorage";
 import { recordKey, historicalStatus } from "./practiceRecords";
-import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
-
-const RecordDetail = lazy(() => import("./RecordDetail").then(module => ({ default: module.RecordDetail })));
+import { RecordDetail } from "./RecordDetail";
 
 function readHistory(key: string) {
   try {
@@ -53,6 +51,6 @@ function LocalHistory({ context, exercise, mode, children }: ExerciseHistoryProp
       </button>}
   </div>;
   return <>{children({ status, action })}
-    {open && data.record && <Suspense fallback={<LoadingPlaceholder />}><RecordDetail record={data.record} onClose={() => setOpen(false)} /></Suspense>}
+    {open && data.record && <RecordDetail record={data.record} onClose={() => setOpen(false)} />}
   </>;
 }

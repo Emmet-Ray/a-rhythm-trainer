@@ -63,3 +63,11 @@ export function recordDictationEvent(record: DictationRecord | null, context: Ex
     updatedAt: event.type === "edit" || current.updatedAt > at ? current.updatedAt : at,
     attempts: previous ? current.attempts.map(item => item.id === attemptId ? next : item) : [...current.attempts, next] };
 }
+/** Clamp after filtering/deletion; bounds apply to the displayed (newest-first) order. */
+export function recordPage(total: number, requested: number) {
+  const pageSize = 10;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(pages, Math.max(1, Number.isFinite(requested) ? Math.floor(requested) : 1));
+  const start = (page - 1) * pageSize;
+  return { page, pages, start, end: Math.min(total, start + pageSize) };
+}

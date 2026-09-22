@@ -19,6 +19,8 @@ import {
   recordAccessMessage,
 } from "../practice-records/recordAccess";
 import { RecordDetail } from "../practice-records/RecordDetail";
+import { RecordPagination } from "../practice-records/RecordPagination";
+import { recordPage } from "../practice-records/practiceRecords";
 
 const sources = { preset: "预设", random: "随机", custom: "自定义" };
 function readRecords() {
@@ -56,7 +58,7 @@ function LocalRecords() {
     "record-filter",
     "all",
   );
-  const [limit, setLimit] = useBrowsingState("record-limit", 20);
+  const [page, setPage] = useBrowsingState("record-page", 1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
   const [deletedCount, setDeletedCount] = useState(0);
@@ -73,6 +75,8 @@ function LocalRecords() {
     (record) => filter === "all" || record.mode === filter,
   );
   const selected = data.records.find((record) => record.id === selectedId);
+  const pagination = recordPage(filtered.length, page);
+  if (page !== pagination.page) setPage(pagination.page);
   function remove(record: PracticeRecord) {
     if (
       !window.confirm(
@@ -126,7 +130,7 @@ function LocalRecords() {
             aria-pressed={filter === value}
             onClick={() => {
               setFilter(value);
-              setLimit(20);
+              setPage(1);
             }}
           >
             {label}
@@ -140,7 +144,7 @@ function LocalRecords() {
         </p>
       ) : (
         <ul className="record-list navigation-list">
-          {filtered.slice(0, limit).map((record) => (
+          {filtered.slice(pagination.start, pagination.end).map((record) => (
             <RecordRow
               key={record.id}
               record={record}
@@ -150,11 +154,7 @@ function LocalRecords() {
           ))}
         </ul>
       )}
-      {filtered.length > limit && (
-        <button type="button" onClick={() => setLimit((value) => value + 20)}>
-          加载更多
-        </button>
-      )}
+      <RecordPagination {...pagination} onChange={setPage} label="题目记录分页" />
       {deletedCount > 0 && (
         <SuccessToast key={deletedCount} message="练习记录已删除" />
       )}

@@ -290,13 +290,13 @@ test("详情抽屉有关闭与预览切换但没有删除，账号状态不展�
   try {
     const html = renderToStaticMarkup(createElement(RecordDetail, { record: listPracticeRecords(storage)[0], onClose() {} }));
     assert.match(html, /<dialog/);
-    assert.match(html, /尝试记录/);
+    assert.match(html, /练习明细/);
     assert.match(html, /题目预览/);
-    assert.match(html, /击拍尝试明细/);
+    assert.match(html, /击拍练习明细/);
     assert.match(html, /关闭记录详情/);
     assert.doesNotMatch(html, /删除|更多记录操作/);
     const account = renderToStaticMarkup(createElement(RecordAccessContext.Provider, { value: "account" }, createElement(PracticeRecordsPage)));
-    assert.doesNotMatch(account, /两小节|击拍尝试明细/);
+    assert.doesNotMatch(account, /两小节|击拍练习明细/);
   } finally {
     if (original) Object.defineProperty(globalThis, "localStorage", original);
     else delete globalThis.localStorage;
@@ -310,11 +310,36 @@ test("听写每行一次尝试，最新优先，保留两个时间与独立的�
   const before = JSON.stringify(record);
   const html = renderToStaticMarkup(createElement(DictationAttempts, { attempts: record.attempts }));
   assert.match(html, /<th>开始时间<\/th><th>完成时间<\/th>/);
-  assert.ok(html.indexOf("第 2 次</th>") < html.indexOf("第 1 次</th>"));
+  assert.ok(html.indexOf('scope="row">1</th>') < html.indexOf('scope="row">2</th>'));
+  assert.ok(html.indexOf("未完成</td><td>已查看") < html.indexOf("已完成</td><td>未查看"));
   assert.match(html, /未完成<\/td><td>已查看/);
   assert.match(html, /已完成<\/td><td>未查看/);
   assert.equal((html.match(/aria-expanded="false"/g) ?? []).length, 2);
   assert.equal((html.match(/class="dictation-measure-row"/g) ?? []).length, 2);
   assert.doesNotMatch(html, /<details/);
   assert.equal(JSON.stringify(record), before);
+});
+
+test("题目记录列表只展示最新十条并提供分页", () => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const storage = memoryStorage();
+  for (let index = 0; index < 23; index++) {
+    save(storage, [tap({ completedAt: new Date(Date.parse(at) + index * 60000).toISOString() })], {
+      context: { ...context, exerciseId: `question-${index}`, title: `分页题目-${index}` },
+    });
+  }
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: storage });
+  try {
+    const html = renderToStaticMarkup(createElement(MemoryRouter, null,
+      createElement(RecordAccessContext.Provider, { value: "guest" }, createElement(PracticeRecordsPage))));
+    assert.equal((html.match(/class="record-entry"/g) ?? []).length, 10);
+    assert.match(html, /分页题目-22/);
+    assert.match(html, /分页题目-13/);
+    assert.doesNotMatch(html, /分页题目-12/);
+    assert.match(html, /题目记录分页/);
+    assert.doesNotMatch(html, /加载更多/);
+  } finally {
+    if (original) Object.defineProperty(globalThis, "localStorage", original);
+    else delete globalThis.localStorage;
+  }
 });
