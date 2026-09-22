@@ -22,6 +22,21 @@ try {
 }
 
 const windows = { perfectMs: 50, hitMs: 150 };
+test("主动停止以题目时间零点为界，保留命中误敲并补齐未来漏拍", () => {
+  const score = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: Array.from({ length: 4 }, () => ({ kind: "note", noteValue: "quarter" })) }] };
+  const timeline = timing.createExerciseTimeline(score, 60, 4, windows);
+  assert.equal(timing.stopPractice(timeline, [-20], -1, windows), null);
+  assert.deepEqual(timing.stopPractice(timeline, [], 0, windows).result, {
+    targetCount: 4, hitCount: 0, missCount: 4, wrongTapCount: 0, passed: false,
+  });
+  assert.deepEqual(timing.stopPractice(timeline, [0, 500], 600, windows).result, {
+    targetCount: 4, hitCount: 1, missCount: 3, wrongTapCount: 1, passed: false,
+  });
+  const taps = timeline.targetTaps.map(target => target.offsetMs);
+  assert.equal(timing.stopPractice(timeline, taps, 3050, windows).result.passed, false);
+  assert.equal(timing.stopPractice(timeline, taps, 3050, windows).result.hitCount, 4);
+  assert.equal(timing.summarizePractice(4, timing.judgePractice(timeline, taps, timeline.finishOffsetMs, windows).events).passed, true);
+});
 const exercise = {
   timeSignature: { beats: 4, beatType: 4 },
   measures: [{ elements: ["quarter", "quarter", "quarter", "eighth", "eighth"].map(

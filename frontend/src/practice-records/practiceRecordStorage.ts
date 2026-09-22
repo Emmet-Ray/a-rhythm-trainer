@@ -80,10 +80,11 @@ export function parsePracticeRecord(value: unknown): PracticeRecord {
       if (
         (item.hitCount as number) + (item.missCount as number) !==
           item.targetCount ||
-        item.passed !==
-          (item.hitCount === item.targetCount &&
+        typeof item.passed !== "boolean" ||
+        (item.passed &&
+          !(item.hitCount === item.targetCount &&
             item.missCount === 0 &&
-            item.wrongTapCount === 0)
+            item.wrongTapCount === 0))
       )
         throw new Error("击拍结果无效");
     }

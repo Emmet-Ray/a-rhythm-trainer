@@ -26,6 +26,14 @@ function memoryStorage() {
   return { values, getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
 }
 const tap = (overrides = {}) => ({ mode: "tapping", attempt: { ...attempt, ...overrides } });
+test("全部命中但主动停止的未通过记录可保存，通过仍要求无漏拍误敲", () => {
+  const storage = memoryStorage();
+  save(storage, [tap({ hitCount: 2, missCount: 0, passed: false })]);
+  assert.equal(listPracticeRecords(storage)[0].attempts[0].passed, false);
+  const record = listPracticeRecords(storage)[0];
+  const invalid = { ...record, attempts: [{ ...record.attempts[0], hitCount: 1, missCount: 1, passed: true }] };
+  assert.throws(() => parsePracticeRecord(invalid));
+});
 const hear = (event, time = at, attemptId = "answer-1") => ({ mode: "dictation", attemptId, event, at: time });
 const verify = (measureIndex, correct = false, attemptId = "answer-1", time = at) => hear({ type: "verify", measureIndex, correct }, time, attemptId);
 function save(storage, actions, options = {}) {

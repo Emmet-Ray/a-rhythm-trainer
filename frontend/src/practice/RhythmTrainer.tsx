@@ -17,6 +17,7 @@ import {
   getPlaybackPosition,
   getTargetTimingWindow,
   summarizePractice,
+  stopPractice,
   type PlaybackPosition,
   type TimingEvent,
   type TimingWindows,
@@ -56,7 +57,7 @@ export type RhythmTrainerProps = {
   settingsPanel?: ReactNode;
   toolbarEnd?: ReactNode;
   onBusyChange?: (busy: boolean) => void;
-  /** 成功启动时固定本轮记录目标；自然结束及迟到输入修正共用返回的回调。 */
+  /** 成功启动时固定本轮记录目标；自然结束、主动停止及迟到输入修正共用回调。 */
   onAttemptStart?: AttemptRecorder;
 };
 
@@ -104,6 +105,7 @@ function RhythmTrainer({
   const [roundId, setRoundId] = useState(0);
   const { phase, countInBeat, playingBeatIndex } = playback;
   const [timingEvents, setTimingEvents] = useState<TimingEvent[]>([]);
+  const [stopped, setStopped] = useState(false);
   const [startingMode, setStartingMode] = useState<PlaybackMode | null>(null);
   const isStarting = startingMode !== null;
   const [audioError, setAudioError] = useState<string | null>(null);
@@ -114,6 +116,7 @@ function RhythmTrainer({
     setConfiguration({ exercise, bpm, countInBeatCount });
     setPlayback(IDLE_PLAYBACK);
     setTimingEvents([]);
+    setStopped(false);
     setMode("practice");
     setStartingMode(null);
     setAudioError(null);
@@ -149,7 +152,7 @@ function RhythmTrainer({
   // 在状态更新后的渲染中结算，包含结束帧补上的漏拍；不另存结果 state。
   const result =
     mode === "practice" && phase === "finished" && !isStarting
-      ? summarizePractice(targetTapTimeline.length, timingEvents)
+      ? { ...summarizePractice(targetTapTimeline.length, timingEvents), ...(stopped ? { passed: false } : {}) }
       : null;
 
   const stopScheduledSounds = useCallback(() => {
@@ -246,12 +249,18 @@ function RhythmTrainer({
 
   async function handlePlay(requestedMode: PlaybackMode) {
     if (clockRef.current !== null && !finishedRef.current) {
+      const settlement = mode === "practice"
+        ? stopPractice(timeline, tapOffsetsRef.current, clockRef.current.nowMs(), effectiveTimingWindows)
+        : null;
+      const record = recordResultRef.current;
       stopScheduledSounds();
       clockRef.current = null;
       recordResultRef.current = undefined;
       nextTargetIndexRef.current = 0;
-      setPlayback(IDLE_PLAYBACK);
-      setTimingEvents([]);
+      setStopped(settlement !== null);
+      setPlayback(settlement ? { ...IDLE_PLAYBACK, phase: "finished" } : IDLE_PLAYBACK);
+      setTimingEvents(settlement?.events ?? []);
+      if (settlement) record?.(settlement.result);
       return;
     }
     // resume 是异步的；在等待期间阻止重复开始。
@@ -259,6 +268,7 @@ function RhythmTrainer({
     clockRef.current = null;
     recordResultRef.current = undefined;
     finishedRef.current = false;
+    setStopped(false);
     startingRef.current = true;
     setStartingMode(requestedMode);
     setAudioError(null);

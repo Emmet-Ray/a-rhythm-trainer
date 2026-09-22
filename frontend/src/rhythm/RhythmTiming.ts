@@ -54,7 +54,7 @@ export type PracticeResult = {
  * 汇总同一轮自然结束后的完整判定记录，不读取时钟或修改记录。
  * targetCount 为本轮目标总数；每个目标应恰好有一次 hit 或 miss。
  * 所有命中等级均算命中；零目标且没有误敲也通过。
- * 是否自然结束由调用者判断，中断和试听不使用此函数结算。
+ * 主动停止时调用者须覆盖通过状态；试听不结算。
  */
 export function summarizePractice(
   targetCount: number,
@@ -334,6 +334,18 @@ export function judgePractice(
   const misses = collectExpiredTargets(targetTaps, nextTargetIndex, nowMs, windows);
   events.push(...misses);
   return { events, nextTargetIndex: nextTargetIndex + misses.length };
+}
+
+/** 音频时钟进入题目后才记录主动停止；未命中目标（含尚未播放）全部补为漏拍。 */
+export function stopPractice(
+  timeline: Pick<ExerciseTimeline, "targetTaps" | "finishOffsetMs">,
+  tapTimes: readonly number[],
+  nowMs: number,
+  windows: TimingWindows,
+) {
+  if (nowMs < 0) return null;
+  const { events } = judgePractice(timeline, tapTimes.filter(time => time <= nowMs), timeline.finishOffsetMs, windows);
+  return { events, result: { ...summarizePractice(timeline.targetTaps.length, events), passed: false } };
 }
 
 export function evaluateExpiredTarget(
