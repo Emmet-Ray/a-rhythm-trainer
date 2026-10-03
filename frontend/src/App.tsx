@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { routeModules, preloadDestination, preloadLinkIntent } from "./navigation/routeModules";
 import { LoadingPlaceholder } from "./navigation/LoadingPlaceholder";
 import { Navigate, Route, Routes, useLocation } from "react-router";
@@ -11,6 +11,8 @@ import { useNavigationScroll } from "./navigation/usePageNavigation";
 import "./App.css";
 import "./design-system.css";
 import { RecordAccessContext, recordAccess } from "./practice-records/recordAccess";
+import { AssistantPanel } from "./assistant/AssistantPanel";
+import { AssistantContext, AssistantContextScope } from "./assistant/assistantContext";
 
 // 首页只展示入口；题库和训练代码进入对应页面后再加载。
 const RandomPracticePage = routeModules.random.Component;
@@ -30,9 +32,13 @@ function AppShell() {
   useEffect(() => { void preloadDestination(pathname); }, [pathname]);
   const mainRef = useRef<HTMLElement>(null);
   const identity = auth.state.status === "authenticated" ? `account:${auth.state.user.id}` : auth.state.status;
+  // 每次访问创建独立快照容器；面板在路由边界外保留，身份变化时重新挂载。
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const assistantContext = useMemo(() => new AssistantContext(), [key, identity]);
   useNavigationScroll(pathname.startsWith("/custom") ? identity : "public");
 
   return (
+    <AssistantContextScope.Provider value={assistantContext}>
     <RecordAccessContext.Provider value={recordAccess(auth)}><div className="site-shell" onPointerOver={preloadLinkIntent} onFocusCapture={preloadLinkIntent} onPointerDownCapture={preloadLinkIntent}>
       <a className="skip-link" href="#main-content">
         跳到主要内容
@@ -90,7 +96,9 @@ function AppShell() {
           </Routes>
         </Suspense>
       </main>
+      <AssistantPanel key={identity} />
     </div></RecordAccessContext.Provider>
+    </AssistantContextScope.Provider>
   );
 }
 

@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowRight, Hand, Ear, LoaderCircle, Minus, Plus, Save, Pencil, Trash2, Play } from "lucide-react";
 import { SuccessToast } from "../navigation/SuccessToast";
+import { useAssistantPageContext } from "../assistant/assistantContext";
 import { flushSync } from "react-dom";
 import { UnsavedChanges } from "../navigation/UnsavedChanges";
 import {
@@ -545,6 +546,14 @@ function CustomExerciseEditor({
     settings: { bpm: 60, metronomeEnabled: true },
   });
   const { name, measures, selectedMeasureIndex } = draft;
+  useAssistantPageContext({
+    page: "custom_exercise_editor",
+    description: "自定义练习编辑页，正在编辑未保存草稿；小节可能未填满，selectedMeasureIndex 从 0 开始。",
+    state: { mode, name, exercise_id: initial?.id ?? null, source: source ?? "local",
+      timeSignature: { beats: 4, beatType: 4 }, measure_count: measures.length,
+      measures: measures.map(elements => ({ elements })), selectedMeasureIndex,
+      bpm: draft.settings.bpm, metronomeEnabled: draft.settings.metronomeEnabled },
+  });
   const [savedSuccessfully, setSavedSuccessfully] = useState(false);
   const [saveNotice, setSaveNotice] = useState(0);
   const [savedContent, setSavedContent] = useState(() => ({

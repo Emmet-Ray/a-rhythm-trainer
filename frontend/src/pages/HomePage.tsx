@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { ArrowRight, FileText, Shuffle, PencilLine } from "lucide-react";
+import { useAssistantPageContext } from "../assistant/assistantContext";
 
 const sources = [
   {
@@ -23,6 +24,10 @@ const sources = [
 ];
 
 export default function HomePage() {
+  useAssistantPageContext({
+    page: "home", description: "节奏训练首页，选择练习来源。",
+    state: { practiceSources: sources.map(({ path, title, description }) => ({ path, title, description })) },
+  });
   return (
     <div className="design-system home-page">
       <title>首页 · 节奏训练</title>
