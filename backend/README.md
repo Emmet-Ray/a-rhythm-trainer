@@ -1,5 +1,159 @@
 # 后端
 
+## 新版 AI 助手：后端内存会话与流式问答
+
+当前实现 DeepSeek Responses API 的多轮文字问答，会话历史保存在后端内存；支持请求携带页面快照，尚未接入前端采集或工具。
+`api/assistant.py` 处理本站 HTTP/SSE；`assistant/sessions.py` 管理历史与运行占用；
+`assistant/context.py` 定义会话记录，并将历史及其关联快照投影为模型消息；`assistant/model.py` 隔离模型服务的请求与事件。
+`TextModel` 是模型调用边界，后续提供方通过适配器加入。配置中的提供方目前只接受
+`deepseek`，不表示其他 API 或订阅认证已实现。
+
+在本地 `backend/.env` 追加配置，不覆盖已有设置或提交密钥：
+
+```dotenv
+AI_PROVIDER=deepseek
+AI_MODEL=deepseek-flash
+AI_API_KEY=填写自己的密钥
+```
+
+从 `backend/` 启动并显式加载配置：
+
+```sh
+uv sync --locked
+uv run --locked --env-file .env uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
+
+可以先通过本机终端验证后端，不需要先制作助手面板。以下请求会调用真实模型并产生费用：
+
+```sh
+# 先创建会话，从返回 JSON 中取得 id
+curl -X POST http://127.0.0.1:8000/api/assistant/sessions
+
+# 将 SESSION_ID 替换为刚返回的 id；后续输入继续使用同一 id
+curl -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"请解释四分音符和八分音符的时值关系。"}'
+```
+
+接口约定：
+
+| 接口 | 用途 |
+| --- | --- |
+| `POST /api/assistant/sessions` | 创建会话，返回 201 和 `{id, entries, is_running, last_run_status}` |
+| `GET /api/assistant/sessions/{id}` | 获取会话记录（含每次用户输入的快照）与运行状态，不包含正在生成的片段 |
+| `POST /api/assistant/sessions/{id}/messages` | 提交 `{text, page_context?}`，后端补齐历史，返回 SSE |
+
+同一会话正在运行时，新提交返回 409 且不追加消息；不同会话可以独立运行。
+未知 ID 返回 404。内存存储属于应用生命周期，仅适用于单 worker；重启后旧 ID 失效。
+当前未实现持久化、删除、自动过期或订阅者机制。登录会话与这里的聊天会话是两种独立对象。
+旧的单次 `/api/assistant/chat` 路由已由会话接口替代。
+
+消息提交规则借鉴 Pi 的状态归属：接受请求时保存 UserEntry（文字和深复制的页面快照），
+完整回答保存为 AssistantEntry。模型收到由这些记录构造的独立消息序列。
+文字片段只用于显示；完整回答先记入会话，再发送 `message_completed`。
+失败或取消保留用户输入及其关联快照，不保存部分回答；下一次请求仍能看到这些历史记录。
+当前不提供自动重试或原位重试，用户可发送“请继续回答”，不要自动重复提交原请求。
+完整回答提交后即使客户端断连，也不会回滚；可通过 GET 获取最终历史。
+`last_run_status` 为 null（尚未运行）、running、completed、failed 或 cancelled。
+`is_running` 持续到响应清理结束才变为 false，不以文字生成结束作为释放时机。
+
+### 本次页面上下文
+
+在 `/docs` 中向同一会话连续提交，例如第一次：
+
+```json
+{
+  "text": "当前草稿有几个小节？",
+  "page_context": {
+    "page": "custom_exercise_editor",
+    "description": "自定义练习编辑页",
+    "state": {"measure_count": 2}
+  }
+}
+```
+
+第二次将 `measure_count` 改为 3，问题改为“现在呢？”，确认回答使用新快照。
+第三次提交 `{"text":"当前草稿有几个小节？","page_context":null}`，模型应说明缺少当前信息，
+不能把旧对话的数字当作现状。也可切换为首页快照验证页面变化。
+
+`page` 为非空页面标识（最多 100 字符），`description` 为非空说明（最多 2000 字符），
+`state` 为 JSON 对象。整体快照经 JSON 序列化后最多 64 KiB（UTF-8），超限返回 422，
+不截断、不添加用户消息。当前 `state` 是只读问答数据，尚无具体编辑器操作契约或写入授权。
+
+每次请求单独提交快照，省略或 null 表示当前未知，不继承旧值。会话保存每次输入对应的
+完整快照；构造模型输入时，在每条用户文字之前插入 JSON 数据消息：
+
+```json
+{
+  "page_context": {
+    "scope": "historical",
+    "input_index": 1,
+    "snapshot": {
+      "page": "custom_exercise_editor",
+      "description": "自定义练习编辑页",
+      "state": {"measure_count": 2}
+    }
+  }
+}
+```
+
+只有本次输入对应的 scope 为 `current`，其余是 `historical`。这些标记在请求时生成，
+不固化在存储中。所有历史快照当前都会发送，不做压缩或去重；上下文和内存会随会话增长。
+本次 `snapshot: null` 时，历史快照仍可用于回顾，但不能作为当前状态。
+页面文字不拼入系统指令；固定系统规则说明时间语义，遵循效果仍需真实问答验证。
+
+创建和查询会话响应的 `messages` 已改名为 `entries`（不再返回旧字段）。例如：
+
+```json
+{
+  "id": "会话ID",
+  "entries": [
+    {
+      "type": "user",
+      "text": "有几个小节？",
+      "created_at": "2026-10-03T02:00:00+00:00",
+      "page_context": {
+        "page": "custom_exercise_editor",
+        "description": "自定义练习编辑页",
+        "state": {"measure_count": 2}
+      }
+    },
+    {"type": "assistant", "text": "2 小节。", "created_at": "2026-10-03T02:00:05+00:00"}
+  ],
+  "is_running": false,
+  "last_run_status": "completed"
+}
+```
+
+用户记录始终包含 `page_context`（可以为 null）；两种记录都包含 `created_at`。
+`created_at` 由后端生成：用户记录为接受输入时，助手记录为完整回答写入时。
+查询返回带 UTC 时区的 ISO 8601 字符串，前端可转成本地时间显示；重复查询不重新生成时间。
+时间目前只作为会话元数据，不加入模型输入；不代表页面采集时间，也不作为草稿版本或记录排序依据。
+页面快照与聊天一起暂存在后端内存，尚未写入磁盘。发送请求格式和 SSE 事件保持不变。
+
+### 流式事件与验证
+
+事件使用 SSE，每个事件为 `data: {JSON}`，以空行分隔：
+
+| type | 字段与含义 |
+| --- | --- |
+| `text_delta` | `text`：追加显示的文字片段 |
+| `message_completed` | `text`：完整回答，应替换临时文字而非再次追加 |
+| `run_completed` | 本次运行成功结束 |
+| `run_failed` | `message`：固定错误说明；此前部分文字不代表完整回答 |
+
+终端事件前的意外断流不算成功。单次请求最多等待 120 秒，SDK 单次网络等待超时
+30 秒，不自动重试；取消或断连关闭上游连接，不保证供应商立即停止计费。
+未配置返回 503，非法输入返回 422；开始流式响应后的失败用 `run_failed` 报告。
+输入接受非空 `text`（最多 4000 字符）及可选 `page_context`；模型和凭证由后端配置，前端不能指定地址或密钥。
+
+本阶段入口仅供本机开发，检查 loopback 客户端和浏览器 Origin（本机 5173/8000 端口）。
+不应通过反向代理或隧道公开；公开部署前需接入身份与用量控制。后端内置的通用
+API 文档可能展示本接口，但不会因未配置模型而影响健康检查及其他接口。
+
+验证使用 `uv run --locked --no-env-file pytest tests/test_assistant*.py`；测试模拟上游 HTTP，
+不读取真实密钥、不调用模型。接口依据 [DeepSeek Responses 文档](https://api-docs.deepseek.com/guides/responses_api/)。
+
 Python 3.12+、FastAPI，使用 uv 管理依赖，SQLite 存储数据，SQLAlchemy 访问数据库，Alembic 管理表结构迁移。
 
 已提供健康检查、短信登录、当前用户查询及退出接口，使用服务端会话和 HttpOnly Cookie，并接入前端登录页面。登录接口默认关闭；公开接入前仍需补齐 IP 限流、短信发送预算等反滥用保护。

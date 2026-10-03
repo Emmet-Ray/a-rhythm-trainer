@@ -6,6 +6,8 @@ from domain.auth import Auth
 from api.dependencies import AppResources
 from settings import AuthHttpSettings, SESSION_LIFETIME
 from api.auth import router as auth_router
+from api.assistant import router as assistant_router
+from assistant.sessions import SessionStore
 from api.custom_exercises import router as custom_exercise_router
 from db.database import create_database_engine
 from integrations.sms import SmsAuth, SmsSettings
@@ -16,6 +18,7 @@ def create_app(*, resources: AppResources | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         engine = None
+        app.state.assistant_sessions = SessionStore()
         try:
             active_resources = resources
             if active_resources is None:
@@ -28,6 +31,7 @@ def create_app(*, resources: AppResources | None = None) -> FastAPI:
             app.state.auth_enabled = active_resources is not None
             yield
         finally:
+            app.state.assistant_sessions = None
             app.state.auth_enabled = None
             app.state.resources = None
             if engine is not None:
@@ -35,6 +39,7 @@ def create_app(*, resources: AppResources | None = None) -> FastAPI:
 
     app = FastAPI(title="Rhythm Trainer API", lifespan=lifespan)
     app.include_router(auth_router)
+    app.include_router(assistant_router)
     app.include_router(custom_exercise_router)
     app.add_api_route("/api/health", health, methods=["GET"])
     return app
