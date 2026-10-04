@@ -831,3 +831,22 @@
   .assistant-composer textarea { font-size: 16px; }
   .assistant-launcher { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); }
 }
+
+/* 练习展示不依赖来源；对话间距由助手结果容器负责。 */
+.assistant-exercise-result { margin-bottom: 28px; }
+.exercise-card { padding: 16px; border: 1px solid var(--ds-line); border-radius: 14px; background: var(--ds-surface); min-width: 0; }
+.exercise-card-heading h3 { margin: 0; font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.exercise-card-score { min-width: 0; margin-top: 4px; }
+.exercise-card-score > p { font-size: 13px; color: var(--ds-muted); }
+.exercise-card footer { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 12px; }
+.exercise-card footer span { font-size: 11px; color: var(--ds-muted); }
+.exercise-card footer button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--ds-line); border-radius: 8px; color: var(--ds-primary); background: var(--ds-tint); cursor: pointer; }
+
+/* 独立小节切换：标签在背景外，数字条随内容收拢，长练习可横向滚动。 */
+.exercise-measure-navigation { display: flex; align-items: center; gap: 10px; margin-top: 14px; min-width: 0; }
+.exercise-measure-navigation > span { flex: 0 0 auto; font-size: 11px; color: var(--ds-muted); }
+.exercise-measure-buttons { display: flex; gap: 4px; width: fit-content; min-width: 0; padding: 4px; border-radius: 10px; background: var(--ds-subtle); overflow-x: auto; scrollbar-width: thin; }
+.exercise-measure-buttons button { flex: 0 0 auto; min-width: 32px; min-height: 32px; padding: 4px 8px; border: 0; border-radius: 7px; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.exercise-measure-buttons button:hover { background: var(--ds-tint); color: var(--ds-primary); }
+.exercise-measure-buttons button[aria-pressed="true"] { background: var(--ds-primary); color: white; font-weight: 600; }
+.exercise-measure-buttons button:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: -2px; }

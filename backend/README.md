@@ -2,7 +2,7 @@
 
 ## 新版 AI 助手：后端内存会话与流式问答
 
-当前实现 DeepSeek Responses API 的多轮问答与工具循环，会话历史保存在后端内存；前端可携带页面快照，模型可调用工具生成节奏练习。谱面卡片和应用操作尚未接入。
+当前实现 DeepSeek Responses API 的多轮问答与工具循环，会话历史保存在后端内存；前端可携带页面快照，模型可调用工具生成节奏练习。前端已支持候选谱面卡片，并可由用户应用到当前自定义练习草稿。
 `api/assistant.py` 处理本站 HTTP/SSE；`assistant/sessions.py` 管理历史并订阅 Agent 消息；
 `agent/agent.py` 管理消息状态、运行占用、停止与订阅；`agent/loop.py` 负责模型与工具循环；`assistant/records.py` 定义会话记录，`assistant/context.py` 将历史及其关联快照投影为 Agent 消息；`agent/model.py` 隔离模型服务的请求与事件。
 `TextModel` 是模型调用边界，后续提供方通过适配器加入。配置中的提供方目前只接受
@@ -361,7 +361,7 @@ assistant/
 - `assistant/system_prompt.py`：节奏助手身份和行为；具体练习格式在工具参数的 schema 描述中。
 - `agent/model.py`：向 DeepSeek Responses 传入工具声明，将调用和结果转换为 `function_call` / `function_call_output`；保留工具调用轮次的原始 response items 以重放 reasoning。只在完整响应后执行工具，不执行流式参数片段。参考 [DeepSeek Responses 文档](https://api-docs.deepseek.com/guides/responses_api/)。
 
-会话查询返回的 `entries` 现在包含 `user`、`assistant`、`tool_result`。工具结果包含调用 ID、工具名称、正文、结构化详情、错误标记和记录时间；普通文字消息格式不变。HTTP SSE 仍发送 `text_delta`、最终的 `message_completed` 和 `run_completed`，工具调用轮次不会提前结束 HTTP 流。前端兼容并保留工具记录，暂不展示原始工具数据或谱面卡片；卡片、应用和开始练习待后续接入。
+会话查询返回的 `entries` 现在包含 `user`、`assistant`、`tool_result`。工具结果包含调用 ID、工具名称、正文、结构化详情、错误标记和记录时间；普通文字消息格式不变。HTTP SSE 仍发送 `text_delta`、最终的 `message_completed` 和 `run_completed`，工具调用轮次不会提前结束 HTTP 流。前端将成功的练习工具结果显示为谱面卡片，在自定义练习编辑页支持用户点击应用覆盖草稿；不自动保存。卡片试听和直接开始练习尚未接入。
 
 `assistant/tools/propose_rhythm_exercise.py` 中 `ExerciseProposal` 接收 `title`（去除首尾空白后 1–100 字符）、`description`（1–1000 字符）、`exercise`，拒绝额外字段。节奏复用 `domain.rhythm.parse_rhythm_exercise`：4/4、1–64 小节、每小节恰好四拍及现有音符规则。校验保证结构和时值合法，不评判教学效果。`GeneratedExercise(candidate)` 在校验成功后生成 ID、UTC 时间，`snapshot()` 返回独立副本。
 

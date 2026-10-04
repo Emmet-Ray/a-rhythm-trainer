@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, Hand, Ear, LoaderCircle, Minus, Plus, Save, Pencil, Trash2, Play } from "lucide-react";
 import { SuccessToast } from "../navigation/SuccessToast";
-import { useAssistantPageContext } from "../assistant/assistantContext";
+import { useAssistantExerciseTarget, useAssistantPageContext } from "../assistant/assistantContext";
+import type { ExerciseProposal } from "../assistant/tool-results/exerciseProposal";
 import { flushSync } from "react-dom";
 import { UnsavedChanges } from "../navigation/UnsavedChanges";
 import {
@@ -582,6 +583,20 @@ function CustomExerciseEditor({
     };
   }, [identity, auth.busy]);
 
+  const [assistantRevision, setAssistantRevision] = useState(0);
+  const applyAssistantExercise = useCallback((proposal: ExerciseProposal) => {
+    if (locked.current || auth.busy) return false;
+    setDraft(previous => ({ ...previous, name: proposal.title,
+      measures: structuredClone(proposal.exercise.measures.map(measure => measure.elements)),
+      selectedMeasureIndex: 0 }));
+    setAssistantRevision(value => value + 1);
+    setSavedSuccessfully(false);
+    setSaveError(null);
+    editorRef.current?.clearMessage();
+    return true;
+  }, [setDraft, auth.busy]);
+  useAssistantExerciseTarget(saving || auth.busy ? null : applyAssistantExercise);
+
   function addMeasure() {
     setSaveError(null);
     setDraft((previous) => ({
@@ -728,7 +743,7 @@ function CustomExerciseEditor({
                   aria-label="试听与保存"
                 >
                   <RhythmPlayback
-                    key={[bpm, measures.length].join(":")}
+                    key={[bpm, measures.length, assistantRevision].join(":")}
                     bpm={bpm}
                     metronomeEnabled={metronomeEnabled}
                     timeSignature={timeSignature}

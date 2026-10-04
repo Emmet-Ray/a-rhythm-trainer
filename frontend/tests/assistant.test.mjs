@@ -4,8 +4,9 @@ import { createServer } from "vite";
 
 const server = await createServer({ configFile: false,
   server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
-let api, AssistantConversation, AssistantContext;
+let api, AssistantConversation, AssistantContext, parseExerciseProposal;
 try {
+  ({ parseExerciseProposal } = await server.ssrLoadModule("/src/assistant/tool-results/exerciseProposal.ts"));
   api = await server.ssrLoadModule("/src/api/assistant.ts");
   ({ AssistantConversation } = await server.ssrLoadModule("/src/assistant/conversation.ts"));
   ({ AssistantContext } = await server.ssrLoadModule("/src/assistant/assistantContext.ts"));
@@ -165,4 +166,36 @@ test("拒绝字段不完整的工具结果", async t => {
     { type: "tool_result", created_at: stamp, content: "text" },
   ] }));
   await assert.rejects(api.getSession("session1", new AbortController().signal), /会话格式异常/);
+});
+
+
+test("候选练习先校验节奏，返回独立数据", () => {
+  const value = { id: "proposal", title: "四拍", description: "基础", exercise: {
+    timeSignature: { beats: 4, beatType: 4 },
+    measures: [{ elements: Array.from({ length: 4 }, () => ({ kind: "note", noteValue: "quarter" })) }],
+  } };
+  const proposal = parseExerciseProposal(value);
+  proposal.exercise.measures[0].elements[0].kind = "rest";
+  assert.equal(value.exercise.measures[0].elements[0].kind, "note");
+  assert.throws(() => parseExerciseProposal({ ...value, id: "" }));
+  assert.throws(() => parseExerciseProposal({ ...value, exercise: { ...value.exercise, measures: [{ elements: [] }] } }));
+});
+
+test("应用能力随编辑目标注册与注销，旧编辑器不能注销新目标", () => {
+  const scope = new AssistantContext();
+  const first = Symbol(), second = Symbol();
+  let applied;
+  const apply = proposal => { applied = proposal; return true; };
+  scope.registerApply(first, () => false);
+  scope.registerApply(second, apply);
+  scope.removeApply(first);
+  assert.equal(scope.getApplySnapshot(), apply);
+  assert.equal(scope.getApplySnapshot()({ id: "p" }), true);
+  assert.deepEqual(applied, { id: "p" });
+  assert.equal(scope.readCurrentPageContext(), null);
+  scope.registerApply(second, null);
+  assert.equal(scope.getApplySnapshot(), null);
+  scope.registerApply(second, apply);
+  scope.removeApply(second);
+  assert.equal(scope.getApplySnapshot(), null);
 });

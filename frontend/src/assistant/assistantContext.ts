@@ -1,10 +1,28 @@
 import { createContext, useContext, useLayoutEffect, useState, useSyncExternalStore } from "react";
 
+import type { ExerciseProposal } from "./tool-results/exerciseProposal";
+
+export type ApplyExercise = (proposal: ExerciseProposal) => boolean;
+
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type PageContext = { page: string; description: string; state: { [key: string]: JsonValue } };
 
 /** 每个访问及身份范围一个实例。快照独立于编辑器，旧提供者不能清除新提供者。 */
 export class AssistantContext {
+  private applyOwner: symbol | null = null;
+  private applyExercise: ApplyExercise | null = null;
+  registerApply(owner: symbol, apply: ApplyExercise | null) {
+    if (this.applyOwner === owner && this.applyExercise === apply) return;
+    this.applyOwner = owner;
+    this.applyExercise = apply;
+    this.notify();
+  }
+  removeApply(owner: symbol) {
+    if (this.applyOwner !== owner) return;
+    this.applyOwner = null; this.applyExercise = null; this.notify();
+  }
+  getApplySnapshot = () => this.applyExercise;
+
   private current: PageContext | null = null;
   private owner: symbol | null = null;
   private serialized = "";
@@ -51,4 +69,18 @@ export function useAssistantContext() {
   const snapshot = useSyncExternalStore(scope?.subscribe ?? emptySubscribe,
     scope?.getSnapshot ?? emptySnapshot, emptySnapshot);
   return { snapshot, readCurrentPageContext: scope?.readCurrentPageContext ?? emptySnapshot };
+}
+
+/** 应用能力仅在当前编辑器挂载时存在，路由或身份切换会注销。 */
+export function useAssistantExerciseTarget(apply: ApplyExercise | null) {
+  const scope = useContext(AssistantContextScope);
+  const [owner] = useState(() => Symbol("exercise-target"));
+  useLayoutEffect(() => { scope?.registerApply(owner, apply); }, [scope, owner, apply]);
+  useLayoutEffect(() => () => scope?.removeApply(owner), [scope, owner]);
+}
+
+export function useApplyAssistantExercise() {
+  const scope = useContext(AssistantContextScope);
+  return useSyncExternalStore(scope?.subscribe ?? emptySubscribe,
+    scope?.getApplySnapshot ?? emptySnapshot, emptySnapshot);
 }

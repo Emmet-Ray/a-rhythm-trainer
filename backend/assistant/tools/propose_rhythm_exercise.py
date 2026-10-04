@@ -18,7 +18,7 @@ class ExerciseProposal(BaseModel):
     """模型提供的候选内容。音乐规则复用领域解析器，ID 和时间不接受外部输入。"""
 
     model_config = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=True)
-    title: str = Field(min_length=1, max_length=100)
+    title: str = Field(min_length=1, max_length=100, description="简短的练习名称，不附加拍号、小节数或候选等状态标签。")
     description: str = Field(min_length=1, max_length=1000)
     exercise: dict = Field(description=(
         '格式为 {timeSignature: {beats: 4, beatType: 4}, measures: [{elements: [...]}]}。'
@@ -79,7 +79,7 @@ def create_propose_rhythm_exercise_tool() -> AgentTool[ExerciseProposal]:
 
     return AgentTool(
         name="propose_rhythm_exercise",
-        description="提出一份可预览、练习或应用到编辑器的完整 4/4 节奏练习；每小节必须恰好四拍。不会自动应用或保存到题库。",
+        description="提出一份可预览谱面、由用户应用到自定义练习草稿的完整 4/4 节奏练习；每小节必须恰好四拍。不会自动应用或保存到题库。",
         parameters=ExerciseProposal,
         execute=execute,
     )

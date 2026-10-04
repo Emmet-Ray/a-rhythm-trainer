@@ -17,6 +17,10 @@ type RhythmDraftScoreProps = {
   overlay?: ReactNode;
   navigationLabel?: string;
   showNavigation?: boolean;
+  /** 窄预览容器中缩放至一整小节可见，其他小节仍可横向浏览。 */
+  fitMeasure?: boolean;
+  /** 显示练习片段时保留原小节编号。 */
+  measureNumberStart?: number;
 };
 
 // 原样显示草稿或参考答案，不自动补休止符；未传选择回调时导航只改变独立的浏览位置。
@@ -29,6 +33,8 @@ export function RhythmDraftScore({
   overlay,
   navigationLabel = "小节",
   showNavigation = true,
+  fitMeasure = false,
+  measureNumberStart = 1,
 }: RhythmDraftScoreProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -43,9 +49,15 @@ export function RhythmDraftScore({
     observer.observe(viewport);
     return () => observer.disconnect();
   }, []);
-  const layout = useMemo(() => createDraftScoreLayout(
-    measures.length, viewportWidth, timeSignature.beats * 4 / timeSignature.beatType,
-  ), [measures.length, viewportWidth, timeSignature.beats, timeSignature.beatType]);
+  const layout = useMemo(() => {
+    const layout = createDraftScoreLayout(measures.length, viewportWidth, timeSignature.beats * 4 / timeSignature.beatType);
+    if (fitMeasure && viewportWidth > 0 && layout.measures.length) {
+      layout.height = 120;
+      layout.measures = layout.measures.map(measure => ({ ...measure, y: 10 }));
+      layout.scale = Math.min(layout.scale, viewportWidth / (layout.measures[0].width + 20));
+    }
+    return layout;
+  }, [measures.length, viewportWidth, timeSignature.beats, timeSignature.beatType, fitMeasure]);
   // 历史恢复可能从第 3、4 小节继续：等待真实宽度后只定位一次。
   // 后续编辑、尺寸变化及手动滚动不接管视野；显式跳转仍由 selectMeasure 处理。
   useLayoutEffect(() => {
@@ -77,7 +89,7 @@ export function RhythmDraftScore({
         (indexes) => new Beam(indexes.map((noteIndex) => notes[noteIndex])),
       );
       const stave = createRhythmStave(x, y, width, index === 0);
-      stave.setMeasure(index + 1);
+      stave.setMeasure(measureNumberStart + index);
       if (index === 0)
         stave.addTimeSignature(
           `${timeSignature.beats}/${timeSignature.beatType}`,
@@ -91,7 +103,7 @@ export function RhythmDraftScore({
       preparedMeasures.push(measure);
     }
     return { ...layout, measures: preparedMeasures };
-  }, [measures, layout, timeSignature.beats, timeSignature.beatType]);
+  }, [measures, layout, timeSignature.beats, timeSignature.beatType, measureNumberStart]);
 
   useEffect(() => {
     const container = containerRef.current;
