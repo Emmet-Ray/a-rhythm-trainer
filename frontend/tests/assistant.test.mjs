@@ -148,3 +148,21 @@ test("页面快照深复制，旧页面卸载不清除新页面，离开页面�
   context.remove(current);
   assert.equal(context.readCurrentPageContext(), null);
 });
+
+test("会话保留工具调用与工具结果，供后续卡片使用", async t => {
+  const value = { ...empty(), entries: [
+    { type: "assistant", text: "", created_at: stamp,
+      tool_calls: [{ id: "c1", name: "propose_rhythm_exercise", arguments: "{}" }] },
+    { type: "tool_result", tool_call_id: "c1", tool_name: "propose_rhythm_exercise",
+      content: "已生成", details: { generated_exercise: { id: "exercise1" } }, is_error: false, created_at: stamp },
+  ] };
+  t.mock.method(globalThis, "fetch", async () => Response.json(value));
+  assert.deepEqual(await api.getSession("session1", new AbortController().signal), value);
+});
+
+test("拒绝字段不完整的工具结果", async t => {
+  t.mock.method(globalThis, "fetch", async () => Response.json({ ...empty(), entries: [
+    { type: "tool_result", created_at: stamp, content: "text" },
+  ] }));
+  await assert.rejects(api.getSession("session1", new AbortController().signal), /会话格式异常/);
+});

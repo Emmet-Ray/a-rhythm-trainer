@@ -2,9 +2,9 @@
 
 ## 新版 AI 助手：后端内存会话与流式问答
 
-当前实现 DeepSeek Responses API 的多轮文字问答，会话历史保存在后端内存；支持请求携带页面快照，尚未接入前端采集或工具。
-`api/assistant.py` 处理本站 HTTP/SSE；`assistant/sessions.py` 管理历史与运行占用；
-`assistant/context.py` 定义会话记录，并将历史及其关联快照投影为模型消息；`assistant/model.py` 隔离模型服务的请求与事件。
+当前实现 DeepSeek Responses API 的多轮问答与工具循环，会话历史保存在后端内存；前端可携带页面快照，模型可调用工具生成节奏练习。谱面卡片和应用操作尚未接入。
+`api/assistant.py` 处理本站 HTTP/SSE；`assistant/sessions.py` 管理历史并订阅 Agent 消息；
+`agent/agent.py` 管理消息状态、运行占用、停止与订阅；`agent/loop.py` 负责模型与工具循环；`assistant/records.py` 定义会话记录，`assistant/context.py` 将历史及其关联快照投影为 Agent 消息；`agent/model.py` 隔离模型服务的请求与事件。
 `TextModel` 是模型调用边界，后续提供方通过适配器加入。配置中的提供方目前只接受
 `deepseek`，不表示其他 API 或订阅认证已实现。
 
@@ -49,9 +49,9 @@ curl -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
 旧的单次 `/api/assistant/chat` 路由已由会话接口替代。
 
 消息提交规则借鉴 Pi 的状态归属：接受请求时保存 UserEntry（文字和深复制的页面快照），
-完整回答保存为 AssistantEntry。模型收到由这些记录构造的独立消息序列。
+完整模型消息（包括工具调用）保存为 AssistantEntry，工具结果保存为 ToolResultEntry。模型收到由这些记录构造的独立消息序列。
 文字片段只用于显示；完整回答先记入会话，再发送 `message_completed`。
-失败或取消保留用户输入及其关联快照，不保存部分回答；下一次请求仍能看到这些历史记录。
+失败或取消保留用户输入、已完成的模型消息和工具结果，不保存部分回答；下一次请求仍能看到这些历史记录。
 当前不提供自动重试或原位重试，用户可发送“请继续回答”，不要自动重复提交原请求。
 完整回答提交后即使客户端断连，也不会回滚；可通过 GET 获取最终历史。
 `last_run_status` 为 null（尚未运行）、running、completed、failed 或 cancelled。
@@ -319,3 +319,50 @@ backend/
 `data/` 为运行时数据目录，不提交 Git；`uv.lock` 和迁移脚本应提交。
 
 前端启动、代理检查与页面验收见 [前端说明](../frontend/README.md#本地开发与联调)。
+
+### 模块边界
+
+`agent/` 是通用运行能力，不导入 `assistant/`、`domain/` 或 HTTP API。
+`assistant/` 是节奏助手应用，组合 Agent、会话、页面上下文和业务工具。
+`domain/rhythm.py` 提供所有题目来源共用的节奏规则，不依赖 AI。
+
+```text
+agent/
+  agent.py       状态、运行控制、订阅
+  loop.py        单次模型与工具循环
+  messages.py    分角色的消息协议
+  events.py      Agent 运行事件
+  tools.py       工具契约和执行器
+  model.py       模型接口、模型流事件、当前 DeepSeek 适配器
+assistant/
+  sessions.py    会话管理、订阅记录、聊天输出事件
+  records.py     会话记录及序列化
+  context.py     页面快照和历史投影
+  system_prompt.py
+  tools/propose_rhythm_exercise.py  参数、候选结果、工具实现
+```
+
+会话记录独立为 `records.py`，供会话管理和上下文投影共同使用，避免投影依赖会话运行实现。
+具体工具的专用类型就近定义，通用工具接口留在 `agent/tools.py`，不建立全项目共用的类型杂物文件。
+
+### 工具调用与 AI 生成练习
+
+助手遵循标准顺序：用户输入 → 模型消息（可包含工具调用）→ 执行工具 → 工具结果消息 → 再次请求模型。`ChatSession` 持有统一的 `entries`，通过 Agent 查询运行状态；没有独立的生成练习列表，也不向工具传入会话保存回调。
+
+- `agent/loop.py`：只接收 Agent 消息，在本次上下文中追加模型消息与工具结果，所有事件统一通过同步 `emit(event)` 通知 Agent；不导入会话类型、不修改会话记录。一次运行最多执行 8 次工具调用。未知工具、非法 JSON、参数校验错误会作为工具结果交回模型修正。程序异常终止运行；取消或异常时为未完成的调用补充失败结果，区分结果未确认和未执行，避免后续历史中出现悬空调用。不自动重试工具。
+- `agent/agent.py`：持有独立的消息状态，收到完整消息后先更新状态，再发布 `message_end`。管理互斥、120 秒超时、停止和运行状态；`run(model, messages=...)` 可替换历史投影，不会重新发布旧消息。`_process_event` 是唯一事件入口：先更新状态，再通知订阅者。显示流作为订阅者，通过队列取出文字与运行完成事件；不会再次广播。loop 在独立任务中运行，第一次消费显示流才启动。`stop()` 取消 loop 任务；关闭显示流会取消并等待该任务清理，调用方需等待上下文退出。当前订阅者同步执行，适用于内存记录；未来异步落盘需明确等待与失败策略。
+- `agent/messages.py`：分别定义系统、用户、模型、工具结果消息，各角色只携带自己的字段。`ProviderMetadata` 保留适配器私有数据，只有匹配提供方的适配器解释它。工具详情随消息保留，适配器只发送模型所需内容。
+- `agent/events.py`：定义文字增量、完整消息、整次运行完成事件。`agent/model.py` 的 `ModelEvent` 只描述单次模型调用；会话层将 Agent 运行事件转换为现有聊天事件，二者不再混用。
+- `assistant/sessions.py`：投影历史和当前输入，成功取得 Agent 占用后保存用户记录；订阅 `message_end`，把新模型消息和工具结果包装为会话记录并添加记录时间。用户输入已保存，历史投影也不重发事件，因此不会重复记录。
+- `agent/tools.py`：`AgentTool` 定义名称、说明、参数模型及异步函数；`ToolExecutor` 负责查找和参数校验。工具只返回 `ToolResult(content, details, is_error)`。
+- `assistant/tools/propose_rhythm_exercise.py`：创建并返回生成练习，不修改草稿、不写题库。完整练习在结果的 `details.generated_exercise` 中；ID 和标题在模型可读的 `content` 中，完整候选内容已在 assistant 工具调用参数中。
+- `assistant/records.py`：会话记录及对外快照，包含记录时间；提供方元数据不暴露给界面。
+- `assistant/context.py`：校验页面快照，`build_agent_messages` 将记录投影为 Agent 消息；页面编码及其解释规则放在一起。最近用户快照在工具循环内仍标记为 current。
+- `assistant/system_prompt.py`：节奏助手身份和行为；具体练习格式在工具参数的 schema 描述中。
+- `agent/model.py`：向 DeepSeek Responses 传入工具声明，将调用和结果转换为 `function_call` / `function_call_output`；保留工具调用轮次的原始 response items 以重放 reasoning。只在完整响应后执行工具，不执行流式参数片段。参考 [DeepSeek Responses 文档](https://api-docs.deepseek.com/guides/responses_api/)。
+
+会话查询返回的 `entries` 现在包含 `user`、`assistant`、`tool_result`。工具结果包含调用 ID、工具名称、正文、结构化详情、错误标记和记录时间；普通文字消息格式不变。HTTP SSE 仍发送 `text_delta`、最终的 `message_completed` 和 `run_completed`，工具调用轮次不会提前结束 HTTP 流。前端兼容并保留工具记录，暂不展示原始工具数据或谱面卡片；卡片、应用和开始练习待后续接入。
+
+`assistant/tools/propose_rhythm_exercise.py` 中 `ExerciseProposal` 接收 `title`（去除首尾空白后 1–100 字符）、`description`（1–1000 字符）、`exercise`，拒绝额外字段。节奏复用 `domain.rhythm.parse_rhythm_exercise`：4/4、1–64 小节、每小节恰好四拍及现有音符规则。校验保证结构和时值合法，不评判教学效果。`GeneratedExercise(candidate)` 在校验成功后生成 ID、UTC 时间，`snapshot()` 返回独立副本。
+
+接口与循环测试使用模拟模型及 HTTP transport，不产生 API 费用；真实模型的生成效果还需本机试用。图片输入、数据库持久化、并行工具和执行 hooks 尚未实现。

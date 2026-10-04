@@ -231,3 +231,5 @@ Docker 启动见 [项目 README](../README.md#快速启动)，仓库中的 [Ngin
 - [界面设计系统](DESIGN.md)
 - [计时与音频生命周期](TIMING.md)
 - [后端运行与维护](../backend/README.md)
+
+助手会话协议兼容后端的 `assistant.tool_calls` 和 `tool_result` 记录，保留它们用于后续卡片接入。当前消息区仅展示用户文字与助手非空文字，不把原始工具参数、结果 JSON 或内部详情直接展示给用户。

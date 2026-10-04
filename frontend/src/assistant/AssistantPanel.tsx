@@ -71,7 +71,7 @@ export function AssistantPanel() {
           <MessageCircle size={30} aria-hidden="true" /><h3>从一个节奏问题开始</h3>
           <p>试着问“四分音符和八分音符有什么区别？”</p><p>在编辑页，还可以询问当前草稿的内容。</p>
         </div> : null}
-        {state.session?.entries.map((entry, index) => <article className={`assistant-message ${entry.type}`} key={index} aria-label={entry.type === "user" ? "你的消息" : "助手回答"}>
+        {state.session?.entries.map((entry, index) => entry.type === "tool_result" || !entry.text.trim() ? null : <article className={`assistant-message ${entry.type}`} key={index} aria-label={entry.type === "user" ? "你的消息" : "助手回答"}>
           <p className="assistant-message-text">{entry.text}</p>
           <div className="assistant-message-meta">
             <time dateTime={entry.created_at} title={new Date(entry.created_at).toLocaleString()}>{new Date(entry.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>

@@ -1,4 +1,4 @@
-"""本机多轮会话接口，接收每次请求的页面快照；尚不提供工具执行。"""
+"""本机多轮会话接口，接收每次请求的页面快照；运行工具循环并返回最终回答。"""
 
 import json
 from contextlib import aclosing
@@ -11,8 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from assistant.model import ModelError, ModelEvent, ModelSettings, TextModel, create_model
-from assistant.sessions import ChatSession, SessionBusy, SessionStore
+from agent.model import ModelError, ModelSettings, TextModel, create_model
+from assistant.sessions import SessionEvent, ChatSession, SessionBusy, SessionStore
 from assistant.context import PageContext
 
 
@@ -85,7 +85,7 @@ async def get_run(
     body: ChatInput,
     session: Annotated[ChatSession, Depends(get_session)],
     model: Annotated[TextModel, Depends(get_model)],
-) -> AsyncIterator[AsyncIterator[ModelEvent]]:
+) -> AsyncIterator[AsyncIterator[SessionEvent]]:
     # request 作用域的 yield 依赖在整个响应结束后退出，包括断连/发送异常。
     try:
         async with session.run(body.text, model, body.page_context) as stream:
@@ -99,7 +99,7 @@ def encode_event(event: dict) -> str:
 
 
 @router.post("/sessions/{session_id}/messages")
-async def chat(stream: Annotated[AsyncIterator[ModelEvent], Depends(get_run, scope="request")]):
+async def chat(stream: Annotated[AsyncIterator[SessionEvent], Depends(get_run, scope="request")]):
     async def events():
         try:
             async with aclosing(stream) as events_stream:

@@ -1,3 +1,4 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -16,7 +17,7 @@ from integrations.sms import SmsAuth, SmsSettings
 def create_app(*, resources: AppResources | None = None) -> FastAPI:
     """测试可注入独立运行时；生产资源在启动时创建、关闭时释放，不自动建表。"""
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         engine = None
         app.state.assistant_sessions = SessionStore()
         try:

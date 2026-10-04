@@ -7,7 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.assistant import get_model
-from assistant.model import Message, ModelError, ModelEvent
+from agent.messages import UserMessage, AssistantMessage
+from agent.model import ModelError, ModelEvent
 from main import create_app
 
 
@@ -22,12 +23,12 @@ def test_entry_timestamps_are_generated_at_acceptance_and_completion(monkeypatch
             assert tz == UTC
             return clock[0]
 
-    monkeypatch.setattr("assistant.context.datetime", Clock)
+    monkeypatch.setattr("assistant.records.datetime", Clock)
     app = create_app()
     observed = []
 
     class TimedModel:
-        async def stream(self, messages):
+        async def stream(self, messages, *, tools=()):
             observed.append(messages)
             yield ModelEvent("text_delta", "部分回答")
             clock[0] = completed
@@ -55,7 +56,7 @@ class RecordingModel:
         self.inputs = []
         self.fail = False
 
-    async def stream(self, messages):
+    async def stream(self, messages, *, tools=()):
         self.inputs.append(messages)
         yield ModelEvent("text_delta", "临时文字")
         if self.fail:
@@ -74,7 +75,7 @@ def test_history_is_server_owned_and_sessions_are_isolated():
         client.post(f"{path}/messages", json={"text": "问题1"})
         client.post(f"{path}/messages", json={"text": "问题2"})
         assert tuple(m for m in model.inputs[1] if m.role != "system" and not m.content.startswith('{"page_context":')) == (
-            Message("user", "问题1"), Message("assistant", "回答1"), Message("user", "问题2"))
+            UserMessage("问题1"), AssistantMessage("回答1"), UserMessage("问题2"))
         snapshot = client.get(path).json()
         assert snapshot["last_run_status"] == "completed"
         assert snapshot["is_running"] is False
@@ -83,7 +84,7 @@ def test_history_is_server_owned_and_sessions_are_isolated():
         snapshot["entries"].clear()
         assert len(client.get(path).json()["entries"]) == 4
         client.post(f"/api/assistant/sessions/{second}/messages", json={"text": "独立问题"})
-        assert model.inputs[2][-1] == Message("user", "独立问题")
+        assert model.inputs[2][-1] == UserMessage("独立问题")
         assert len(model.inputs[2]) == 3
         assert client.get("/api/assistant/sessions/unknown").status_code == 404
         assert client.post(f"{path}/messages", json={"text": "问题", "history": []}).status_code == 422
@@ -112,14 +113,14 @@ def test_failure_retains_user_without_partial_answer_and_allows_next_run():
         }
         model.fail = False
         client.post(f"{path}/messages", json={"text": "请继续回答"})
-        assert tuple(m for m in model.inputs[1] if m.role != "system" and not m.content.startswith('{"page_context":')) == (Message("user", "问题1"), Message("user", "请继续回答"))
+        assert tuple(m for m in model.inputs[1] if m.role != "system" and not m.content.startswith('{"page_context":')) == (UserMessage("问题1"), UserMessage("请继续回答"))
 
 
 def test_busy_session_rejects_concurrent_input_but_other_session_runs():
     async def run():
         entered, release = asyncio.Event(), asyncio.Event()
         class WaitingModel:
-            async def stream(self, messages):
+            async def stream(self, messages, *, tools=()):
                 if messages[-1].content == "等待":
                     entered.set()
                     await release.wait()
@@ -152,7 +153,7 @@ def test_http_disconnect_releases_session(before_stream):
         disconnected = asyncio.Event()
         closed = []
         class WaitingModel:
-            async def stream(self, messages):
+            async def stream(self, messages, *, tools=()):
                 try:
                     yield ModelEvent("text_delta", "部分回答")
                     await asyncio.Event().wait()

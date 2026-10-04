@@ -1,7 +1,9 @@
 import type { PageContext } from "../assistant/assistantContext";
 
 export type SessionEntry = { type: "user"; text: string; created_at: string; page_context: PageContext | null }
-  | { type: "assistant"; text: string; created_at: string };
+  | { type: "assistant"; text: string; created_at: string; tool_calls?: { id: string; name: string; arguments: string }[] }
+  | { type: "tool_result"; tool_call_id: string; tool_name: string; content: string;
+      details: Record<string, unknown>; is_error: boolean; created_at: string };
 export type ChatSession = {
   id: string; entries: SessionEntry[]; is_running: boolean;
   last_run_status: null | "running" | "completed" | "failed" | "cancelled";
@@ -31,11 +33,18 @@ async function checkedFetch(path: string, options: RequestInit, signal: AbortSig
 
 function object(value: unknown): value is Record<string, unknown> { return !!value && typeof value === "object"; }
 function isEntry(value: unknown): value is SessionEntry {
-  if (!object(value) || typeof value.text !== "string" || typeof value.created_at !== "string"
+  if (!object(value) || typeof value.created_at !== "string"
     || !Number.isFinite(Date.parse(value.created_at))) return false;
-  return value.type === "assistant" || (value.type === "user" && (value.page_context === null
+  if (value.type === "tool_result") return typeof value.tool_call_id === "string"
+    && typeof value.tool_name === "string" && typeof value.content === "string"
+    && typeof value.is_error === "boolean" && object(value.details) && !Array.isArray(value.details);
+  if (typeof value.text !== "string") return false;
+  if (value.type === "assistant") return value.tool_calls === undefined || (Array.isArray(value.tool_calls)
+    && value.tool_calls.every(call => object(call) && typeof call.id === "string"
+      && typeof call.name === "string" && typeof call.arguments === "string"));
+  return value.type === "user" && (value.page_context === null
     || (object(value.page_context) && typeof value.page_context.page === "string"
-      && typeof value.page_context.description === "string" && object(value.page_context.state))));
+      && typeof value.page_context.description === "string" && object(value.page_context.state)));
 }
 async function parseSession(response: Response): Promise<ChatSession> {
   const value: unknown = await response.json();

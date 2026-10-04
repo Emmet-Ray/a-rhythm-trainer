@@ -8,7 +8,8 @@ from fastapi.testclient import TestClient
 from openai import AsyncOpenAI
 
 from api.assistant import get_model
-from assistant.model import DeepSeekModel, Message, ModelError, ModelEvent, ModelSettings
+from agent.messages import UserMessage
+from agent.model import DeepSeekModel, ModelError, ModelEvent, ModelSettings
 from main import create_app
 
 
@@ -28,7 +29,7 @@ def completed(text="你好"):
 def install_transport(monkeypatch, handler):
     def client(**kwargs):
         return AsyncOpenAI(**kwargs, http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)))
-    monkeypatch.setattr("assistant.model.AsyncOpenAI", client)
+    monkeypatch.setattr("agent.model.AsyncOpenAI", client)
     return DeepSeekModel(ModelSettings("deepseek", "test-model", "secret-test"))
 
 
@@ -43,7 +44,7 @@ def test_model_responses_stream(monkeypatch):
             wire({"type": "response.output_text.delta", "delta": "好"}) + wire(completed()))
     model = install_transport(monkeypatch, handler)
     async def collect():
-        return [event async for event in model.stream([Message("user", "你好")])]
+        return [event async for event in model.stream([UserMessage("你好")])]
     assert asyncio.run(collect()) == [ModelEvent("text_delta", "你"), ModelEvent("text_delta", "好"),
                                     ModelEvent("message_completed", "你好")]
 
@@ -54,7 +55,7 @@ def test_model_requires_nonempty_completed_response(monkeypatch, ending):
         200, headers={"content-type": "text/event-stream"}, content=ending))
     async def collect():
         with pytest.raises(ModelError):
-            return [event async for event in model.stream([Message("user", "问题")])]
+            return [event async for event in model.stream([UserMessage("问题")])]
     asyncio.run(collect())
 
 
@@ -66,7 +67,7 @@ def test_upstream_error_is_sanitized_and_not_retried(monkeypatch):
     model = install_transport(monkeypatch, handler)
     async def collect():
         with pytest.raises(ModelError, match="模型服务请求失败") as error:
-            return [event async for event in model.stream([Message("user", "问题")])]
+            return [event async for event in model.stream([UserMessage("问题")])]
         assert "secret-test" not in str(error.value)
     asyncio.run(collect())
     assert len(calls) == 1
@@ -86,7 +87,7 @@ def test_cancellation_closes_upstream(monkeypatch):
     async def run():
         started = asyncio.Event()
         async def consume():
-            async with aclosing(model.stream([Message("user", "问题")])) as stream:
+            async with aclosing(model.stream([UserMessage("问题")])) as stream:
                 async for event in stream:
                     started.set()
         task = asyncio.create_task(consume())
@@ -102,9 +103,9 @@ def test_cancellation_closes_upstream(monkeypatch):
 def test_http_event_contract_and_cleanup(fail):
     class FakeModel:
         closed = False
-        async def stream(self, messages):
+        async def stream(self, messages, *, tools=()):
             try:
-                assert messages[-1] == Message("user", "你好")
+                assert messages[-1] == UserMessage("你好")
                 yield ModelEvent("text_delta", "你")
                 if fail:
                     raise ModelError("模型回答未完成，请重试。")
@@ -139,3 +140,56 @@ def test_missing_configuration_and_input_validation(monkeypatch):
                            headers={"Origin": "https://example.com"}).status_code == 403
     with TestClient(app, client=("192.0.2.1", 1234)) as client:
         assert client.post(endpoint, json={"text": "你好"}).status_code == 403
+
+
+def test_responses_tool_round_trip_preserves_reasoning_and_call_id(monkeypatch):
+    from assistant.sessions import ChatSession
+    requests = []
+    arguments = {"title": "练习", "description": "四拍", "exercise": {
+        "timeSignature": {"beats": 4, "beatType": 4},
+        "measures": [{"elements": [{"kind": "note", "noteValue": "whole"}]}]}}
+    reasoning = {"id": "rs_1", "type": "reasoning", "summary": [],
+                 "content": [{"type": "reasoning_text", "text": "规划节奏"}]}
+    tool_call = {"id": "fc_1", "type": "function_call", "call_id": "call_1",
+                 "name": "propose_rhythm_exercise", "arguments": json.dumps(arguments), "status": "completed"}
+    def handler(request):
+        body = json.loads(request.content)
+        requests.append(body)
+        assert body["tools"][0]["name"] == "propose_rhythm_exercise"
+        if len(requests) == 1:
+            response = completed("")
+            response["response"]["output"] = [reasoning, tool_call]
+            events = wire(response)
+        else:
+            assert body["input"][-3:] == [reasoning, tool_call, body["input"][-1]]
+            result = body["input"][-1]
+            assert result["type"] == "function_call_output"
+            assert result["call_id"] == "call_1"
+            assert json.loads(result["output"])["title"] == "练习"
+            events = wire(completed("已生成练习"))
+        return httpx.Response(200, headers={"content-type": "text/event-stream"}, content=events)
+    model = install_transport(monkeypatch, handler)
+    session = ChatSession()
+    async def run():
+        async with session.run("生成", model) as stream:
+            return [event async for event in stream]
+    assert asyncio.run(run())[-1].text == "已生成练习"
+    assert len(requests) == 2
+    assert session.snapshot()["entries"][2]["type"] == "tool_result"
+
+
+def test_partial_tool_arguments_never_execute(monkeypatch):
+    from assistant.sessions import ChatSession
+    model = install_transport(monkeypatch, lambda request: httpx.Response(
+        200, headers={"content-type": "text/event-stream"}, content=wire({
+            "type": "response.function_call_arguments.delta", "item_id": "fc1", "output_index": 0,
+            "delta": '{"title":', "sequence_number": 1,
+        })))
+    session = ChatSession()
+    async def run():
+        with pytest.raises(ModelError):
+            async with session.run("生成", model) as stream:
+                async for _ in stream:
+                    pass
+    asyncio.run(run())
+    assert [e["type"] for e in session.snapshot()["entries"]] == ["user"]

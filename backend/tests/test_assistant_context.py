@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.assistant import get_model
-from assistant.model import ModelError, ModelEvent
+from agent.model import ModelError, ModelEvent
 from assistant.context import PageContext
 from assistant.sessions import ChatSession
 from main import create_app
@@ -16,7 +16,7 @@ class CapturingModel:
         self.inputs = []
         self.fail = False
 
-    async def stream(self, messages):
+    async def stream(self, messages, *, tools=()):
         self.inputs.append(messages)
         if self.fail:
             raise ModelError("模拟失败")

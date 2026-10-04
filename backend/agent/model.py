@@ -1,6 +1,6 @@
 """一次模型请求的边界；不依赖 HTTP 路由，不管理会话或执行业务工具。
 
-适配器产生文字增量，最后产生一个完整回答；失败时抛出 ModelError。
+适配器产生文字增量，最后产生一条完整模型消息（文字和／或工具调用）；失败时抛出 ModelError。
 调用方取消或停止消费时必须关闭迭代器，以释放上游连接。
 """
 
@@ -8,9 +8,22 @@ import asyncio
 import os
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass, field
+from copy import deepcopy
 from typing import Literal, Protocol
 
+from agent.messages import AssistantMessage, Message, ProviderMetadata, ToolCall
+
 from openai import AsyncOpenAI, OpenAIError
+
+
+@dataclass(frozen=True)
+class ModelEvent:
+    """单次模型请求的增量或完整输出；不代表 Agent 整次运行结束。"""
+
+    type: Literal["text_delta", "message_completed"]
+    text: str
+    tool_calls: tuple[ToolCall, ...] = ()
+    provider_metadata: ProviderMetadata | None = None
 
 
 @dataclass(frozen=True)
@@ -29,31 +42,19 @@ class ModelSettings:
         return cls(provider, model, api_key)
 
 
-@dataclass(frozen=True)
-class ModelEvent:
-    type: Literal["text_delta", "message_completed"]
-    text: str
-
-
-@dataclass(frozen=True)
-class Message:
-    role: Literal["system", "user", "assistant"]
-    content: str
-
-
 class ModelError(Exception):
     """可对用户展示的固定错误，不包含上游响应或认证信息。"""
 
 
 class TextModel(Protocol):
-    def stream(self, messages: Sequence[Message]) -> AsyncIterator[ModelEvent]: ...
+    def stream(self, messages: Sequence[Message], *, tools: Sequence[dict] = ()) -> AsyncIterator[ModelEvent]: ...
 
 
 class DeepSeekModel:
     def __init__(self, settings: ModelSettings):
         self.settings = settings
 
-    async def stream(self, messages: Sequence[Message]) -> AsyncIterator[ModelEvent]:
+    async def stream(self, messages: Sequence[Message], *, tools: Sequence[dict] = ()) -> AsyncIterator[ModelEvent]:
         try:
             # 每次请求拥有连接，取消/异常/正常返回均通过上下文管理器关闭。
             async with AsyncOpenAI(
@@ -65,7 +66,8 @@ class DeepSeekModel:
                 async with asyncio.timeout(120):
                     response = await client.responses.create(
                         model=self.settings.model,
-                        input=[{"role": message.role, "content": message.content} for message in messages],
+                        input=responses_input(messages),
+                        **({"tools": [{"type": "function", **tool, "strict": False} for tool in tools]} if tools else {}),
                         max_output_tokens=2048,
                         stream=True,
                     )
@@ -75,11 +77,18 @@ class DeepSeekModel:
                                 yield ModelEvent("text_delta", event.delta)
                             elif event.type == "response.completed":
                                 final = event.response
-                                if final.status != "completed" or not final.output_text.strip():
+                                if final.status != "completed":
                                     raise ModelError("模型未返回完整的文字回答，请重试。")
-                                if any(item.type not in ("message", "reasoning") for item in final.output):
+                                if any(item.type not in ("message", "reasoning", "function_call") for item in final.output):
                                     raise ModelError("模型返回了当前尚不支持的内容。")
-                                yield ModelEvent("message_completed", final.output_text)
+                                calls = tuple(ToolCall(item.call_id, item.name, item.arguments)
+                                              for item in final.output if item.type == "function_call")
+                                if not final.output_text.strip() and not calls:
+                                    raise ModelError("模型未返回完整的文字回答，请重试。")
+                                if any(not call.id or not call.name for call in calls) or len({c.id for c in calls}) != len(calls):
+                                    raise ModelError("模型返回了无效的工具调用标识。")
+                                items = tuple(item.model_dump(exclude_none=True) for item in final.output) if calls else ()
+                                yield ModelEvent("message_completed", final.output_text, calls, ProviderMetadata("deepseek", {"response_items": items}) if calls else None)
                                 return
                             elif event.type in ("response.failed", "response.incomplete", "error"):
                                 raise ModelError("模型回答未完成，请重试。")
@@ -95,3 +104,21 @@ def create_model(settings: ModelSettings) -> TextModel:
     if settings.provider == "deepseek":
         return DeepSeekModel(settings)
     raise ValueError("不支持的模型提供方。")
+
+
+def responses_input(messages: Sequence[Message]) -> list[dict]:
+    """把统一消息转换为 Responses items，工具结果通过 call_id 与调用关联。"""
+    items = []
+    for message in messages:
+        if message.role == "tool":
+            items.append({"type": "function_call_output", "call_id": message.tool_call_id, "output": message.content})
+        elif (isinstance(message, AssistantMessage) and message.provider_metadata is not None
+              and message.provider_metadata.provider == "deepseek"):
+            items.extend(deepcopy(message.provider_metadata.payload["response_items"]))
+        else:
+            calls = message.tool_calls if isinstance(message, AssistantMessage) else ()
+            if message.content or not calls:
+                items.append({"role": message.role, "content": message.content})
+            items.extend({"type": "function_call", "call_id": call.id, "name": call.name,
+                          "arguments": call.arguments} for call in calls)
+    return items
