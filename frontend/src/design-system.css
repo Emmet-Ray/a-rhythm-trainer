@@ -850,3 +850,14 @@
 .exercise-measure-buttons button:hover { background: var(--ds-tint); color: var(--ds-primary); }
 .exercise-measure-buttons button[aria-pressed="true"] { background: var(--ds-primary); color: white; font-weight: 600; }
 .exercise-measure-buttons button:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: -2px; }
+
+/* 卡片操作保持紧凑，播放状态与应用反馈各自归属其控件。 */
+.exercise-card footer { flex-wrap: wrap; }
+.exercise-card footer > .rhythm-playback { margin-right: auto; min-width: 0; }
+.exercise-card .rhythm-playback-controls { width: auto; gap: 8px; }
+.exercise-card .rhythm-playback-controls > .rhythm-playback-buttons { display: flex; width: auto; }
+.exercise-card .rhythm-playback .rhythm-playback-buttons button { min-width: 0; font-size: 12px; }
+.exercise-card .rhythm-playback .rhythm-playback-status { display: block; min-height: 0; margin-top: 4px; font-size: 11px; }
+.exercise-card .rhythm-playback .rhythm-playback-status:empty { display: none; }
+
+.ai-practice-source { margin: 0 0 8px; color: var(--ds-muted); font-size: 12px; }

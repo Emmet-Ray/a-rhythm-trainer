@@ -1,3 +1,4 @@
+import { exerciseSources } from "./PracticeRecord";
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import type { DictationAttempt, PracticeRecord } from "./PracticeRecord";
@@ -37,7 +38,7 @@ function RecordScorePreview({ record }: { record: PracticeRecord }) {
       </div> : <p className="record-preview-status" role="status" aria-busy="true">正在加载题目预览…</p>}
   </div>;
 }
-const sources = { preset: "预设", random: "随机", custom: "自定义" };
+
 const dateFormat = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "medium",
   timeStyle: "short",
@@ -117,7 +118,7 @@ export function RecordDetail({
         <div>
           <h2 id={titleId}>{record.title}</h2>
           <p>
-            {sources[record.source]} ·{" "}
+            {exerciseSources[record.source]} ·{" "}
             {record.mode === "tapping" ? "击拍练习" : "节奏听写"} ·{" "}
             全部历史 · {recordSummary(record)}
           </p>

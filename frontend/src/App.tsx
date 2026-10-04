@@ -11,6 +11,7 @@ import { useNavigationScroll } from "./navigation/usePageNavigation";
 import "./App.css";
 import "./design-system.css";
 import { RecordAccessContext, recordAccess } from "./practice-records/recordAccess";
+import { GeneratedExerciseStore, GeneratedExercisesContext } from "./exercises/GeneratedExerciseStore";
 import { AssistantPanel } from "./assistant/AssistantPanel";
 import { AssistantContext, AssistantContextScope } from "./assistant/assistantContext";
 
@@ -20,6 +21,7 @@ const PresetPracticePage = routeModules.preset.Component;
 const CustomPracticePage = routeModules.custom.Component;
 const SettingsPage = routeModules.settings.Component;
 const PracticeRecordsPage = routeModules.records.Component;
+const AiPracticePage = routeModules.ai.Component;
 const AboutPage = routeModules.about.Component;
 
 function App() {
@@ -32,12 +34,16 @@ function AppShell() {
   useEffect(() => { void preloadDestination(pathname); }, [pathname]);
   const mainRef = useRef<HTMLElement>(null);
   const identity = auth.state.status === "authenticated" ? `account:${auth.state.user.id}` : auth.state.status;
+  // 临时生成题目与助手一样按身份隔离，路由切换不清空。
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const generatedExercises = useMemo(() => new GeneratedExerciseStore(), [identity]);
   // 每次访问创建独立快照容器；面板在路由边界外保留，身份变化时重新挂载。
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const assistantContext = useMemo(() => new AssistantContext(), [key, identity]);
   useNavigationScroll(pathname.startsWith("/custom") ? identity : "public");
 
   return (
+    <GeneratedExercisesContext value={generatedExercises}>
     <AssistantContextScope.Provider value={assistantContext}>
     <RecordAccessContext.Provider value={recordAccess(auth)}><div className="site-shell" onPointerOver={preloadLinkIntent} onFocusCapture={preloadLinkIntent} onPointerDownCapture={preloadLinkIntent}>
       <a className="skip-link" href="#main-content">
@@ -62,6 +68,7 @@ function AppShell() {
               path="/preset/:questionId"
               element={<PresetPracticePage />}
             />
+            <Route path="/ai/tapping/:exerciseId" element={<AiPracticePage key={identity} />} />
             <Route path="/random" element={<RandomPracticePage />} />
             <Route path="/random/:mode" element={<RandomPracticePage />} />
             <Route
@@ -99,6 +106,7 @@ function AppShell() {
       <AssistantPanel key={identity} />
     </div></RecordAccessContext.Provider>
     </AssistantContextScope.Provider>
+    </GeneratedExercisesContext>
   );
 }
 

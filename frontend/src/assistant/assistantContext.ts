@@ -1,8 +1,8 @@
 import { createContext, useContext, useLayoutEffect, useState, useSyncExternalStore } from "react";
 
-import type { ExerciseProposal } from "./tool-results/exerciseProposal";
+import type { GeneratedExercise } from "../exercises/GeneratedExercise";
 
-export type ApplyExercise = (proposal: ExerciseProposal) => boolean;
+export type ApplyExercise = (proposal: GeneratedExercise) => boolean;
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type PageContext = { page: string; description: string; state: { [key: string]: JsonValue } };

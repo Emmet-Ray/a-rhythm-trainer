@@ -1,5 +1,6 @@
 import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LoaderCircle, Play, Square } from "lucide-react";
+import type { PlaybackGroup } from "./PlaybackGroup";
 import { MetronomePlaybackContext } from "./MetronomePlayback";
 import { practiceShortcuts, usePracticeShortcuts } from "./usePracticeShortcuts";
 import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
@@ -29,10 +30,12 @@ type PlaybackOption = {
  * BPM、播放范围或小节数量改变时，调用方用 key 重建；卸载取消排程、RAF 和异步启动并关闭音频。
  * 节拍器开关实时生效，不参与 key，也不影响预备拍和钢琴。
  */
-export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, onBusyChange, controls, onCountInChange, onStart, onPlaybackStarted }: {
+export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, onBusyChange, controls, onCountInChange, onStart, onPlaybackStarted, playbackGroup }: {
   options: readonly PlaybackOption[];
   timeSignature: RhythmExercise["timeSignature"] | null;
   bpm: number;
+  /** 可选播放范围；同组的新播放会同步停止旧播放。 */
+  playbackGroup?: PlaybackGroup;
   metronomeEnabled?: boolean;
   onBusyChange?: (busy: boolean) => void;
   /** 与播放按钮成组的控制项，例如播放范围；不参与播放状态管理。 */
@@ -43,6 +46,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
   /** 声音准备与排程成功后通知；停止、准备失败或失效请求不会通知。 */
   onPlaybackStarted?: (source: string) => void;
 }) {
+  const releasePlaybackRef = useRef<(() => void) | null>(null);
   const metronomePlayback = useContext(MetronomePlaybackContext);
   const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
   const [status, setStatus] = useState<
@@ -63,6 +67,8 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
   const [playbackSource, setPlaybackSource] = useState<string | null>(null);
 
   const cancelPlayback = useCallback(() => {
+    releasePlaybackRef.current?.();
+    releasePlaybackRef.current = null;
     onCountInChange?.(null);
     clearMetronomePlaybackRef.current?.();
     clearMetronomePlaybackRef.current = null;
@@ -98,6 +104,10 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
     if (!timeSignature || !option.measures?.some((elements) => elements.length > 0)) return;
     // 新一轮开始前清理上一轮尚未结束的自然尾音。
     cancelPlayback();
+    releasePlaybackRef.current = playbackGroup?.acquire(() => {
+      cancelPlayback();
+      setStatus("idle");
+    }) ?? null;
     activeRef.current = source;
     onStart?.();
     setPlaybackSource(source);

@@ -1,3 +1,4 @@
+import { exerciseSources } from "../practice-records/PracticeRecord";
 import {
   useContext,
   useEffect,
@@ -22,7 +23,7 @@ import { RecordDetail } from "../practice-records/RecordDetail";
 import { RecordPagination } from "../practice-records/RecordPagination";
 import { recordPage, recordOverview, type RecordFilter, type RecordPeriod } from "../practice-records/practiceRecords";
 
-const sources = { preset: "预设", random: "随机", custom: "自定义" };
+
 function readRecords() {
   try {
     return { records: listPracticeRecords(), error: "" };
@@ -210,7 +211,7 @@ function RecordRow({
       <div className="record-entry-content">
         <h2>{record.title}</h2>
         <p>
-          {sources[record.source]} ·{" "}
+          {exerciseSources[record.source]} ·{" "}
           {record.mode === "tapping" ? "击拍练习" : "节奏听写"}
         </p>
       </div>

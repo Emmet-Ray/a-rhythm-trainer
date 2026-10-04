@@ -57,6 +57,7 @@ test("预加载范围不把首页、列表或设置变成全量训练代码入�
   assert.deepEqual(destinationModules("/custom/tapping/account/123"), [routeModules.custom, workspaceModule]);
   assert.deepEqual(destinationModules("/preset/basic-values-01"), [routeModules.preset, workspaceModule]);
   assert.deepEqual(destinationModules("/random/dictation"), [routeModules.random, workspaceModule]);
+  assert.deepEqual(destinationModules("/ai/tapping/generated-1"), [routeModules.ai, workspaceModule]);
   assert.deepEqual(destinationModules("/random/unknown"), [routeModules.random]);
 });
 

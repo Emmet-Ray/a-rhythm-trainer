@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, Hand, Ear, LoaderCircle, Minus, Plus, Save, Pencil, Trash2, Play } from "lucide-react";
 import { SuccessToast } from "../navigation/SuccessToast";
 import { useAssistantExerciseTarget, useAssistantPageContext } from "../assistant/assistantContext";
-import type { ExerciseProposal } from "../assistant/tool-results/exerciseProposal";
+import type { GeneratedExercise } from "../exercises/GeneratedExercise";
 import { flushSync } from "react-dom";
 import { UnsavedChanges } from "../navigation/UnsavedChanges";
 import {
@@ -584,7 +584,7 @@ function CustomExerciseEditor({
   }, [identity, auth.busy]);
 
   const [assistantRevision, setAssistantRevision] = useState(0);
-  const applyAssistantExercise = useCallback((proposal: ExerciseProposal) => {
+  const applyAssistantExercise = useCallback((proposal: GeneratedExercise) => {
     if (locked.current || auth.busy) return false;
     setDraft(previous => ({ ...previous, name: proposal.title,
       measures: structuredClone(proposal.exercise.measures.map(measure => measure.elements)),

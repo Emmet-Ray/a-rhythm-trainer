@@ -4,6 +4,7 @@ import { editorModule, workspaceModule } from "../practice/practiceModules";
 import { presetCatalogStore } from "../exercises/presetCatalogStore";
 
 export const routeModules = {
+  ai: preloadable(() => import("../pages/AiPracticePage")),
   preset: preloadable(() => import("../pages/PresetPracticePage")),
   random: preloadable(() => import("../pages/RandomPracticePage")),
   custom: preloadable(() => import("../pages/CustomPracticePage")),
@@ -21,7 +22,8 @@ export function destinationModules(pathname: string) {
   const modules = [routeModules[page as keyof typeof routeModules]];
   if (section === "custom" && ["tapping", "dictation"].includes(mode)
     && (target === "new" || segments.at(-1) === "edit")) return [...modules, editorModule];
-  if (section === "preset" && segments.length === 2
+  if (section === "ai" && mode === "tapping" && segments.length === 3
+    || section === "preset" && segments.length === 2
     || section === "random" && segments.length === 2 && ["tapping", "dictation"].includes(mode)
     || section === "custom" && ["tapping", "dictation"].includes(mode) && target && target !== "new") {
     return [...modules, workspaceModule];

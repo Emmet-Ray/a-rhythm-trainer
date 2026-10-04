@@ -4,9 +4,9 @@ import { createServer } from "vite";
 
 const server = await createServer({ configFile: false,
   server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
-let api, AssistantConversation, AssistantContext, parseExerciseProposal;
+let api, AssistantConversation, AssistantContext, parseGeneratedExercise;
 try {
-  ({ parseExerciseProposal } = await server.ssrLoadModule("/src/assistant/tool-results/exerciseProposal.ts"));
+  ({ parseGeneratedExercise } = await server.ssrLoadModule("/src/exercises/GeneratedExercise.ts"));
   api = await server.ssrLoadModule("/src/api/assistant.ts");
   ({ AssistantConversation } = await server.ssrLoadModule("/src/assistant/conversation.ts"));
   ({ AssistantContext } = await server.ssrLoadModule("/src/assistant/assistantContext.ts"));
@@ -174,11 +174,11 @@ test("候选练习先校验节奏，返回独立数据", () => {
     timeSignature: { beats: 4, beatType: 4 },
     measures: [{ elements: Array.from({ length: 4 }, () => ({ kind: "note", noteValue: "quarter" })) }],
   } };
-  const proposal = parseExerciseProposal(value);
+  const proposal = parseGeneratedExercise(value);
   proposal.exercise.measures[0].elements[0].kind = "rest";
   assert.equal(value.exercise.measures[0].elements[0].kind, "note");
-  assert.throws(() => parseExerciseProposal({ ...value, id: "" }));
-  assert.throws(() => parseExerciseProposal({ ...value, exercise: { ...value.exercise, measures: [{ elements: [] }] } }));
+  assert.throws(() => parseGeneratedExercise({ ...value, id: "" }));
+  assert.throws(() => parseGeneratedExercise({ ...value, exercise: { ...value.exercise, measures: [{ elements: [] }] } }));
 });
 
 test("应用能力随编辑目标注册与注销，旧编辑器不能注销新目标", () => {

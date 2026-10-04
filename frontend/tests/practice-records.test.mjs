@@ -355,3 +355,17 @@ test("题目记录列表只展示最新十条并提供分页", () => {
     else delete globalThis.localStorage;
   }
 });
+
+test("AI 练习按生成 ID 累计，版本独立，来源与谱面可从存储恢复", () => {
+  const storage = memoryStorage();
+  const options = { context: { source: "ai", exerciseId: "generated-1", title: "AI 四分练习" } };
+  const id = save(storage, [tap()], options);
+  assert.equal(save(storage, [tap({ id: "round-2", completedAt: later })], options), id);
+  save(storage, [tap()], { context: { ...options.context, exerciseId: "generated-2" } });
+  const records = listPracticeRecords(storage);
+  assert.equal(records.length, 2);
+  assert.equal(records.find(record => record.id === id).attempts.length, 2);
+  assert.ok(records.every(record => record.source === "ai"));
+  assert.deepEqual(records[0].exercise, exercise);
+  assert.notEqual(recordKey(options.context, exercise, "tapping"), recordKey({ ...options.context, source: "custom" }, exercise, "tapping"));
+});

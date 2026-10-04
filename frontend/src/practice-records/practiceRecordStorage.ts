@@ -1,3 +1,4 @@
+import { exerciseSources } from "./PracticeRecord";
 import { parseRhythmExercise } from "../rhythm/RhythmModel";
 import type {
   DictationRecordEvent,
@@ -39,7 +40,7 @@ export function parsePracticeRecord(value: unknown): PracticeRecord {
   for (const key of ["id", "exerciseId", "title"] as const) text(value[key]);
   date(value.startedAt);
   date(value.updatedAt);
-  if (!["preset", "random", "custom"].includes(String(value.source)))
+  if (!Object.hasOwn(exerciseSources, String(value.source)))
     throw new Error("来源无效");
   const exercise = parseRhythmExercise(value.exercise);
   if (value.mode === "tapping") {

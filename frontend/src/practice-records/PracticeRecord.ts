@@ -1,8 +1,10 @@
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import type { PracticeResult, TimingWindows } from "../rhythm/RhythmTiming";
 
+export const exerciseSources = { preset: "预设", random: "随机", custom: "自定义", ai: "AI" } as const;
+
 export type ExerciseContext = {
-  source: "preset" | "random" | "custom";
+  source: keyof typeof exerciseSources;
   exerciseId: string;
   title: string;
 };

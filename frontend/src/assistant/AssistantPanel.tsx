@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { MessageCircle, Plus, X, RefreshCw, ArrowUp, Square } from "lucide-react";
 import { ExerciseProposalResult } from "./tool-results/ExerciseProposalResult";
+import { PlaybackGroup } from "../practice/PlaybackGroup";
 import { AssistantConversation } from "./conversation";
 import { useAssistantContext } from "./assistantContext";
 
 export function AssistantPanel() {
+  const [playbackGroup] = useState(() => new PlaybackGroup());
   const [conversation] = useState(() => new AssistantConversation());
   const state = useSyncExternalStore(conversation.subscribe, conversation.getSnapshot, conversation.getSnapshot);
   const { readCurrentPageContext } = useAssistantContext();
@@ -15,7 +17,7 @@ export function AssistantPanel() {
   const thread = useRef<HTMLDivElement>(null);
   const follow = useRef(true);
   const generation = useRef(0);
-  useEffect(() => () => { generation.current++; conversation.dispose(); }, [conversation]);
+  useEffect(() => () => { generation.current++; conversation.dispose(); playbackGroup.stop(); }, [conversation, playbackGroup]);
   useEffect(() => {
     if (open && follow.current && thread.current) thread.current.scrollTop = thread.current.scrollHeight;
   }, [open, state]);
@@ -45,10 +47,11 @@ export function AssistantPanel() {
   function newConversation() {
     if ((state.session || draft) && !window.confirm("开始新对话？当前面板将清空，正在生成的回答会停止。")) return;
     generation.current++;
+    playbackGroup.stop();
     conversation.reset(); setDraft(""); follow.current = true;
     input.current?.focus();
   }
-  function close() { setOpen(false); requestAnimationFrame(() => launcher.current?.focus()); }
+  function close() { playbackGroup.stop(); setOpen(false); requestAnimationFrame(() => launcher.current?.focus()); }
   const blocked = state.busy || state.needsSync || state.expired;
 
   return <div className="assistant-shell">
@@ -73,7 +76,7 @@ export function AssistantPanel() {
           <p>试着问“四分音符和八分音符有什么区别？”</p><p>在编辑页，还可以询问当前草稿的内容。</p>
         </div> : null}
         {state.session?.entries.map((entry, index) => entry.type === "tool_result" ? (entry.tool_name === "propose_rhythm_exercise" && !entry.is_error
-          ? <ExerciseProposalResult key={index} value={entry.details.generated_exercise} /> : null) : !entry.text.trim() ? null : <article className={`assistant-message ${entry.type}`} key={index} aria-label={entry.type === "user" ? "你的消息" : "助手回答"}>
+          ? <ExerciseProposalResult key={index} value={entry.details.generated_exercise} playbackGroup={playbackGroup} onPracticeStart={() => { if (window.matchMedia("(max-width: 1099px)").matches) setOpen(false); }} /> : null) : !entry.text.trim() ? null : <article className={`assistant-message ${entry.type}`} key={index} aria-label={entry.type === "user" ? "你的消息" : "助手回答"}>
           <p className="assistant-message-text">{entry.text}</p>
           <div className="assistant-message-meta">
             <time dateTime={entry.created_at} title={new Date(entry.created_at).toLocaleString()}>{new Date(entry.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
