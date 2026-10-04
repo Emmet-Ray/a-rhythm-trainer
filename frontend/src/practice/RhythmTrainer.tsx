@@ -362,7 +362,7 @@ function RhythmTrainer({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (document.querySelector("dialog[open], .practice-shortcuts-panel:popover-open")) return;
+      if (document.querySelector("dialog:modal, .practice-shortcuts-panel:popover-open")) return;
       if (event.code !== "Space" || event.repeat) return;
       // 外层配置控件和按钮保留自己的键盘行为，不把操作控件误记为击拍。
       if (

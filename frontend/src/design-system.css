@@ -171,7 +171,7 @@
 /* 全站导航：固定侧栏与移动抽屉共享链接样式，选中与悬停各有语义。 */
 :is(.site-sidebar, .site-mobile-header) .brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ds-primary); font-size: 22px; font-weight: 800; letter-spacing: -.025em; }
 .brand-mark { width: 28px; height: 32px; flex-shrink: 0; }
-.site-sidebar { position: fixed; inset: 0 auto 0 0; width: var(--site-nav-width); height: 100dvh; padding: 28px 16px 20px; display: flex; flex-direction: column; gap: 36px; overflow-y: auto; overscroll-behavior: contain; background: var(--ds-surface); border-right: 1px solid var(--ds-line); }
+.site-sidebar { z-index: 20; position: fixed; inset: 0 auto 0 0; width: var(--site-nav-width); height: 100dvh; padding: 28px 16px 20px; display: flex; flex-direction: column; gap: 36px; overflow-y: auto; overscroll-behavior: contain; background: var(--ds-surface); border-right: 1px solid var(--ds-line); }
 .site-navigation { display: flex; flex-direction: column; gap: 8px; flex: 1; }
 .site-navigation a { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 10px 16px; border-radius: 10px; color: var(--ds-muted); font-weight: 650; transition: background-color var(--ds-motion); }
 .site-navigation a:hover { background: var(--ds-hover); color: var(--ds-ink); }
@@ -789,7 +789,7 @@
 .assistant-shell button:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 3px; }
 .assistant-launcher { position: fixed; right: 24px; bottom: 24px; z-index: 45; padding: 12px 18px; color: var(--ds-on-primary); background: var(--ds-primary); border: 0; border-radius: 999px; box-shadow: 0 4px 18px #0002; font: inherit; }
 .assistant-shell .assistant-launcher:hover:not(:disabled) { background: var(--ds-primary-hover); }
-.assistant-panel { position: fixed; z-index: 45; inset: 0 0 0 auto; width: var(--assistant-width); max-width: 100%; height: 100dvh; display: flex; flex-direction: column; background: var(--ds-surface); border-left: 1px solid var(--ds-line); }
+.assistant-panel { margin: 0; padding: 0; color: inherit; max-height: none; border: 0; position: fixed; z-index: 45; inset: 0 0 0 auto; width: var(--assistant-width); max-width: 100%; height: 100dvh; display: flex; flex-direction: column; background: var(--ds-surface); border-left: 1px solid var(--ds-line); }
 .assistant-heading { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--ds-line); }
 .assistant-heading h2 { font-size: 16px; font-weight: 650; margin: 0; white-space: nowrap; }
 .assistant-actions { display: flex; align-items: center; gap: 2px; }
@@ -822,14 +822,67 @@
 .assistant-notice { color: var(--ds-muted); }
 .assistant-error { color: var(--ds-error); }
 .assistant-composer > button { margin-bottom: 10px; font-size: 12px; }
-@media (min-width: 1100px) { .site-shell:has(.assistant-panel:not([hidden])) { padding-right: var(--assistant-width); } }
-@media (max-width: 1099px) { .assistant-panel { box-shadow: -12px 0 40px #0002; } }
+@media (min-width: 1100px) { .site-shell:has(.assistant-shell[data-layout="sidebar"] .assistant-panel:not([hidden])) { padding-right: var(--assistant-width); } }
+@media (max-width: 1099px) { .assistant-shell[data-layout="sidebar"] .assistant-panel { width: 100%; border-left: 0; } }
 @media (max-width: 600px) {
   .assistant-panel { width: 100%; border-left: 0; }
   .assistant-heading { padding-top: max(12px, env(safe-area-inset-top)); }
   .assistant-messages { padding: 20px; }
   .assistant-composer textarea { font-size: 16px; }
   .assistant-launcher { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); }
+}
+
+/* 首页与侧栏共用一个持续挂载的对话树；只改变布局，不复制会话。 */
+.assistant-panel:not([open]) { display: none; }
+.assistant-panel::backdrop { background: var(--ds-surface); }
+.site-shell:has(.assistant-home-main) { height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.site-shell:has(.assistant-home-main) > .site-mobile-header { flex-shrink: 0; }
+.site-shell > .assistant-home-main { flex: 1; min-height: 0; padding: 0; max-width: none; background: var(--ds-surface); }
+.assistant-shell[data-layout="home"] { --home-conversation-width: 760px; --home-conversation-gutter: max(24px, calc((100% - var(--home-conversation-width)) / 2)); height: 100%; }
+.assistant-shell[data-layout="home"] .assistant-panel { z-index: auto; position: relative; inset: auto; width: 100%; height: 100%; border: 0; box-shadow: none; }
+.assistant-shell[data-layout="home"] .assistant-heading { padding: 24px var(--home-conversation-gutter) 20px; border-bottom: 0; }
+.assistant-shell[data-layout="home"] .assistant-heading h2 { font-size: 18px; }
+.assistant-shell[data-layout="home"] .assistant-new { font-size: 13px; }
+.assistant-shell[data-layout="home"] .assistant-messages { padding: 28px var(--home-conversation-gutter) 24px; }
+.assistant-shell[data-layout="home"] .assistant-composer { width: 100%; padding: 16px var(--home-conversation-gutter) 28px; }
+.assistant-shell[data-layout="home"] .assistant-message { font-size: 16px; margin-bottom: 32px; }
+.assistant-shell[data-layout="home"] .assistant-message-text { line-height: 1.8; }
+.assistant-shell[data-layout="home"] .assistant-message-meta { font-size: 11px; }
+.assistant-shell[data-layout="home"] .assistant-message.user > .assistant-message-text { padding: 12px 16px; }
+.assistant-shell[data-layout="home"] .assistant-input-box { padding: 16px; border-radius: 16px; }
+.assistant-shell[data-layout="home"] .assistant-composer textarea { font-size: 16px; line-height: 28px; min-height: 28px; }
+.assistant-shell[data-layout="home"] .assistant-input-actions button { width: 36px; min-height: 36px; }
+.assistant-shell[data-layout="home"] .exercise-card { padding: 20px; }
+.assistant-shell[data-layout="home"] .exercise-card-heading h3 { font-size: 18px; }
+.assistant-shell[data-layout="home"] .exercise-card-controls { margin-top: 16px; }
+.assistant-shell[data-layout="home"] :is(.exercise-hidden-summary, .exercise-measure-navigation > span) { font-size: 13px; }
+.assistant-shell[data-layout="home"] .exercise-measure-buttons button { font-size: 14px; }
+.assistant-shell[data-layout="home"] .exercise-tempo { font-size: 12px; }
+.assistant-shell[data-layout="home"] .exercise-tempo input { font-size: 15px; }
+.assistant-shell[data-layout="home"] .exercise-card footer { padding-top: 16px; margin-top: 12px; }
+.assistant-shell[data-layout="home"] :is(.exercise-card footer button, .exercise-card .rhythm-playback .rhythm-playback-buttons button) { font-size: 14px; min-height: 40px; }
+.assistant-home-welcome { text-align: center; }
+.assistant-home-welcome h1 { margin: 0; font-size: clamp(26px, 3vw, 36px); font-weight: 650; letter-spacing: -.03em; line-height: 1.3; }
+.assistant-suggestions { margin-top: 16px; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+.assistant-suggestions button { min-height: 38px; padding: 8px 14px; border: 1px solid var(--ds-line); border-radius: 10px; background: transparent; color: var(--ds-ink); font: inherit; font-size: 13px; transition: background-color 140ms ease, border-color 140ms ease; }
+.assistant-suggestions button:hover { background: var(--ds-tint); border-color: var(--ds-primary); }
+.assistant-home-sources { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 24px; margin-top: 24px; }
+.assistant-home-sources a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--ds-muted); font-size: 13px; transition: color 140ms ease; }
+.assistant-home-sources a:hover { color: var(--ds-primary); }
+.assistant-home-sources a:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 3px; border-radius: 4px; }
+.assistant-shell[data-layout="home"] .assistant-panel[data-empty="true"] .assistant-messages { flex: 0 1 auto; margin-top: auto; padding-top: 24px; padding-bottom: 12px; }
+.assistant-shell[data-layout="home"] .assistant-panel[data-empty="true"] .assistant-composer { margin-bottom: auto; padding-bottom: 56px; }
+@media (max-width: 600px) {
+  .assistant-shell[data-layout="home"] .assistant-heading { padding: 12px 20px; }
+  .assistant-shell[data-layout="home"] .assistant-heading h2 { font-size: 16px; }
+  .assistant-shell[data-layout="home"] .assistant-messages { padding: 20px; }
+  .assistant-shell[data-layout="home"] .assistant-composer { padding: 12px 20px max(12px, env(safe-area-inset-bottom)); }
+  .assistant-home-sources { gap: 8px 16px; margin-top: 20px; }
+  .assistant-shell[data-layout="home"] .exercise-card { padding: 16px; }
+  .assistant-shell[data-layout="home"] .assistant-panel[data-empty="true"] .assistant-composer { padding-bottom: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assistant-suggestions button, .assistant-home-sources a { transition: none; }
 }
 
 /* 练习展示不依赖来源；对话间距由助手结果容器负责。 */

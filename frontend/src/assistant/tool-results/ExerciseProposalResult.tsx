@@ -72,7 +72,7 @@ export function ExerciseProposalResult({ value, playbackGroup, onPracticeStart }
         onPracticeStart();
         navigate(`/ai/${proposal.mode}/${encodeURIComponent(proposal.id)}`, { state: practiceNavigationState(location) });
       }}>{proposal.mode === "dictation" ? <Ear size={16} aria-hidden="true" /> : <Hand size={16} aria-hidden="true" />}
-        {proposal.mode === "dictation" ? "进入听写" : "进入击拍"}
+        {proposal.mode === "dictation" ? "开始听写" : "开始击拍"}
       </button>}
       {apply ? <>
       {notice && <span className="exercise-apply-feedback" role="status">{notice}</span>}

@@ -2,7 +2,6 @@ import { Suspense, useEffect, useMemo, useRef } from "react";
 import { routeModules, preloadDestination, preloadLinkIntent } from "./navigation/routeModules";
 import { LoadingPlaceholder } from "./navigation/LoadingPlaceholder";
 import { Navigate, Route, Routes, useLocation } from "react-router";
-import HomePage from "./pages/HomePage";
 import SiteNavigation from "./navigation/SiteNavigation";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useAuth } from "./auth/useAuth";
@@ -15,7 +14,7 @@ import { GeneratedExerciseStore, GeneratedExercisesContext } from "./exercises/G
 import { AssistantPanel } from "./assistant/AssistantPanel";
 import { AssistantContext, AssistantContextScope } from "./assistant/assistantContext";
 
-// 首页只展示入口；题库和训练代码进入对应页面后再加载。
+// 题库和训练代码进入对应页面后再加载；助手在路由边界外持续挂载。
 const RandomPracticePage = routeModules.random.Component;
 const PresetPracticePage = routeModules.preset.Component;
 const CustomPracticePage = routeModules.custom.Component;
@@ -50,7 +49,7 @@ function AppShell() {
         跳到主要内容
       </a>
       <SiteNavigation />
-      <main id="main-content" ref={mainRef} tabIndex={-1}>
+      <main id="main-content" ref={mainRef} tabIndex={-1} className={pathname === "/" ? "assistant-home-main" : undefined}>
         {/* 按历史记录重挂载以恢复访问快照；预加载缓存不随此 key 重置。 */}
         <Suspense key={key}
           fallback={
@@ -62,7 +61,8 @@ function AppShell() {
             <Route path="/settings" element={<SettingsPage auth={auth} />} />
             <Route path="/records" element={<PracticeRecordsPage />} />
             <Route path="/about" element={<AboutPage />} />
-            <Route path="/" element={<HomePage />} />
+            {/* 首页内容由下方持续挂载的助手呈现，避免路由切换重建对话。 */}
+            <Route path="/" element={null} />
             <Route path="/preset" element={<PresetPracticePage />} />
             <Route
               path="/preset/:questionId"
@@ -103,8 +103,8 @@ function AppShell() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
+        <AssistantPanel key={identity} home={pathname === "/"} />
       </main>
-      <AssistantPanel key={identity} />
     </div></RecordAccessContext.Provider>
     </AssistantContextScope.Provider>
     </GeneratedExercisesContext>

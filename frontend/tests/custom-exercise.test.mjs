@@ -159,16 +159,16 @@ test("听写小节反馈与导航同步，未验证或清除后不显示结果",
   assert.doesNotMatch(render(undefined), /data-verdict|draft-measure-feedback/);
 });
 
-test("首页独立展示三个平等入口，不显示预设主题或训练区", async () => {
+test("首页提供对话和三个直接入口，不预先展示训练区", async () => {
   const html = await renderApp("/");
   assert.match(html, /<title>首页 · 节奏训练<\/title>/);
   assert.match(html, /aria-label="练习入口"/);
   assert.doesNotMatch(html, /home-rhythm-mark|home-intro|<h1>节奏训练<\/h1>/);
   assert.match(html, /<svg[^>]*class="brand-mark"[^>]*aria-hidden="true"[^>]*focusable="false"/);
   assert.match(withoutSvg(html), /class="brand"[^>]*>节奏训练/);
-  for (const description of ["按主题循序练习，逐步熟悉不同节奏", "选择想巩固的节奏，随机出题反复练习", "编写自己的节奏题目，保存后随时练习"]) {
-    assert.ok(html.includes(description));
-  }
+  assert.match(html, /今天想练什么节奏？/);
+  assert.match(html, /两小节入门击拍/);
+  assert.match(html, /出一道听写题/);
   for (const path of ["preset", "random", "custom"]) assert.ok(html.includes(`href="/${path}"`));
   assert.match(withoutSvg(html), /aria-current="page"[^>]*>首页/);
   assert.doesNotMatch(html, /topic-section|击拍训练区|节奏听写区/);
@@ -259,7 +259,11 @@ test("折叠导航恢复偏好，保留入口名称，移动抽屉仍显示文�
 });
 
 test("设计系统覆盖公共页头、首页、预设列表与击拍页，其他主体不受影响", async () => {
-  assert.match(await renderApp("/"), /class="design-system home-page"/);
+  const home = await renderApp("/");
+  assert.match(home, /今天想练什么节奏？/);
+  assert.match(home, /aria-label="向助手提问"/);
+  assert.match(home, /aria-label="练习入口"/);
+  assert.equal((home.match(/id="assistant-input"/g) ?? []).length, 1);
   assert.match(await renderApp("/preset"), /class="design-system preset-library"/);
   const tapping = await renderApp("/preset/basic-values-01");
   assert.doesNotMatch(tapping, /random-toolbar-actions|random-settings-drawer/);

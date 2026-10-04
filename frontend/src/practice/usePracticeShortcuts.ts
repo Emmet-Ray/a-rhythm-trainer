@@ -3,7 +3,7 @@ import { useEffect, useEffectEvent } from "react";
 /** Single-letter shortcuts must not intercept typing, native controls, or modal interaction. */
 export function canUsePracticeShortcut(event: KeyboardEvent): boolean {
   return !event.defaultPrevented && !event.repeat && !event.isComposing && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey
-    && !document.querySelector("dialog[open]")
+    && !document.querySelector("dialog:modal")
     && !document.querySelector(".practice-shortcuts-panel:popover-open")
     && !(event.target instanceof HTMLElement && (event.target.isContentEditable || event.target.closest("input, textarea, select, button, a, [role='textbox']")));
 }

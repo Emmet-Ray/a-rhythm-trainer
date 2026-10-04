@@ -1,0 +1,151 @@
+// 用 playwright-cli run-code --filename 执行；先打开本地前端。
+// 所有助手请求都在浏览器拦截，不使用真实模型或修改现有会话。
+async (page) => {
+  function check(value, message) { if (!value) throw new Error(message); }
+  // 此脚本会应用测试草稿后离开，直接接受应用内的离开确认。
+  await page.addInitScript(() => {
+    window.confirm = () => true;
+    window.assistantNewFocusCount = 0;
+    document.addEventListener('focusin', event => {
+      if (event.target instanceof Element && event.target.matches('.assistant-new')) window.assistantNewFocusCount++;
+    });
+  });
+  const origin = new URL(page.url()).origin;
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const stamp = '2026-10-04T08:00:00Z';
+  const exercise = { id: 'layout-exercise', title: '八分音符入门', mode: 'tapping', description: '测试练习',
+    exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [1, 2].map(() => ({
+      elements: Array.from({ length: 8 }, () => ({ kind: 'note', noteValue: 'eighth' })),
+    })) } };
+  let created = 0;
+  const submissions = [];
+  let entries = [];
+  let releaseResponse;
+  let deferResponse = false;
+  const session = () => ({ id: 'layout-session', entries, is_running: false, last_run_status: entries.length ? 'completed' : null });
+  await page.route('**/api/auth/me', route => route.fulfill({ json: { auth_enabled: false } }));
+  await page.route('**/api/assistant/sessions', route => { created++; return route.fulfill({ json: session() }); });
+  await page.route('**/api/assistant/sessions/*', route => route.fulfill({ json: session() }));
+  await page.route('**/api/assistant/sessions/*/messages', async route => {
+    const body = route.request().postDataJSON();
+    submissions.push(body);
+    if (deferResponse) await new Promise(resolve => { releaseResponse = resolve; });
+    entries = [...entries, { type: 'user', text: body.text, page_context: body.page_context, created_at: stamp },
+      ...(entries.length ? [] : [{ type: 'tool_result', tool_call_id: 'layout-call', tool_name: 'propose_rhythm_exercise',
+        content: '练习已创建', details: { generated_exercise: exercise }, is_error: false, created_at: stamp }]),
+      { type: 'assistant', text: '先慢速跟着稳定的拍点练习。', created_at: stamp }];
+    await route.fulfill({ contentType: 'text/event-stream', body: 'data: {"type":"message_completed","text":"先慢速跟着稳定的拍点练习。"}\n\ndata: {"type":"run_completed"}\n\n' });
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(origin);
+  await page.getByRole('heading', { name: '今天想练什么节奏？' }).waitFor();
+  check(await page.evaluate(() => window.assistantNewFocusCount) === 0, '首次打开首页不能自动聚焦新对话');
+  await page.reload();
+  await page.getByRole('heading', { name: '今天想练什么节奏？' }).waitFor();
+  check(await page.evaluate(() => window.assistantNewFocusCount) === 0, '刷新首页不能自动聚焦新对话，即使随后焦点又转移');
+  const panel = page.locator('#assistant-panel');
+  const input = page.getByRole('textbox', { name: '向助手提问' });
+  const nav = page.locator('.site-sidebar');
+  check(await input.count() === 1, '首页只能有一个输入框');
+  check(await page.getByRole('navigation', { name: '练习入口', exact: true }).isVisible(), '欢迎状态保留传统入口');
+  check(await page.evaluate(() => {
+    const input = document.querySelector('.assistant-input-box').getBoundingClientRect();
+    const suggestions = document.querySelector('.assistant-suggestions').getBoundingClientRect();
+    return suggestions.top >= input.bottom;
+  }), '示例问题应位于输入框下方');
+  check(await page.locator('.site-sidebar-toggle').evaluate(el => {
+    const box = el.getBoundingClientRect();
+    return [box.left + 8, box.right - 8].every(x => el.contains(document.elementFromPoint(x, box.top + box.height / 2)));
+  }), '导航折叠按钮的左右两侧都应完整可点击');
+  check(!await page.getByRole('button', { name: '打开 AI 助手' }).isVisible(), '首页不显示重复助手入口');
+  await page.getByRole('button', { name: '两小节入门击拍', exact: true }).click();
+  check((await input.inputValue()).includes('两小节'), '快捷提示应填入输入框');
+  check(submissions.length === 0, '快捷提示不自动调用模型');
+  await input.fill('尚未发送的文字');
+  await nav.getByRole('link', { name: '预设练习', exact: true }).click();
+  await page.getByRole('button', { name: '打开 AI 助手' }).click();
+  await page.waitForFunction(() => document.activeElement?.id === 'assistant-input');
+  check(await input.inputValue() === '尚未发送的文字', '首页切到侧栏应保留草稿');
+  check(!await panel.evaluate(el => el.matches(':modal')), '宽屏侧栏不能锁住页面');
+  await nav.getByRole('link', { name: '首页', exact: true }).click();
+  check(await input.inputValue() === '尚未发送的文字', '返回首页应保留草稿');
+  await input.fill('给我一道两小节的击拍练习');
+  await page.getByRole('button', { name: '发送', exact: true }).click();
+  await page.locator('.exercise-card').waitFor();
+  check(!await page.getByRole('navigation', { name: '练习入口', exact: true }).count(), '开始对话后隐藏重复入口');
+  check(await page.evaluate(() => {
+    const title = document.querySelector('#assistant-title').getBoundingClientRect();
+    const card = document.querySelector('.exercise-card').getBoundingClientRect();
+    const input = document.querySelector('.assistant-input-box').getBoundingClientRect();
+    return Math.abs(title.left - card.left) < 2 && Math.abs(card.left - input.left) < 2;
+  }), '首页页头、消息和输入框应共用对齐线');
+  check(created === 1 && submissions[0].page_context.page === 'home', '首页请求应携带当前页面并只创建一个会话');
+  await page.getByRole('button', { name: '加快 5 BPM' }).click();
+  await page.locator('.exercise-measure-buttons').getByRole('button', { name: '跳到小节 2', exact: true }).click();
+  await input.fill('卡片切换时保留的草稿');
+  await panel.getByRole('button', { name: '开始击拍', exact: true }).click();
+  await page.waitForURL('**/ai/tapping/layout-exercise');
+  await page.locator('.practice-page').waitFor();
+  check(await panel.isVisible(), '宽屏进入训练应保留助手');
+  check(await input.inputValue() === '卡片切换时保留的草稿', '进入训练不能丢输入');
+  check(await page.getByRole('spinbutton', { name: '试听速度 BPM' }).inputValue() === '65', '切换布局不能重置卡片 BPM');
+  check(await page.locator('.exercise-measure-buttons button[aria-pressed="true"]').textContent() === '2', '切换布局不能重置选中小节');
+  check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '训练加侧栏不能横向溢出');
+  await page.getByRole('button', { name: '收起助手', exact: true }).click();
+  await page.getByRole('button', { name: '打开 AI 助手' }).click();
+  await page.waitForFunction(() => document.activeElement?.id === 'assistant-input');
+  check(await input.inputValue() === '卡片切换时保留的草稿', '收起不能丢输入');
+
+  // 请求等待期间切换两种布局，再放行响应，检查没有取消或创建第二个会话。
+  await nav.getByRole('link', { name: '首页', exact: true }).click();
+  deferResponse = true;
+  await input.fill('简单一点');
+  await page.getByRole('button', { name: '发送', exact: true }).click();
+  await page.getByRole('button', { name: '停止生成', exact: true }).waitFor();
+  await nav.getByRole('link', { name: '练习记录', exact: true }).click();
+  check(await page.getByRole('button', { name: '停止生成', exact: true }).isVisible(), '切换页面不能中止生成');
+  await nav.getByRole('link', { name: '首页', exact: true }).click();
+  check(typeof releaseResponse === 'function', '延迟请求应已到达');
+  releaseResponse();
+  await page.getByRole('button', { name: '发送', exact: true }).waitFor();
+  check(created === 1 && submissions.length === 2, '跨页面多轮应复用一个会话');
+  check(await page.locator('.exercise-card').count() === 1, '切换布局不能复制卡片');
+
+  // 编辑器仍可操作、应用；页面资料应切换为当前编辑器。
+  await nav.getByRole('link', { name: '自定义练习', exact: true }).click();
+  await page.getByRole('link', { name: /击拍练习/ }).click();
+  await page.getByRole('link', { name: /新建练习/ }).click();
+  await panel.getByRole('button', { name: '放入编辑器' }).click();
+  check(await page.getByRole('textbox', { name: '练习名称' }).inputValue() === exercise.title, '侧栏应继续支持应用到编辑器');
+
+  // 缩到手机尺寸后成为真正模态框，焦点不能进入背后的页面。
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('dialog', { name: '节奏助手' }).waitFor();
+  check(await panel.evaluate(el => el.matches(':modal')), '窄屏必须模态展示');
+  await page.evaluate(() => document.getElementById('main-content').focus());
+  check(await panel.evaluate(el => el.contains(document.activeElement)), '模态框应阻止背景获得焦点');
+  check(await page.evaluate(() => document.body.style.overflow) === 'hidden', '覆盖层应锁住背景滚动');
+  await input.fill('手机草稿');
+  await input.press('Escape');
+  check(!await panel.isVisible(), 'Escape 应关闭窄屏助手');
+  await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '打开 AI 助手');
+  await page.getByRole('button', { name: '打开 AI 助手' }).click();
+  await page.waitForFunction(() => document.activeElement?.id === 'assistant-input');
+  check(await input.inputValue() === '手机草稿', '窄屏重新打开应保留输入');
+  await panel.getByRole('button', { name: '开始击拍', exact: true }).click();
+  await page.waitForURL('**/ai/tapping/layout-exercise');
+  check(!await panel.isVisible(), '窄屏进入练习应收起助手');
+  check(await page.evaluate(() => document.body.style.overflow) !== 'hidden', '进入训练应释放背景滚动');
+  await page.getByRole('button', { name: '打开导航菜单' }).click();
+  await page.getByRole('dialog', { name: '导航菜单' }).getByRole('link', { name: '首页', exact: true }).click();
+  await input.waitFor();
+  check(!await panel.evaluate(el => el.matches(':modal')), '回到首页应该恢复普通主区域');
+  check(await input.inputValue() === '手机草稿', '手机返回首页应保留输入');
+  check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '手机首页不能横向溢出');
+  check(errors.length === 0, `浏览器异常：${errors.join('; ')}`);
+  console.log('PASS: 助手布局交互回归');
+  return { passed: true, sessionsCreated: created, messagesSent: submissions.length,
+    checks: '首页/侧栏/训练/编辑器/窄屏切换、草稿和卡片状态、等待中的请求、模态焦点与滚动隔离' };
+}

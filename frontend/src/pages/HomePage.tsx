@@ -1,64 +1,34 @@
 import { Link } from "react-router";
-import { ArrowRight, FileText, Shuffle, PencilLine } from "lucide-react";
+import { FileText, Shuffle, PencilLine } from "lucide-react";
 import { useAssistantPageContext } from "../assistant/assistantContext";
 
 const sources = [
-  {
-    path: "/preset",
-    title: "预设练习",
-    description: "按主题循序练习，逐步熟悉不同节奏",
-    icon: FileText,
-  },
-  {
-    path: "/random",
-    title: "随机练习",
-    description: "选择想巩固的节奏，随机出题反复练习",
-    icon: Shuffle,
-  },
-  {
-    path: "/custom",
-    title: "自定义练习",
-    description: "编写自己的节奏题目，保存后随时练习",
-    icon: PencilLine,
-  },
+  { path: "/preset", title: "预设练习", icon: FileText },
+  { path: "/random", title: "随机练习", icon: Shuffle },
+  { path: "/custom", title: "自定义练习", icon: PencilLine },
 ];
 
-export default function HomePage() {
-  useAssistantPageContext({
-    page: "home", description: "节奏训练首页，选择练习来源。",
-    state: { practiceSources: sources.map(({ path, title, description }) => ({ path, title, description })) },
-  });
-  return (
-    <div className="design-system home-page">
-      <title>首页 · 节奏训练</title>
-      <nav aria-label="练习入口">
-        <ul className="question-list navigation-list home-sources">
-          {sources.map((source) => (
-            <li key={source.path}>
-              <Link className="question-link" to={source.path}>
-                <span className="source-symbol" aria-hidden="true">
-                  <source.icon
-                    className="ui-icon ui-icon--entry"
-                    aria-hidden="true"
-                    focusable="false"
-                  />
-                </span>
-                <div>
-                  <h2>{source.title}</h2>
-                  <p className="question-meta">{source.description}</p>
-                </div>
-                <span className="question-action">
-                  <ArrowRight
-                    className="ui-icon"
-                    aria-hidden="true"
-                    focusable="false"
-                  />
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    </div>
-  );
+/** 首页提供引导与页面资料；对话本身由路由外的助手持续持有。 */
+export default function HomePage({ started }: { started: boolean }) {
+  useAssistantPageContext({ page: "home", description: "节奏训练首页，通过对话生成练习，或选择已有练习来源。",
+    state: { practiceSources: sources.map(({ path, title }) => ({ path, title })) } });
+  return <>
+    <title>首页 · 节奏训练</title>
+    {!started && <div className="assistant-home-welcome">
+      <h1>今天想练什么节奏？</h1>
+    </div>}
+  </>;
+}
+
+export function HomeSuggestions({ onSuggestion }: { onSuggestion: (text: string) => void }) {
+  return <div className="assistant-suggestions" aria-label="示例问题">
+    <button type="button" onClick={() => onSuggestion("给我一道两小节的入门击拍练习")}>两小节入门击拍</button>
+    <button type="button" onClick={() => onSuggestion("给我出一道两小节的节奏听写题")}>出一道听写题</button>
+  </div>;
+}
+
+export function HomePracticeLinks() {
+  return <nav className="assistant-home-sources" aria-label="练习入口">
+    {sources.map(({ path, title, icon: Icon }) => <Link key={path} to={path}><Icon size={15} aria-hidden="true" />{title}</Link>)}
+  </nav>;
 }
