@@ -52,7 +52,7 @@ export function RhythmDraftScore({
   const layout = useMemo(() => {
     const layout = createDraftScoreLayout(measures.length, viewportWidth, timeSignature.beats * 4 / timeSignature.beatType);
     if (fitMeasure && viewportWidth > 0 && layout.measures.length) {
-      layout.height = 120;
+      layout.height = 108;
       layout.measures = layout.measures.map(measure => ({ ...measure, y: 10 }));
       layout.scale = Math.min(layout.scale, viewportWidth / (layout.measures[0].width + 20));
     }

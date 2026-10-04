@@ -8,6 +8,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import uuid4
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -19,6 +20,7 @@ class ExerciseProposal(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=True)
     title: str = Field(min_length=1, max_length=100, description="简短的练习名称，不附加拍号、小节数或候选等状态标签。")
+    mode: Literal["tapping", "dictation"] = Field(default="tapping", description="用户要求出听写题时必须为 dictation，默认隐藏谱面；其他练习为 tapping。听写标题和说明只能给通用信息，不得透露自行选用的时值、附点、休止、三连音、数量或所在小节等答案线索。")
     description: str = Field(min_length=1, max_length=1000)
     exercise: dict = Field(description=(
         '格式为 {timeSignature: {beats: 4, beatType: 4}, measures: [{elements: [...]}]}。'
@@ -41,6 +43,7 @@ class GeneratedExercise:
     """
 
     title: str
+    mode: Literal["tapping", "dictation"]
     description: str
     _exercise: dict = field(repr=False)
     id: str
@@ -53,6 +56,7 @@ class GeneratedExercise:
         """
         proposal = ExerciseProposal.model_validate(value)
         object.__setattr__(self, "title", proposal.title)
+        object.__setattr__(self, "mode", proposal.mode)
         object.__setattr__(self, "description", proposal.description)
         object.__setattr__(self, "_exercise", proposal.exercise)
         object.__setattr__(self, "id", uuid4().hex)
@@ -63,6 +67,7 @@ class GeneratedExercise:
         return {
             "id": self.id,
             "title": self.title,
+            "mode": self.mode,
             "description": self.description,
             "exercise": deepcopy(self._exercise),
             "created_at": self.created_at.isoformat(),
@@ -73,7 +78,7 @@ def create_propose_rhythm_exercise_tool() -> AgentTool[ExerciseProposal]:
     async def execute(call_id: str, parameters: ExerciseProposal) -> ToolResult:
         exercise = GeneratedExercise(parameters.model_dump())
         return ToolResult(
-            content=json.dumps({"exercise_id": exercise.id, "title": exercise.title}, ensure_ascii=False),
+            content=json.dumps({"exercise_id": exercise.id, "title": exercise.title, "mode": exercise.mode}, ensure_ascii=False),
             details={"generated_exercise": exercise.snapshot()},
         )
 

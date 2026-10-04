@@ -1,6 +1,6 @@
-import { Suspense, useContext, useMemo } from "react";
+import { Suspense, useContext, useMemo, useSyncExternalStore } from "react";
 import { readPracticeOrigin } from "../exercises/aiPracticeNavigation";
-import { useLocation, useParams } from "react-router";
+import { Navigate, useLocation, useParams } from "react-router";
 import { GeneratedExercisesContext } from "../exercises/GeneratedExerciseStore";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
 import { useAssistantPageContext } from "../assistant/assistantContext";
@@ -10,8 +10,9 @@ import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
 
 const PracticeWorkspace = workspaceModule.Component;
 
-export default function AiPracticePage() {
-  const origin = readPracticeOrigin(useLocation().state);
+export default function AiPracticePage({ mode }: { mode: "tapping" | "dictation" }) {
+  const location = useLocation();
+  const origin = readPracticeOrigin(location.state);
   const { exerciseId = "" } = useParams();
   const store = useContext(GeneratedExercisesContext);
   const generated = useMemo(() => store?.get(exerciseId) ?? null, [store, exerciseId]);
@@ -20,22 +21,27 @@ export default function AiPracticePage() {
     <PracticeHeading backTo={origin.path} backLabel={origin.label} title="练习已失效" />
     <p role="status">这份临时练习已不在当前会话中，请打开助手重新生成。</p>
   </div>;
-  return <GeneratedPractice key={generated.id} generated={generated} />;
+  if (generated.mode !== mode) return <Navigate replace to={`/ai/${generated.mode}/${encodeURIComponent(generated.id)}`} state={location.state} />;
+  return <GeneratedPractice key={generated.id} generated={generated} mode={mode} />;
 }
 
-function GeneratedPractice({ generated }: { generated: GeneratedExercise }) {
+function GeneratedPractice({ generated, mode }: { generated: GeneratedExercise; mode: "tapping" | "dictation" }) {
+  const store = useContext(GeneratedExercisesContext)!;
+  const viewed = useSyncExternalStore(store.subscribe, () => store.hasViewedAnswer(generated.id));
+  const label = mode === "dictation" ? "听写练习" : "击拍练习";
   const origin = readPracticeOrigin(useLocation().state);
   const context = { source: "ai" as const, exerciseId: generated.id, title: generated.title };
-  useAssistantPageContext({ page: "ai-practice", description: "AI 生成的击拍练习",
-    state: { mode: "tapping", exercise_id: generated.id, title: generated.title, exercise: generated.exercise } });
+  useAssistantPageContext({ page: "ai-practice", description: `AI 生成的${label}`,
+    state: { mode, answer_viewed: viewed, exercise_id: generated.id, title: generated.title, exercise: generated.exercise } });
   return <div className="design-system practice-page">
-    <title>{`${generated.title} · 击拍练习`}</title>
+    <title>{`${generated.title} · ${label}`}</title>
     <p className="ai-practice-source">AI 练习</p>
     <PracticeHeading backTo={origin.path} backLabel={origin.label} title={generated.title}
-      history={{ context, exercise: generated.exercise, mode: "tapping" }} />
+      history={{ context, exercise: generated.exercise, mode }} />
     <Suspense fallback={<LoadingPlaceholder workspace label="正在加载练习…" />}>
-      <PracticeWorkspace exercise={generated.exercise} exerciseKey={generated.id} mode="tapping"
-        recoveryScope={`ai:tapping:${generated.id}`} recordContext={context} />
+      <PracticeWorkspace exercise={generated.exercise} exerciseKey={generated.id} mode={mode}
+        recoveryScope={`ai:${mode}:${generated.id}`} recordContext={context} answerExposed={viewed}
+        onAnswerViewed={() => store.markAnswerViewed(generated.id)} />
     </Suspense>
   </div>;
 }

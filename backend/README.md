@@ -361,8 +361,10 @@ assistant/
 - `assistant/system_prompt.py`：节奏助手身份和行为；具体练习格式在工具参数的 schema 描述中。
 - `agent/model.py`：向 DeepSeek Responses 传入工具声明，将调用和结果转换为 `function_call` / `function_call_output`；保留工具调用轮次的原始 response items 以重放 reasoning。只在完整响应后执行工具，不执行流式参数片段。参考 [DeepSeek Responses 文档](https://api-docs.deepseek.com/guides/responses_api/)。
 
-会话查询返回的 `entries` 现在包含 `user`、`assistant`、`tool_result`。工具结果包含调用 ID、工具名称、正文、结构化详情、错误标记和记录时间；普通文字消息格式不变。HTTP SSE 仍发送 `text_delta`、最终的 `message_completed` 和 `run_completed`，工具调用轮次不会提前结束 HTTP 流。前端将成功的练习工具结果显示为谱面卡片，在自定义练习编辑页支持用户点击应用覆盖草稿；不自动保存。卡片支持 60 BPM 整首试听，支持直接进入击拍训练，听写尚未接入。
+会话查询返回的 `entries` 现在包含 `user`、`assistant`、`tool_result`。工具结果包含调用 ID、工具名称、正文、结构化详情、错误标记和记录时间；普通文字消息格式不变。HTTP SSE 仍发送 `text_delta`、最终的 `message_completed` 和 `run_completed`，工具调用轮次不会提前结束 HTTP 流。前端将成功的练习工具结果显示为谱面卡片，在自定义练习编辑页支持用户点击应用覆盖草稿；不自动保存。卡片支持可调速的整首试听（默认 60 BPM），支持直接进入击拍训练，同时支持听写训练。
 
 `assistant/tools/propose_rhythm_exercise.py` 中 `ExerciseProposal` 接收 `title`（去除首尾空白后 1–100 字符）、`description`（1–1000 字符）、`exercise`，拒绝额外字段。节奏复用 `domain.rhythm.parse_rhythm_exercise`：4/4、1–64 小节、每小节恰好四拍及现有音符规则。校验保证结构和时值合法，不评判教学效果。`GeneratedExercise(candidate)` 在校验成功后生成 ID、UTC 时间，`snapshot()` 返回独立副本。
 
 接口与循环测试使用模拟模型及 HTTP transport，不产生 API 费用；真实模型的生成效果还需本机试用。图片输入、数据库持久化、并行工具和执行 hooks 尚未实现。
+
+生成工具支持 `mode: tapping | dictation`（默认 tapping）；听写题前端隐藏谱面，模型须避免在标题、说明和回复中提前泄露答案。该字段属于节奏助手业务协议，通用 Agent 循环不参与展示策略。

@@ -583,13 +583,20 @@ function CustomExerciseEditor({
     };
   }, [identity, auth.busy]);
 
+  const [assistantApplied, setAssistantApplied] = useState(false);
   const [assistantRevision, setAssistantRevision] = useState(0);
+  useEffect(() => {
+    if (assistantRevision === 0) return;
+    const timer = window.setTimeout(() => setAssistantApplied(false), 3500);
+    return () => window.clearTimeout(timer);
+  }, [assistantRevision]);
   const applyAssistantExercise = useCallback((proposal: GeneratedExercise) => {
     if (locked.current || auth.busy) return false;
     setDraft(previous => ({ ...previous, name: proposal.title,
       measures: structuredClone(proposal.exercise.measures.map(measure => measure.elements)),
       selectedMeasureIndex: 0 }));
     setAssistantRevision(value => value + 1);
+    setAssistantApplied(true);
     setSavedSuccessfully(false);
     setSaveError(null);
     editorRef.current?.clearMessage();
@@ -767,6 +774,7 @@ function CustomExerciseEditor({
                     {saving ? "正在保存…" : initial ? "保存修改" : "保存练习"}
                   </button>
                 </div>
+                {assistantApplied && <p key={assistantRevision} className="custom-assistant-feedback" role="status">已放入，可继续编辑</p>}
                 {saveError && (
                   <p className="custom-save-error" role="alert">
                     {saveError}

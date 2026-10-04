@@ -24,7 +24,7 @@ def test_tool_returns_result_without_session_storage():
     result = invoke(arguments())
     saved = result.details["generated_exercise"]
     assert not result.is_error
-    assert json.loads(result.content) == {"exercise_id": saved["id"], "title": "稳定四拍"}
+    assert json.loads(result.content) == {"exercise_id": saved["id"], "title": "稳定四拍", "mode": "tapping"}
     assert saved["exercise"] == arguments()["exercise"]
 
 

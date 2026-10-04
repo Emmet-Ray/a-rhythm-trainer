@@ -16,6 +16,8 @@ type WorkspaceProps = {
   mode: "tapping" | "dictation";
   recoveryScope?: string;
   recordContext?: ExerciseContext;
+  answerExposed?: boolean;
+  onAnswerViewed?: () => void;
   onBusyChange?: (busy: boolean) => void;
 };
 
@@ -36,13 +38,15 @@ function WorkspaceSession({
   onBusyChange,
   recoveryScope = mode,
   recordContext,
+  answerExposed = false,
+  onAnswerViewed,
   access,
   binding,
 }: WorkspaceProps & { access: RecordAccess; binding: string }) {
   const [settings, rememberSettings] = useVisitState<PracticeSettingsValue>(`practice:${recoveryScope}:settings`, { bpm: 60, metronomeEnabled: true });
   const [snapshot, setSnapshot] = useVisitState<DictationSnapshot | null>(`practice:${access}:${recoveryScope}:dictation`, null);
   const recorder = usePracticeRecorder({ mode, context: recordContext, exercise, enabled: access === "guest",
-    scope: `${access}:${recoveryScope}:${binding}` });
+    answerExposed, scope: `${access}:${recoveryScope}:${binding}` });
   const empty = useMemo(() => createDictationState(exercise), [exercise]);
   const state = restoreDictation(snapshot, binding, empty);
   const update = useCallback((next: SetStateAction<DictationState>) => {
@@ -61,7 +65,7 @@ function WorkspaceSession({
           {mode === "dictation" ? (
             // BPM 改变只重建听写内部播放器，保留草稿、验证结果和参考答案状态。
             <RhythmDictation key={binding} session={{ state, onChange: update }} exercise={exercise} bpm={bpm} metronomeEnabled={metronomeEnabled} onBusyChange={onBusyChange} settingsPanel={settingsPanel}
-              onRecord={recorder.dictation} toolbarEnd={shortcutHelp} />
+              onRecord={event => { if (event.type === "view-answer") onAnswerViewed?.(); recorder.dictation(event); }} toolbarEnd={shortcutHelp} />
           ) : (
             // 换题重建；调速由训练组件原地停止旧轮次，保留谱面。
             <RhythmTrainer

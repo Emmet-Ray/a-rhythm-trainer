@@ -835,10 +835,11 @@
 /* 练习展示不依赖来源；对话间距由助手结果容器负责。 */
 .assistant-exercise-result { margin-bottom: 28px; }
 .exercise-card { padding: 16px; border: 1px solid var(--ds-line); border-radius: 14px; background: var(--ds-surface); min-width: 0; }
-.exercise-card-heading h3 { margin: 0; font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.exercise-card-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+.exercise-card-heading h3 { flex: 1; min-width: 0; margin: 0; font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
 .exercise-card-score { min-width: 0; margin-top: 4px; }
 .exercise-card-score > p { font-size: 13px; color: var(--ds-muted); }
-.exercise-card footer { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 12px; }
+.exercise-card footer { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--ds-line); }
 .exercise-card footer span { font-size: 11px; color: var(--ds-muted); }
 .exercise-card footer button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--ds-line); border-radius: 8px; color: var(--ds-primary); background: var(--ds-tint); cursor: pointer; }
 
@@ -861,3 +862,41 @@
 .exercise-card .rhythm-playback .rhythm-playback-status:empty { display: none; }
 
 .ai-practice-source { margin: 0 0 8px; color: var(--ds-muted); font-size: 12px; }
+
+
+/* 助手卡片使用轻量试听和唯一训练主操作，覆盖训练页播放器的立体按钮。 */
+.exercise-card footer button { min-height: 36px; font-size: 12px; font-weight: 500; line-height: 1.4; box-shadow: none; transform: none; white-space: nowrap; }
+.exercise-card .rhythm-playback .rhythm-playback-buttons button,
+.exercise-card .rhythm-playback .rhythm-playback-buttons button[data-action="stop"]:not(:disabled) { padding: 8px 4px; background: transparent; border-color: transparent; color: var(--ds-ink); box-shadow: none; transform: none; }
+.exercise-card .rhythm-playback .rhythm-playback-buttons button:hover:not(:disabled) { background: var(--ds-subtle); color: var(--ds-primary); }
+.exercise-card .rhythm-playback .rhythm-playback-buttons button svg { width: 16px; height: 16px; }
+.exercise-card footer .exercise-start { background: var(--ds-primary); border-color: var(--ds-primary); color: var(--ds-on-primary); padding-inline: 14px; }
+.exercise-card footer .exercise-start:hover { background: var(--ds-primary-hover); }
+.exercise-card footer .exercise-apply { background: transparent; border-color: transparent; color: var(--ds-muted); }
+.exercise-card footer .exercise-apply:hover { color: var(--ds-primary); background: var(--ds-subtle); }
+.exercise-card footer .exercise-apply-feedback { flex-basis: 100%; text-align: right; order: 1; }
+
+.custom-assistant-feedback { flex-basis: 100%; margin: 0; color: var(--ds-primary); font-size: 13px; }
+
+.exercise-card-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; }
+.exercise-card-controls .exercise-measure-navigation { margin-top: 0; flex: 1 1 auto; }
+/* 与小节导航同高的紧凑调速组；仅编辑时强调数值。 */
+.exercise-tempo { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; flex-shrink: 0; padding: 4px; border-radius: 10px; background: var(--ds-subtle); color: var(--ds-muted); font-size: 11px; }
+.exercise-tempo button { width: 32px; height: 32px; min-height: 32px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--ds-muted); box-shadow: none; }
+.exercise-tempo button:hover:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); }
+.exercise-tempo-value { display: inline-flex; align-items: center; gap: 2px; padding-right: 4px; }
+.exercise-tempo input { appearance: textfield; width: 36px; height: 32px; min-height: 32px; box-sizing: border-box; padding: 4px 0; border: 0; border-radius: 5px; background: transparent; color: var(--ds-ink); text-align: center; font: inherit; font-size: 13px; font-variant-numeric: tabular-nums; }
+.exercise-tempo input::-webkit-inner-spin-button, .exercise-tempo input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.exercise-tempo input:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: -2px; background: var(--ds-surface); }
+.exercise-card { container-type: inline-size; }
+@container (max-width: 360px) {
+  .exercise-card-controls .exercise-measure-navigation { gap: 6px; }
+  .exercise-measure-buttons { gap: 2px; }
+  .exercise-measure-buttons button { min-width: 26px; padding-inline: 4px; }
+  .exercise-tempo { gap: 0; }
+  .exercise-tempo button { width: 28px; }
+  .exercise-tempo input { width: 30px; }
+}
+
+.exercise-hidden-summary { color: var(--ds-muted); font-size: 12px; line-height: 1.5; }
+.exercise-answer-viewed { flex-shrink: 0; margin-left: auto; color: var(--ds-muted); font-size: 11px; line-height: 1.5; white-space: nowrap; }

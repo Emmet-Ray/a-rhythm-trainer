@@ -30,12 +30,13 @@ type PlaybackOption = {
  * BPM、播放范围或小节数量改变时，调用方用 key 重建；卸载取消排程、RAF 和异步启动并关闭音频。
  * 节拍器开关实时生效，不参与 key，也不影响预备拍和钢琴。
  */
-export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, onBusyChange, controls, onCountInChange, onStart, onPlaybackStarted, playbackGroup }: {
+export default function RhythmPlayback({ options, timeSignature, bpm, metronomeEnabled = true, onBusyChange, controls, onCountInChange, onStart, onPlaybackStarted, playbackGroup, showStatus = true }: {
   options: readonly PlaybackOption[];
   timeSignature: RhythmExercise["timeSignature"] | null;
   bpm: number;
   /** 可选播放范围；同组的新播放会同步停止旧播放。 */
   playbackGroup?: PlaybackGroup;
+  showStatus?: boolean;
   metronomeEnabled?: boolean;
   onBusyChange?: (busy: boolean) => void;
   /** 与播放按钮成组的控制项，例如播放范围；不参与播放状态管理。 */
@@ -246,7 +247,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
           {controls}
         </div>
       </div>
-      {!onCountInChange && <span className="rhythm-playback-status" role="status">{text}</span>}
+      {showStatus && !onCountInChange && <span className="rhythm-playback-status" role="status">{text}</span>}
       {error && <span role="alert">{error}</span>}
     </div>
   );

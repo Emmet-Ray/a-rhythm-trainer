@@ -3,6 +3,17 @@ import { parseGeneratedExercise, type GeneratedExercise } from "./GeneratedExerc
 
 /** 当前身份的临时题目。按生成 ID 保留版本；不写入题库，刷新或切换身份后失效。 */
 export class GeneratedExerciseStore {
+  private exposed = new Set<string>();
+  private listeners = new Set<() => void>();
+  subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
+  hasViewedAnswer = (id: string) => this.exposed.has(id);
+  /** 展示过谱面后不可恢复为未查看；同一生成结果跨卡片与训练方式共享。 */
+  markAnswerViewed(id: string) {
+    if (this.exposed.has(id)) return;
+    this.exposed.add(id);
+    this.listeners.forEach(listener => listener());
+  }
+
   private exercises = new Map<string, GeneratedExercise>();
 
   add(value: GeneratedExercise): void {

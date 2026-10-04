@@ -37,7 +37,7 @@ def test_valid_record_has_backend_identity_time_and_normalized_text():
     {"title": " "}, {"title": 123}, {"title": "题" * 101},
     {"description": ""}, {"description": "说" * 1001},
     {"id": "model-chosen"}, {"created_at": "2026-01-01"},
-    {"mode": "tapping"}, {"exercise": []},
+    {"mode": "unknown"}, {"exercise": []},
 ])
 def test_invalid_outer_fields_rejected(patch):
     with pytest.raises(ValidationError):
@@ -79,3 +79,10 @@ def test_input_and_display_snapshot_cannot_change_record():
     displayed["exercise"]["measures"][0]["elements"].clear()
     assert record.snapshot()["exercise"] == original["exercise"]
 
+
+
+def test_dictation_mode_is_preserved_and_validated():
+    assert GeneratedExercise(candidate()).snapshot()["mode"] == "tapping"
+    assert GeneratedExercise({**candidate(), "mode": "dictation"}).snapshot()["mode"] == "dictation"
+    with pytest.raises(ValidationError):
+        GeneratedExercise({**candidate(), "mode": "unknown"})

@@ -68,7 +68,8 @@ function AppShell() {
               path="/preset/:questionId"
               element={<PresetPracticePage />}
             />
-            <Route path="/ai/tapping/:exerciseId" element={<AiPracticePage key={identity} />} />
+            <Route path="/ai/dictation/:exerciseId" element={<AiPracticePage key={identity} mode="dictation" />} />
+            <Route path="/ai/tapping/:exerciseId" element={<AiPracticePage key={identity} mode="tapping" />} />
             <Route path="/random" element={<RandomPracticePage />} />
             <Route path="/random/:mode" element={<RandomPracticePage />} />
             <Route

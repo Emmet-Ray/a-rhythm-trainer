@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import { useVisitState } from "../navigation/usePageNavigation";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import type { PracticeResult, TimingWindows } from "../rhythm/RhythmTiming";
@@ -11,12 +11,13 @@ type PendingRecording = { actions: RecordAction[]; recordId?: string; dictationA
 /** 题目归档独立于访问；听写尝试编号与草稿一起在站内返回时恢复。
  * 写入成功后丢弃行为队列；卸载后的音频回调不能跨身份继续写入。
  */
-export function usePracticeRecorder({ mode, context, exercise, enabled, scope }: {
+export function usePracticeRecorder({ mode, context, exercise, enabled, scope, answerExposed = false }: {
   mode: "tapping" | "dictation";
   context?: ExerciseContext;
   exercise: RhythmExercise | null;
   enabled: boolean;
   scope: string;
+  answerExposed?: boolean;
 }) {
   const [remembered, remember] = useVisitState<PendingRecording>(`record-pending:${scope}`, { actions: [], error: "" });
   const current = useRef<PendingRecording>({ ...remembered });
@@ -58,9 +59,19 @@ export function usePracticeRecorder({ mode, context, exercise, enabled, scope }:
     if (!enabled || !context || !exercise || !active.current) return;
     if (!current.current.dictationAttemptId && event.type === "edit") return;
     current.current.dictationAttemptId ??= crypto.randomUUID();
+    if (answerExposed && event.type !== "view-answer") {
+      current.current.actions = [...current.current.actions, { mode: "dictation", attemptId: current.current.dictationAttemptId,
+        event: { type: "view-answer" }, at: new Date().toISOString() }];
+    }
     current.current.actions = [...current.current.actions, { mode: "dictation", attemptId: current.current.dictationAttemptId, event, at: new Date().toISOString() }];
     persist();
   }
+
+  // 训练进行中从助手卡片查看答案，也要立即更新已存在的尝试；仅打开页面不创建记录。
+  const exposeExistingAttempt = useEffectEvent(() => {
+    if (current.current.dictationAttemptId) dictation({ type: "view-answer" });
+  });
+  useLayoutEffect(() => { if (answerExposed) exposeExistingAttempt(); }, [answerExposed]);
 
   return { startAttempt, dictation, retry: persist, error };
 }

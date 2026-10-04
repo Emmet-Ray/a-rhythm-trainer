@@ -14,7 +14,7 @@ test("临时生成练习保留各个版本并隔离读写与身份", () => {
   store.add({ ...generated, id: "two", title: "新版本" });
   original.title = "外部修改";
   store.get("one").exercise.measures.length = 0;
-  assert.deepEqual(store.get("one"), generated);
+  assert.deepEqual(store.get("one"), { ...generated, mode: "tapping" });
   assert.equal(store.get("two").title, "新版本");
   assert.equal(store.get("missing"), null);
   assert.equal(new GeneratedExerciseStore().get("one"), null);
@@ -24,4 +24,33 @@ test("非法题目不能进入临时题目集合", () => {
   const store = new GeneratedExerciseStore();
   assert.throws(() => store.add({ ...generated, exercise: {} }));
   assert.equal(store.get("one"), null);
+});
+
+
+test("听写意图校验，答案展示状态跨导航保留且各版本隔离", () => {
+  const store = new GeneratedExerciseStore();
+  store.add({ ...generated, mode: "dictation" });
+  assert.equal(store.get("one").mode, "dictation");
+  assert.equal(store.hasViewedAnswer("one"), false);
+  let changes = 0;
+  const unsubscribe = store.subscribe(() => changes++);
+  store.markAnswerViewed("one");
+  store.markAnswerViewed("one");
+  store.add({ ...generated, mode: "dictation" });
+  assert.equal(store.hasViewedAnswer("one"), true);
+  assert.equal(store.hasViewedAnswer("two"), false);
+  assert.equal(changes, 1);
+  unsubscribe();
+  assert.throws(() => store.add({ ...generated, mode: "unknown" }));
+});
+
+test("旧数据在读取边界转换，新 mode 优先且非法模式不降级", () => {
+  const store = new GeneratedExerciseStore();
+  for (const [intent, expected] of [[undefined, "tapping"], ["practice", "tapping"], ["dictation", "dictation"]]) {
+    store.add({ ...generated, intent });
+    assert.equal(store.get("one").mode, expected);
+  }
+  store.add({ ...generated, intent: "dictation", mode: "tapping" });
+  assert.equal(store.get("one").mode, "tapping");
+  assert.throws(() => store.add({ ...generated, intent: "dictation", mode: "invalid" }));
 });
