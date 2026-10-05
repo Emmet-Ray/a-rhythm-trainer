@@ -67,6 +67,7 @@ function WorkspaceSession({
       ...buildPracticeContextSummary({ context: recordContext, exercise, mode,
         answerExposed: viewed, session, historyEnabled: access === "guest" }),
       bpm: settings.bpm,
+      metronomeEnabled: settings.metronomeEnabled,
       audioBusy,
       ...(mode === "dictation" ? { currentAnswer: state.answerMeasures,
         selectedMeasure: state.selectedMeasureIndex + 1, verdicts: state.measureVerdicts } : {}),

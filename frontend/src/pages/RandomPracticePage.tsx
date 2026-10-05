@@ -1,3 +1,4 @@
+import { useAssistantPageContext } from "../assistant/assistantContext";
 import { lazy, memo, Suspense, useEffect, useId, useRef, useState } from "react";
 import { workspaceModule } from "../practice/practiceModules";
 import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
@@ -33,6 +34,8 @@ const randomModes = [
 export default function RandomPracticePage() {
   const { mode } = useParams();
   const selectedMode = randomModes.find(item => item.id === mode);
+  useAssistantPageContext(mode === undefined ? { page: "random_index", description: "随机练习入口，选择训练方式。",
+    state: { modes: randomModes.map(({ id, label }) => ({ id, label })) } } : null);
   if (mode !== undefined && !selectedMode) return <NotFoundPage />;
 
   if (selectedMode) {
@@ -83,6 +86,11 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
   const restoreSettingsFocus = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const rangeError = config.materials.length === 0 ? "至少选择一个练习范围。" : error;
+
+  useAssistantPageContext({ page: "random_practice", description: "随机练习；生成设置是下一次换题的条件，不一定是当前题目的生成条件。",
+    state: { mode, settingsOpen, generationSettings: { measureCount: config.measureCount,
+      materials: randomMaterials.filter(item => config.materials.includes(item.id)).map(({ id, label, group }) => ({ id, label, group })) },
+      exerciseAvailable: generated.exercise !== null, configurationError: rangeError } });
 
   useEffect(() => {
     if (!settingsOpen) {

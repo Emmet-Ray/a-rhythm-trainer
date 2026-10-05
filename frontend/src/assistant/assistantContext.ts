@@ -42,6 +42,12 @@ export class AssistantContext {
     this.serialized = "";
     this.notify();
   }
+  private sections = new Map<symbol, { name: string; value: JsonValue }>();
+  /** 子面板补充页面字段，关闭只移除自己的数据，不替换基础页面或练习上下文。 */
+  publishSection(owner: symbol, name: string, value: JsonValue) {
+    this.sections.set(owner, { name, value: structuredClone(value) });
+  }
+  removeSection(owner: symbol) { this.sections.delete(owner); }
   private practices = new Map<symbol, { title: string; read: () => JsonValue }>();
   private recentPractice: { title: string; read: () => JsonValue } | null = null;
   private practiceLabel = "";
@@ -66,10 +72,11 @@ export class AssistantContext {
   readCurrentPageContext = (): PageContext | null => {
     const active = [...this.practices.values()].at(-1);
     const practice = active ?? this.recentPractice;
-    if (!practice) return structuredClone(this.current);
+    if (!practice && !this.current && !this.sections.size) return null;
     const page = this.current ?? { page: "practice", description: "节奏练习", state: {} };
     return structuredClone({ ...page, state: { ...page.state,
-      practice: { scope: active ? "current" : "recent", snapshot: practice.read() } } });
+      ...Object.fromEntries([...this.sections.values()].map(({ name, value }) => [name, value])),
+      ...(practice ? { practice: { scope: active ? "current" : "recent", snapshot: practice.read() } } : {}) } });
   };
   // React 订阅需要稳定引用；业务调用者使用上面的独立副本。
   getSnapshot = () => this.current;
@@ -83,10 +90,10 @@ export class AssistantContext {
 export const AssistantContextScope = createContext<AssistantContext | null>(null);
 
 /** 只发布已提交的页面状态；卸载时注销，不改变页面自己的草稿。 */
-export function useAssistantPageContext(context: PageContext) {
+export function useAssistantPageContext(context: PageContext | null) {
   const scope = useContext(AssistantContextScope);
   const [owner] = useState(() => Symbol("page-context"));
-  useLayoutEffect(() => { scope?.publish(owner, context); });
+  useLayoutEffect(() => { if (context) scope?.publish(owner, context); else scope?.remove(owner); });
   useLayoutEffect(() => () => scope?.remove(owner), [scope, owner]);
 }
 
@@ -123,4 +130,15 @@ export function useAssistantPractice(title: string | null, read: () => JsonValue
     else scope?.removePractice(owner);
   });
   useLayoutEffect(() => () => scope?.removePractice(owner), [scope, owner]);
+}
+
+/** 当前展开的子面板资料；随页面作用域或子面板卸载清除。 */
+export function useAssistantPageSection(name: string, value: JsonValue | null) {
+  const scope = useContext(AssistantContextScope);
+  const [owner] = useState(() => Symbol("page-section"));
+  useLayoutEffect(() => {
+    if (value === null) scope?.removeSection(owner);
+    else scope?.publishSection(owner, name, value);
+  });
+  useLayoutEffect(() => () => scope?.removeSection(owner), [scope, owner]);
 }

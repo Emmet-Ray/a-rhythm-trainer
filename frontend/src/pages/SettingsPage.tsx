@@ -1,3 +1,4 @@
+import { useAssistantPageContext, useAssistantPageSection } from "../assistant/assistantContext";
 import { useContext, useLayoutEffect, useState } from "react";
 import { VisitsContext } from "../navigation/usePageNavigation";
 import {
@@ -51,6 +52,9 @@ export default function SettingsPage({
     categories.find((item) => item.id === params.get("category"))?.id ??
     "account";
   const [appearance, setAppearance] = useState(getAppearance);
+  useAssistantPageContext({ page: "settings", description: "设置页，仅提供公开设置和登录状态，不包含账号资料、密码或模型凭证；声音设置尚未开放。",
+    state: { category, categories: categories.map(({ id, label }) => ({ id, label, available: id !== "sound" })),
+      accountStatus: auth.state.status, appearance: { colorMode: appearance.colorMode, theme: appearance.theme } } });
   const visits = useContext(VisitsContext);
   useLayoutEffect(() => {
     visits?.rememberDestination("/settings", `/settings?category=${category}`);
@@ -228,6 +232,8 @@ function AccountSettings({ auth }: { auth: ReturnType<typeof useAuth> }) {
 
 function TappingPrecisionSettings() {
   const [preference, setPreference] = useState(getTappingPrecision);
+  useAssistantPageSection("tappingPrecision", { selected: preference.precision, storageAvailable: preference.storageAvailable,
+    options: tappingPrecisions.map(({ id, label, windows }) => ({ id, label, windows: { ...windows } })) });
   return (
     <section
       className="settings-section"
@@ -296,6 +302,7 @@ function LocalDataSettings() {
   const [data, setData] = useState(readLocalData);
   const [notice, setNotice] = useState(0);
   const [clearError, setClearError] = useState("");
+  useAssistantPageSection("localExercises", { status: data.error ? "read-error" : "ready", summary: data.summary ? { ...data.summary } : null });
 
   function clear() {
     if (

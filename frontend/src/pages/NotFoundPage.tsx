@@ -1,3 +1,4 @@
+import { useAssistantPageContext } from "../assistant/assistantContext";
 import { Link } from "react-router";
 
 export default function NotFoundPage({
@@ -6,6 +7,7 @@ export default function NotFoundPage({
   isQuestion?: boolean;
 }) {
   const title = isQuestion ? "未找到该练习" : "未找到该页面";
+  useAssistantPageContext({ page: "not_found", description: title, state: { isQuestion, returnTo: isQuestion ? "/preset" : "/" } });
   return (
     <section
       className="design-system not-found"

@@ -1,3 +1,4 @@
+import { useAssistantPageContext } from "../assistant/assistantContext";
 import { exerciseSources } from "../practice-records/PracticeRecord";
 import {
   useContext,
@@ -37,6 +38,8 @@ function readRecords() {
 
 export default function PracticeRecordsPage() {
   const access = useContext(RecordAccessContext);
+  useAssistantPageContext(access !== "guest" ? { page: "practice_records", description: "练习记录当前不可读取。",
+    state: { status: "unavailable", reason: recordAccessMessage(access) } } : null);
   return (
     <section className="design-system practice-records-page">
       <title>练习记录 · 节奏训练</title>
@@ -79,6 +82,14 @@ function LocalRecords() {
   const filtered = overview.records;
   const selected = data.records.find((record) => record.id === selectedId);
   const pagination = recordPage(filtered.length, page);
+  const metrics = { count: overview.count, days: overview.days, tappingCount: overview.tappingCount,
+    passedCount: overview.passedCount, passRate: overview.passRate, dictationCount: overview.dictationCount,
+    completedCount: overview.completedCount, independentCount: overview.independentCount };
+  useAssistantPageContext({ page: "practice_records", description: "练习记录列表。统计仅覆盖当前时间和模式筛选；题目详情使用该题全部历史，不受列表时间筛选限制。",
+    state: { status: data.error ? "read-error" : "ready", filter: { mode: filter, period, asOf: now.toISOString() },
+      overview: data.error ? null : metrics, pagination: { page: pagination.page, pages: pagination.pages, totalRecords: filtered.length },
+      records: data.error ? [] : filtered.slice(pagination.start, pagination.end).map(record => ({ id: record.id, source: record.source,
+        exerciseId: record.exerciseId, title: record.title, mode: record.mode, allTimeAttempts: record.attempts.length })), selectedRecordId: selected?.id ?? null } });
   if (page !== pagination.page) setPage(pagination.page);
   function remove(record: PracticeRecord) {
     if (

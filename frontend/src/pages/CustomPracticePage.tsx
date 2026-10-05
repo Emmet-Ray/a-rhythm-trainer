@@ -81,6 +81,9 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
       ? `account:${auth.state.user.id}`
       : auth.state.status;
   const selectedMode = customModes.find((item) => item.id === mode);
+  useAssistantPageContext(!selectedMode && mode === undefined ? { page: "custom_index", description: "自定义练习入口，选择训练方式。",
+    state: { source, modes: customModes.map(({ id, label }) => ({ id, label })) } } : selectedMode && (auth.busy || auth.state.status === "checking" || auth.state.status === "unavailable") ? {
+      page: "custom_exercises", description: "自定义练习暂时无法读取，正在确认访问状态。", state: { mode: selectedMode.id, status: auth.state.status } } : null);
   if (mode !== undefined && !selectedMode) return <NotFoundPage />;
 
   if (
@@ -244,6 +247,11 @@ function CustomExerciseList({
   const [deleting, setDeleting] = useState<string | null>(null);
   const [mutationMessage, setMutationMessage] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  useAssistantPageContext({ page: "custom_library", description: "自定义题目列表，仅有题目摘要，不代表已读取每道题的谱面。账号列表仅表示已加载的一页。",
+    state: { mode, source, status: result.loading ? "loading" : result.error ? "read-error" : "ready",
+      offset: source === "account" ? offset : 0, loadedCount: result.items.length, totalCount: source === "local" ? result.items.length : null,
+      items: result.items.slice(0, 50).map(item => ({ id: item.id, name: item.name, mode: item.mode,
+        measureCount: "exercise" in item ? item.exercise.measures.length : null })), truncated: result.items.length > 50 } });
   const mutationActive = useRef(false);
   const lifetime = useRef(0);
   useEffect(() => () => { lifetime.current += 1; }, []);
@@ -424,6 +432,8 @@ function CustomExercisePractice({
     }
   }
   const [result, setResult] = useState(readExercise);
+  useAssistantPageContext(result.loading || result.error || !result.item ? { page: "custom_practice", description: "自定义题目读取状态。",
+    state: { mode, source, status: result.loading ? "loading" : result.error ? "read-error" : "not-found" } } : null);
   const [revision, setRevision] = useState(0);
   useEffect(() => {
     if (source !== "account") return;

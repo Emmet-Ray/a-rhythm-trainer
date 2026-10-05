@@ -1,3 +1,4 @@
+import { useAssistantPageSection } from "../assistant/assistantContext";
 import { useContext, useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { SuccessToast } from "../navigation/SuccessToast";
@@ -13,6 +14,7 @@ import {
 
 export default function LocalRecordSettings() {
   const access = useContext(RecordAccessContext);
+  useAssistantPageSection("localRecordsAccess", { status: access === "guest" ? "available" : "unavailable", reason: access === "guest" ? null : recordAccessMessage(access) });
   return (
     <section
       className="local-data-group"
@@ -53,6 +55,7 @@ function readSummary() {
 function RecordData() {
   const [data, setData] = useState(readSummary);
   const [notice, setNotice] = useState(0);
+  useAssistantPageSection("localRecords", { status: data.error ? "read-error" : "ready", recordCount: data.count, attemptCount: data.error ? null : data.attempts });
   const [error, setError] = useState("");
   useEffect(() => {
     const refresh = () => setData(readSummary());

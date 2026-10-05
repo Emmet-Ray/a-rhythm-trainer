@@ -1,4 +1,8 @@
-import { Suspense, useEffect, useSyncExternalStore, useLayoutEffect, useRef, type UIEvent } from "react";
+import { RecordAccessContext } from "../practice-records/recordAccess";
+import { listPracticeRecords, RECORDS_CHANGED } from "../practice-records/practiceRecordStorage";
+import { historicalStatus, recordKey } from "../practice-records/practiceRecords";
+import { useAssistantPageContext } from "../assistant/assistantContext";
+import { useCallback, useContext, useState, Suspense, useEffect, useSyncExternalStore, useLayoutEffect, useRef, type UIEvent } from "react";
 import { presetCatalogStore } from "../exercises/presetCatalogStore";
 import { workspaceModule } from "../practice/practiceModules";
 import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
@@ -22,6 +26,8 @@ export default function PresetPracticePage() {
   const { questionId } = useParams();
   const state = useSyncExternalStore(presetCatalogStore.subscribe, presetCatalogStore.getSnapshot, presetCatalogStore.getSnapshot);
   useEffect(() => { void presetCatalogStore.load(); }, []);
+  useAssistantPageContext(state.status !== "ready" ? { page: "preset_catalog", description: "预设题库读取状态。",
+    state: { status: state.status } } : state.catalog.topics.length === 0 ? { page: "preset_catalog", description: "预设题库为空。", state: { status: "ready", topics: [] } } : null);
   if (state.status === "idle" || state.status === "loading") return <LoadingPlaceholder label="正在读取题库…" />;
   if (state.status === "error") return (
     <div className="design-system practice-page">
@@ -51,6 +57,27 @@ function PresetLibrary({ presetTopics }: { presetTopics: PracticeTopic[] }) {
   const [topicId, setTopicId] = useBrowsingState("preset:topic", presetTopics[0].id);
   const topic = presetTopics.find(item => item.id === topicId) ?? presetTopics[0];
   const questions = topic.modes.find(group => group.mode === selectedMode)?.questions ?? [];
+  const access = useContext(RecordAccessContext);
+  const readProgress = useCallback(() => {
+    if (access !== "guest") return { status: "unavailable", records: [] };
+    try { return { status: "available", records: listPracticeRecords() }; }
+    catch { return { status: "read-error", records: [] }; }
+  }, [access]);
+  const [progress, setProgress] = useState(readProgress);
+  useEffect(() => {
+    const refresh = () => setProgress(readProgress());
+    refresh();
+    window.addEventListener("storage", refresh);
+    window.addEventListener(RECORDS_CHANGED, refresh);
+    return () => { window.removeEventListener("storage", refresh); window.removeEventListener(RECORDS_CHANGED, refresh); };
+  }, [readProgress]);
+  useAssistantPageContext({ page: "preset_catalog", description: "预设练习目录，题目摘要不包含谱面；只提供当前分类的前50题；完成状态来自同题同谱面版本的本地历史。",
+    state: { mode: selectedMode, topic: { id: topic.id, title: topic.title },
+      topics: presetTopics.slice(0, 50).map(({ id, title }) => ({ id, title })), totalTopics: presetTopics.length,
+      progressStatus: progress.status,
+      questions: questions.slice(0, 50).map(question => ({ id: question.id, title: question.title,
+        achievement: progress.status !== "available" ? null : historicalStatus(progress.records.find(record => recordKey(record, record.exercise, record.mode) === recordKey({ source: "preset", exerciseId: question.id, title: question.title }, question.exercise, selectedMode as "tapping" | "dictation"))) })), totalQuestions: questions.length,
+      truncated: questions.length > 50 || presetTopics.length > 50 } });
   const [topicScrollRef, onTopicScroll] = useListScroll("preset:topic-scroll", "topics");
   const [questionScrollRef, onQuestionScroll] = useListScroll("preset:question-scroll", `${topic.id}:${selectedMode}`);
 
@@ -126,6 +153,13 @@ function useListScroll(field: string, content: string) {
 
 function PresetExercisePage({ questionId, presetTopics }: { questionId: string; presetTopics: PracticeTopic[] }) {
   const selected = findPresetQuestion(questionId, presetTopics);
+  const questions = selected?.topic.modes.find(group => group.mode === selected.mode)?.questions ?? [];
+  const index = questions.findIndex(question => question.id === questionId);
+  const reference = (question: typeof questions[number] | undefined) => question ? { id: question.id, title: question.title } : null;
+  useAssistantPageContext(selected ? { page: "preset_practice", description: "预设练习题目页，导航范围是同主题、同模式的题组。",
+    state: { mode: selected.mode, topic: { id: selected.topic.id, title: selected.topic.title },
+      question: reference(selected.question), position: index + 1, totalQuestions: questions.length,
+      previous: reference(questions[index - 1]), next: reference(questions[index + 1]) } } : null);
   if (!selected) return <NotFoundPage isQuestion />;
   const modeLabel = practiceModes.find(mode => mode.id === selected.mode)!.label;
 

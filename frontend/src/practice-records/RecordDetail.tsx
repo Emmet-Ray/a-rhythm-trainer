@@ -1,3 +1,5 @@
+import { useAssistantPageSection } from "../assistant/assistantContext";
+import { buildPracticeContextSummary } from "../assistant/practiceContextSummary";
 import { exerciseSources } from "./PracticeRecord";
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
@@ -77,6 +79,11 @@ export function RecordDetail({
   const [tab, setTab] = useState<"attempts" | "score">("attempts");
   const [page, setPage] = useState(1);
   const pagination = recordPage(record.attempts.length, page);
+  const visibleRecord = { ...record, attempts: record.attempts.slice(record.attempts.length - pagination.end, record.attempts.length - pagination.start) } as PracticeRecord;
+  useAssistantPageSection("recordDetail", { tab, period: "all", page: pagination.page, pages: pagination.pages,
+    totalAttempts: record.attempts.length, recordId: record.id,
+    summary: buildPracticeContextSummary({ context: record, exercise: record.exercise, mode: record.mode,
+      session: visibleRecord, historyEnabled: false, answerExposed: tab === "score" || (record.mode === "dictation" && record.attempts.some(attempt => attempt.viewedAnswer)) }) });
   if (page !== pagination.page) setPage(pagination.page);
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();

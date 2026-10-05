@@ -1,6 +1,8 @@
+import { useAssistantPageContext } from "../assistant/assistantContext";
 import { ArrowUpRight, Mail } from "lucide-react";
 
 export default function AboutPage() {
+  useAssistantPageContext({ page: "about", description: "关于页面，提供项目 GitHub 仓库与联系邮箱入口。", state: {} });
   return <section className="design-system about-page">
     <title>关于 · 节奏训练</title>
     <header className="page-heading"><h1>关于</h1></header>

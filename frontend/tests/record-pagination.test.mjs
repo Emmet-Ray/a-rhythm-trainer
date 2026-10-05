@@ -51,7 +51,8 @@ test("听写序号跨页递增，按需渲染小节入口且不修改数据", ()
 
 test("击拍详情仅渲染最新十次，汇总仍包含全部尝试", () => {
   const record = {
-    id: "record", title: "测试题", source: "preset", mode: "tapping",
+    id: "record", title: "测试题", source: "preset", exerciseId: "question", mode: "tapping",
+    exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: Array.from({ length: 4 }, () => ({ kind: "note", noteValue: "quarter" })) }] },
     attempts: Array.from({ length: 23 }, (_, index) => ({
       id: `attempt-${index}`, completedAt: "2026-09-22T00:00:00Z", bpm: 60,
       timingWindows: { perfectMs: 50, hitMs: 100 }, passed: true,

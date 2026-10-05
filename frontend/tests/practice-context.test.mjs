@@ -201,3 +201,25 @@ test('活动轮次数保持完整，摘要只保留最近轮次，无需调用�
   assert.equal(Object.hasOwn(practice, 'bpm'), false, '速度由每轮实际记录提供');
   assert.equal(practice.session.recentAttempts[0].bpm, 60);
 });
+
+
+test('子面板资料与基础页面和练习并存，更新不覆盖其他区块，关闭无残留', () => {
+  const scope = new AssistantContext();
+  const page = Symbol(), panel = Symbol(), other = Symbol(), practice = Symbol();
+  scope.publish(page, { page: 'practice_records', description: '记录', state: { filter: 'week' } });
+  scope.publishPractice(practice, 'A', () => ({ id: 'A' }));
+  const detail = { page: 2, title: 'B' };
+  scope.publishSection(panel, 'recordDetail', detail);
+  detail.page = 99;
+  scope.publishSection(other, 'settings', { selected: 'strict' });
+  const first = scope.readCurrentPageContext();
+  assert.equal(first.state.filter, 'week');
+  assert.equal(first.state.practice.snapshot.id, 'A');
+  assert.equal(first.state.recordDetail.page, 2);
+  first.state.recordDetail.page = 88;
+  assert.equal(scope.readCurrentPageContext().state.recordDetail.page, 2);
+  scope.removeSection(panel);
+  assert.equal(Object.hasOwn(scope.readCurrentPageContext().state, 'recordDetail'), false);
+  assert.equal(scope.readCurrentPageContext().state.settings.selected, 'strict');
+  assert.equal(new AssistantContext().readCurrentPageContext(), null);
+});
