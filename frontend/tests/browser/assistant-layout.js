@@ -49,18 +49,20 @@ async (page) => {
   const input = page.getByRole('textbox', { name: '向助手提问' });
   const nav = page.locator('.site-sidebar');
   check(await input.count() === 1, '首页只能有一个输入框');
-  check(await page.getByRole('navigation', { name: '练习入口', exact: true }).isVisible(), '欢迎状态保留传统入口');
-  check(await page.evaluate(() => {
-    const input = document.querySelector('.assistant-input-box').getBoundingClientRect();
-    const suggestions = document.querySelector('.assistant-suggestions').getBoundingClientRect();
-    return suggestions.top >= input.bottom;
-  }), '示例问题应位于输入框下方');
+  check(!await page.getByRole('navigation', { name: '练习入口', exact: true }).count(), '不重复展示传统入口');
+  check(await page.locator('.assistant-input-box').getAttribute('data-multiline') === 'false', '空输入采用单行布局');
+  const initialInputBox = await page.locator('.assistant-input-box').boundingBox();
+  await input.fill('第一行\n第二行');
+  check(await page.locator('.assistant-input-box').getAttribute('data-multiline') === 'true', '多行输入展开');
+  await input.fill('');
+  check(await page.locator('.assistant-input-box').getAttribute('data-multiline') === 'false', '清空后恢复单行');
   check(await page.locator('.site-sidebar-toggle').evaluate(el => {
     const box = el.getBoundingClientRect();
     return [box.left + 8, box.right - 8].every(x => el.contains(document.elementFromPoint(x, box.top + box.height / 2)));
   }), '导航折叠按钮的左右两侧都应完整可点击');
   check(!await page.getByRole('button', { name: '打开 AI 助手' }).isVisible(), '首页不显示重复助手入口');
-  await page.getByRole('button', { name: '两小节入门击拍', exact: true }).click();
+  await page.locator('.assistant-templates summary').click();
+  await page.getByRole('button', { name: '生成击拍练习', exact: true }).click();
   check((await input.inputValue()).includes('两小节'), '快捷提示应填入输入框');
   check(submissions.length === 0, '快捷提示不自动调用模型');
   await input.fill('尚未发送的文字');
@@ -74,6 +76,8 @@ async (page) => {
   await input.fill('给我一道两小节的击拍练习');
   await page.getByRole('button', { name: '发送', exact: true }).click();
   await page.locator('.exercise-card').waitFor();
+  const chattingInputBox = await page.locator('.assistant-input-box').boundingBox();
+  check(Math.abs(initialInputBox.width - chattingInputBox.width) < 2 && Math.abs(initialInputBox.x - chattingInputBox.x) < 2, '开始聊天前后输入框宽度和左右位置一致');
   check(!await page.getByRole('navigation', { name: '练习入口', exact: true }).count(), '开始对话后隐藏重复入口');
   check(await page.evaluate(() => {
     const title = document.querySelector('#assistant-title').getBoundingClientRect();

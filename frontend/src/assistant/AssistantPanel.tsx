@@ -1,11 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { MessageCircle, Plus, X, RefreshCw, ArrowUp, Square } from "lucide-react";
 import { ExerciseProposalResult } from "./tool-results/ExerciseProposalResult";
+import { PracticeTemplates } from "./PracticeTemplates";
 import { PlaybackGroup } from "../practice/PlaybackGroup";
 import { AssistantConversation } from "./conversation";
 import { useAssistantContext } from "./assistantContext";
 import { useAssistantPresentation } from "./useAssistantPresentation";
-import HomePage, { HomePracticeLinks, HomeSuggestions } from "../pages/HomePage";
+import HomePage from "../pages/HomePage";
 
 export function AssistantPanel({ home = false }: { home?: boolean }) {
   const { panel: panelRef, launcher: launcherRef, visible, modal, open, close: closePanel, startPractice } = useAssistantPresentation(home);
@@ -26,11 +27,36 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
     if (visible && follow.current && thread.current) thread.current.scrollTop = thread.current.scrollHeight;
   }, [visible, state]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const field = input.current;
-    if (!visible || !field) return;
-    field.style.height = "auto";
-    field.style.height = `${Math.min(field.scrollHeight, 144)}px`;
+    const box = field?.parentElement;
+    if (!visible || !field || !box) return;
+    // 始终用单行布局的可用宽度判断换行，避免展开后变宽引起布局反复切换。
+    const resize = () => {
+      const style = getComputedStyle(box);
+      const controls = box.querySelector<HTMLElement>(".assistant-templates")!;
+      const actions = box.querySelector<HTMLElement>(".assistant-input-actions")!;
+      const width = box.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+        - controls.offsetWidth - actions.offsetWidth - 2 * parseFloat(style.columnGap);
+      field.style.width = `${Math.max(width, 1)}px`;
+      field.style.height = "0px";
+      box.dataset.multiline = String(field.scrollHeight > parseFloat(getComputedStyle(field).lineHeight) + 1);
+      field.style.width = "";
+      field.style.height = "0px";
+      field.style.height = `${Math.min(field.scrollHeight, 144)}px`;
+    };
+    resize();
+    let width = box.clientWidth;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      if (width !== box.clientWidth) {
+        width = box.clientWidth;
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(resize);
+      }
+    });
+    observer.observe(box);
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, [draft, visible, home]);
 
   useLayoutEffect(() => {
@@ -116,6 +142,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
           <RefreshCw size={16} />同步状态</button> : null}
         {state.expired ? <button type="button" onClick={newConversation}>开始新对话</button> : null}
         <div className="assistant-input-box">
+          <PracticeTemplates onSelect={suggest} disabled={Boolean(blocked)} />
           <textarea ref={input} id="assistant-input" aria-label="向助手提问" value={draft} onChange={event => setDraft(event.target.value)}
             maxLength={4000} rows={1} disabled={state.busy} placeholder={home && !started ? "描述你想练的内容，或问一个问题…" : "继续提问或调整练习…"}
             onKeyDown={event => {
@@ -128,10 +155,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
               : <button type="submit" aria-label="发送" title="发送" disabled={blocked || !draft.trim()}><ArrowUp size={19} aria-hidden="true" /></button>}
           </div>
         </div>
-        {home && !started && <>
-          <HomeSuggestions onSuggestion={suggest} />
-          <HomePracticeLinks />
-        </>}
+
       </form>
     </dialog>
   </div>;
