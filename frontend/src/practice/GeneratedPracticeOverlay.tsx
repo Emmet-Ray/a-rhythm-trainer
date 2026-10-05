@@ -30,7 +30,7 @@ export function GeneratedPracticeOverlay({ generated, onClose }: { generated: Ge
     }}>
     <ExerciseHistory context={{ source: "ai", exerciseId: generated.id, title: generated.title }} exercise={generated.exercise} mode={generated.mode}>
       {({ status, action }) => <header className="generated-practice-heading">
-        <div><h2 id="generated-practice-title">{generated.title}</h2>{status}</div>
+        <div className="generated-practice-title"><h2 id="generated-practice-title">{generated.title}</h2>{status}</div>
         <div className="generated-practice-actions">{action}
           <button type="button" className="generated-practice-close" aria-label="关闭练习" onClick={onClose}><X size={22} aria-hidden="true" /></button>
         </div>

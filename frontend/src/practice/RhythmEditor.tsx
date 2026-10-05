@@ -280,20 +280,6 @@ export function RhythmEditor({
           </div>
         </div>
 
-        </div>
-        <div role="group" aria-label="常见节奏型" className="rhythm-editor-pattern-input">
-          <p className="rhythm-editor-group-label">常用组合</p>
-          <div className="rhythm-editor-pattern-buttons">
-            {rhythmInputPatterns.map(pattern => (
-              <button key={pattern.id} type="button" aria-label={pattern.label} title={pattern.label}
-                disabled={!hasSelectedMeasure} onClick={() => addElements(pattern.events)}>
-                <RhythmSymbol kind="pattern" events={pattern.events} />
-              </button>
-            ))}
-          </div>
-        </div>
-        </div>
-
         <div
           role="group"
           aria-label="编辑当前小节"
@@ -319,6 +305,19 @@ export function RhythmEditor({
           >
             <Eraser className="ui-icon" aria-hidden="true" focusable="false" />清空小节
           </button>
+        </div>
+        </div>
+        <div role="group" aria-label="常见节奏型" className="rhythm-editor-pattern-input">
+          <p className="rhythm-editor-group-label">常用组合</p>
+          <div className="rhythm-editor-pattern-buttons">
+            {rhythmInputPatterns.map(pattern => (
+              <button key={pattern.id} type="button" aria-label={pattern.label} title={pattern.label}
+                disabled={!hasSelectedMeasure} onClick={() => addElements(pattern.events)}>
+                <RhythmSymbol kind="pattern" events={pattern.events} />
+              </button>
+            ))}
+          </div>
+        </div>
         </div>
       </fieldset>
     </div>

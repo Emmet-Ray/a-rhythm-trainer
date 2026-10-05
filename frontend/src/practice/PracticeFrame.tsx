@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/** 播放、调速和辅助操作组成顶部控制区；谱面与作答使用完整宽度。 */
+/** 播放、调速和辅助操作组成顶部控制区；谱面与作答使用工作区宽度排列。 */
 export default function PracticeFrame({ toolbar, settingsPanel, utilities, children }: {
   toolbar: ReactNode;
   settingsPanel?: ReactNode;

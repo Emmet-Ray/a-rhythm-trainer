@@ -253,7 +253,7 @@ export function RhythmDictation({
                 aria-label="参考答案"
               >
                 <RhythmDraftScore
-                  navigationLabel="参考答案"
+                  navigationLabel="小节"
                   measures={referenceMeasures}
                   timeSignature={exercise.timeSignature}
                   overlay={

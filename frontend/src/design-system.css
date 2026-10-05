@@ -454,8 +454,12 @@
 .practice-layout--sidebar { min-width: 0; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-lg); background: var(--ds-surface); }
 .practice-layout--sidebar .practice-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--ds-space-4); padding: var(--ds-space-6) var(--ds-space-8); border-bottom: 1px solid var(--ds-line); }
 .practice-layout--sidebar .trainer-actions { justify-content: flex-start; flex-wrap: wrap; }
-/* 独立训练页保留卡片边界，控制区按实际可用宽度换行。 */
-.practice-layout--training { min-width: 0; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-lg); background: var(--ds-surface); }
+/* 训练页是连续工作区；覆盖层的边界由 dialog 自身负责。 */
+.site-shell:has(> main .practice-layout--training) { background: var(--ds-surface); }
+.practice-layout--training { min-width: 0; background: transparent; container-type: inline-size; }
+.practice-layout--training > .practice-body > .practice-content { width: 100%; }
+.rhythm-dictation .practice-layout--training > .practice-body > .practice-content { padding-top: 28px; }
+
 .practice-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 18px 28px; border-bottom: 1px solid var(--ds-line); }
 .practice-controls .practice-toolbar { display: flex; align-items: center; flex-wrap: wrap; flex: 1 1 380px; gap: 12px; min-width: 0; }
 .practice-controls .trainer-actions { justify-content: flex-start; flex-wrap: wrap; }
@@ -474,8 +478,23 @@
 .practice-controls .tempo-step .ui-icon { width: 24px; height: 24px; }
 .practice-utilities { margin-left: auto; }
 .practice-layout--training > .practice-body { display: block; }
+/* 助手会压缩工作区；按容器宽度让播放区与设置区整组换行。 */
+@container (max-width: 1050px) {
+  .practice-controls .practice-toolbar { flex-basis: 100%; }
+  .practice-controls > .practice-settings { margin-left: auto; }
+  .practice-controls .practice-utilities { margin-left: 0; }
+}
+@container (max-width: 600px) {
+  .practice-controls { padding: 16px; gap: 12px 8px; }
+  .practice-controls .tempo-value input[type="number"] { width: 48px; }
+  .practice-controls .tempo-step { width: 36px; min-height: 44px; }
+  .practice-controls > .practice-settings { margin-left: 0; }
+  .practice-controls .practice-utilities { margin-left: auto; }
+}
 @media (max-width: 600px) {
-  .practice-controls { padding: 16px; gap: 16px; }
+  .practice-controls { padding: 16px; gap: 16px 8px; }
+  .practice-controls .tempo-value input[type="number"] { width: 48px; }
+  .practice-controls .tempo-step { width: 36px; min-height: 44px; }
   .practice-controls > .practice-settings { flex: 0 0 auto; }
   .practice-controls .practice-toolbar { flex-basis: 100%; }
   .practice-controls .trainer-actions { width: 100%; }
@@ -601,8 +620,8 @@
 .rhythm-editor .rhythm-editor-symbol-row { margin-top: var(--ds-space-3); }
 /* 按编辑区可用宽度排布，不把侧栏占位隐含在屏幕断点里。按钮尺寸保持不变。 */
 .rhythm-editor-input-groups { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
-.rhythm-editor-basic-input { flex: 1 1 352px; min-width: 0; max-width: 444px; }
-.rhythm-editor-pattern-input { flex: 1 1 288px; min-width: 0; max-width: 440px; }
+.rhythm-editor-basic-input { flex: 0 1 444px; min-width: 0; }
+.rhythm-editor-pattern-input { flex: 1 1 316px; min-width: 0; }
 .rhythm-editor-basic-input .rhythm-editor-symbol-row:first-of-type { margin-top: 0; }
 .rhythm-editor-pattern-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px 8px; }
 .rhythm-editor .rhythm-editor-pattern-buttons button { display: flex; align-items: center; justify-content: center; height: 52px; padding: 2px; min-width: 0; }
@@ -620,7 +639,7 @@
 .rhythm-editor .rhythm-editor-controls button:active:not(:disabled) { box-shadow: none; transform: none; background: var(--ds-tint); }
 .rhythm-editor button.rhythm-editor-dot[aria-pressed="true"]:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); border-color: var(--ds-primary); }
 .rhythm-editor .rhythm-editor-input-message { min-height: 2lh; margin: 0; color: var(--ds-error); }
-.rhythm-dictation .dictation-verification { margin-top: var(--ds-space-4); padding-top: var(--ds-space-6); border-top: 2px solid var(--ds-line); gap: var(--ds-space-4); }
+.rhythm-dictation .dictation-verification { margin-top: var(--ds-space-4); padding-top: var(--ds-space-6); border-top: 1px solid var(--ds-line); gap: var(--ds-space-3); justify-content: flex-end; }
 .rhythm-dictation .dictation-verification-result { gap: var(--ds-space-3); }
 .rhythm-draft-score [data-verdict="correct"] { color: var(--ds-success); }
 .rhythm-draft-score [data-verdict="incorrect"] { color: var(--ds-error); }
@@ -637,6 +656,9 @@
 .rhythm-dictation [role="alert"] { color: var(--ds-error); font-size: var(--ds-text-sm); }
 @media (max-width: 600px) {
   .rhythm-dictation .rhythm-playback { width: 100%; }
+  .rhythm-dictation .dictation-verification { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rhythm-dictation .dictation-verification button { width: 100%; padding-inline: 8px; font-size: var(--ds-text-sm); }
+  .rhythm-dictation .dictation-verification-result { min-width: 0; }
   .rhythm-playback .rhythm-playback-buttons { display: grid; grid-template-columns: 1fr 1fr; }
   .rhythm-playback .rhythm-playback-buttons button { min-width: 0; padding-inline: 8px; font-size: var(--ds-text-sm); }
 }
@@ -995,6 +1017,8 @@
 .generated-practice-overlay { width: min(1280px, calc(100vw - 64px)); max-width: none; max-height: calc(100dvh - 64px); margin: auto; padding: 0; border: 1px solid var(--ds-line); border-radius: 20px; background: var(--ds-subtle); color: var(--ds-ink); box-shadow: 0 24px 80px #21193633; overflow: auto; overscroll-behavior: contain; }
 .generated-practice-overlay::backdrop { background: #21193666; }
 .generated-practice-heading { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 28px; border-bottom: 1px solid var(--ds-line); background: var(--ds-surface); }
+.generated-practice-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; min-width: 0; }
+.generated-practice-title h2 { overflow-wrap: anywhere; }
 .generated-practice-heading h2 { margin: 0; font-size: 22px; line-height: 1.4; }
 .generated-practice-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
 .design-system .generated-practice-close { display: grid; place-items: center; width: 40px; height: 40px; min-height: 40px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; }
@@ -1012,3 +1036,8 @@
 }
 
 .design-system .generated-practice-close:active:not(:disabled) { box-shadow: none; transform: none; }
+
+/* 小节导航紧邻谱面，不额外添加面板背景或边界。 */
+.rhythm-dictation .draft-measure-navigation { gap: 8px; margin-bottom: 8px; }
+.rhythm-dictation .draft-measure-navigation button { min-width: 40px; min-height: 40px; border: 1px solid var(--ds-line); background: var(--ds-surface); }
+.rhythm-dictation .draft-measure-navigation button[aria-pressed="true"] { background: color-mix(in srgb, var(--ds-primary) 10%, var(--ds-tint)); border-color: transparent; }
