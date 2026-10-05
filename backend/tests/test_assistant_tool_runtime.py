@@ -70,4 +70,3 @@ def test_cancellation_propagates_into_async_tool():
             await task
         assert cleaned == [True]
     asyncio.run(scenario())
-
