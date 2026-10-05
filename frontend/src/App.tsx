@@ -1,4 +1,5 @@
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { PlaybackContext, PlaybackGroup } from "./practice/PlaybackGroup";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { routeModules, preloadDestination, preloadLinkIntent } from "./navigation/routeModules";
 import { LoadingPlaceholder } from "./navigation/LoadingPlaceholder";
 import { Navigate, Route, Routes, useLocation } from "react-router";
@@ -24,7 +25,8 @@ const AiPracticePage = routeModules.ai.Component;
 const AboutPage = routeModules.about.Component;
 
 function App() {
-  return <PageNavigation><AppShell /></PageNavigation>;
+  const [playback] = useState(() => new PlaybackGroup());
+  return <PlaybackContext value={playback}><PageNavigation><AppShell /></PageNavigation></PlaybackContext>;
 }
 
 function AppShell() {

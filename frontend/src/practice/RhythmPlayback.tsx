@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LoaderCircle, Play, Square } from "lucide-react";
-import type { PlaybackGroup } from "./PlaybackGroup";
+import { PlaybackContext, type PlaybackGroup } from "./PlaybackGroup";
 import { MetronomePlaybackContext } from "./MetronomePlayback";
 import { practiceShortcuts, usePracticeShortcuts } from "./usePracticeShortcuts";
 import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
@@ -47,6 +47,8 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
   /** 声音准备与排程成功后通知；停止、准备失败或失效请求不会通知。 */
   onPlaybackStarted?: (source: string) => void;
 }) {
+  const playback = useContext(PlaybackContext);
+  const releaseGlobalRef = useRef<(() => void) | null>(null);
   const releasePlaybackRef = useRef<(() => void) | null>(null);
   const metronomePlayback = useContext(MetronomePlaybackContext);
   const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
@@ -68,6 +70,8 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
   const [playbackSource, setPlaybackSource] = useState<string | null>(null);
 
   const cancelPlayback = useCallback(() => {
+    releaseGlobalRef.current?.();
+    releaseGlobalRef.current = null;
     releasePlaybackRef.current?.();
     releasePlaybackRef.current = null;
     onCountInChange?.(null);
@@ -105,6 +109,10 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
     if (!timeSignature || !option.measures?.some((elements) => elements.length > 0)) return;
     // 新一轮开始前清理上一轮尚未结束的自然尾音。
     cancelPlayback();
+    releaseGlobalRef.current = playback?.acquire(() => {
+      cancelPlayback();
+      setStatus("idle");
+    }) ?? null;
     releasePlaybackRef.current = playbackGroup?.acquire(() => {
       cancelPlayback();
       setStatus("idle");

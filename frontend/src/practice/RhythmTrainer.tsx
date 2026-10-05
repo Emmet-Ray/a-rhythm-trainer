@@ -1,3 +1,4 @@
+import { PlaybackContext } from "./PlaybackGroup";
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PracticeKeyboardScope, canReceivePracticeKey, practiceShortcuts, usePracticeShortcuts } from "./usePracticeShortcuts";
 import { Hand, LoaderCircle, Play, Square } from "lucide-react";
@@ -77,6 +78,9 @@ function RhythmTrainer({
   onBusyChange,
   onAttemptStart,
 }: RhythmTrainerProps) {
+  const playbackGroup = useContext(PlaybackContext);
+  const releasePlaybackRef = useRef<(() => void) | null>(null);
+  const stopPlaybackRef = useRef<() => void>(() => {});
   const metronomePlayback = useContext(MetronomePlaybackContext);
   const keyboardScope = useContext(PracticeKeyboardScope);
   const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
@@ -233,6 +237,8 @@ function RhythmTrainer({
   useLayoutEffect(() => {
     // 配置变更或卸载时同步废弃旧时钟与异步启动，在下一次输入/RAF 前完成。
     return () => {
+      releasePlaybackRef.current?.();
+      releasePlaybackRef.current = null;
       startRequestRef.current += 1;
       clockRef.current = null;
       startingRef.current = false;
@@ -248,7 +254,13 @@ function RhythmTrainer({
     };
   }, [exercise, bpm, countInBeatCount, stopScheduledSounds, resetInputTime]);
 
-  async function handlePlay(requestedMode: PlaybackMode) {
+  // 手动停止与被其他播放器中断共用结算规则；准备期只取消，正式击拍记录中断。
+  const stopPlayback = useCallback(() => {
+    releasePlaybackRef.current?.();
+    releasePlaybackRef.current = null;
+    startRequestRef.current += 1;
+    startingRef.current = false;
+    setStartingMode(null);
     if (clockRef.current !== null && !finishedRef.current) {
       const settlement = mode === "practice"
         ? stopPractice(timeline, tapOffsetsRef.current, clockRef.current.nowMs(), effectiveTimingWindows)
@@ -262,10 +274,22 @@ function RhythmTrainer({
       setPlayback(settlement ? { ...IDLE_PLAYBACK, phase: "finished" } : IDLE_PLAYBACK);
       setTimingEvents(settlement?.events ?? []);
       if (settlement) record?.(settlement.result);
+    } else {
+      stopScheduledSounds();
+      clockRef.current = null;
+    }
+  }, [mode, timeline, effectiveTimingWindows, stopScheduledSounds]);
+  useLayoutEffect(() => { stopPlaybackRef.current = stopPlayback; }, [stopPlayback]);
+
+  async function handlePlay(requestedMode: PlaybackMode) {
+    if (clockRef.current !== null && !finishedRef.current) {
+      stopPlayback();
       return;
     }
     // resume 是异步的；在等待期间阻止重复开始。
     if (startingRef.current) return;
+    releasePlaybackRef.current?.();
+    releasePlaybackRef.current = playbackGroup?.acquire(() => stopPlaybackRef.current()) ?? null;
     clockRef.current = null;
     recordResultRef.current = undefined;
     finishedRef.current = false;
@@ -334,6 +358,8 @@ function RhythmTrainer({
       setPlayback(getPlaybackPosition(nextTimeline, clock.nowMs()));
     } catch (error) {
       if (request !== startRequestRef.current) return;
+      releasePlaybackRef.current?.();
+      releasePlaybackRef.current = null;
       stopScheduledSounds();
       clockRef.current = null;
       setPlayback(IDLE_PLAYBACK);
@@ -351,14 +377,7 @@ function RhythmTrainer({
   usePracticeShortcuts({
     practice: !isStarting && !isRunning ? () => { void handlePlay("practice"); } : undefined,
     listen: !isStarting && !isRunning ? () => { void handlePlay("listen"); } : undefined,
-    stop: isStarting || isRunning ? () => {
-      if (startingRef.current) {
-        startRequestRef.current += 1;
-        startingRef.current = false;
-        setStartingMode(null);
-        stopScheduledSounds();
-      } else { void handlePlay(mode); }
-    } : undefined,
+    stop: isStarting || isRunning ? stopPlayback : undefined,
   });
 
   useEffect(() => {

@@ -190,6 +190,52 @@ async (page) => {
   await dictation.getByRole('button', { name: '查看答案', exact: true }).click();
   await dictation.getByRole('button', { name: '关闭练习', exact: true }).click();
   check(await panel.getByText('已查看答案', { exact: true }).isVisible(), '听写查看答案状态返回卡片');
+  // 页面试听、卡片试听和覆盖层共享播放所有权；关闭覆盖层不恢复后台播放。
+  await nav.getByRole('link', { name: '预设练习', exact: true }).click();
+  await page.locator('a[href="/preset/basic-values-01"]').first().click();
+  if (await page.getByRole('button', { name: '打开 AI 助手' }).isVisible()) await page.getByRole('button', { name: '打开 AI 助手' }).click();
+  const background = page.locator('section[aria-label="击拍训练区"]');
+  await background.getByRole('button', { name: '试听', exact: true }).click();
+  await background.getByRole('button', { name: '停止', exact: true }).waitFor();
+  await panel.getByRole('button', { name: '试听', exact: true }).click();
+  await background.getByRole('button', { name: '试听', exact: true }).waitFor();
+  await panel.getByRole('button', { name: '停止试听', exact: true }).waitFor();
+  await background.getByRole('button', { name: '试听', exact: true }).click();
+  await panel.getByRole('button', { name: '试听', exact: true }).waitFor();
+  await background.getByRole('button', { name: '停止', exact: true }).waitFor();
+  await panel.getByRole('button', { name: '开始听写', exact: true }).click();
+  await dictation.getByRole('region', { name: '节奏听写区' }).waitFor();
+  check(await background.getByRole('button', { name: '试听', exact: true, includeHidden: true }).count() === 1, '打开覆盖层停止后台试听');
+  await dictation.getByRole('button', { name: '播放题目', exact: true }).click();
+  await dictation.getByRole('button', { name: '停止', exact: true }).waitFor();
+  await dictation.getByRole('button', { name: '关闭练习', exact: true }).click();
+  check(await background.getByRole('button', { name: '试听', exact: true }).isVisible(), '关闭覆盖层不自动恢复后台');
+  const attemptCount = () => page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('rhythm-trainer.practice-records') || '{"records":[]}');
+    return data.records.filter(record => record.exerciseId === 'basic-values-01' && record.mode === 'tapping')
+      .reduce((sum, record) => sum + record.attempts.length, 0);
+  });
+  const beforeAttempts = await attemptCount();
+  // 预备拍中断不写入训练记录。
+  await background.getByRole('button', { name: '击拍练习', exact: true }).click();
+  await background.locator('.trainer-countdown').waitFor();
+  await panel.getByRole('button', { name: '试听', exact: true }).click();
+  await background.getByRole('button', { name: '击拍练习', exact: true }).waitFor();
+  check(await attemptCount() === beforeAttempts, '预备拍取消不新增记录');
+  await panel.getByRole('button', { name: '停止试听', exact: true }).click();
+  // 正式击拍中断沿用手动停止规则，恰好记录一次未通过。
+  await background.getByRole('button', { name: '击拍练习', exact: true }).click();
+  await background.locator('.trainer-countdown').waitFor();
+  await background.locator('.trainer-countdown').waitFor({ state: 'detached' });
+  await panel.getByRole('button', { name: '试听', exact: true }).click();
+  await background.getByRole('button', { name: '击拍练习', exact: true }).waitFor();
+  check(await attemptCount() === beforeAttempts + 1, '正式训练中断只记录一次');
+  check(await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('rhythm-trainer.practice-records'));
+    return data.records.find(record => record.exerciseId === 'basic-values-01' && record.mode === 'tapping')
+      .attempts.at(-1).passed === false;
+  }), '中断轮次不能被记录为通过');
+  await panel.getByRole('button', { name: '停止试听', exact: true }).click();
   check(errors.length === 0, `浏览器异常：${errors.join('; ')}`);
   console.log('PASS: 助手布局交互回归');
   return { passed: true, sessionsCreated: created, messagesSent: submissions.length,

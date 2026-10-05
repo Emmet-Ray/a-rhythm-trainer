@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef } from "react";
+import { PlaybackContext } from "./PlaybackGroup";
+import { useContext, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
@@ -8,8 +9,10 @@ import { ExerciseHistory } from "../practice-records/ExerciseHistory";
 
 /** 在来源页面上方临时练习；卸载停止训练，关闭恢复原触发点，不导航或重建背景。 */
 export function GeneratedPracticeOverlay({ generated, onClose }: { generated: GeneratedExercise; onClose: () => void }) {
+  const playback = useContext(PlaybackContext);
   const dialog = useRef<HTMLDialogElement>(null);
   useLayoutEffect(() => {
+    playback?.stop();
     const element = dialog.current!;
     const trigger = document.activeElement;
     const overflow = document.body.style.overflow;
@@ -21,7 +24,7 @@ export function GeneratedPracticeOverlay({ generated, onClose }: { generated: Ge
       document.body.style.overflow = overflow;
       if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus({ preventScroll: true });
     };
-  }, []);
+  }, [playback]);
   return createPortal(<dialog ref={dialog} className="generated-practice-overlay design-system" tabIndex={-1}
     aria-labelledby="generated-practice-title" aria-modal="true"
     onCancel={event => {
