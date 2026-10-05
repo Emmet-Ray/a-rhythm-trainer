@@ -856,6 +856,22 @@
 .assistant-message { margin-bottom: 28px; font-size: 14px; }
 .assistant-message.user { width: fit-content; max-width: 88%; margin-left: auto; }
 .assistant-message-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.75; margin: 0; }
+.assistant-markdown { white-space: normal; }
+.assistant-markdown > :first-child { margin-top: 0; }
+.assistant-markdown > :last-child { margin-bottom: 0; }
+.assistant-markdown p { margin: 0 0 .75em; white-space: pre-wrap; }
+.assistant-markdown :is(h3, h4, h5, h6) { font-size: 1em; line-height: 1.6; margin: 1em 0 .4em; font-weight: 650; }
+.assistant-markdown :is(ul, ol) { margin: .5em 0 .85em; padding-left: 1.5em; }
+.assistant-markdown li { margin: .25em 0; white-space: pre-wrap; }
+.assistant-markdown li > :is(ul, ol) { margin: .25em 0; }
+.assistant-markdown li > p { margin-bottom: .25em; }
+.assistant-markdown blockquote { margin: .75em 0; padding: .15em 0 .15em 1em; border-left: 3px solid var(--ds-line); color: var(--ds-muted); }
+.assistant-markdown blockquote > :last-child { margin-bottom: 0; }
+.assistant-markdown a { color: var(--ds-primary); text-decoration: underline; text-underline-offset: 3px; }
+.assistant-markdown code { font: .9em/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--ds-tint); padding: .1em .3em; border-radius: 4px; }
+.assistant-markdown pre { max-width: 100%; overflow-x: auto; white-space: pre; margin: .75em 0; padding: 12px 14px; border-radius: 8px; background: var(--ds-tint); }
+.assistant-markdown pre code { padding: 0; background: transparent; overflow-wrap: normal; }
+.assistant-markdown hr { border: 0; border-top: 1px solid var(--ds-line); margin: 1em 0; }
 .assistant-message.user > .assistant-message-text { padding: 10px 14px; background: var(--ds-tint); border-radius: 14px 14px 4px 14px; }
 .assistant-message-meta { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; color: var(--ds-muted); font-size: 10px; }
 .assistant-message.user .assistant-message-meta { justify-content: flex-end; flex-wrap: wrap; }

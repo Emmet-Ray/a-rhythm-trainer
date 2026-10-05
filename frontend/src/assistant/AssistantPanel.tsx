@@ -1,3 +1,4 @@
+import { AssistantMarkdown } from "./AssistantMarkdown";
 import { PracticeActivityContext } from "./practiceActivity";
 import {
   useContext,
@@ -309,7 +310,8 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                     key={index}
                     aria-label={entry.type === "user" ? "你的消息" : "助手回答"}
                   >
-                    <p className="assistant-message-text">{entry.text}</p>
+                    {entry.type === "assistant" ? <AssistantMarkdown text={entry.text} />
+                      : <p className="assistant-message-text">{entry.text}</p>}
                     <div className="assistant-message-meta">
                       <time
                         dateTime={entry.created_at}
@@ -338,10 +340,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                     className="assistant-message assistant"
                     aria-label="正在生成的回答"
                   >
-                    <p className="assistant-message-text">
-                      {state.pending.text ||
-                        (state.busy ? "正在思考…" : "等待同步…")}
-                    </p>
+                    <AssistantMarkdown text={state.pending.text || (state.busy ? "正在思考…" : "等待同步…")} />
                     {!state.busy && state.pending.text ? (
                       <small className="assistant-notice">
                         临时内容，等待同步
@@ -387,7 +386,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
               <div className="assistant-input-box">
                 <PracticeTemplates
                   onSelect={suggest}
-                  disabled={Boolean(blocked)}
+                  disabled={!availability.ready}
                 />
                 <textarea
                   ref={input}
@@ -397,15 +396,16 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                   onChange={(event) => setDraft(event.target.value)}
                   maxLength={4000}
                   rows={1}
-                  disabled={state.busy || !availability.ready}
+                  disabled={!availability.ready}
                   placeholder={
-                    home && !started
+                    state.busy ? "可以继续输入，回答结束后发送…" : home && !started
                       ? "描述你想练的内容，或问一个问题…"
                       : "继续提问或调整练习…"
                   }
                   onKeyDown={(event) => {
                     if (
                       event.key === "Enter" &&
+                      !state.busy &&
                       !event.shiftKey &&
                       !event.nativeEvent.isComposing &&
                       event.keyCode !== 229

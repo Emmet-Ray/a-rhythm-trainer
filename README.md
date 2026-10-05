@@ -24,12 +24,9 @@ _动图仅演示操作，不含声音。_
 
 ## 技术栈
 
-- **前端界面**：React、TypeScript、Vite。
-- **谱面渲染**：VexFlow。
-- **音频与节拍调度**：Web Audio API。
-- **后端接口**：Python、FastAPI。
-- **数据存储**：SQLite、SQLAlchemy；Alembic 管理数据库迁移。
-- **部署**：Docker Compose、Nginx。
+- **前端**：React、TypeScript、Vite；React Router（路由）、Lucide（图标）、react-markdown（Markdown 渲染）、VexFlow（谱面渲染）、Web Audio API（音频与节拍调度）
+- **后端**：Python、FastAPI；SQLite、SQLAlchemy、Alembic（数据存储与迁移）；OpenAI Python SDK（接入 DeepSeek）、SSE（流式通信）
+- **部署**：Docker、Nginx
 
 ## 快速启动（Docker）
 
