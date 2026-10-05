@@ -146,7 +146,7 @@ export function RhythmDictation({
             : "incorrect"
           : verdict,
     );
-    onRecord?.({ type: "verify", measureIndex: selectedMeasureIndex, correct });
+    onRecord?.({ type: "verify", measureIndex: selectedMeasureIndex, correct, answerMeasures });
     updateState((previous) => ({ ...previous, measureVerdicts: nextVerdicts }));
     if (nextVerdicts.every((verdict) => verdict === "correct"))
       setResultVisible(true);
@@ -179,7 +179,7 @@ export function RhythmDictation({
               onCountInChange={setCountdown}
               onStart={() => setResultVisible(false)}
               onPlaybackStarted={source => {
-                if (source === "question" && !isComplete) onRecord?.({ type: "play", scope: playbackScope === "all" ? "all" : selectedMeasureIndex });
+                if (source === "question" && !isComplete) onRecord?.({ type: "play", scope: playbackScope === "all" ? "all" : selectedMeasureIndex, bpm, metronomeEnabled });
               }}
               onBusyChange={onBusyChange}
               timeSignature={exercise?.timeSignature ?? null}
@@ -285,7 +285,7 @@ export function RhythmDictation({
           }
           onChange={(measureIndex, elements) => {
             if (isComplete || JSON.stringify(answerMeasures[measureIndex]) === JSON.stringify(elements)) return;
-            onRecord?.({ type: "edit", measureIndex });
+            onRecord?.({ type: "edit", measureIndex, answerMeasures: answerMeasures.map((measure, index) => index === measureIndex ? elements : measure) });
             setResultVisible(false);
             updateState((previous) => ({
               ...previous,

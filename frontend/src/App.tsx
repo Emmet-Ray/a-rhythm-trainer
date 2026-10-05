@@ -1,3 +1,4 @@
+import { PracticeActivity, PracticeActivityContext } from "./assistant/practiceActivity";
 import { PlaybackContext, PlaybackGroup } from "./practice/PlaybackGroup";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { routeModules, preloadDestination, preloadLinkIntent } from "./navigation/routeModules";
@@ -41,10 +42,12 @@ function AppShell() {
   // 每次访问创建独立快照容器；面板在路由边界外保留，身份变化时重新挂载。
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const assistantContext = useMemo(() => new AssistantContext(), [key, identity]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const practiceActivity = useMemo(() => new PracticeActivity(), [identity]);
   useNavigationScroll(pathname.startsWith("/custom") ? identity : "public");
 
   return (
-    <GeneratedExercisesContext value={generatedExercises}>
+    <PracticeActivityContext value={practiceActivity}><GeneratedExercisesContext value={generatedExercises}>
     <AssistantContextScope.Provider value={assistantContext}>
     <RecordAccessContext.Provider value={recordAccess(auth)}><div className="site-shell" onPointerOver={preloadLinkIntent} onFocusCapture={preloadLinkIntent} onPointerDownCapture={preloadLinkIntent}>
       <a className="skip-link" href="#main-content">
@@ -109,7 +112,7 @@ function AppShell() {
       </main>
     </div></RecordAccessContext.Provider>
     </AssistantContextScope.Provider>
-    </GeneratedExercisesContext>
+    </GeneratedExercisesContext></PracticeActivityContext>
   );
 }
 

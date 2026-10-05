@@ -1,4 +1,6 @@
+import { PracticeActivityContext } from "./practiceActivity";
 import {
+  useContext,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -26,6 +28,8 @@ import { useAssistantAvailability } from "./useAssistantAvailability";
 import HomePage from "../pages/HomePage";
 
 export function AssistantPanel({ home = false }: { home?: boolean }) {
+  const activity = useContext(PracticeActivityContext);
+  const activityLabel = useSyncExternalStore(activity?.subscribe ?? (() => () => {}), activity?.getLabel ?? (() => ""), () => "");
   const availability = useAssistantAvailability();
   const {
     panel: panelRef,
@@ -42,7 +46,14 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
     conversation.getSnapshot,
     conversation.getSnapshot,
   );
-  const { readCurrentPageContext } = useAssistantContext();
+  useEffect(() => {
+    for (const entry of state.session?.entries ?? []) {
+      if (entry.type !== "user") continue;
+      const batch = entry.page_context?.state.practice_activity;
+      if (batch && typeof batch === "object" && !Array.isArray(batch) && typeof batch.batchId === "string") activity?.acknowledge(batch.batchId);
+    }
+  }, [activity, state.session]);
+  const { readCurrentPageContext, practiceLabel } = useAssistantContext();
   const [practice, setPractice] = useState<GeneratedExercise | null>(null);
   const [draft, setDraft] = useState("");
   const input = useRef<HTMLTextAreaElement>(null);
@@ -140,7 +151,13 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
     const previousEntryCount = before.session?.entries.length ?? 0;
     follow.current = true;
     setDraft("");
-    await conversation.send(text, readCurrentPageContext());
+    activity?.start();
+    const page = readCurrentPageContext();
+    const batch = activity?.prepare();
+    const focus = activity?.getFocus();
+    const context = batch || focus ? { ...(page ?? { page: "unknown", description: "当前页面未提供上下文", state: {} }),
+      state: { ...page?.state, practice_activity: batch ?? null, practice_focus: focus ?? null } } : page;
+    await conversation.send(text, context);
     if (version !== generation.current) return;
     const after = conversation.getSnapshot();
     // 仅在已确认本次输入没有写入会话时恢复。不能用文字相等判断：用户可能连续发送相同内容。
@@ -159,6 +176,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
     generation.current++;
     playbackGroup.stop();
     conversation.reset();
+    activity?.reset();
     setDraft("");
     follow.current = true;
     input.current?.focus();
@@ -340,6 +358,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                 void send();
               }}
             >
+              {(activityLabel || practiceLabel) && <p className="assistant-notice">{activityLabel || practiceLabel}</p>}
               {state.error ? (
                 <p className="assistant-error" role="alert">
                   {state.error}

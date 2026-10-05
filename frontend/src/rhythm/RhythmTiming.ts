@@ -43,6 +43,8 @@ export type TimingEvent =
     };
 
 export type PracticeResult = {
+  /** 新轮次保存实际判定；旧记录没有此字段，不能推断早晚或中断原因。 */
+  details?: { timingEvents: TimingEvent[]; stopped: boolean };
   passed: boolean;
   targetCount: number;
   hitCount: number;

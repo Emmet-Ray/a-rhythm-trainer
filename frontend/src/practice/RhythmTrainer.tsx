@@ -224,7 +224,7 @@ function RhythmTrainer({
         finishedRef.current = true;
         if (recordResultRef.current) {
           const final = judgePractice(timeline, tapOffsetsRef.current, nowMs, effectiveTimingWindows);
-          recordResultRef.current(summarizePractice(timeline.targetTaps.length, final.events));
+          recordResultRef.current({ ...summarizePractice(timeline.targetTaps.length, final.events), details: { timingEvents: final.events, stopped: false } });
         }
         return;
       }
@@ -273,7 +273,7 @@ function RhythmTrainer({
       setStopped(settlement !== null);
       setPlayback(settlement ? { ...IDLE_PLAYBACK, phase: "finished" } : IDLE_PLAYBACK);
       setTimingEvents(settlement?.events ?? []);
-      if (settlement) record?.(settlement.result);
+      if (settlement) record?.({ ...settlement.result, details: { timingEvents: settlement.events, stopped: true } });
     } else {
       stopScheduledSounds();
       clockRef.current = null;
@@ -352,7 +352,7 @@ function RhythmTrainer({
 
       nextTargetIndexRef.current = 0;
       tapOffsetsRef.current = [];
-      recordResultRef.current = requestedMode === "practice" ? onAttemptStart?.({ bpm, timingWindows: nextWindows }) : undefined;
+      recordResultRef.current = requestedMode === "practice" ? onAttemptStart?.({ bpm, metronomeEnabled, timingWindows: nextWindows }) : undefined;
       setTimingEvents([]);
       setRoundId(previous => previous + 1);
       setPlayback(getPlaybackPosition(nextTimeline, clock.nowMs()));
@@ -435,7 +435,7 @@ function RhythmTrainer({
 
       nextTargetIndexRef.current = judgement.nextTargetIndex;
       setTimingEvents(judgement.events);
-      if (finishedRef.current) recordResultRef.current?.(summarizePractice(timeline.targetTaps.length, judgement.events));
+      if (finishedRef.current) recordResultRef.current?.({ ...summarizePractice(timeline.targetTaps.length, judgement.events), details: { timingEvents: judgement.events, stopped: false } });
     }
 
     window.addEventListener("keydown", handleKeyDown);

@@ -1,5 +1,6 @@
+import { createExerciseTimeline, summarizePractice, type TimingEvent } from "../rhythm/RhythmTiming";
 import { exerciseSources } from "./PracticeRecord";
-import { parseRhythmExercise } from "../rhythm/RhythmModel";
+import { parseRhythmExercise, expandRhythmElements, TICKS_PER_QUARTER } from "../rhythm/RhythmModel";
 import type {
   DictationRecordEvent,
   ExerciseContext,
@@ -59,6 +60,7 @@ export function parsePracticeRecord(value: unknown): PracticeRecord {
         item.bpm <= 0
       )
         throw new Error("速度无效");
+      if (item.metronomeEnabled !== undefined && typeof item.metronomeEnabled !== "boolean") throw new Error("节拍器设置无效");
       object(item.timingWindows);
       const { perfectMs, hitMs } = item.timingWindows;
       if (
@@ -71,6 +73,26 @@ export function parsePracticeRecord(value: unknown): PracticeRecord {
         perfectMs > hitMs
       )
         throw new Error("判定窗口无效");
+      if (item.details !== undefined) {
+        object(item.details);
+        if (typeof item.details.stopped !== "boolean" || !Array.isArray(item.details.timingEvents)) throw new Error("判定明细无效");
+        const timeline = createExerciseTimeline(exercise, item.bpm, 0, { perfectMs, hitMs });
+        const targets = new Set<number>();
+        for (const event of item.details.timingEvents) {
+          object(event);
+          if (!["hit", "miss", "wrongTap"].includes(String(event.kind))) throw new Error("判定类型无效");
+          if (event.kind !== "wrongTap") {
+            count(event.targetIndex); count(event.eventIndex);
+            const targetIndex = event.targetIndex as number;
+            if (targets.has(targetIndex) || timeline.targetTaps[targetIndex]?.eventIndex !== event.eventIndex) throw new Error("判定目标无效");
+            targets.add(targetIndex);
+          }
+          if (event.kind !== "miss" && (typeof event.tapOffsetMs !== "number" || !Number.isFinite(event.tapOffsetMs))) throw new Error("敲击时间无效");
+          if (event.kind === "hit" && (!["perfect", "early", "late"].includes(String(event.grade)) || typeof event.errorMs !== "number" || !Number.isFinite(event.errorMs))) throw new Error("击拍偏差无效");
+        }
+        const summary = summarizePractice(timeline.targetTaps.length, item.details.timingEvents as TimingEvent[]);
+        if (targets.size !== timeline.targetTaps.length || summary.targetCount !== item.targetCount || summary.hitCount !== item.hitCount || summary.missCount !== item.missCount || summary.wrongTapCount !== item.wrongTapCount || (item.details.stopped ? false : summary.passed) !== item.passed) throw new Error("判定明细与汇总不一致");
+      }
       for (const key of [
         "targetCount",
         "hitCount",
@@ -113,6 +135,21 @@ export function parsePracticeRecord(value: unknown): PracticeRecord {
         attempt.measures.length !== exercise.measures.length
       )
         throw new Error("听写尝试无效");
+      if (attempt.playbackSettings !== undefined) {
+        if (!Array.isArray(attempt.playbackSettings)) throw new Error("播放设置无效");
+        for (const setting of attempt.playbackSettings) {
+          object(setting);
+          if (typeof setting.bpm !== "number" || !Number.isFinite(setting.bpm) || setting.bpm <= 0 || typeof setting.metronomeEnabled !== "boolean") throw new Error("播放设置无效");
+          count(setting.count);
+          if (setting.count === 0) throw new Error("播放次数无效");
+        }
+      }
+      if (attempt.answerMeasures !== undefined) {
+        if (!Array.isArray(attempt.answerMeasures) || attempt.answerMeasures.length !== exercise.measures.length) throw new Error("作答小节无效");
+        for (const measure of attempt.answerMeasures) {
+          if (!Array.isArray(measure) || expandRhythmElements(measure).durationTicks > exercise.timeSignature.beats * TICKS_PER_QUARTER) throw new Error("作答内容无效");
+        }
+      }
       for (const item of attempt.measures) {
         object(item);
         count(item.questionPlayCount);

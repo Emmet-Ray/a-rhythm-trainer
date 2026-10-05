@@ -1,9 +1,8 @@
-import { useContext, useMemo, useSyncExternalStore } from "react";
+import { useContext, useMemo } from "react";
 import { readPracticeOrigin } from "../exercises/aiPracticeNavigation";
 import { Navigate, useLocation, useParams } from "react-router";
 import { GeneratedExercisesContext } from "../exercises/GeneratedExerciseStore";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
-import { useAssistantPageContext } from "../assistant/assistantContext";
 import { GeneratedPracticeWorkspace } from "../practice/GeneratedPracticeWorkspace";
 import { PracticeHeading } from "../practice/PracticeHeading";
 
@@ -23,13 +22,9 @@ export default function AiPracticePage({ mode }: { mode: "tapping" | "dictation"
 }
 
 function GeneratedPractice({ generated, mode }: { generated: GeneratedExercise; mode: "tapping" | "dictation" }) {
-  const store = useContext(GeneratedExercisesContext)!;
-  const viewed = useSyncExternalStore(store.subscribe, () => store.hasViewedAnswer(generated.id));
   const label = mode === "dictation" ? "听写练习" : "击拍练习";
   const origin = readPracticeOrigin(useLocation().state);
   const context = { source: "ai" as const, exerciseId: generated.id, title: generated.title };
-  useAssistantPageContext({ page: "ai-practice", description: `AI 生成的${label}`,
-    state: { mode, answer_viewed: viewed, exercise_id: generated.id, title: generated.title, exercise: generated.exercise } });
   return <div className="design-system practice-page">
     <title>{`${generated.title} · ${label}`}</title>
     <p className="ai-practice-source">AI 练习</p>

@@ -48,7 +48,7 @@ export function recordDictationEvent(record: DictationRecord | null, context: Ex
   if ((event.type === "verify" || event.type === "edit") && !attempt.measures[event.measureIndex]) throw new Error("小节不存在。");
   if (event.type === "play" && event.scope !== "all" && !attempt.measures[event.scope]) throw new Error("小节不存在。");
   if (event.type === "verify" && attempt.measures[event.measureIndex].verdict !== "unchecked") return record;
-  if (event.type === "edit" && attempt.measures[event.measureIndex].verdict === "unchecked") return record;
+  if (event.type === "edit" && attempt.measures[event.measureIndex].verdict === "unchecked" && !event.answerMeasures) return record;
   if (event.type === "view-answer" && attempt.viewedAnswer) return record;
   const measures = attempt.measures.map((item, index) => {
     if (event.type === "play" && (event.scope === "all" || event.scope === index)) return { ...item, questionPlayCount: item.questionPlayCount + 1 };
@@ -56,7 +56,15 @@ export function recordDictationEvent(record: DictationRecord | null, context: Ex
     if (event.type === "edit" && event.measureIndex === index) return { ...item, verdict: "unchecked" as const };
     return item;
   });
-  const next: DictationAttempt = { ...attempt, measures, viewedAnswer: attempt.viewedAnswer || event.type === "view-answer",
+  const playbackSettings = attempt.playbackSettings ? attempt.playbackSettings.map(item => ({ ...item })) : [];
+  if (event.type === "play" && event.bpm !== undefined && event.metronomeEnabled !== undefined) {
+    const existing = playbackSettings.find(item => item.bpm === event.bpm && item.metronomeEnabled === event.metronomeEnabled);
+    if (existing) existing.count++;
+    else playbackSettings.push({ bpm: event.bpm, metronomeEnabled: event.metronomeEnabled, count: 1 });
+  }
+  const next: DictationAttempt = { ...attempt, measures,
+    ...((event.type === "edit" || event.type === "verify") && event.answerMeasures ? { answerMeasures: structuredClone(event.answerMeasures) } : {}),
+    ...(playbackSettings.length ? { playbackSettings } : {}), viewedAnswer: attempt.viewedAnswer || event.type === "view-answer",
     completedAt: measures.length > 0 && measures.every(item => item.verdict === "correct") ? at : null };
   const current: DictationRecord = record ?? { ...base(context, exercise, at), mode: "dictation", attempts: [] };
   return { ...current, title: context.title,

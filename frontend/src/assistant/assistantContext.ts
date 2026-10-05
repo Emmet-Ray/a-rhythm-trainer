@@ -4,7 +4,7 @@ import type { GeneratedExercise } from "../exercises/GeneratedExercise";
 
 export type ApplyExercise = (proposal: GeneratedExercise) => boolean;
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type PageContext = { page: string; description: string; state: { [key: string]: JsonValue } };
 
 /** 每个访问及身份范围一个实例。快照独立于编辑器，旧提供者不能清除新提供者。 */
@@ -42,7 +42,35 @@ export class AssistantContext {
     this.serialized = "";
     this.notify();
   }
-  readCurrentPageContext = (): PageContext | null => structuredClone(this.current);
+  private practices = new Map<symbol, { title: string; read: () => JsonValue }>();
+  private recentPractice: { title: string; read: () => JsonValue } | null = null;
+  private practiceLabel = "";
+  /** 工作区独立于页面注册；覆盖层优先，关闭后恢复底层练习或保留刚才的练习。 */
+  publishPractice(owner: symbol, title: string, read: () => JsonValue) {
+    this.practices.set(owner, { title, read });
+    this.updatePracticeLabel();
+  }
+  removePractice(owner: symbol) {
+    const practice = this.practices.get(owner);
+    if (!practice) return;
+    this.recentPractice = practice;
+    this.practices.delete(owner);
+    this.updatePracticeLabel();
+  }
+  private updatePracticeLabel() {
+    const active = [...this.practices.values()].at(-1);
+    const next = active ? `当前练习：${active.title}` : this.recentPractice ? `刚才练习：${this.recentPractice.title}` : "";
+    if (next !== this.practiceLabel) { this.practiceLabel = next; this.notify(); }
+  }
+  getPracticeLabel = () => this.practiceLabel;
+  readCurrentPageContext = (): PageContext | null => {
+    const active = [...this.practices.values()].at(-1);
+    const practice = active ?? this.recentPractice;
+    if (!practice) return structuredClone(this.current);
+    const page = this.current ?? { page: "practice", description: "节奏练习", state: {} };
+    return structuredClone({ ...page, state: { ...page.state,
+      practice: { scope: active ? "current" : "recent", snapshot: practice.read() } } });
+  };
   // React 订阅需要稳定引用；业务调用者使用上面的独立副本。
   getSnapshot = () => this.current;
   subscribe = (listener: () => void) => {
@@ -68,7 +96,8 @@ export function useAssistantContext() {
   const scope = useContext(AssistantContextScope);
   const snapshot = useSyncExternalStore(scope?.subscribe ?? emptySubscribe,
     scope?.getSnapshot ?? emptySnapshot, emptySnapshot);
-  return { snapshot, readCurrentPageContext: scope?.readCurrentPageContext ?? emptySnapshot };
+  const practiceLabel = useSyncExternalStore(scope?.subscribe ?? emptySubscribe, scope?.getPracticeLabel ?? (() => ""), () => "");
+  return { snapshot, practiceLabel, readCurrentPageContext: scope?.readCurrentPageContext ?? emptySnapshot };
 }
 
 /** 应用能力仅在当前编辑器挂载时存在，路由或身份切换会注销。 */
@@ -83,4 +112,15 @@ export function useApplyAssistantExercise() {
   const scope = useContext(AssistantContextScope);
   return useSyncExternalStore(scope?.subscribe ?? emptySubscribe,
     scope?.getApplySnapshot ?? emptySnapshot, emptySnapshot);
+}
+
+/** 延迟到发送消息时读取轮次与历史，播放期间不因每次判定刷新整个助手。 */
+export function useAssistantPractice(title: string | null, read: () => JsonValue) {
+  const scope = useContext(AssistantContextScope);
+  const [owner] = useState(() => Symbol("practice-context"));
+  useLayoutEffect(() => {
+    if (title !== null) scope?.publishPractice(owner, title, read);
+    else scope?.removePractice(owner);
+  });
+  useLayoutEffect(() => () => scope?.removePractice(owner), [scope, owner]);
 }

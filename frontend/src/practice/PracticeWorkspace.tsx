@@ -1,4 +1,6 @@
-import { useCallback, useContext, useMemo, type SetStateAction } from "react";
+import { useCallback, useContext, useMemo, useState, type SetStateAction } from "react";
+import { useAssistantPractice } from "../assistant/assistantContext";
+import { buildPracticeContextSummary } from "../assistant/practiceContextSummary";
 import PracticeShortcutHelp from "./PracticeShortcutHelp";
 import PracticeSettings, { type PracticeSettingsValue } from "./PracticeSettings";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
@@ -43,6 +45,8 @@ function WorkspaceSession({
   access,
   binding,
 }: WorkspaceProps & { access: RecordAccess; binding: string }) {
+  const [audioBusy, setAudioBusy] = useState(false);
+  const reportBusy = useCallback((busy: boolean) => { setAudioBusy(busy); onBusyChange?.(busy); }, [onBusyChange]);
   const [settings, rememberSettings] = useVisitState<PracticeSettingsValue>(`practice:${recoveryScope}:settings`, { bpm: 60, metronomeEnabled: true });
   const [snapshot, setSnapshot] = useVisitState<DictationSnapshot | null>(`practice:${access}:${recoveryScope}:dictation`, null);
   const recorder = usePracticeRecorder({ mode, context: recordContext, exercise, enabled: access === "guest",
@@ -55,6 +59,19 @@ function WorkspaceSession({
       return { binding, state: typeof next === "function" ? next(current) : next };
     });
   }, [binding, empty, setSnapshot]);
+  useAssistantPractice(exercise && recordContext ? recordContext.title : null, () => {
+    if (!exercise || !recordContext) return null;
+    const session = recorder.readSession();
+    const viewed = answerExposed || (session?.mode === "dictation" && session.attempts.some(attempt => attempt.viewedAnswer));
+    return {
+      ...buildPracticeContextSummary({ context: recordContext, exercise, mode,
+        answerExposed: viewed, session, historyEnabled: access === "guest" }),
+      bpm: settings.bpm,
+      audioBusy,
+      ...(mode === "dictation" ? { currentAnswer: state.answerMeasures,
+        selectedMeasure: state.selectedMeasureIndex + 1, verdicts: state.measureVerdicts } : {}),
+    };
+  });
   const shortcutHelp = <PracticeShortcutHelp mode={mode} source={recordContext?.source} />;
   return (
     <PracticeSettings layout="sidebar" initialValue={settings} onChange={rememberSettings}>
@@ -64,7 +81,7 @@ function WorkspaceSession({
           {recorder.error && <div className="practice-record-error" role="alert"><span>{recorder.error}</span><button type="button" onClick={recorder.retry}>重试保存</button></div>}
           {mode === "dictation" ? (
             // BPM 改变只重建听写内部播放器，保留草稿、验证结果和参考答案状态。
-            <RhythmDictation key={binding} session={{ state, onChange: update }} exercise={exercise} bpm={bpm} metronomeEnabled={metronomeEnabled} onBusyChange={onBusyChange} settingsPanel={settingsPanel}
+            <RhythmDictation key={binding} session={{ state, onChange: update }} exercise={exercise} bpm={bpm} metronomeEnabled={metronomeEnabled} onBusyChange={reportBusy} settingsPanel={settingsPanel}
               onRecord={event => { if (event.type === "view-answer") onAnswerViewed?.(); recorder.dictation(event); }} toolbarEnd={shortcutHelp} />
           ) : (
             // 换题重建；调速由训练组件原地停止旧轮次，保留谱面。
@@ -74,7 +91,7 @@ function WorkspaceSession({
               bpm={bpm}
               metronomeEnabled={metronomeEnabled}
               settingsPanel={settingsPanel}
-              onBusyChange={onBusyChange}
+              onBusyChange={reportBusy}
               onAttemptStart={recorder.startAttempt}
               toolbarEnd={shortcutHelp}
             />
