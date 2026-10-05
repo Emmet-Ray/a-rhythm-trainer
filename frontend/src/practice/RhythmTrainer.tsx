@@ -433,7 +433,7 @@ function RhythmTrainer({
   const listenShortcut = practiceShortcuts[isRunning && mode === "listen" ? "stop" : "listen"];
   return (
     <div className="rhythm-trainer design-system">
-    <PracticeFrame settingsPanel={settingsPanel} toolbar={<>
+    <PracticeFrame settingsPanel={settingsPanel} utilities={toolbarEnd} toolbar={<>
       <div className="trainer-actions">
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
         <button
@@ -467,7 +467,6 @@ function RhythmTrainer({
         </button>
       </div>
       <PracticeResult passed={result?.passed ?? null} />
-      {toolbarEnd}
       {audioError && <p className="trainer-audio-error" role="alert">{audioError}</p>}
     </>}>
       <RhythmScore
@@ -490,12 +489,11 @@ export default function RhythmTrainerWorkspace(props: Omit<RhythmTrainerProps, "
   if (props.exercise) return <RhythmTrainer {...props} exercise={props.exercise} />;
   return (
     <div className="rhythm-trainer design-system">
-    <PracticeFrame settingsPanel={props.settingsPanel} toolbar={<>
+    <PracticeFrame settingsPanel={props.settingsPanel} utilities={props.toolbarEnd} toolbar={<>
       <div className="trainer-actions">
         <button type="button" disabled><Hand className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />击拍练习</button>
         <button type="button" disabled><Play className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />试听</button>
       </div>
-      {props.toolbarEnd}
     </>}>
       <div className="empty-practice-score" role="region" aria-label="空白节奏乐谱">
         <svg width="100%" height="180" aria-hidden="true">

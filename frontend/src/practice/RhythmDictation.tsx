@@ -167,6 +167,7 @@ export function RhythmDictation({
     <div className="rhythm-dictation design-system">
       <PracticeFrame
         settingsPanel={settingsPanel}
+        utilities={toolbarEnd}
         toolbar={
           <>
           <div className="dictation-playbar">
@@ -239,7 +240,6 @@ export function RhythmDictation({
             />
           </div>
           <PracticeResult passed={isComplete && resultVisible ? true : null} complete />
-          {toolbarEnd}
           </>
         }
       >

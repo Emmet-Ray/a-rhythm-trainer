@@ -515,7 +515,7 @@ test("自定义练习复用组件自身样式，不需要页面开启设计开�
     assert.match(html, mode === "tapping"
       ? /class="rhythm-trainer design-system"/
       : /class="rhythm-dictation design-system"/);
-    assert.match(html, /practice-layout--sidebar/);
+    assert.match(html, /practice-layout--training/);
   }
 });
 
@@ -758,7 +758,7 @@ test("公共速度控件提供整数滑块与数值输入，不再要求点击�
   assert.match(html, /aria-hidden="true" title="慢"><svg[^>]*focusable="false"/);
   assert.match(html, /aria-hidden="true" title="快"><svg[^>]*focusable="false"/);
   assert.doesNotMatch(html, /🐢|🐇/);
-  assert.match(html, /class="tempo-value"><input[^>]*aria-label="速度 BPM"[^>]*\/><label[^>]*class="unit">BPM<\/label><\/div>/);
+  assert.match(html, /class="tempo-value">.*?<input[^>]*aria-label="速度 BPM"[^>]*\/><label[^>]*class="unit">BPM<\/label>.*?<\/div>/);
   assert.equal((html.match(/>BPM<\/label>/g) ?? []).length, 1);
   assert.doesNotMatch(html, />速度\s/);
   assert.doesNotMatch(html, /应用速度|未应用|aria-invalid="true"/);
@@ -767,10 +767,10 @@ test("公共速度控件提供整数滑块与数值输入，不再要求点击�
   assert.doesNotMatch(html, /metronome-toggle|type="checkbox"/);
 });
 
-test("预设与随机击拍都有题目，侧栏布局将操作按钮放在谱面之前", async () => {
+test("预设与随机击拍都有题目，顶部控制区将播放和设置放在谱面之前", async () => {
   for (const path of ["/preset/basic-values-01", "/random/tapping"]) {
     const html = await renderApp(path);
-    assert.match(html, /practice-layout--sidebar/);
+    assert.match(html, /practice-layout--training/);
     const actions = html.indexOf('class="trainer-actions"');
     const score = html.indexOf('aria-label="节奏乐谱"');
     assert.ok(actions >= 0 && actions < score);
@@ -779,13 +779,13 @@ test("预设与随机击拍都有题目，侧栏布局将操作按钮放在谱�
     const body = html.indexOf('class="practice-body"');
     assert.ok(toolbar < actions && actions < body);
     assert.doesNotMatch(html, /keyboard-hint|键敲击/);
-    assert.ok(html.indexOf('aria-label="练习设置"') > body);
+    assert.ok(html.indexOf('aria-label="练习设置"') < body);
     assert.equal((html.match(/aria-label="速度 BPM"/g) ?? []).length, 1);
     assert.equal((html.match(/aria-label="节拍器"/g) ?? []).length, 1);
   }
   for (const path of ["/preset/dictation-basic-values-01", "/random/dictation"]) {
     const html = await renderApp(path);
-    assert.match(html, /practice-layout--sidebar/);
+    assert.match(html, /practice-layout--training/);
     assert.doesNotMatch(html, /practice-layout--stacked/);
     const body = html.indexOf('class="practice-body"');
     assert.ok(html.indexOf('aria-label="播放范围"') < body);
@@ -794,7 +794,7 @@ test("预设与随机击拍都有题目，侧栏布局将操作按钮放在谱�
     assert.doesNotMatch(html, /dictation-scope-options|class="dictation-scope-toggle"><input[^>]*checked/);
     assert.doesNotMatch(html, /class="dictation-scope-toggle"><input[^>]*disabled/);
     assert.ok(html.indexOf('data-source="question"') < body);
-    assert.ok(html.indexOf('aria-label="练习设置"') > body);
+    assert.ok(html.indexOf('aria-label="练习设置"') < body);
     assert.equal((html.match(/aria-label="速度 BPM"/g) ?? []).length, 1);
   }
 });

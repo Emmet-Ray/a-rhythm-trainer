@@ -1,15 +1,19 @@
 import type { ReactNode } from "react";
 
-/** 设置先于谱面进入阅读/键盘顺序；宽屏放在右侧，窄屏自然排在上方，不重挂载。 */
-export default function PracticeFrame({ toolbar, settingsPanel, children }: {
+/** 播放、调速和辅助操作组成顶部控制区；谱面与作答使用完整宽度。 */
+export default function PracticeFrame({ toolbar, settingsPanel, utilities, children }: {
   toolbar: ReactNode;
   settingsPanel?: ReactNode;
+  utilities?: ReactNode;
   children: ReactNode;
 }) {
-  return <div className="practice-layout practice-layout--sidebar design-system">
-    <div className="practice-toolbar">{toolbar}</div>
-    <div className="practice-body">
+  return <div className="practice-layout practice-layout--training design-system">
+    <div className="practice-controls">
+      <div className="practice-toolbar">{toolbar}</div>
       {settingsPanel}
+      {utilities && <div className="practice-utilities">{utilities}</div>}
+    </div>
+    <div className="practice-body">
       <div className="practice-content">{children}</div>
     </div>
   </div>;

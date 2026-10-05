@@ -1,4 +1,4 @@
-import { Rabbit, Turtle } from "lucide-react";
+import { Minus, Plus, Rabbit, Turtle } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -174,6 +174,16 @@ export default function PracticeSettings({
           </span>
         </div>
         <div className="tempo-value">
+          <button
+            type="button"
+            className="tempo-step"
+            aria-label="减速 5 BPM"
+            title="减速 5 BPM"
+            disabled={bpm <= MIN_BPM}
+            onClick={() => applyBpm(String(Math.max(MIN_BPM, bpm - 5)))}
+          >
+            <Minus className="ui-icon" aria-hidden="true" />
+          </button>
           <input
             id={inputId}
             type="number"
@@ -204,6 +214,16 @@ export default function PracticeSettings({
           <label htmlFor={inputId} className="unit">
             BPM
           </label>
+          <button
+            type="button"
+            className="tempo-step"
+            aria-label="加速 5 BPM"
+            title="加速 5 BPM"
+            disabled={bpm >= MAX_BPM}
+            onClick={() => applyBpm(String(Math.min(MAX_BPM, bpm + 5)))}
+          >
+            <Plus className="ui-icon" aria-hidden="true" />
+          </button>
         </div>
         {hasBpmError && (
           <p id={errorId} className="bpm-error" role="alert">

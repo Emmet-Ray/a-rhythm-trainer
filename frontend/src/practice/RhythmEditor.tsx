@@ -192,6 +192,7 @@ export function RhythmEditor({
         </p>
         <div className="rhythm-editor-input-groups">
         <div className="rhythm-editor-basic-input">
+        <p className="rhythm-editor-group-label">基础音符</p>
         <div
           role="group"
           aria-label="添加音符"
@@ -281,6 +282,7 @@ export function RhythmEditor({
 
         </div>
         <div role="group" aria-label="常见节奏型" className="rhythm-editor-pattern-input">
+          <p className="rhythm-editor-group-label">常用组合</p>
           <div className="rhythm-editor-pattern-buttons">
             {rhythmInputPatterns.map(pattern => (
               <button key={pattern.id} type="button" aria-label={pattern.label} title={pattern.label}
@@ -305,7 +307,7 @@ export function RhythmEditor({
             }
             onClick={removeLastEvent}
           >
-            <Delete className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />
+            <Delete className="ui-icon" aria-hidden="true" focusable="false" />删除末尾
           </button>
           <button
             type="button"
@@ -315,7 +317,7 @@ export function RhythmEditor({
             }
             onClick={clearSelectedMeasure}
           >
-            <Eraser className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />
+            <Eraser className="ui-icon" aria-hidden="true" focusable="false" />清空小节
           </button>
         </div>
       </fieldset>
