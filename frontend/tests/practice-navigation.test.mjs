@@ -130,13 +130,19 @@ test("快捷键避开弹窗、输入控件、组合输入、长按与系统修�
   let modal = false;
   let popover = false;
   class Element { isContentEditable = false; closest() { return null; } }
-  globalThis.document = { querySelector: selector => (selector.includes("popover") ? popover : modal) ? {} : null };
+  globalThis.document = { querySelector: () => popover ? {} : null, querySelectorAll: () => modal ? [modal] : [] };
   globalThis.HTMLElement = Element;
   try {
     assert.equal(canUsePracticeShortcut({}), true);
     for (const flag of ["defaultPrevented", "repeat", "isComposing", "ctrlKey", "metaKey", "shiftKey", "altKey"]) assert.equal(canUsePracticeShortcut({ [flag]: true }), false);
     modal = true;
     assert.equal(canUsePracticeShortcut({}), false);
+    const practiceModal = {};
+    modal = practiceModal;
+    const scope = { closest: () => practiceModal };
+    assert.equal(canUsePracticeShortcut({}, scope), true, "上层模态训练允许快捷键");
+    modal = {};
+    assert.equal(canUsePracticeShortcut({}, scope), false, "子弹窗打开时停止训练快捷键");
     modal = false;
     popover = true;
     assert.equal(canUsePracticeShortcut({}), false);

@@ -1,16 +1,14 @@
 import { useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { PanelLeft, Hand, Ear, Minus, Plus } from "lucide-react";
-import { practiceNavigationState } from "../../exercises/aiPracticeNavigation";
-import { useLocation, useNavigate } from "react-router";
 import { GeneratedExercisesContext } from "../../exercises/GeneratedExerciseStore";
 import RhythmPlayback from "../../practice/RhythmPlayback";
 import type { PlaybackGroup } from "../../practice/PlaybackGroup";
 import { ExerciseCard } from "../../exercises/ExerciseCard";
-import { parseGeneratedExercise } from "../../exercises/GeneratedExercise";
+import { parseGeneratedExercise, type GeneratedExercise } from "../../exercises/GeneratedExercise";
 import { useApplyAssistantExercise } from "../assistantContext";
 
 /** 连接助手工具协议与练习展示；通用卡片不读取助手上下文。 */
-export function ExerciseProposalResult({ value, playbackGroup, onPracticeStart }: { value: unknown; playbackGroup: PlaybackGroup; onPracticeStart: () => void }) {
+export function ExerciseProposalResult({ value, playbackGroup, onPracticeStart }: { value: unknown; playbackGroup: PlaybackGroup; onPracticeStart: (exercise: GeneratedExercise) => void }) {
   const proposal = useMemo(() => {
     try { return parseGeneratedExercise(value); } catch { return null; }
   }, [value]);
@@ -20,8 +18,6 @@ export function ExerciseProposalResult({ value, playbackGroup, onPracticeStart }
   useEffect(() => {
     if (proposal?.mode === "tapping") store?.markAnswerViewed(proposal.id);
   }, [store, proposal]);
-  const navigate = useNavigate();
-  const location = useLocation();
   const apply = useApplyAssistantExercise();
   const [bpm, setBpm] = useState(60);
   const [bpmInput, setBpmInput] = useState("60");
@@ -69,8 +65,7 @@ export function ExerciseProposalResult({ value, playbackGroup, onPracticeStart }
         store.add(proposal);
         if (proposal.mode === "tapping") store.markAnswerViewed(proposal.id);
         playbackGroup.stop();
-        onPracticeStart();
-        navigate(`/ai/${proposal.mode}/${encodeURIComponent(proposal.id)}`, { state: practiceNavigationState(location) });
+        onPracticeStart(proposal);
       }}>{proposal.mode === "dictation" ? <Ear size={16} aria-hidden="true" /> : <Hand size={16} aria-hidden="true" />}
         {proposal.mode === "dictation" ? "开始听写" : "开始击拍"}
       </button>}

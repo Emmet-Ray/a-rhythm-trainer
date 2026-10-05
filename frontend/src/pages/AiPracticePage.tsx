@@ -1,14 +1,11 @@
-import { Suspense, useContext, useMemo, useSyncExternalStore } from "react";
+import { useContext, useMemo, useSyncExternalStore } from "react";
 import { readPracticeOrigin } from "../exercises/aiPracticeNavigation";
 import { Navigate, useLocation, useParams } from "react-router";
 import { GeneratedExercisesContext } from "../exercises/GeneratedExerciseStore";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
 import { useAssistantPageContext } from "../assistant/assistantContext";
-import { workspaceModule } from "../practice/practiceModules";
+import { GeneratedPracticeWorkspace } from "../practice/GeneratedPracticeWorkspace";
 import { PracticeHeading } from "../practice/PracticeHeading";
-import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
-
-const PracticeWorkspace = workspaceModule.Component;
 
 export default function AiPracticePage({ mode }: { mode: "tapping" | "dictation" }) {
   const location = useLocation();
@@ -38,10 +35,6 @@ function GeneratedPractice({ generated, mode }: { generated: GeneratedExercise; 
     <p className="ai-practice-source">AI 练习</p>
     <PracticeHeading backTo={origin.path} backLabel={origin.label} title={generated.title}
       history={{ context, exercise: generated.exercise, mode }} />
-    <Suspense fallback={<LoadingPlaceholder workspace label="正在加载练习…" />}>
-      <PracticeWorkspace exercise={generated.exercise} exerciseKey={generated.id} mode={mode}
-        recoveryScope={`ai:${mode}:${generated.id}`} recordContext={context} answerExposed={viewed}
-        onAnswerViewed={() => store.markAnswerViewed(generated.id)} />
-    </Suspense>
+    <GeneratedPracticeWorkspace generated={generated} />
   </div>;
 }

@@ -5,6 +5,11 @@ async (page) => {
   // 此脚本会应用测试草稿后离开，直接接受应用内的离开确认。
   await page.addInitScript(() => {
     window.confirm = () => true;
+    window.practiceAudioContexts = [];
+    const NativeAudioContext = window.AudioContext;
+    window.AudioContext = new Proxy(NativeAudioContext, {
+      construct(target, args) { const context = Reflect.construct(target, args); window.practiceAudioContexts.push(context); return context; },
+    });
     window.assistantNewFocusCount = 0;
     document.addEventListener('focusin', event => {
       if (event.target instanceof Element && event.target.matches('.assistant-new')) window.assistantNewFocusCount++;
@@ -89,18 +94,34 @@ async (page) => {
   await page.getByRole('button', { name: '加快 5 BPM' }).click();
   await page.locator('.exercise-measure-buttons').getByRole('button', { name: '跳到小节 2', exact: true }).click();
   await input.fill('卡片切换时保留的草稿');
+  const originalScroll = await page.locator('.assistant-messages').evaluate(el => el.scrollTop);
   await panel.getByRole('button', { name: '开始击拍', exact: true }).click();
-  await page.waitForURL('**/ai/tapping/layout-exercise');
-  await page.locator('.practice-page').waitFor();
-  check(await panel.isVisible(), '宽屏进入训练应保留助手');
+  const overlay = page.getByRole('dialog', { name: exercise.title, exact: true });
+  await overlay.getByRole('region', { name: '击拍训练区' }).waitFor();
+  check(new URL(page.url()).pathname === '/', '练习覆盖层不能离开首页');
+  check(await nav.getByRole('link', { name: '首页', exact: true }).getAttribute('aria-current') === 'page', '首页高亮保留');
+  check(await overlay.evaluate(el => el.matches(':modal')), '训练必须在模态覆盖层内');
   check(await input.inputValue() === '卡片切换时保留的草稿', '进入训练不能丢输入');
-  check(await page.getByRole('spinbutton', { name: '试听速度 BPM' }).inputValue() === '65', '切换布局不能重置卡片 BPM');
-  check(await page.locator('.exercise-measure-buttons button[aria-pressed="true"]').textContent() === '2', '切换布局不能重置选中小节');
-  check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '训练加侧栏不能横向溢出');
-  await page.getByRole('button', { name: '收起助手', exact: true }).click();
-  await page.getByRole('button', { name: '打开 AI 助手' }).click();
-  await page.waitForFunction(() => document.activeElement?.id === 'assistant-input');
-  check(await input.inputValue() === '卡片切换时保留的草稿', '收起不能丢输入');
+  check(await page.getByRole('spinbutton', { name: '试听速度 BPM' }).inputValue() === '65', '打开覆盖层不能重置卡片 BPM');
+  check(await page.locator('.exercise-measure-buttons button[aria-pressed="true"]').textContent() === '2', '打开覆盖层不能重置选中小节');
+  await input.evaluate(el => el.focus());
+  check(await overlay.evaluate(el => el.contains(document.activeElement)), '覆盖层隔离背景焦点');
+  await overlay.evaluate(el => el.focus());
+  await page.keyboard.press('l');
+  await overlay.getByRole('button', { name: '停止', exact: true }).waitFor();
+  await overlay.evaluate(el => el.focus());
+  await page.keyboard.press('s');
+  await overlay.getByRole('button', { name: '击拍练习', exact: true }).waitFor();
+  await page.keyboard.press('h');
+  await overlay.getByRole('button', { name: '停止', exact: true }).waitFor();
+  check(await overlay.evaluate(el => !el.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true, cancelable: true }))), '模态训练接收空格击拍');
+  await overlay.getByRole('button', { name: '关闭练习', exact: true }).click();
+  await page.waitForFunction(() => window.practiceAudioContexts.length > 0 && window.practiceAudioContexts.every(context => context.state === 'closed'));
+  check(!await overlay.count(), '关闭应卸载训练并停止音频');
+  check(Math.abs(await page.locator('.assistant-messages').evaluate(el => el.scrollTop) - originalScroll) < 2, '原对话滚动位置保留');
+  check(await page.evaluate(() => document.activeElement?.textContent?.includes('开始击拍')), '关闭后恢复卡片焦点');
+  check(await page.evaluate(() => document.body.style.overflow) !== 'hidden', '关闭后恢复背景滚动');
+  check(await input.inputValue() === '卡片切换时保留的草稿', '关闭后保留原草稿');
 
   // 请求等待期间切换两种布局，再放行响应，检查没有取消或创建第二个会话。
   await nav.getByRole('link', { name: '首页', exact: true }).click();
@@ -109,6 +130,7 @@ async (page) => {
   await page.getByRole('button', { name: '发送', exact: true }).click();
   await page.getByRole('button', { name: '停止生成', exact: true }).waitFor();
   await nav.getByRole('link', { name: '练习记录', exact: true }).click();
+  if (await page.getByRole('button', { name: '打开 AI 助手' }).isVisible()) await page.getByRole('button', { name: '打开 AI 助手' }).click();
   check(await page.getByRole('button', { name: '停止生成', exact: true }).isVisible(), '切换页面不能中止生成');
   await nav.getByRole('link', { name: '首页', exact: true }).click();
   check(typeof releaseResponse === 'function', '延迟请求应已到达');
@@ -139,15 +161,34 @@ async (page) => {
   await page.waitForFunction(() => document.activeElement?.id === 'assistant-input');
   check(await input.inputValue() === '手机草稿', '窄屏重新打开应保留输入');
   await panel.getByRole('button', { name: '开始击拍', exact: true }).click();
-  await page.waitForURL('**/ai/tapping/layout-exercise');
-  check(!await panel.isVisible(), '窄屏进入练习应收起助手');
-  check(await page.evaluate(() => document.body.style.overflow) !== 'hidden', '进入训练应释放背景滚动');
+  await overlay.getByRole('region', { name: '击拍训练区' }).waitFor();
+  check(new URL(page.url()).pathname.includes('/custom/'), '窄屏训练保留来源页');
+  check(await overlay.evaluate(el => el.matches(':modal') && el.clientWidth <= innerWidth), '窄屏训练全屏且不溢出');
+  await page.keyboard.press('Escape');
+  check(!await overlay.count(), 'Escape 只关闭上层训练');
+  check(await panel.evaluate(el => el.matches(':modal')), '关闭训练后保留原来的模态助手');
+  check(await page.evaluate(() => document.body.style.overflow) === 'hidden', '下层助手仍需锁住背景滚动');
+  await page.getByRole('button', { name: '收起助手', exact: true }).click();
   await page.getByRole('button', { name: '打开导航菜单' }).click();
   await page.getByRole('dialog', { name: '导航菜单' }).getByRole('link', { name: '首页', exact: true }).click();
   await input.waitFor();
   check(!await panel.evaluate(el => el.matches(':modal')), '回到首页应该恢复普通主区域');
   check(await input.inputValue() === '手机草稿', '手机返回首页应保留输入');
   check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '手机首页不能横向溢出');
+  // 听写同样在覆盖层完成，关闭与再次打开保留草稿和答案曝光状态。
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  entries = []; deferResponse = false;
+  exercise.id = 'layout-dictation'; exercise.mode = 'dictation'; exercise.title = '听写覆盖层测试';
+  await page.getByRole('button', { name: '新对话', exact: true }).click();
+  await input.fill('给我一道听写题');
+  await page.getByRole('button', { name: '发送', exact: true }).click();
+  await panel.getByRole('button', { name: '开始听写', exact: true }).click();
+  const dictation = page.getByRole('dialog', { name: exercise.title, exact: true });
+  await dictation.getByRole('region', { name: '节奏听写区' }).waitFor();
+  check(new URL(page.url()).pathname === '/', '听写保留首页');
+  await dictation.getByRole('button', { name: '查看答案', exact: true }).click();
+  await dictation.getByRole('button', { name: '关闭练习', exact: true }).click();
+  check(await panel.getByText('已查看答案', { exact: true }).isVisible(), '听写查看答案状态返回卡片');
   check(errors.length === 0, `浏览器异常：${errors.join('; ')}`);
   console.log('PASS: 助手布局交互回归');
   return { passed: true, sessionsCreated: created, messagesSent: submissions.length,

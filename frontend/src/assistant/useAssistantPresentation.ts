@@ -45,6 +45,5 @@ export function useAssistantPresentation(home: boolean) {
     setOpen(false);
     requestAnimationFrame(() => launcher.current?.focus({ preventScroll: true }));
   }
-  return { panel, launcher, visible, modal, open: () => setOpen(true), close,
-    startPractice: () => setOpen(!isNarrow()) };
+  return { panel, launcher, visible, modal, open: () => setOpen(true), close };
 }

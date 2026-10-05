@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { MessageCircle, Plus, X, RefreshCw, ArrowUp, Square } from "lucide-react";
 import { ExerciseProposalResult } from "./tool-results/ExerciseProposalResult";
+import { GeneratedPracticeOverlay } from "../practice/GeneratedPracticeOverlay";
+import type { GeneratedExercise } from "../exercises/GeneratedExercise";
 import { PracticeTemplates } from "./PracticeTemplates";
 import { PlaybackGroup } from "../practice/PlaybackGroup";
 import { AssistantConversation } from "./conversation";
@@ -9,11 +11,12 @@ import { useAssistantPresentation } from "./useAssistantPresentation";
 import HomePage from "../pages/HomePage";
 
 export function AssistantPanel({ home = false }: { home?: boolean }) {
-  const { panel: panelRef, launcher: launcherRef, visible, modal, open, close: closePanel, startPractice } = useAssistantPresentation(home);
+  const { panel: panelRef, launcher: launcherRef, visible, modal, open, close: closePanel } = useAssistantPresentation(home);
   const [playbackGroup] = useState(() => new PlaybackGroup());
   const [conversation] = useState(() => new AssistantConversation());
   const state = useSyncExternalStore(conversation.subscribe, conversation.getSnapshot, conversation.getSnapshot);
   const { readCurrentPageContext } = useAssistantContext();
+  const [practice, setPractice] = useState<GeneratedExercise | null>(null);
   const [draft, setDraft] = useState("");
   const input = useRef<HTMLTextAreaElement>(null);
   const thread = useRef<HTMLDivElement>(null);
@@ -120,7 +123,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
           <p>可以生成练习，也可以聊聊节奏。</p>
         </div> : null}
         {state.session?.entries.map((entry, index) => entry.type === "tool_result" ? (entry.tool_name === "propose_rhythm_exercise" && !entry.is_error
-          ? <ExerciseProposalResult key={index} value={entry.details.generated_exercise} playbackGroup={playbackGroup} onPracticeStart={startPractice} /> : null) : !entry.text.trim() ? null : <article className={`assistant-message ${entry.type}`} key={index} aria-label={entry.type === "user" ? "你的消息" : "助手回答"}>
+          ? <ExerciseProposalResult key={index} value={entry.details.generated_exercise} playbackGroup={playbackGroup} onPracticeStart={setPractice} /> : null) : !entry.text.trim() ? null : <article className={`assistant-message ${entry.type}`} key={index} aria-label={entry.type === "user" ? "你的消息" : "助手回答"}>
           <p className="assistant-message-text">{entry.text}</p>
           <div className="assistant-message-meta">
             <time dateTime={entry.created_at} title={new Date(entry.created_at).toLocaleString()}>{new Date(entry.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
@@ -158,5 +161,6 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
 
       </form>
     </dialog>
+    {practice && <GeneratedPracticeOverlay key={practice.id} generated={practice} onClose={() => setPractice(null)} />}
   </div>;
 }

@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { practiceShortcuts, usePracticeShortcuts } from "./usePracticeShortcuts";
+import { PracticeKeyboardScope, canReceivePracticeKey, practiceShortcuts, usePracticeShortcuts } from "./usePracticeShortcuts";
 import { Hand, LoaderCircle, Play, Square } from "lucide-react";
 import { MetronomePlaybackContext } from "./MetronomePlayback";
 import PracticeFrame from "./PracticeFrame";
@@ -78,6 +78,7 @@ function RhythmTrainer({
   onAttemptStart,
 }: RhythmTrainerProps) {
   const metronomePlayback = useContext(MetronomePlaybackContext);
+  const keyboardScope = useContext(PracticeKeyboardScope);
   const clearMetronomePlaybackRef = useRef<(() => void) | null>(null);
   const [roundTimingWindows, setRoundTimingWindows] = useState<TimingWindows>(
     () => ({ ...(timingWindows ?? getTappingTimingWindows(DEFAULT_TAPPING_PRECISION)) }),
@@ -362,7 +363,7 @@ function RhythmTrainer({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (document.querySelector("dialog:modal, .practice-shortcuts-panel:popover-open")) return;
+      if (!canReceivePracticeKey(keyboardScope?.current)) return;
       if (event.code !== "Space" || event.repeat) return;
       // 外层配置控件和按钮保留自己的键盘行为，不把操作控件误记为击拍。
       if (
@@ -421,6 +422,7 @@ function RhythmTrainer({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
+    keyboardScope,
     mode,
     timeline,
     targetTapTimeline,
