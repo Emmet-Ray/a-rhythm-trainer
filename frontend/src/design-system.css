@@ -1041,3 +1041,12 @@
 .rhythm-dictation .draft-measure-navigation { gap: 8px; margin-bottom: 8px; }
 .rhythm-dictation .draft-measure-navigation button { min-width: 40px; min-height: 40px; border: 1px solid var(--ds-line); background: var(--ds-surface); }
 .rhythm-dictation .draft-measure-navigation button[aria-pressed="true"] { background: color-mix(in srgb, var(--ds-primary) 10%, var(--ds-tint)); border-color: transparent; }
+
+/* 助手不可用时使用独立状态页，不显示失效的聊天控件。 */
+.assistant-unavailable { flex: 1; min-height: 0; display: grid; place-items: center; padding: 32px 24px; overflow: auto; }
+.assistant-unavailable-content { width: 100%; max-width: 460px; text-align: center; padding-bottom: 8vh; }
+.assistant-unavailable-content > svg { color: var(--ds-muted); margin-bottom: 16px; }
+.assistant-unavailable h1 { margin: 0 0 12px; font-size: 26px; line-height: 1.4; font-weight: 600; }
+.assistant-unavailable p { margin: 0; color: var(--ds-muted); font-size: 15px; line-height: 1.8; overflow-wrap: anywhere; }
+.assistant-unavailable button { margin-top: 24px; padding: 10px 18px; border: 1px solid var(--ds-line); border-radius: 10px; background: var(--ds-surface); color: var(--ds-ink); font-size: 14px; }
+.assistant-unavailable button:hover { background: var(--ds-surface); border-color: var(--ds-primary); }

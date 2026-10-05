@@ -199,3 +199,17 @@ test("应用能力随编辑目标注册与注销，旧编辑器不能注销新�
   scope.removeApply(second);
   assert.equal(scope.getApplySnapshot(), null);
 });
+
+
+test("配置状态区分可用、未配置与配置错误，不创建会话", async t => {
+  for (const status of ["ready", "unconfigured", "invalid"]) {
+    const mock = t.mock.method(globalThis, "fetch", async () => Response.json({ status, message: "提示" }));
+    assert.deepEqual(await api.getAssistantStatus(new AbortController().signal), { status, message: "提示" });
+    assert.equal(mock.mock.calls[0].arguments[0], "/api/assistant/status");
+    mock.mock.restore();
+  }
+});
+test("配置查询拒绝异常响应，不误判为助手可用", async t => {
+  t.mock.method(globalThis, "fetch", async () => Response.json({ status: "ready" }));
+  await assert.rejects(api.getAssistantStatus(new AbortController().signal), /状态格式异常/);
+});

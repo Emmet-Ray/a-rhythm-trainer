@@ -11,13 +11,13 @@ const isNarrow = () => window.matchMedia(narrowQuery).matches;
 /** 同一个面板在首页、并排侧栏和模态覆盖层之间切换，不重挂载对话及卡片。
  * 窄屏使用原生模态框隔离焦点和背景交互；收起不结束正在生成的回答。
  */
-export function useAssistantPresentation(home: boolean) {
+export function useAssistantPresentation(home: boolean, enabled = true) {
   const panel = useRef<HTMLDialogElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const narrow = useSyncExternalStore(subscribeViewport, isNarrow, () => false);
-  const visible = home || open;
-  const modal = !home && open && narrow;
+  const visible = home || (enabled && open);
+  const modal = !home && enabled && open && narrow;
 
   useLayoutEffect(() => {
     const element = panel.current;

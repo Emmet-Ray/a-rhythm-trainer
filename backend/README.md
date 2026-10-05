@@ -23,7 +23,7 @@ uv sync --locked
 uv run --locked --env-file .env uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-可以先通过本机终端验证后端，不需要先制作助手面板。以下请求会调用真实模型并产生费用：
+也可以通过终端验证后端。以下请求会调用真实模型并产生费用：
 
 ```sh
 # 先创建会话，从返回 JSON 中取得 id
@@ -147,7 +147,13 @@ curl -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
 未配置返回 503，非法输入返回 422；开始流式响应后的失败用 `run_failed` 报告。
 输入接受非空 `text`（最多 4000 字符）及可选 `page_context`；模型和凭证由后端配置，前端不能指定地址或密钥。
 
-本阶段入口仅供本机开发，检查 loopback 客户端和浏览器 Origin（本机 5173/8000 端口）。
+助手不额外要求登录；部署者提供共用的模型凭证。助手接口允许反向代理连接，浏览器 Origin 必须匹配 `AI_ALLOWED_ORIGINS`（逗号分隔的完整地址，不含路径、通配符）。本地开发默认允许 localhost / 127.0.0.1 的 5173、8000、8080 端口；自定义域名或端口需显式配置。无 Origin 的非浏览器请求允许访问，因此来源校验不是身份认证，也不能限制额度消耗。
+
+`GET /api/assistant/status` 只检查配置，返回 `ready`、`unconfigured` 或 `invalid` 及固定提示，不调用模型、不返回凭证。没有 `AI_API_KEY` 时，首页显示独立配置错误提示，隐藏聊天界面和其他页面的助手入口；配置好后重启后端，再点击“重新检查配置”。Key 是否有效在实际调用时判断。
+
+Docker Compose 使用根目录 `.env`，不读取 `backend/.env`：填写 `AI_API_KEY`，按需设置 `AI_PROVIDER`（目前仅 deepseek）、`AI_MODEL`，运行 `docker compose up -d --build`。更新配置后用 `docker compose up -d backend` 重建容器，单纯 `restart` 不会更新容器环境变量。Compose 默认允许 localhost / 127.0.0.1 的 `HTTP_PORT`；域名部署需设置 `AI_ALLOWED_ORIGINS=https://你的域名`。默认只绑定本机；开放给其他访客后，他们共用部署者的模型额度。不要把真实 Key 提交到仓库。
+
+本地直接启动后端则从 `backend/` 执行 `uv run --locked --env-file .env uvicorn main:app --reload --host 127.0.0.1 --port 8000`，显式加载 `backend/.env`；项目不会自动加载该文件。
 不应通过反向代理或隧道公开；公开部署前需接入身份与用量控制。后端内置的通用
 API 文档可能展示本接口，但不会因未配置模型而影响健康检查及其他接口。
 

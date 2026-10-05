@@ -33,13 +33,29 @@ _动图仅演示操作，不含声音。_
 
 ## 快速启动（Docker）
 
-```sh
-git clone https://github.com/Emmet-Ray/a-rhythm-trainer.git
-cd a-rhythm-trainer
-docker compose up
-```
+1. 下载项目并复制配置文件：
 
-打开 <http://localhost:8080>访问网页内容
+   ```sh
+   git clone https://github.com/Emmet-Ray/a-rhythm-trainer.git
+   cd a-rhythm-trainer
+   cp .env.example .env
+   ```
+
+2. 编辑根目录 `.env`，填写 DeepSeek API Key：
+
+   ```dotenv
+   AI_PROVIDER=deepseek
+   AI_MODEL=deepseek-flash
+   AI_API_KEY=你的APIKey
+   ```
+
+3. 启动：
+
+   ```sh
+   docker compose up -d --build
+   ```
+
+打开 <http://localhost:8080> 即可使用。
 
 ## TODO
 

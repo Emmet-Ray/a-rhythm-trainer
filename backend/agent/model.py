@@ -13,7 +13,7 @@ from typing import Literal, Protocol
 
 from agent.messages import AssistantMessage, Message, ProviderMetadata, ToolCall
 
-from openai import AsyncOpenAI, OpenAIError
+from openai import AsyncOpenAI, OpenAIError, AuthenticationError, RateLimitError, APIStatusError, APITimeoutError, APIConnectionError
 
 
 @dataclass(frozen=True)
@@ -37,7 +37,9 @@ class ModelSettings:
         provider = os.getenv("AI_PROVIDER", "deepseek").strip()
         model = os.getenv("AI_MODEL", "deepseek-flash").strip()
         api_key = os.getenv("AI_API_KEY", "").strip()
-        if provider != "deepseek" or not model or not api_key:
+        if not api_key:
+            raise ValueError("助手尚未配置 API Key。请在部署环境中设置 AI_API_KEY，并重启后端服务。")
+        if provider != "deepseek" or not model:
             raise ValueError("请配置受支持的 AI_PROVIDER、AI_MODEL 和 AI_API_KEY。")
         return cls(provider, model, api_key)
 
@@ -95,6 +97,18 @@ class DeepSeekModel:
                     raise ModelError("模型连接提前结束，请重试。")
         except TimeoutError as error:
             raise ModelError("模型响应超时，请重试。") from error
+        except AuthenticationError as error:
+            raise ModelError("模型 API Key 无效，请检查后端 AI_API_KEY 配置。") from error
+        except RateLimitError as error:
+            raise ModelError("模型请求受限，请稍后重试或检查模型账户额度。") from error
+        except APITimeoutError as error:
+            raise ModelError("模型响应超时，请重试。") from error
+        except APIConnectionError as error:
+            raise ModelError("无法连接模型服务，请稍后重试。") from error
+        except APIStatusError as error:
+            if error.status_code == 402:
+                raise ModelError("模型账户额度不足，请检查模型账户余额。") from error
+            raise ModelError("模型服务请求失败，请检查模型配置或稍后重试。") from error
         except OpenAIError as error:
             raise ModelError("模型服务请求失败，请稍后重试。") from error
 

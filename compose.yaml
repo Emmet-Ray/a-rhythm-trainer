@@ -24,6 +24,10 @@ services:
     build: ./backend
     restart: unless-stopped
     environment:
+      AI_PROVIDER: "${AI_PROVIDER:-deepseek}"
+      AI_MODEL: "${AI_MODEL:-deepseek-flash}"
+      AI_API_KEY: "${AI_API_KEY:-}"
+      AI_ALLOWED_ORIGINS: "${AI_ALLOWED_ORIGINS:-http://localhost:${HTTP_PORT:-8080},http://127.0.0.1:${HTTP_PORT:-8080}}"
       AUTH_ENABLED: "${AUTH_ENABLED:-false}"
       AUTH_ALLOWED_ORIGINS: "${AUTH_ALLOWED_ORIGINS:-}"
       AUTH_COOKIE_SECURE: "${AUTH_COOKIE_SECURE:-true}"

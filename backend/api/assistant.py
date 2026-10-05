@@ -1,9 +1,9 @@
-"""本机多轮会话接口，接收每次请求的页面快照；运行工具循环并返回最终回答。"""
+"""多轮会话接口，接收每次请求的页面快照；运行工具循环并返回最终回答。"""
 
 import json
 from contextlib import aclosing
 from collections.abc import AsyncIterator
-from ipaddress import ip_address
+import os
 from typing import Annotated
 from urllib.parse import urlsplit
 
@@ -16,30 +16,30 @@ from assistant.sessions import SessionEvent, ChatSession, SessionBusy, SessionSt
 from assistant.context import PageContext
 
 
-def require_local_request(request: Request) -> None:
-    # 第一阶段没有账号级配额，入口仅供本机开发，不接入公开部署。
-    try:
-        local = request.client is not None and ip_address(request.client.host).is_loopback
-    except ValueError:
-        local = False
+def require_assistant_origin(request: Request) -> None:
+    """校验浏览器来源；允许反向代理连接，不信任客户端提交的转发头。"""
     origins = request.headers.getlist("origin")
-    if origins:
-        try:
-            origin = urlsplit(origins[0])
-            origin_allowed = (
-                len(origins) == 1
-                and origin.scheme in ("http", "https")
-                and origin.hostname in ("localhost", "127.0.0.1", "::1")
-                and origin.port in (5173, 8000)
-                and not origin.username and not origin.password
-                and not origin.path and not origin.query and not origin.fragment
-            )
-        except ValueError:
-            origin_allowed = False
-    else:
-        origin_allowed = True  # 允许本机 curl；浏览器请求校验 Origin。
-    if not local or not origin_allowed:
-        raise HTTPException(403, "助手目前仅供本机使用。")
+    if not origins:
+        # 非浏览器客户端可以无 Origin；来源校验不是身份认证。
+        if request.headers.get("sec-fetch-site") == "cross-site":
+            raise HTTPException(403, "不允许的助手请求来源。")
+        return
+    allowed = {value.strip() for value in os.getenv(
+        "AI_ALLOWED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000,http://localhost:8080,http://127.0.0.1:8080",
+    ).split(",") if value.strip()}
+    try:
+        origin = urlsplit(origins[0])
+        valid = (len(origins) == 1 and origin.scheme in ("http", "https")
+                 and origin.hostname and origin.username is None and origin.password is None
+                 and not origin.path and not origin.query and not origin.fragment
+                 and origins[0] == f"{origin.scheme}://{origin.netloc}"
+                 and "*" not in origins[0])
+        origin.port  # 检查端口格式。
+    except ValueError:
+        valid = False
+    if not valid or origins[0] not in allowed:
+        raise HTTPException(403, "不允许的助手请求来源，请检查 AI_ALLOWED_ORIGINS。")
 
 
 def get_model() -> TextModel:
@@ -57,7 +57,19 @@ class ChatInput(BaseModel):
     )
 
 
-router = APIRouter(prefix="/api/assistant", tags=["assistant"], dependencies=[Depends(require_local_request)])
+router = APIRouter(prefix="/api/assistant", tags=["assistant"], dependencies=[Depends(require_assistant_origin)])
+
+
+@router.get("/status")
+async def assistant_status():
+    # 只检查配置，不创建模型客户端、不消耗额度、不返回任何凭证。
+    try:
+        ModelSettings.from_env()
+        status, message = "ready", ""
+    except ValueError as error:
+        status = "unconfigured" if not os.getenv("AI_API_KEY", "").strip() else "invalid"
+        message = str(error)
+    return JSONResponse({"status": status, "message": message}, headers={"Cache-Control": "no-store"})
 
 
 def get_store(request: Request) -> SessionStore:

@@ -66,7 +66,7 @@ def test_upstream_error_is_sanitized_and_not_retried(monkeypatch):
         return httpx.Response(401, json={"error": {"message": "secret-test", "type": "auth"}})
     model = install_transport(monkeypatch, handler)
     async def collect():
-        with pytest.raises(ModelError, match="模型服务请求失败") as error:
+        with pytest.raises(ModelError, match="模型 API Key 无效") as error:
             return [event async for event in model.stream([UserMessage("问题")])]
         assert "secret-test" not in str(error.value)
     asyncio.run(collect())
@@ -139,7 +139,7 @@ def test_missing_configuration_and_input_validation(monkeypatch):
         assert client.post(endpoint, json={"text": "你好"},
                            headers={"Origin": "https://example.com"}).status_code == 403
     with TestClient(app, client=("192.0.2.1", 1234)) as client:
-        assert client.post(endpoint, json={"text": "你好"}).status_code == 403
+        assert client.post("/api/assistant/sessions").status_code == 201
 
 
 def test_responses_tool_round_trip_preserves_reasoning_and_call_id(monkeypatch):
@@ -193,3 +193,51 @@ def test_partial_tool_arguments_never_execute(monkeypatch):
                     pass
     asyncio.run(run())
     assert [e["type"] for e in session.snapshot()["entries"]] == ["user"]
+
+
+@pytest.mark.parametrize("origin,expected", [
+    ("http://localhost:8080", 201), ("https://rhythm.example", 201),
+    ("https://evil.example", 403), ("null", 403),
+    ("https://rhythm.example/", 403), ("https://rhythm.example:bad", 403),
+])
+def test_proxy_origins(monkeypatch, origin, expected):
+    monkeypatch.setenv("AI_ALLOWED_ORIGINS", "http://localhost:8080,https://rhythm.example")
+    with TestClient(create_app(), client=("172.18.0.2", 1234)) as client:
+        response = client.post("/api/assistant/sessions", headers={"Origin": origin})
+        assert response.status_code == expected
+        assert client.post("/api/assistant/sessions", headers={
+            "Origin": "https://evil.example", "X-Forwarded-Host": "rhythm.example",
+            "X-Forwarded-For": "127.0.0.1", "X-Forwarded-Proto": "https",
+        }).status_code == 403
+        assert client.post("/api/assistant/sessions", headers={"Sec-Fetch-Site": "cross-site"}).status_code == 403
+        assert client.post("/api/assistant/sessions", headers=[("Origin", origin), ("Origin", origin)]).status_code == 403
+
+
+@pytest.mark.parametrize("key,provider,status", [
+    ("", "deepseek", "unconfigured"), ("  ", "deepseek", "unconfigured"),
+    ("secret-test", "deepseek", "ready"), ("secret-test", "unsupported", "invalid"),
+])
+def test_configuration_status_never_calls_model(monkeypatch, key, provider, status):
+    monkeypatch.setenv("AI_API_KEY", key)
+    monkeypatch.setenv("AI_PROVIDER", provider)
+    monkeypatch.setenv("AI_MODEL", "test-model")
+    def forbidden(*args, **kwargs):
+        raise AssertionError("status must not create a model client")
+    monkeypatch.setattr("agent.model.AsyncOpenAI", forbidden)
+    with TestClient(create_app()) as client:
+        response = client.get("/api/assistant/status")
+    assert response.status_code == 200
+    assert response.json()["status"] == status
+    assert set(response.json()) == {"status", "message"}
+    assert "secret-test" not in response.text
+    assert response.headers["cache-control"] == "no-store"
+
+
+@pytest.mark.parametrize("code,message", [(402, "额度不足"), (429, "请求受限"), (500, "模型服务请求失败")])
+def test_upstream_failure_messages(monkeypatch, code, message):
+    model = install_transport(monkeypatch, lambda request: httpx.Response(code, json={"error": {"message": "secret-test"}}))
+    async def collect():
+        with pytest.raises(ModelError, match=message) as error:
+            return [event async for event in model.stream([UserMessage("问题")])]
+        assert "secret-test" not in str(error.value)
+    asyncio.run(collect())

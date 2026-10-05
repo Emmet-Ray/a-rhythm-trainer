@@ -22,7 +22,7 @@ async function checkedFetch(path: string, options: RequestInit, signal: AbortSig
   });
   if (!response.ok) {
     const messages: Record<number, string> = {
-      403: "助手目前仅供本机使用，请检查访问地址。", 404: "会话已失效，请开始新对话。",
+      403: "助手请求来源未获允许，请检查后端 AI_ALLOWED_ORIGINS 配置。", 404: "会话已失效，请开始新对话。",
       409: "这个会话仍在运行，请稍后同步状态。", 422: "问题或页面资料格式不正确，或内容过大。",
       503: "助手尚未配置或服务不可用，请检查后端配置。",
     };
@@ -114,4 +114,12 @@ export async function sendMessage(id: string, text: string, pageContext: PageCon
     await reader.cancel().catch(() => {});
     reader.releaseLock();
   }
+}
+
+/** 只读取配置可用性；不验证凭证、不产生模型调用。 */
+export async function getAssistantStatus(signal: AbortSignal): Promise<{ status: "ready" | "unconfigured" | "invalid"; message: string }> {
+  const value: unknown = await (await checkedFetch("/status", {}, signal)).json();
+  if (!object(value) || !["ready", "unconfigured", "invalid"].includes(value.status as string)
+      || typeof value.message !== "string") throw new Error("助手配置状态格式异常，请重试。");
+  return value as { status: "ready" | "unconfigured" | "invalid"; message: string };
 }

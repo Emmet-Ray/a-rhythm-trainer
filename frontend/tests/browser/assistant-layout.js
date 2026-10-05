@@ -31,6 +31,7 @@ async (page) => {
   let deferResponse = false;
   const session = () => ({ id: 'layout-session', entries, is_running: false, last_run_status: entries.length ? 'completed' : null });
   await page.route('**/api/auth/me', route => route.fulfill({ json: { auth_enabled: false } }));
+  await page.route('**/api/assistant/status', route => route.fulfill({ json: { status: 'ready', message: '' } }));
   await page.route('**/api/assistant/sessions', route => { created++; return route.fulfill({ json: session() }); });
   await page.route('**/api/assistant/sessions/*', route => route.fulfill({ json: session() }));
   await page.route('**/api/assistant/sessions/*/messages', async route => {
