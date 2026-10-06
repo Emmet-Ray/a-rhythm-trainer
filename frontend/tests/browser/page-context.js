@@ -52,7 +52,7 @@ async (page) => {
     return requests.at(-1).page_context;
   }
   await visit('/random');
-  check((await ask()).page === 'random_index', '随机入口');
+  check((await ask()).page === 'random_practice', '随机直接进入练习');
   await visit('/random/dictation');
   let c = await ask();
   check(c.state.generationSettings.materials.length > 0 && c.state.practice.snapshot.metronomeEnabled === true, '生成条件与节拍器');
@@ -83,7 +83,7 @@ async (page) => {
     const actions = Array.from({ length: 12 }, (_, i) => ({ mode: 'tapping', attempt: { id: 'context-' + i, completedAt: new Date().toISOString(), bpm: 60, timingWindows: { perfectMs: 50, hitMs: 150 }, passed: true, targetCount: 1, hitCount: 1, missCount: 0, wrongTapCount: 0 } }));
     savePracticeActions({ source: 'custom', exerciseId: 'context', title: '上下文测试记录' }, exercise, 'tapping', actions);
   });
-  await visit('/custom'); check((await ask()).page === 'custom_index', '自定义入口');
+  await visit('/custom'); check((await ask()).page === 'custom_library', '自定义直接进入题库');
   await visit('/custom/tapping'); c = await ask();
   check(c.page === 'custom_library' && c.state.items.some(i => i.name === '上下文测试题' && i.measureCount === 1), '自定义摘要');
   check(!JSON.stringify(c.state.items).includes('elements'), '列表只传摘要');

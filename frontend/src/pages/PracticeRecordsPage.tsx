@@ -1,3 +1,4 @@
+import { ActionError } from "../navigation/ActionError";
 import { useAssistantPageContext } from "../assistant/assistantContext";
 import { exerciseSources } from "../practice-records/PracticeRecord";
 import {
@@ -64,6 +65,7 @@ function LocalRecords() {
   const [now, setNow] = useState(() => new Date());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
+  const [deleteAttempt, setDeleteAttempt] = useState(0);
   const [deletedCount, setDeletedCount] = useState(0);
   useEffect(() => {
     const refresh = () => { setData(readRecords()); setNow(new Date()); };
@@ -99,6 +101,7 @@ function LocalRecords() {
     )
       return;
     setActionError("");
+    setDeleteAttempt(value => value + 1);
     try {
       deletePracticeRecord(record.id);
       setDeletedCount((value) => value + 1);
@@ -132,11 +135,7 @@ function LocalRecords() {
           ))}
         </div>
       </header>
-      {actionError && (
-        <p role="alert" className="practice-record-error">
-          {actionError}
-        </p>
-      )}
+      {actionError && <ActionError key={deleteAttempt} message={actionError} />}
       <div
         className="record-filters topic-modes"
         role="group"

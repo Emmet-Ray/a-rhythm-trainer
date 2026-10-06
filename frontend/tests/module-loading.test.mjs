@@ -51,11 +51,12 @@ test("失败的预测加载不会产生未处理拒绝，后续意图可重试",
 
 test("预加载范围不把首页、列表或设置变成全量训练代码入口", () => {
   for (const path of ["/", "/unknown", "/constructor", "/toString"]) assert.deepEqual(destinationModules(path), []);
-  for (const section of ["preset", "random", "custom", "settings"]) assert.deepEqual(destinationModules(`/${section}`), [routeModules[section]]);
+  for (const section of ["preset", "custom", "settings"]) assert.deepEqual(destinationModules(`/${section}`), [routeModules[section]]);
   assert.deepEqual(destinationModules("/custom/tapping"), [routeModules.custom]);
   assert.deepEqual(destinationModules("/custom/dictation/new"), [routeModules.custom, editorModule]);
   assert.deepEqual(destinationModules("/custom/tapping/account/123"), [routeModules.custom, workspaceModule]);
   assert.deepEqual(destinationModules("/preset/basic-values-01"), [routeModules.preset, workspaceModule]);
+  assert.deepEqual(destinationModules("/random"), [routeModules.random, workspaceModule]);
   assert.deepEqual(destinationModules("/random/dictation"), [routeModules.random, workspaceModule]);
   assert.deepEqual(destinationModules("/ai/tapping/generated-1"), [routeModules.ai, workspaceModule]);
   assert.deepEqual(destinationModules("/random/unknown"), [routeModules.random]);

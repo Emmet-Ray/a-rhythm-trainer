@@ -1,12 +1,13 @@
+import { ActionError } from "../navigation/ActionError";
 import { useAssistantPageContext } from "../assistant/assistantContext";
 import { lazy, memo, Suspense, useEffect, useId, useRef, useState } from "react";
 import { workspaceModule } from "../practice/practiceModules";
 import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
-import { ArrowRight, Hand, Ear, RefreshCw, SlidersHorizontal, X } from "lucide-react";
+import { RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import { PracticeHeading } from "../practice/PracticeHeading";
 import { practiceShortcuts, usePracticeShortcuts } from "../practice/usePracticeShortcuts";
 import { useBrowsingState, useVisitState } from "../navigation/usePageNavigation";
-import { Link, useParams } from "react-router";
+import { Navigate, useNavigate, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
 import { generateRandomExercise, randomMaterials, defaultRandomMaterials, randomMeasureCounts, DEFAULT_RANDOM_MEASURE_COUNT, type RandomGenerationConfig } from "../exercises/randomExercises";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
@@ -27,49 +28,25 @@ const MaterialPreview = memo(function MaterialPreview({ material }: { material: 
 
 // 随机练习的开放范围独立于预设题库；这里只列出已有子页面的模式。
 const randomModes = [
-  { id: "tapping", label: "击拍练习", icon: Hand },
-  { id: "dictation", label: "节奏听写", icon: Ear },
+  { id: "tapping", label: "击拍练习" },
+  { id: "dictation", label: "节奏听写" },
 ] as const;
 
 export default function RandomPracticePage() {
   const { mode } = useParams();
+  const [lastMode, setLastMode] = useBrowsingState("random:last-mode", "tapping");
   const selectedMode = randomModes.find(item => item.id === mode);
-  useAssistantPageContext(mode === undefined ? { page: "random_index", description: "随机练习入口，选择训练方式。",
-    state: { modes: randomModes.map(({ id, label }) => ({ id, label })) } } : null);
-  if (mode !== undefined && !selectedMode) return <NotFoundPage />;
-
-  if (selectedMode) {
-    return (
-      <div className="random-page">
-        <title>{`随机${selectedMode.label} · 节奏训练`}</title>
-        <RandomExerciseWorkspace key={selectedMode.id} mode={selectedMode.id} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="design-system random-page random-index">
-      <title>随机练习 · 节奏训练</title>
-      <header className="page-heading"><h1>随机练习</h1></header>
-      <section className="random-mode-selection" aria-labelledby="random-mode-heading">
-        <h2 id="random-mode-heading">选择训练方式</h2>
-        <ul className="question-list navigation-list">
-          {randomModes.map(item => (
-            <li key={item.id}>
-              <Link className="question-link" to={`/random/${item.id}`}>
-                <h3 className="mode-entry-label"><item.icon className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />{item.label}</h3>
-                <span className="question-action">开始练习 <ArrowRight className="ui-icon" aria-hidden="true" focusable="false" /></span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <p className="mode-unavailable">几何游戏暂未开放</p>
-      </section>
-    </div>
-  );
+  useEffect(() => { if (selectedMode) setLastMode(selectedMode.id); }, [selectedMode, setLastMode]);
+  if (mode === undefined) return <Navigate to={`/random/${lastMode}`} replace />;
+  if (!selectedMode) return <NotFoundPage />;
+  return <div className="random-page">
+    <title>{`随机${selectedMode.label} · 节奏训练`}</title>
+    <RandomExerciseWorkspace key={selectedMode.id} mode={selectedMode.id} />
+  </div>;
 }
 
 function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"] }) {
+  const navigate = useNavigate();
   const measureCountName = useId();
   const drawerTitleId = useId();
   const rangeTitleId = useId();
@@ -85,12 +62,12 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
   const [busy, setBusy] = useState(false);
   const restoreSettingsFocus = useRef(false);
   const [error, setError] = useState<string | null>(null);
-  const rangeError = config.materials.length === 0 ? "至少选择一个练习范围。" : error;
+  const rangeError = config.materials.length === 0 ? "至少选择一个练习范围" : null;
 
   useAssistantPageContext({ page: "random_practice", description: "随机练习；生成设置是下一次换题的条件，不一定是当前题目的生成条件。",
     state: { mode, settingsOpen, generationSettings: { measureCount: config.measureCount,
       materials: randomMaterials.filter(item => config.materials.includes(item.id)).map(({ id, label, group }) => ({ id, label, group })) },
-      exerciseAvailable: generated.exercise !== null, configurationError: rangeError } });
+      exerciseAvailable: generated.exercise !== null, configurationError: rangeError ?? error } });
 
   useEffect(() => {
     if (!settingsOpen) {
@@ -167,7 +144,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
             </fieldset>
           <div className="random-range-heading">
             <h3 id={rangeTitleId}>练习范围</h3>
-            {rangeError && <p id={rangeErrorId} role="alert">{rangeError}</p>}
+            <p id={rangeErrorId} className="random-range-error" aria-live="polite">{rangeError}</p>
           </div>
           <div className="random-range-scroll" role="group" aria-labelledby={rangeTitleId}
             aria-describedby={rangeError ? rangeErrorId : undefined}>
@@ -192,10 +169,15 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
           </div>
         </div>
       </section>
+        {settingsOpen && error && <ActionError message={error} />}
       </dialog>
         <div className="design-system practice-page">
-          <PracticeHeading backTo="/random" backLabel="随机练习"
+          <PracticeHeading title="随机练习"
             history={generated.exercise ? { context: { source: "random", exerciseId: String(generated.id), title: "随机练习" }, exercise: generated.exercise, mode } : undefined}>
+            <div className="topic-modes workspace-mode-switch" role="group" aria-label="训练方式">
+              {randomModes.map(item => <button key={item.id} type="button" aria-pressed={mode === item.id}
+                disabled={busy} onClick={() => { if (mode !== item.id) navigate(`/random/${item.id}`); }}>{item.label}</button>)}
+            </div>
             <div className="practice-question-actions text-actions">
               <button type="button" title={`换一题（${practiceShortcuts.next.key}）`} aria-keyshortcuts={practiceShortcuts.next.key} disabled={busy || config.materials.length === 0} onClick={generate}><RefreshCw className="ui-icon" aria-hidden="true" focusable="false" />换一题</button>
               <button ref={settingsButtonRef} type="button" disabled={busy} aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}><SlidersHorizontal className="ui-icon" aria-hidden="true" focusable="false" />生成设置</button>

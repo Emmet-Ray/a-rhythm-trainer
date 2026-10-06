@@ -76,6 +76,8 @@ type RhythmEditorProps = {
 export type RhythmEditorHandle = {
   /** 调用方执行验证或保存后，可清除编辑提示，不改变草稿和选择。 */
   clearMessage: () => void;
+  /** 在谱面下方的固定反馈区显示校验问题。 */
+  showMessage: (message: string) => void;
 };
 
 /**
@@ -100,7 +102,7 @@ export function RhythmEditor({
   const [addEventMessage, setAddEventMessage] = useState("");
   useImperativeHandle(
     ref,
-    () => ({ clearMessage: () => setAddEventMessage("") }),
+    () => ({ clearMessage: () => setAddEventMessage(""), showMessage: setAddEventMessage }),
     [],
   );
   const hasSelectedMeasure = measures[selectedMeasureIndex] !== undefined;
@@ -188,7 +190,7 @@ export function RhythmEditor({
       </div>
       <fieldset disabled={readOnly} className="rhythm-editor-controls" inert={!!preview} style={preview ? { visibility: "hidden" } : undefined}>
         <p className="rhythm-editor-input-message" role="status">
-          {addEventMessage}
+          {addEventMessage.replace(/。+$/, "")}
         </p>
         <div className="rhythm-editor-input-groups">
         <div className="rhythm-editor-basic-input">

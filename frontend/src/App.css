@@ -1,6 +1,6 @@
 /* 全站侧栏独立于正文滚动；各页面从同一条正文基准线开始。 */
 :root { --site-content-width: 1440px; --site-gutter: 32px; --site-nav-width: 208px; --site-sidebar-width: 220px; --site-column-gap: 24px; --site-heading-gap: 32px; }
-body { background: var(--ds-subtle); }
+body { background: var(--ds-surface); }
 .site-shell { min-height: 100svh; padding-left: var(--site-nav-width); }
 .brand { font-size: 21px; font-weight: 700; letter-spacing: .03em; }
 .brand { flex-shrink: 0; }
@@ -15,7 +15,7 @@ body { background: var(--ds-subtle); }
 .login-code-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
 .login-feedback { min-height: 36px; padding: 4px 0; color: var(--muted); font-size: 13px; }
 .login-form > button[type="submit"]:not(:disabled) { background: var(--accent); border-color: var(--accent); color: var(--ds-on-primary); }
-.site-shell > main { display: flow-root; min-width: 0; width: 100%; max-width: calc(var(--site-content-width) + 2 * var(--site-gutter)); margin: 0; padding: 32px var(--site-gutter) 48px; }
+.site-shell > main { display: flow-root; min-width: 0; width: 100%; max-width: calc(var(--site-content-width) + 2 * var(--site-gutter)); margin: 0 auto; padding: 32px var(--site-gutter) 48px; }
 .site-shell > .auth-error { width: 100%; max-width: calc(var(--site-content-width) + 2 * var(--site-gutter)); margin: 12px auto 0; padding-inline: var(--site-gutter); }
 main:focus { outline: none; }
 .page-heading { margin-bottom: 20px; }
@@ -35,7 +35,7 @@ main:focus { outline: none; }
 .question-list { list-style: none; padding: 0; margin: 0; }
 .question-list li + li { border-top: 1px solid var(--line); }
 .question-link { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 12px; border-radius: 4px; transition: background-color 140ms ease; }
-.question-link:hover { background: var(--accent-soft); }
+.question-link:hover { background: var(--ds-hover); }
 .home-sources .question-link { padding: 24px 12px; }
 .question-copy { min-width: 0; }
 .question-meta { display: block; margin-top: 3px; font-size: 12px; color: var(--muted); }

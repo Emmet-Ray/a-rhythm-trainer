@@ -1,4 +1,5 @@
-import { ArrowLeft, ArrowRight, Hand, Ear, LoaderCircle, Minus, Plus, Save, Pencil, Trash2, Play } from "lucide-react";
+import { ActionError } from "../navigation/ActionError";
+import { ArrowLeft, LoaderCircle, Minus, Plus, Save, Pencil, Trash2, Play } from "lucide-react";
 import { SuccessToast } from "../navigation/SuccessToast";
 import { useAssistantExerciseTarget, useAssistantPageContext } from "../assistant/assistantContext";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
@@ -7,12 +8,14 @@ import { UnsavedChanges } from "../navigation/UnsavedChanges";
 import {
   Suspense,
   useCallback,
+  useId,
   useEffect,
   useRef,
   useState,
 } from "react";
 import {
   Link,
+  Navigate,
   useLocation,
   useNavigationType,
   useMatch,
@@ -27,6 +30,8 @@ import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
 import { useBrowsingState, useVisitState } from "../navigation/usePageNavigation";
 import {
   parseRhythmExercise,
+  expandRhythmElements,
+  TICKS_PER_QUARTER,
   type RhythmElement,
   type RhythmExercise,
 } from "../rhythm/RhythmModel";
@@ -54,14 +59,14 @@ import {
   type CustomMode,
 } from "../exercises/customExercises";
 
-// 选择训练方式时不加载 VexFlow；进入新建页面后才加载编辑器。
+// 题目列表不加载 VexFlow；进入新建页面后才加载编辑器。
 const RhythmEditor = editorModule.Component;
 const PracticeWorkspace = workspaceModule.Component;
 
 // 自定义的开放范围不依赖预设题库；每个模式的草稿独立创建。
 const customModes = [
-  { id: "tapping", label: "击拍练习", icon: Hand },
-  { id: "dictation", label: "节奏听写", icon: Ear },
+  { id: "tapping", label: "击拍练习" },
+  { id: "dictation", label: "节奏听写" },
 ] as const;
 
 type Auth = ReturnType<typeof useAuth>;
@@ -80,10 +85,12 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
     auth.state.status === "authenticated"
       ? `account:${auth.state.user.id}`
       : auth.state.status;
+  const [lastMode, setLastMode] = useBrowsingState("custom:last-mode", "tapping");
   const selectedMode = customModes.find((item) => item.id === mode);
-  useAssistantPageContext(!selectedMode && mode === undefined ? { page: "custom_index", description: "自定义练习入口，选择训练方式。",
-    state: { source, modes: customModes.map(({ id, label }) => ({ id, label })) } } : selectedMode && (auth.busy || auth.state.status === "checking" || auth.state.status === "unavailable") ? {
-      page: "custom_exercises", description: "自定义练习暂时无法读取，正在确认访问状态。", state: { mode: selectedMode.id, status: auth.state.status } } : null);
+  useEffect(() => { if (selectedMode) setLastMode(selectedMode.id); }, [selectedMode, setLastMode]);
+  useAssistantPageContext(selectedMode && (auth.busy || auth.state.status === "checking" || auth.state.status === "unavailable") ? {
+    page: "custom_exercises", description: "自定义练习暂时无法读取，正在确认访问状态。", state: { mode: selectedMode.id, status: auth.state.status } } : null);
+  if (mode === undefined) return <Navigate to={`/custom/${lastMode}`} replace />;
   if (mode !== undefined && !selectedMode) return <NotFoundPage />;
 
   if (
@@ -179,33 +186,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
       />
     );
 
-  return (
-    <div className="design-system custom-index">
-      <title>自定义练习 · 节奏训练</title>
-      <header className="page-heading">
-        <h1>自定义练习</h1>
-      </header>
-      <section
-        className="custom-mode-selection"
-        aria-labelledby="custom-mode-heading"
-      >
-        <h2 id="custom-mode-heading">选择训练方式</h2>
-        <ul className="question-list navigation-list">
-          {customModes.map((item) => (
-            <li key={item.id}>
-              <Link className="question-link" to={`/custom/${item.id}`}>
-                <h3 className="mode-entry-label"><item.icon className="ui-icon ui-icon--control" aria-hidden="true" focusable="false" />{item.label}</h3>
-                <span className="question-action">
-                  查看题目 <ArrowRight className="ui-icon" aria-hidden="true" focusable="false" />
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <p className="mode-unavailable">几何游戏暂未开放</p>
-      </section>
-    </div>
-  );
+  return <NotFoundPage />;
 }
 
 function CustomExerciseList({
@@ -219,6 +200,7 @@ function CustomExerciseList({
   source: Source;
   identity: string;
 }) {
+  const navigate = useNavigate();
   const { state } = useLocation();
   const navigationType = useNavigationType();
   type ListResult = {
@@ -315,17 +297,18 @@ function CustomExerciseList({
       <title>{`自定义${label} · 节奏训练`}</title>
       {navigationType !== "POP" && state?.createdExercise === true && <SuccessToast message="练习已创建" />}
       <header className="practice-titlebar custom-list-heading">
-        <ReturnLink className="practice-return" to="/custom">
-          <ArrowLeft className="ui-icon" aria-hidden="true" focusable="false" /> 自定义练习
-        </ReturnLink>
-        <h1>{label}</h1>
+        <h1>自定义练习</h1>
         <Link className="custom-new-link" to={`/custom/${mode}/new`}>
           <Plus className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />新建练习
         </Link>
       </header>
+      <div className="topic-modes library-mode-switch" role="group" aria-label="训练方式">
+        {customModes.map(item => <button key={item.id} type="button" aria-pressed={mode === item.id}
+          onClick={() => { if (mode !== item.id) navigate(`/custom/${item.id}`); }}>{item.label}</button>)}
+      </div>
       <section className="custom-catalog" aria-label="题目列表">
-      {mutationError && <p className="custom-mutation-error" role="alert">{mutationError}</p>}
-      {mutationMessage && <p role="status">{mutationMessage}</p>}
+      {mutationError && <ActionError message={mutationError} />}
+      {mutationMessage && <SuccessToast key={mutationMessage} message={mutationMessage} />}
       {result.error ? (
         <div className="custom-storage-error">
           <p role="alert">{result.error}</p>
@@ -543,6 +526,9 @@ function CustomExerciseEditor({
   source?: Source;
 }) {
   const navigate = useNavigate();
+  const nameErrorId = useId();
+  const nameInput = useRef<HTMLInputElement>(null);
+  const [nameError, setNameError] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [draft, setDraft, forgetDraft] = useVisitState<{
@@ -607,6 +593,7 @@ function CustomExerciseEditor({
       selectedMeasureIndex: 0 }));
     setAssistantRevision(value => value + 1);
     setAssistantApplied(true);
+    setNameError(false);
     setSavedSuccessfully(false);
     setSaveError(null);
     editorRef.current?.clearMessage();
@@ -649,6 +636,20 @@ function CustomExerciseEditor({
 
   async function save() {
     if (locked.current || !canSave) return;
+    setSaveError(null);
+    if (!name.trim()) {
+      setNameError(true);
+      nameInput.current?.focus();
+      return;
+    }
+    setNameError(false);
+    const invalidMeasure = measures.findIndex(elements => expandRhythmElements(elements).durationTicks !== timeSignature.beats * TICKS_PER_QUARTER);
+    if (invalidMeasure !== -1) {
+      const beats = expandRhythmElements(measures[invalidMeasure]).durationTicks / TICKS_PER_QUARTER;
+      setDraft(previous => ({ ...previous, selectedMeasureIndex: invalidMeasure }));
+      editorRef.current?.showMessage(`第 ${invalidMeasure + 1} 小节${beats < 4 ? `还差 ${4 - beats} 拍` : `超出 ${beats - 4} 拍`}，请修改后保存`);
+      return;
+    }
     locked.current = true;
     setSaving(true);
     const generation = saveGeneration.current;
@@ -662,7 +663,7 @@ function CustomExerciseEditor({
           measures: measures.map((elements) => ({ elements })),
         },
       };
-      if (!candidate.name) throw new Error("请输入练习名称。");
+      if (!candidate.name) throw new Error("请输入练习名称");
       candidate.exercise = parseRhythmExercise(candidate.exercise);
       const saved =
         initial
@@ -746,13 +747,19 @@ function CustomExerciseEditor({
                 <label className="custom-name">
                   <span>练习名称</span>
                   <input
+                    ref={nameInput}
+                    aria-label="练习名称"
+                    aria-invalid={nameError || undefined}
+                    aria-describedby={nameError ? nameErrorId : undefined}
                     value={name}
                     onChange={(event) => {
                       const name = event.target.value;
                       setDraft((previous) => ({ ...previous, name }));
                       setSaveError(null);
+                      setNameError(false);
                     }}
                   />
+                  <span id={nameErrorId} className="custom-name-error" aria-live="polite">{nameError ? "请输入练习名称" : ""}</span>
                 </label>
                 <div
                   className="custom-editor-actions"
@@ -784,12 +791,8 @@ function CustomExerciseEditor({
                     {saving ? "正在保存…" : initial ? "保存修改" : "保存练习"}
                   </button>
                 </div>
-                {assistantApplied && <p key={assistantRevision} className="custom-assistant-feedback" role="status">已放入，可继续编辑</p>}
-                {saveError && (
-                  <p className="custom-save-error" role="alert">
-                    {saveError}
-                  </p>
-                )}
+                {assistantApplied && <SuccessToast key={assistantRevision} message="已放入，可继续编辑" />}
+                {saveError && <ActionError message={saveError} onRetry={() => void save()} />}
               </div>
               <div className="practice-body">
                 {settingsPanel}

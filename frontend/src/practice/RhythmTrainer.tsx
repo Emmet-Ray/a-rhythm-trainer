@@ -1,3 +1,4 @@
+import { ActionError } from "../navigation/ActionError";
 import { PlaybackContext } from "./PlaybackGroup";
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PracticeKeyboardScope, canReceivePracticeKey, practiceShortcuts, usePracticeShortcuts } from "./usePracticeShortcuts";
@@ -486,7 +487,7 @@ function RhythmTrainer({
         </button>
       </div>
       <PracticeResult passed={result?.passed ?? null} />
-      {audioError && <p className="trainer-audio-error" role="alert">{audioError}</p>}
+      {audioError && <ActionError message={audioError} />}
     </>}>
       <RhythmScore
         exercise={exercise}

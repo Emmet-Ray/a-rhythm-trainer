@@ -68,7 +68,7 @@ test("高频操作在各模式保留文字并提供不参与朗读的图标", as
       : await renderApp(path);
     const controls = html.match(/<(?:button|a)\b[^]*?<\/(?:button|a)>/g) ?? [];
     for (const label of labels) {
-      const control = controls.find(item => withoutSvg(item).replace(/<[^>]*>/g, "").trim() === label);
+      const control = controls.find(item => item.includes("<svg") && withoutSvg(item).replace(/<[^>]*>/g, "").trim() === label);
       assert.ok(control, `${path}: ${label}`);
       assert.match(control, /<svg[^>]*aria-hidden="true"[^>]*focusable="false"/);
       assert.equal((control.match(/<svg\b/g) ?? []).length, 1);
@@ -175,12 +175,12 @@ test("首页检查配置期间隐藏聊天控件，传统入口仅保留在导�
   assert.doesNotMatch(html, /topic-section|击拍训练区|节奏听写区/);
 });
 
-test("随机练习展示两个可用入口，几何游戏仅作未开放提示", async () => {
-  const html = await renderApp("/random");
-  assert.match(html, /href="\/random\/tapping"/);
-  assert.match(html, /href="\/random\/dictation"/);
-  assert.match(html, /<p class="mode-unavailable">几何游戏暂未开放<\/p>/);
-  assert.doesNotMatch(html, /href="\/random\/geometry"/);
+test("随机工作区提供模式切换，不再返回中间入口页", async () => {
+  const html = await renderApp("/random/tapping");
+  assert.match(html, /aria-label="训练方式"/);
+  assert.match(html, /<h1>随机练习<\/h1>/);
+  assert.match(html, /节奏听写/);
+  assert.doesNotMatch(html, /class="practice-return"|几何游戏|选择训练方式/);
 });
 
 test("预设列表与详情都在 preset 下，旧 practice 地址不再兼容", async () => {
@@ -201,12 +201,14 @@ test("预设列表与详情都在 preset 下，旧 practice 地址不再兼容",
 });
 
 test("三个来源页面不再展示来源切换栏，保留首页返回入口及训练方式选择", async () => {
-  for (const path of ["/preset", "/random", "/custom"]) {
+  for (const path of ["/preset", "/random/tapping", "/custom/tapping"]) {
     const html = await renderApp(path);
     assert.doesNotMatch(html, /aria-label="内容来源"/);
     assert.match(withoutSvg(html), /href="\/"[^>]*><span>节奏助手/);
-    assert.match(html, /击拍练习/);
-    assert.match(html, /节奏听写/);
+    if (path !== "/custom/tapping") {
+      assert.match(html, /击拍练习/);
+      assert.match(html, /节奏听写/);
+    }
     if (path === "/preset") {
       assert.equal((html.match(/aria-label="训练方式"/g) ?? []).length, 1);
       assert.match(html, /class="preset-question-heading"[^]*?aria-label="训练方式"[^]*?<\/header>\s*<section id="preset-question-list"/);
@@ -260,7 +262,7 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
   assert.doesNotMatch(tapping, /trainer-feedback|rhythm-score-overlay/);
   assert.match(tapping, /data-action="start"/);
   assert.match(tapping, /data-action="listen"/);
-  assert.match(await renderApp("/random"), /class="design-system random-page random-index"/);
+  assert.match(await renderApp("/random/tapping"), /class="random-page"/);
   for (const mode of ["tapping", "dictation"]) {
     const html = await renderApp(`/random/${mode}`);
     assert.match(html, /class="design-system random-generation"/);
@@ -274,9 +276,8 @@ test("设计系统覆盖公共页头、首页、预设列表与击拍页，其�
     assert.doesNotMatch(html, /data-verdict=|rhythm-playback-status|dictation-completion/);
     assert.match(html, /data-action="play" data-source="question"/);
   }
-  const customIndex = await renderApp("/custom");
-  assert.match(customIndex, /class="design-system custom-index"/);
-  assert.match(customIndex, /<p class="mode-unavailable">几何游戏暂未开放<\/p>/);
+  const customIndex = await renderPage("/custom/tapping", "/custom/:mode");
+  assert.match(customIndex, /class="design-system practice-page custom-library"/);
   assert.doesNotMatch(customIndex, /href="\/custom\/geometry"/);
   for (const path of ["/settings"]) {
     const html = await renderApp(path);
@@ -381,8 +382,9 @@ test("登录表单保留标签、自动填充和反馈语义，未发送验证�
   assert.match(html, /autoComplete="one-time-code"/);
   assert.match(html, /id="login-phone"[^>]*aria-invalid="false"/);
   assert.match(html, /id="login-code"[^>]*aria-invalid="false"/);
-  assert.doesNotMatch(html, /id="login-(?:phone|code)-error"/);
-  assert.match(html, /class="login-feedback"><p role="status"/);
+  for (const field of ["phone", "code"]) {
+    assert.match(html, new RegExp(`<p id="login-${field}-error" class="login-field-error" aria-live="polite"></p>`));
+  }
   assert.match(withoutSvg(html), /<button type="submit" disabled="">登录/);
 });
 
@@ -634,12 +636,13 @@ test("题目页读取损坏数据时显示错误与重试，不冒充题目不�
   assert.doesNotMatch(html, /未找到该练习|击拍训练区/);
 });
 
-test("自定义入口分别提供击拍和听写的列表地址，几何游戏不开放", async () => {
-  const html = await renderPage("/custom", "/custom");
-  assert.match(html, /href="\/custom\/tapping"/);
-  assert.match(html, /href="\/custom\/dictation"/);
-  assert.doesNotMatch(html, /href="[^\"]*geometry/);
-  assert.doesNotMatch(html, /aria-label="内容来源"/);
+test("自定义题库提供模式切换和新建入口", async () => {
+  const html = await renderPage("/custom/tapping", "/custom/:mode");
+  assert.match(html, /<h1>自定义练习<\/h1>/);
+  assert.match(html, /aria-label="训练方式"/);
+  assert.match(html, /节奏听写/);
+  assert.match(html, /href="\/custom\/tapping\/new"/);
+  assert.doesNotMatch(html, /class="practice-return"|选择训练方式|几何游戏/);
 });
 
 test("模式列表保留新建入口，空存储引导创建", async (t) => {

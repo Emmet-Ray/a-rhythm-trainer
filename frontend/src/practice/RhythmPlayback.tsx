@@ -1,3 +1,4 @@
+import { ActionError } from "../navigation/ActionError";
 import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LoaderCircle, Play, Square } from "lucide-react";
 import { PlaybackContext, type PlaybackGroup } from "./PlaybackGroup";
@@ -256,7 +257,7 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
         </div>
       </div>
       {showStatus && !onCountInChange && <span className="rhythm-playback-status" role="status">{text}</span>}
-      {error && <span role="alert">{error}</span>}
+      {error && <ActionError message={error} />}
     </div>
   );
 }

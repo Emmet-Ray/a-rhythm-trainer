@@ -24,7 +24,7 @@ export function destinationModules(pathname: string) {
     && (target === "new" || segments.at(-1) === "edit")) return [...modules, editorModule];
   if (section === "ai" && ["tapping", "dictation"].includes(mode) && segments.length === 3
     || section === "preset" && segments.length === 2
-    || section === "random" && segments.length === 2 && ["tapping", "dictation"].includes(mode)
+    || section === "random" && (segments.length === 1 || segments.length === 2 && ["tapping", "dictation"].includes(mode))
     || section === "custom" && ["tapping", "dictation"].includes(mode) && target && target !== "new") {
     return [...modules, workspaceModule];
   }

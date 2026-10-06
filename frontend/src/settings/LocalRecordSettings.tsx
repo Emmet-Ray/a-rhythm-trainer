@@ -1,3 +1,4 @@
+import { ActionError } from "../navigation/ActionError";
 import { useAssistantPageSection } from "../assistant/assistantContext";
 import { useContext, useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
@@ -57,6 +58,7 @@ function RecordData() {
   const [notice, setNotice] = useState(0);
   useAssistantPageSection("localRecords", { status: data.error ? "read-error" : "ready", recordCount: data.count, attemptCount: data.error ? null : data.attempts });
   const [error, setError] = useState("");
+  const [clearAttempt, setClearAttempt] = useState(0);
   useEffect(() => {
     const refresh = () => setData(readSummary());
     window.addEventListener("storage", refresh);
@@ -72,6 +74,7 @@ function RecordData() {
     )
       return;
     setError("");
+    setClearAttempt(value => value + 1);
     try {
       clearPracticeRecords();
       setData(readSummary());
@@ -112,11 +115,7 @@ function RecordData() {
       {notice > 0 && (
         <SuccessToast key={notice} message="练习记录已清空，自定义题库未修改" />
       )}
-      {error && (
-        <p role="alert" className="settings-message">
-          {error}
-        </p>
-      )}
+      {error && <ActionError key={clearAttempt} message={error} />}
     </>
   );
 }

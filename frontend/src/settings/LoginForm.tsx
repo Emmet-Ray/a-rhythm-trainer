@@ -1,3 +1,5 @@
+import { ActionError } from "../navigation/ActionError";
+import { SuccessToast } from "../navigation/SuccessToast";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AuthApiError, authErrorMessage, sendLoginCode } from "../api/auth";
 import type { useAuth } from "../auth/useAuth";
@@ -49,7 +51,7 @@ export default function LoginForm({
   async function send() {
     if (locked.current || disabled || remaining > 0) return;
     if (!/^1[3-9][0-9]{9}$/.test(phone)) {
-      setPhoneError("请输入 11 位中国大陆手机号，不含国家码或空格。");
+      setPhoneError("请输入 11 位中国大陆手机号，不含国家码或空格");
       phoneInput.current?.focus();
       return;
     }
@@ -66,7 +68,7 @@ export default function LoginForm({
       const id = await sendLoginCode(phone);
       if (!mounted.current) return;
       setRequestId(id);
-      setMessage("验证码已发送，请查看短信。");
+      setMessage("验证码已发送，请查看短信");
       coolDown();
     } catch (error) {
       if (!mounted.current) return;
@@ -82,11 +84,11 @@ export default function LoginForm({
     event.preventDefault();
     if (locked.current || disabled) return;
     if (!requestId) {
-      setError("请先发送验证码。");
+      setError("请先发送验证码");
       return;
     }
     if (!/^[0-9]{6}$/.test(code)) {
-      setCodeError("请输入 6 位数字验证码。");
+      setCodeError("请输入 6 位数字验证码");
       setError("");
       setMessage("");
       codeInput.current?.focus();
@@ -141,7 +143,7 @@ export default function LoginForm({
             setCodeError("");
           }}
         />
-        {phoneError && <p id="login-phone-error" className="login-field-error" role="alert">{phoneError}</p>}
+        <p id="login-phone-error" className="login-field-error" aria-live="polite">{phoneError}</p>
         <label htmlFor="login-code">验证码</label>
         <div className="login-code-row">
           <input
@@ -174,16 +176,9 @@ export default function LoginForm({
                 : "发送验证码"}
           </button>
         </div>
-        {codeError && <p id="login-code-error" className="login-field-error" role="alert">{codeError}</p>}
-        <div className="login-feedback">
-          {error ? (
-            <p role="alert" className="auth-error">
-              {error}
-            </p>
-          ) : (
-            <p role="status">{message}</p>
-          )}
-        </div>
+        <p id="login-code-error" className="login-field-error" aria-live="polite">{codeError}</p>
+        {error && <ActionError message={error} />}
+        {message && <SuccessToast key={requestId} message={message} />}
         <button type="submit" disabled={disabled || !requestId}>
           {pending === "login" ? "正在登录…" : "登录"}
         </button>

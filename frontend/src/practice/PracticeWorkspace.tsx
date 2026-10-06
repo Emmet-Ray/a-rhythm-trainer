@@ -1,3 +1,4 @@
+import { ActionError } from "../navigation/ActionError";
 import { useCallback, useContext, useMemo, useState, type SetStateAction } from "react";
 import { useAssistantPractice } from "../assistant/assistantContext";
 import { buildPracticeContextSummary } from "../assistant/practiceContextSummary";
@@ -79,7 +80,7 @@ function WorkspaceSession({
       {({ bpm, metronomeEnabled }, settingsPanel) => (
         <section aria-label={mode === "dictation" ? "节奏听写区" : "击拍训练区"}>
           {recordContext && recordAccessMessage(access) && <p className="practice-record-notice" role="status">{recordAccessMessage(access)}</p>}
-          {recorder.error && <div className="practice-record-error" role="alert"><span>{recorder.error}</span><button type="button" onClick={recorder.retry}>重试保存</button></div>}
+          {recorder.error && <ActionError message={recorder.error} onRetry={recorder.retry} />}
           {mode === "dictation" ? (
             // BPM 改变只重建听写内部播放器，保留草稿、验证结果和参考答案状态。
             <RhythmDictation key={binding} session={{ state, onChange: update }} exercise={exercise} bpm={bpm} metronomeEnabled={metronomeEnabled} onBusyChange={reportBusy} settingsPanel={settingsPanel}

@@ -1,7 +1,7 @@
 :root {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: var(--ds-ink);
-  background: var(--ds-subtle);
+  background: var(--ds-surface);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

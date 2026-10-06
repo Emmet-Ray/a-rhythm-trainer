@@ -14,7 +14,7 @@ export function SuccessToast({ message }: { message: string }) {
   return <div className="success-toast-region" role="status" aria-live="polite" aria-atomic="true">
     {visible && <div className="success-toast">
       <Check className="ui-icon" aria-hidden="true" focusable="false" />
-      <span>{message}</span>
+      <span>{message.replace(/。+$/, "")}</span>
       <button className="success-toast-close" type="button" aria-label="关闭提示" onClick={() => setVisible(false)}>
         <X className="ui-icon" aria-hidden="true" focusable="false" />
       </button>

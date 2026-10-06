@@ -45,7 +45,7 @@
 :root {
   --ds-on-primary: #fff;
   --ds-score: #19171f;
-  /* 悬停只提示可操作；主题浅底留给持续的选中状态。 */
+  /* 次级导航使用中性整行高亮；主题浅底用于全局导航与控件选中态。 */
   --ds-hover: color-mix(in srgb, var(--ds-ink) 5%, transparent);
   /* 判定颜色表达固定语义，不跟随主题。 */
   --ds-success: #287343;
@@ -221,7 +221,7 @@
 .preset-library .preset-topics button { display: flex; align-items: baseline; gap: 12px; text-align: left; min-height: 48px; padding: 12px; border: 0; box-shadow: none; background: transparent; color: var(--ds-muted); font-size: 16px; font-weight: 550; line-height: 1.5; }
 .preset-library .preset-topics button > span:first-child { flex-shrink: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
 .preset-library .preset-topics button:hover:not(:disabled) { background: var(--ds-hover); color: var(--ds-ink); }
-.preset-library .preset-topics button[aria-current], .preset-library .preset-topics button[aria-current]:hover:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); font-weight: 650; }
+.preset-library .preset-topics button[aria-current], .preset-library .preset-topics button[aria-current]:hover:not(:disabled) { background: var(--ds-hover); color: var(--ds-ink); font-weight: 650; }
 .preset-library .preset-topics button:active { transform: none; }
 .preset-topic-select { display: none; }
 .preset-questions { min-width: 0; width: 100%; max-width: 720px; }
@@ -249,10 +249,10 @@
   .preset-topic-select select { width: 100%; min-width: 0; min-height: 48px; padding: 10px; border: 1px solid var(--ds-line); border-radius: 8px; background: var(--ds-surface); color: var(--ds-ink); font: inherit; }
   .preset-library .preset-question-heading .topic-modes { flex: 1 0 100%; }
 }
-.design-system .topic-modes { display: flex; flex-wrap: wrap; gap: var(--ds-space-1); padding: var(--ds-space-1); margin-bottom: var(--ds-space-4); border: 0; border-radius: var(--ds-radius-sm); background: var(--ds-subtle); }
+.design-system .topic-modes { display: flex; flex-wrap: wrap; gap: var(--ds-space-1); padding: var(--ds-space-1); margin-bottom: var(--ds-space-4); border: 0; border-radius: var(--ds-radius-sm); background: transparent; }
 .design-system .topic-modes button { flex: 1 1 auto; min-height: 44px; padding: 8px 10px; border: 2px solid transparent; border-radius: 8px; background: transparent; box-shadow: none; color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .design-system .topic-modes button:hover:not(:disabled) { background: var(--ds-hover); border-color: transparent; color: var(--ds-ink); }
-.design-system .topic-modes button[aria-pressed="true"], .design-system .topic-modes button[aria-pressed="true"]:hover:not(:disabled) { background: var(--ds-surface); color: var(--ds-primary); border-color: var(--ds-line); box-shadow: 0 2px 0 var(--ds-line); }
+.design-system .topic-modes button[aria-pressed="true"], .design-system .topic-modes button[aria-pressed="true"]:hover:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); border-color: var(--ds-line); box-shadow: 0 2px 0 var(--ds-line); }
 .design-system .topic-modes button:active:not(:disabled) { transform: none; box-shadow: none; }
 .design-system .topic-modes button:disabled { color: var(--ds-muted); background: transparent; box-shadow: none; }
 .preset-library .topic-modes small { display: inline; font-size: 10px; color: var(--ds-muted); margin-left: 4px; }
@@ -261,8 +261,8 @@
 .design-system .navigation-list > li { padding: 4px 0; border: 0; }
 .design-system .navigation-list > li + li { border-top: 1px solid var(--ds-line); }
 .design-system .navigation-list a.question-link { min-height: 64px; min-width: 0; padding: 16px; gap: 16px; border: 0; border-radius: var(--ds-radius-sm); background: transparent; box-shadow: none; transition: background-color var(--ds-motion); }
-.design-system .navigation-list a.question-link:hover, .design-system .navigation-list a.question-link:focus-visible { background: color-mix(in srgb, var(--ds-primary) 12%, var(--ds-subtle)); }
-.design-system .navigation-list a.question-link:active { background: color-mix(in srgb, var(--ds-primary) 18%, var(--ds-subtle)); transform: none; box-shadow: none; }
+.design-system .navigation-list a.question-link:hover, .design-system .navigation-list a.question-link:focus-visible { background: var(--ds-hover); }
+.design-system .navigation-list a.question-link:active { background: var(--ds-hover); transform: none; box-shadow: none; }
 .design-system .navigation-list a.question-link:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: -2px; }
 .preset-library .question-link h3 { font-size: var(--ds-text); font-weight: 700; overflow-wrap: anywhere; }
 .preset-library .question-action { font-weight: 750; color: var(--ds-primary); font-size: var(--ds-text-sm); }
@@ -348,7 +348,7 @@
 
 /* 击拍样板：谱面固定在操作与反馈上方，不对谱面或时钟做动画。 */
 .practice-page { max-width: var(--site-content-width); margin: 0; }
-.practice-page.custom-library { width: 100%; max-width: 680px; margin: 0; }
+.practice-page.custom-library { width: 100%; max-width: none; margin: 0; }
 .custom-catalog { width: 100%; }
 .practice-page h1 { overflow-wrap: anywhere; }
 .practice-titlebar { display: flex; flex-wrap: wrap; align-items: center; min-height: 49px; gap: 12px 24px; margin: 0 0 var(--site-heading-gap); }
@@ -688,7 +688,7 @@
 .settings-navigation { display: flex; flex-direction: column; gap: var(--ds-space-2); border-right: 1px solid var(--ds-line); padding: 4px 20px 4px 0; }
 .design-system .settings-navigation button { text-align: left; white-space: nowrap; border-color: transparent; box-shadow: none; background: transparent; color: var(--ds-muted); transform: none; }
 .design-system .settings-navigation button:hover:not(:disabled) { border-color: transparent; background: var(--ds-hover); color: var(--ds-ink); }
-.design-system .settings-navigation button[aria-pressed="true"], .design-system .settings-navigation button[aria-pressed="true"]:hover:not(:disabled) { border-color: transparent; background: var(--ds-tint); color: var(--ds-primary); }
+.design-system .settings-navigation button[aria-pressed="true"], .design-system .settings-navigation button[aria-pressed="true"]:hover:not(:disabled) { border-color: transparent; background: var(--ds-hover); color: var(--ds-ink); }
 .settings-unavailable { margin-left: 8px; font-size: 12px; font-weight: 400; color: var(--ds-muted); }
 .settings-content { min-width: 0; min-height: 360px; max-width: 768px; padding: 4px; }
 .design-system .local-data-clear:not(:disabled) { color: var(--ds-error); }
@@ -1103,3 +1103,30 @@
   .assistant-history-backdrop { display: block; position: absolute; inset: 0; z-index: 64; border: 0; border-radius: 0; background: rgb(20 25 35 / 25%); }
 }
 @media (hover: none) { .assistant-history--sidebar .assistant-history-delete { opacity: 1; } }
+
+/* 普通浏览页限宽居中；练习与编辑工作区沿用宽幅谱面布局。 */
+.site-shell > main:has(> :is(.preset-library, .settings-page, .practice-records-page, .custom-library)) { max-width: calc(1040px + 2 * var(--site-gutter)); }
+.site-shell > main:has(> .about-page) { max-width: calc(720px + 2 * var(--site-gutter)); }
+.practice-records-page, .custom-library { width: 100%; max-width: none; }
+.design-system .library-mode-switch { width: fit-content; margin-bottom: 24px; }
+.design-system .workspace-mode-switch { margin-bottom: 0; }
+
+.about-content { max-width: none; }
+
+/* 名称校验预留一行；保存和播放失败浮出显示，不推动谱面。 */
+.custom-create .custom-name { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; row-gap: 4px; }
+.custom-create .custom-name input { width: 100%; min-width: 0; }
+.custom-create .custom-name input[aria-invalid="true"] { border-color: var(--ds-error); }
+.custom-create .custom-name .custom-name-error { grid-column: 2; min-height: 20px; font-size: 13px; line-height: 20px; font-weight: 400; color: var(--ds-error); }
+.action-error-region { pointer-events: none; }
+.action-error { border-color: var(--ds-error); color: var(--ds-error); }
+.action-error > .ui-icon { flex-shrink: 0; }
+.action-error .action-error-retry { pointer-events: auto; flex-shrink: 0; min-height: 32px; padding: 4px 8px; box-shadow: none; transform: none; }
+@media (max-width: 600px) {
+  .custom-create .custom-name { grid-template-columns: minmax(0, 1fr); }
+  .custom-create .custom-name .custom-name-error { grid-column: 1; }
+}
+
+/* 字段提示常驻占位；长手机号说明按两行预留，避免校验时移动表单。 */
+.login-page .login-field-error { min-height: 2lh; }
+.random-generation .random-range-error { min-height: 24px; margin: 8px 0 0; color: var(--ds-error); font-size: 16px; line-height: 24px; }

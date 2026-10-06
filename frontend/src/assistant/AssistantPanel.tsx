@@ -52,6 +52,40 @@ export function AssistantPanel({ home = false, identity = "guest" }: { home?: bo
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const sessionSidebar = useRef<HTMLElement>(null);
+  const sessionToggle = useRef<HTMLButtonElement>(null);
+  // 窄屏会话列表覆盖正文时，键盘操作留在列表内；返回宽屏后恢复普通侧栏。
+  useEffect(() => {
+    if (!mobileHistoryOpen) return;
+    const sidebar = sessionSidebar.current;
+    const toggle = sessionToggle.current;
+    if (!sidebar) return;
+    const buttons = () => Array.from(sidebar.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+    buttons()[0]?.focus({ preventScroll: true });
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMobileHistoryOpen(false);
+      } else if (event.key === "Tab") {
+        const items = buttons();
+        const first = items[0];
+        const last = items.at(-1);
+        if (!sidebar.contains(document.activeElement) || (event.shiftKey ? document.activeElement === first : document.activeElement === last)) {
+          event.preventDefault();
+          (event.shiftKey ? last : first)?.focus();
+        }
+      }
+    };
+    const media = window.matchMedia("(max-width: 1000px)");
+    const resize = () => { if (!media.matches) setMobileHistoryOpen(false); };
+    document.addEventListener("keydown", keydown);
+    media.addEventListener("change", resize);
+    return () => {
+      document.removeEventListener("keydown", keydown);
+      media.removeEventListener("change", resize);
+      if (media.matches) toggle?.focus({ preventScroll: true });
+    };
+  }, [mobileHistoryOpen]);
   const historyAnchor = useRef<HTMLDivElement>(null);
   const historyButton = useRef<HTMLButtonElement>(null);
   const closeHistory = useCallback(() => {
@@ -259,7 +293,7 @@ export function AssistantPanel({ home = false, identity = "guest" }: { home?: bo
     <div className="assistant-shell" data-layout={home ? "home" : "sidebar"} data-history-expanded={home && sidebarExpanded && availability.ready && !initializing} data-mobile-history={mobileHistoryOpen}>
       {home && availability.ready && !initializing && <>
         {mobileHistoryOpen && <button className="assistant-history-backdrop" aria-label="关闭会话列表" onClick={() => setMobileHistoryOpen(false)} />}
-        <aside className="assistant-session-sidebar" onKeyDown={event => { if (event.key === "Escape") { setMobileHistoryOpen(false); setSidebarExpanded(false); } }}>
+        <aside ref={sessionSidebar} role={mobileHistoryOpen ? "dialog" : undefined} aria-modal={mobileHistoryOpen ? true : undefined} aria-label="会话列表" className="assistant-session-sidebar" onKeyDown={event => { if (event.key === "Escape" && !mobileHistoryOpen) { setSidebarExpanded(false); requestAnimationFrame(() => sessionToggle.current?.focus()); } }}>
           <ConversationHistory placement="sidebar" currentId={state.session?.id} refreshKey={`${state.session?.id ?? ""}:${state.busy}`}
             onNew={() => { newConversation(); setMobileHistoryOpen(false); }} onOpen={openConversation} onDeleted={deleteConversation}
             onClose={() => { setSidebarExpanded(false); setMobileHistoryOpen(false); }} />
@@ -286,6 +320,7 @@ export function AssistantPanel({ home = false, identity = "guest" }: { home?: bo
         id="assistant-panel"
         className="assistant-panel"
         hidden={!visible}
+        inert={home && mobileHistoryOpen}
         data-empty={availability.ready && !initializing && !started}
         role={modal ? "dialog" : home ? "region" : "complementary"}
         aria-modal={modal ? true : undefined}
@@ -324,7 +359,7 @@ export function AssistantPanel({ home = false, identity = "guest" }: { home?: bo
         ) : (
           <>
             <header className="assistant-heading">
-              {home && <button type="button" className="assistant-session-toggle" aria-label="展开会话列表" onClick={() => { setSidebarExpanded(true); setMobileHistoryOpen(window.matchMedia("(max-width: 1000px)").matches); }}><PanelLeftOpen size={20} aria-hidden="true" /></button>}
+              {home && <button ref={sessionToggle} type="button" aria-expanded={mobileHistoryOpen} aria-controls="assistant-history" className="assistant-session-toggle" aria-label="展开会话列表" onClick={() => { setSidebarExpanded(true); setMobileHistoryOpen(window.matchMedia("(max-width: 1000px)").matches); }}><PanelLeftOpen size={20} aria-hidden="true" /></button>}
               {!home && <h2 id="assistant-title">节奏助手</h2>}
               <div className="assistant-actions" hidden={home}>
                 <div className="assistant-history-anchor" ref={historyAnchor}>

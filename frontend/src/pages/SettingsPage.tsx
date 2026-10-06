@@ -1,3 +1,4 @@
+import { ActionError } from "../navigation/ActionError";
 import { useAssistantPageContext, useAssistantPageSection } from "../assistant/assistantContext";
 import { useContext, useLayoutEffect, useState } from "react";
 import { VisitsContext } from "../navigation/usePageNavigation";
@@ -185,11 +186,7 @@ function AccountSettings({ auth }: { auth: ReturnType<typeof useAuth> }) {
   return (
     <section className="settings-section" aria-labelledby="account-heading">
       <h2 id="account-heading">账号</h2>
-      {auth.error && (
-        <p role="alert" className="settings-message">
-          {auth.error}
-        </p>
-      )}
+      {auth.error && <ActionError message={auth.error} />}
       {auth.state.status === "checking" ? (
         <p role="status" data-navigation-pending>
           正在确认登录…
@@ -302,6 +299,7 @@ function LocalDataSettings() {
   const [data, setData] = useState(readLocalData);
   const [notice, setNotice] = useState(0);
   const [clearError, setClearError] = useState("");
+  const [clearAttempt, setClearAttempt] = useState(0);
   useAssistantPageSection("localExercises", { status: data.error ? "read-error" : "ready", summary: data.summary ? { ...data.summary } : null });
 
   function clear() {
@@ -312,6 +310,7 @@ function LocalDataSettings() {
     )
       return;
     setClearError("");
+    setClearAttempt(value => value + 1);
     try {
       clearCustomExercises();
       setData(readLocalData());
@@ -373,11 +372,7 @@ function LocalDataSettings() {
             清空题库
           </button>
         </div>
-        {clearError && (
-          <p role="alert" className="settings-message">
-            {clearError}
-          </p>
-        )}
+        {clearError && <ActionError key={clearAttempt} message={clearError} />}
         {notice > 0 && (
           <SuccessToast
             key={notice}
