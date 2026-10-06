@@ -103,7 +103,6 @@ async (page) => {
     return Math.abs(title.left - card.left) < 2 && Math.abs(card.left - input.left) < 2;
   }), '首页页头、消息和输入框应共用对齐线');
   check(created === 1 && submissions[0].page_context.page === 'home', '首页请求应携带当前页面并只创建一个会话');
-  await page.getByRole('button', { name: '加快 5 BPM' }).click();
   await page.locator('.exercise-measure-buttons').getByRole('button', { name: '跳到小节 2', exact: true }).click();
   await input.fill('卡片切换时保留的草稿');
   const originalScroll = await page.locator('.assistant-messages').evaluate(el => el.scrollTop);
@@ -114,7 +113,6 @@ async (page) => {
   check(await nav.getByRole('link', { name: '首页', exact: true }).getAttribute('aria-current') === 'page', '首页高亮保留');
   check(await overlay.evaluate(el => el.matches(':modal')), '训练必须在模态覆盖层内');
   check(await input.inputValue() === '卡片切换时保留的草稿', '进入训练不能丢输入');
-  check(await page.getByRole('spinbutton', { name: '试听速度 BPM' }).inputValue() === '65', '打开覆盖层不能重置卡片 BPM');
   check(await page.locator('.exercise-measure-buttons button[aria-pressed="true"]').textContent() === '2', '打开覆盖层不能重置选中小节');
   await input.evaluate(el => el.focus());
   check(await overlay.evaluate(el => el.contains(document.activeElement)), '覆盖层隔离背景焦点');

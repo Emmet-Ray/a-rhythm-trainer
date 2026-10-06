@@ -68,7 +68,6 @@ async (page) => {
   check(await page.getByRole('button', { name: '停止生成' }).isVisible(), '卡片应在生成结束前出现');
   const node = await start.elementHandle();
   await page.getByRole("button", { name: "跳到小节 2", exact: true }).click();
-  await page.getByRole("button", { name: "加快 5 BPM", exact: true }).click();
   await start.click();
   await page.locator('.generated-practice-overlay').waitFor();
   await page.getByRole('button', { name: '关闭练习', exact: true }).click();
@@ -81,7 +80,6 @@ async (page) => {
   check(await node.evaluate(el => el.isConnected), '最终同步不重新挂载练习卡片');
   check(await start.count() === 1, '最终同步不重复卡片');
   check(await page.getByRole('button', { name: '跳到小节 2', exact: true }).getAttribute('aria-pressed') === 'true', '最终同步保留选中小节');
-  check(await page.locator('.exercise-tempo input').inputValue() === '65', '最终同步保留卡片速度');
   check(await input.inputValue() === '下一条草稿', '保留输入草稿');
   await input.press('Enter');
   await start.nth(1).waitFor();

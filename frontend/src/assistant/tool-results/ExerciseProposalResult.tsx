@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { PanelLeft, Hand, Ear, Minus, Plus } from "lucide-react";
+import { PanelLeft, Hand, Ear, Eye, EyeOff } from "lucide-react";
 import { GeneratedExercisesContext } from "../../exercises/GeneratedExerciseStore";
 import RhythmPlayback from "../../practice/RhythmPlayback";
 import type { PlaybackGroup } from "../../practice/PlaybackGroup";
@@ -19,9 +19,12 @@ export function ExerciseProposalResult({ value, playbackGroup, onPracticeStart, 
   useEffect(() => {
     if (proposal && (proposal.mode === "tapping" || savedState?.answer_viewed)) store?.markAnswerViewed(proposal.id);
   }, [store, proposal, savedState?.answer_viewed]);
+  // 折叠是本地展示偏好，不撤销已经查看答案的事实。
+  const [answerVisibility, setAnswerVisibility] = useState<boolean | null>(null);
+  const answerExpanded = answerVisibility ?? (viewed || !!savedState?.answer_viewed);
   const apply = useApplyAssistantExercise();
-  const [bpm, setBpm] = useState(savedState?.bpm ?? 60);
-  const [bpmInput, setBpmInput] = useState(String(savedState?.bpm ?? 60));
+  // 保留旧会话的速度字段以兼容存储；卡片试听统一使用 60 BPM。
+  const bpm = savedState?.bpm ?? 60;
   const lastState = useRef(JSON.stringify({ bpm: savedState?.bpm ?? 60, answer_viewed: savedState?.answer_viewed ?? false }));
   useEffect(() => {
     if (!proposal) return;
@@ -31,46 +34,23 @@ export function ExerciseProposalResult({ value, playbackGroup, onPracticeStart, 
     lastState.current = serialized;
     onStateChange?.(proposal.id, next);
   }, [proposal, bpm, viewed, savedState?.answer_viewed, onStateChange]);
-  const typedBpm = Number(bpmInput);
-  const stepBpm = bpmInput.trim() && Number.isInteger(typedBpm) && typedBpm >= 40 && typedBpm <= 240 ? typedBpm : bpm;
-  function adjustBpm(delta: number) {
-    const next = Math.max(40, Math.min(240, stepBpm + delta));
-    setBpm(next); setBpmInput(String(next));
-  }
   const [feedback, setFeedback] = useState<{ target: typeof apply; text: string } | null>(null);
   const notice = feedback?.target === apply ? feedback.text : "";
   if (!proposal) return <p className="assistant-notice" role="status">这份练习的数据无法显示，请让助手重新生成。</p>;
   return <div className="assistant-exercise-result">
     <ExerciseCard title={proposal.title} exercise={proposal.exercise}
-      status={proposal.mode === "dictation" && viewed ? <span className="exercise-answer-viewed" role="status">已查看答案</span> : undefined}
-      controls={<div className="exercise-tempo" role="group" aria-label="试听速度">
-        <button type="button" aria-label="减慢 5 BPM" disabled={stepBpm <= 40} onClick={() => adjustBpm(-5)}><Minus size={14} aria-hidden="true" /></button>
-        <label className="exercise-tempo-value">
-        <input type="number" aria-label="试听速度 BPM" min={40} max={240} step={1} required value={bpmInput}
-          onChange={event => setBpmInput(event.target.value)}
-          onBlur={event => {
-            if (event.currentTarget.validity.valid) {
-              const next = Number(event.currentTarget.value);
-              setBpm(next); setBpmInput(String(next));
-            } else setBpmInput(String(bpm));
-          }}
-          onKeyDown={event => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              if (event.currentTarget.reportValidity()) event.currentTarget.blur();
-            }
-          }} />
-        <span>BPM</span>
-        </label>
-        <button type="button" aria-label="加快 5 BPM" disabled={stepBpm >= 240} onClick={() => adjustBpm(5)}><Plus size={14} aria-hidden="true" /></button>
-      </div>}
-      hiddenSummary={proposal.mode === "dictation" && !viewed ? <span className="exercise-hidden-summary">
-        {proposal.exercise.measures.length} 小节 · 答案已隐藏
-      </span> : undefined} actions={<>
-      <RhythmPlayback key={`${proposal.id}:${bpm}`} playbackGroup={playbackGroup} bpm={bpm} showStatus={false}
+      hideScore={proposal.mode === "dictation" && !answerExpanded} actions={<>
+      <RhythmPlayback key={proposal.id} playbackGroup={playbackGroup} bpm={60} showStatus={false}
         timeSignature={proposal.exercise.timeSignature}
         options={[{ id: proposal.id, label: "试听", stopLabel: "停止试听", measures: proposal.exercise.measures.map(measure => measure.elements) }]} />
-      {proposal.mode === "dictation" && !viewed && <button className="exercise-apply" type="button" onClick={() => store?.markAnswerViewed(proposal.id)}>查看答案</button>}
+      {proposal.mode === "dictation" && <button className="exercise-apply" type="button" aria-expanded={answerExpanded}
+        onClick={() => {
+          if (!answerExpanded) store?.markAnswerViewed(proposal.id);
+          setAnswerVisibility(!answerExpanded);
+        }}>
+        {answerExpanded ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+        {answerExpanded ? "收起答案" : "查看答案"}
+      </button>}
       {store && <button className="exercise-start" type="button" onClick={() => {
         store.add(proposal);
         if (proposal.mode === "tapping") store.markAnswerViewed(proposal.id);

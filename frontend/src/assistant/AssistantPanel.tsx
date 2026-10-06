@@ -1,6 +1,5 @@
 import { useChat } from "@ai-sdk/react";
 import { isToolUIPart, getToolName } from "ai";
-import { Fragment } from "react";
 import { AssistantMarkdown } from "./AssistantMarkdown";
 import { PracticeActivityContext } from "./practiceActivity";
 import {
@@ -383,7 +382,7 @@ export function AssistantPanel({ home = false, identity = "guest" }: { home?: bo
                   <p>可以生成练习，也可以聊聊节奏。</p>
                 </div>
               ) : null}
-              {messages.map(message => <Fragment key={`${state.session?.id ?? "new"}:${message.id}`}>
+              {messages.map(message => <div className="assistant-turn" key={`${state.session?.id ?? "new"}:${message.id}`}>
                 {message.parts.map((part, index) => {
                   if (isToolUIPart(part)) {
                     if (getToolName(part) !== "propose_rhythm_exercise") return null;
@@ -409,7 +408,7 @@ export function AssistantPanel({ home = false, identity = "guest" }: { home?: bo
                     </div>}
                   </article>;
                 })}
-              </Fragment>)}
+              </div>)}
               {waitingForContent && <p className="assistant-notice" role="status">正在思考…</p>}
 
             </div>
