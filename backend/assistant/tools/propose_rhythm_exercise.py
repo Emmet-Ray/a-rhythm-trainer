@@ -1,8 +1,7 @@
 """候选节奏练习：工具参数、校验后的生成结果与工具实现。"""
 
-import json
-
-from agent.tools import AgentTool, ToolResult
+from pydantic import ValidationError
+from pydantic_ai import ModelRetry, Tool
 
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -74,17 +73,18 @@ class GeneratedExercise:
         }
 
 
-def create_propose_rhythm_exercise_tool() -> AgentTool[ExerciseProposal]:
-    async def execute(call_id: str, parameters: ExerciseProposal) -> ToolResult:
-        exercise = GeneratedExercise(parameters.model_dump())
-        return ToolResult(
-            content=json.dumps({"exercise_id": exercise.id, "title": exercise.title, "mode": exercise.mode}, ensure_ascii=False),
-            details={"generated_exercise": exercise.snapshot()},
-        )
+def create_propose_rhythm_exercise_tool() -> Tool:
+    async def execute(**parameters) -> dict:
+        try:
+            exercise = GeneratedExercise(parameters)
+        except ValidationError as error:
+            raise ModelRetry("；".join(item["msg"] for item in error.errors(include_input=False))) from error
+        return {"generated_exercise": exercise.snapshot()}
 
-    return AgentTool(
+    return Tool.from_schema(
+        function=execute,
         name="propose_rhythm_exercise",
-        description="提出一份可预览谱面、由用户应用到自定义练习草稿的完整 4/4 节奏练习；每小节必须恰好四拍。不会自动应用或保存到题库。",
-        parameters=ExerciseProposal,
-        execute=execute,
+        description="生成一份可试听和练习的完整 4/4 节奏练习；每小节必须恰好四拍。不会自动应用或保存到题库。",
+        json_schema=ExerciseProposal.model_json_schema(),
+        sequential=True,
     )

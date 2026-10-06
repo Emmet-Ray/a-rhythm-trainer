@@ -24,8 +24,8 @@ _动图仅演示操作，不含声音。_
 
 ## 技术栈
 
-- **前端**：React、TypeScript、Vite；React Router（路由）、Lucide（图标）、react-markdown（Markdown 渲染）、VexFlow（谱面渲染）、Web Audio API（音频与节拍调度）
-- **后端**：Python、FastAPI；SQLite、SQLAlchemy、Alembic（数据存储与迁移）；OpenAI Python SDK（接入 DeepSeek）、SSE（流式通信）
+- **前端**：React、TypeScript、Vite；React Router（路由）、Lucide（图标）、react-markdown（Markdown 渲染）、VexFlow（谱面渲染）、Web Audio API（音频与节拍调度）；AI SDK UI（助手流式消息）
+- **后端**：Python、FastAPI；SQLite、SQLAlchemy、Alembic（数据存储与迁移）；Pydantic AI（模型接入与工具调用）、OpenAI Python SDK（DeepSeek Responses）
 - **部署**：Docker、Nginx
 
 ## 快速启动（Docker）

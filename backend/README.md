@@ -3,10 +3,10 @@
 ## 新版 AI 助手：后端内存会话与流式问答
 
 当前实现 DeepSeek Responses API 的多轮问答与工具循环，会话历史保存在后端内存；前端可携带页面快照，模型可调用工具生成节奏练习。前端已支持候选谱面卡片，并可由用户应用到当前自定义练习草稿。
-`api/assistant.py` 处理本站 HTTP/SSE；`assistant/sessions.py` 管理历史并订阅 Agent 消息；
-`agent/agent.py` 管理消息状态、运行占用、停止与订阅；`agent/loop.py` 负责模型与工具循环；`assistant/records.py` 定义会话记录，`assistant/context.py` 将历史及其关联快照投影为 Agent 消息；`agent/model.py` 隔离模型服务的请求与事件。
-`TextModel` 是模型调用边界，后续提供方通过适配器加入。配置中的提供方目前只接受
-`deepseek`，不表示其他 API 或订阅认证已实现。
+`api/assistant.py` 负责 HTTP 边界，`assistant/sessions.py` 持有服务端历史、运行互斥与取消后的结果。
+模型请求、工具循环和流解析由 Pydantic AI 负责，`VercelAIAdapter` 输出 AI SDK UI 消息流。
+`assistant/context.py` 投影页面与练习活动上下文；`assistant/model.py` 负责部署配置、完整性检查和错误说明。
+当前配置仅支持 DeepSeek Responses，不表示其他提供方或订阅认证已实现。
 
 在本地 `backend/.env` 追加配置，不覆盖已有设置或提交密钥：
 
@@ -32,28 +32,27 @@ curl -X POST http://127.0.0.1:8000/api/assistant/sessions
 # 将 SESSION_ID 替换为刚返回的 id；后续输入继续使用同一 id
 curl -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
   -H 'Content-Type: application/json' \
-  -d '{"text":"请解释四分音符和八分音符的时值关系。"}'
+  -d '{"message_id":"question-1","text":"请解释四分音符和八分音符的时值关系。"}'
 ```
 
 接口约定：
 
 | 接口 | 用途 |
 | --- | --- |
-| `POST /api/assistant/sessions` | 创建会话，返回 201 和 `{id, entries, is_running, last_run_status}` |
+| `POST /api/assistant/sessions` | 创建会话，返回 201 和 `{id, messages, is_running, last_run_status}` |
 | `GET /api/assistant/sessions/{id}` | 获取会话记录（含每次用户输入的快照）与运行状态，不包含正在生成的片段 |
-| `POST /api/assistant/sessions/{id}/messages` | 提交 `{text, page_context?}`，后端补齐历史，返回 SSE |
+| `POST /api/assistant/sessions/{id}/messages` | 提交 `{message_id, text, page_context?}`，后端补齐历史，返回 SSE |
 
 同一会话正在运行时，新提交返回 409 且不追加消息；不同会话可以独立运行。
 未知 ID 返回 404。内存存储属于应用生命周期，仅适用于单 worker；重启后旧 ID 失效。
 当前未实现持久化、删除、自动过期或订阅者机制。登录会话与这里的聊天会话是两种独立对象。
 旧的单次 `/api/assistant/chat` 路由已由会话接口替代。
 
-消息提交规则借鉴 Pi 的状态归属：接受请求时保存 UserEntry（文字和深复制的页面快照），
-完整模型消息（包括工具调用）保存为 AssistantEntry，工具结果保存为 ToolResultEntry。模型收到由这些记录构造的独立消息序列。
-文字片段只用于显示；完整回答先记入会话，再发送 `message_completed`。
-失败或取消保留用户输入、已完成的模型消息和工具结果，不保存部分回答；下一次请求仍能看到这些历史记录。
-当前不提供自动重试或原位重试，用户可发送“请继续回答”，不要自动重复提交原请求。
-完整回答提交后即使客户端断连，也不会回滚；可通过 GET 获取最终历史。
+每次提交携带新的 `message_id`，重复 ID 返回 409。前端只提交新问题和快照，不上传聊天历史；
+后端按轮次保留用户输入及 Pydantic AI 原生模型消息。失败或取消保留已完成步骤和工具结果，
+丢弃未完成的模型消息。模型历史包含工具调用所需的推理信息，界面不返回推理内容。
+不自动重发 HTTP 请求；工具参数校验失败允许模型修正（最多 2 次），整轮最多 9 次模型请求、8 次工具调用。
+完整结果保存后即使客户端断连，也不会回滚；可通过 GET 查询最终历史。
 `last_run_status` 为 null（尚未运行）、running、completed、failed 或 cancelled。
 `is_running` 持续到响应清理结束才变为 false，不以文字生成结束作为释放时机。
 
@@ -63,6 +62,7 @@ curl -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
 
 ```json
 {
+  "message_id": "question-1",
   "text": "当前草稿有几个小节？",
   "page_context": {
     "page": "custom_exercise_editor",
@@ -72,8 +72,8 @@ curl -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
 }
 ```
 
-第二次将 `measure_count` 改为 3，问题改为“现在呢？”，确认回答使用新快照。
-第三次提交 `{"text":"当前草稿有几个小节？","page_context":null}`，模型应说明缺少当前信息，
+后续提交使用新的 `message_id`。第二次将 `measure_count` 改为 3，问题改为“现在呢？”，确认回答使用新快照。
+第三次提交 `{"message_id":"question-3","text":"当前草稿有几个小节？","page_context":null}`，模型应说明缺少当前信息，
 不能把旧对话的数字当作现状。也可切换为首页快照验证页面变化。
 
 `page` 为非空页面标识（最多 100 字符），`description` 为非空说明（最多 2000 字符），
@@ -102,51 +102,28 @@ curl -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
 本次 `snapshot: null` 时，历史快照仍可用于回顾，但不能作为当前状态。
 页面文字不拼入系统指令；固定系统规则说明时间语义，遵循效果仍需真实问答验证。
 
-创建和查询会话响应的 `messages` 已改名为 `entries`（不再返回旧字段）。例如：
+### 会话与流协议
 
-```json
-{
-  "id": "会话ID",
-  "entries": [
-    {
-      "type": "user",
-      "text": "有几个小节？",
-      "created_at": "2026-10-03T02:00:00+00:00",
-      "page_context": {
-        "page": "custom_exercise_editor",
-        "description": "自定义练习编辑页",
-        "state": {"measure_count": 2}
-      }
-    },
-    {"type": "assistant", "text": "2 小节。", "created_at": "2026-10-03T02:00:05+00:00"}
-  ],
-  "is_running": false,
-  "last_run_status": "completed"
-}
-```
+创建、查询返回 `{id, messages, is_running, last_run_status}`。`messages` 使用 AI SDK `UIMessage`：
 
-用户记录始终包含 `page_context`（可以为 null）；两种记录都包含 `created_at`。
-`created_at` 由后端生成：用户记录为接受输入时，助手记录为完整回答写入时。
-查询返回带 UTC 时区的 ISO 8601 字符串，前端可转成本地时间显示；重复查询不重新生成时间。
-时间目前只作为会话元数据，不加入模型输入；不代表页面采集时间，也不作为草稿版本或记录排序依据。
-页面快照与聊天一起暂存在后端内存，尚未写入磁盘。发送请求格式和 SSE 事件保持不变。
+- 用户消息：稳定 `id`、`role: user`、文字 `parts`；`metadata` 保存接受时间 `created_at` 和 `page_context`。
+- 助手消息：每轮一个稳定 `id`，按顺序包含 `step-start`、`text` 和 `tool-propose_rhythm_exercise` parts。
+- 工具成功结果位于 `part.output.generated_exercise`，通过 `toolCallId` 标识。一个回复可以包含多个工具与文字步骤。
 
-### 流式事件与验证
+GET 和实时流使用相同消息 ID 与工具调用 ID，前端同步后能保留卡片的小节、速度等操作状态。
+时间由后端在接受本轮时生成，查询不会重新生成；只作为界面元数据，不作为模型输入或记录排序依据。
+页面快照与会话暂存在后端内存，尚未持久化。
 
-事件使用 SSE，每个事件为 `data: {JSON}`，以空行分隔：
+流使用 [AI SDK UI Message Stream](https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol)，
+由 Pydantic AI 的 Vercel UI adapter 编码，响应带 `x-vercel-ai-ui-message-stream: v1`。
+文字通过 `text-start` / `text-delta` / `text-end` 传输，工具结果通过 `tool-output-available` 提供，
+整轮以 `finish` 和 `[DONE]` 结束，流内错误使用 `error`。不再维护自定义 SSE 事件或前端解析器。
 
-| type | 字段与含义 |
-| --- | --- |
-| `entry_added` | `index`、`entry`：已写入会话的记录，按索引顺序追加；与 GET 会话中的记录格式一致 |
-| `text_delta` | `text`：当前助手消息的临时文字片段；对应的助手 `entry_added` 到达后清空临时文字 |
-| `message_completed` | 本轮回答完成；`text` 为本轮文字汇总，接收了 `entry_added` 的界面不再重复展示 |
-| `run_completed` | 本次运行成功结束 |
-| `run_failed` | `message`：固定错误说明；此前部分文字不代表完整回答 |
-
-终端事件前的意外断流不算成功。单次请求最多等待 120 秒，SDK 单次网络等待超时
-30 秒，不自动重试；取消或断连关闭上游连接，不保证供应商立即停止计费。
-未配置返回 503，非法输入返回 422；开始流式响应后的失败用 `run_failed` 报告。
-输入接受非空 `text`（最多 4000 字符）及可选 `page_context`；模型和凭证由后端配置，前端不能指定地址或密钥。
+上游必须确认完整响应才可执行工具；异常断流不能作为成功。单轮最多 120 秒，单次网络等待 30 秒，
+OpenAI 客户端关闭自动重试。取消或断连会关闭上游连接，不保证供应商立即停止计费。
+未配置返回 503，非法输入返回 422；流开始后的异常只返回固定说明，不输出供应商响应和凭证。
+输入接受非空 `text`（最多 4000 字符）、`message_id`（最多 100 字符）及可选 `page_context`；
+模型和凭证由后端配置，前端不能指定地址、密钥或替换服务端历史。
 
 助手不额外要求登录；部署者提供共用的模型凭证。助手接口允许反向代理连接，浏览器 Origin 必须匹配 `AI_ALLOWED_ORIGINS`（逗号分隔的完整地址，不含路径、通配符）。本地开发默认允许 localhost / 127.0.0.1 的 5173、8000、8080 端口；自定义域名或端口需显式配置。无 Origin 的非浏览器请求允许访问，因此来源校验不是身份认证，也不能限制额度消耗。
 
@@ -327,48 +304,27 @@ backend/
 
 前端启动、代理检查与页面验收见 [前端说明](../frontend/README.md#本地开发与联调)。
 
-### 模块边界
-
-`agent/` 是通用运行能力，不导入 `assistant/`、`domain/` 或 HTTP API。
-`assistant/` 是节奏助手应用，组合 Agent、会话、页面上下文和业务工具。
-`domain/rhythm.py` 提供所有题目来源共用的节奏规则，不依赖 AI。
+### 模块边界与工具调用
 
 ```text
-agent/
-  agent.py       状态、运行控制、订阅
-  loop.py        单次模型与工具循环
-  messages.py    分角色的消息协议
-  events.py      Agent 运行事件
-  tools.py       工具契约和执行器
-  model.py       模型接口、模型流事件、当前 DeepSeek 适配器
 assistant/
-  sessions.py    会话管理、订阅记录、聊天输出事件
-  records.py     会话记录及序列化
-  context.py     页面快照和历史投影
+  sessions.py    服务端轮次、运行互斥、结果保留、UI 消息投影
+  model.py       部署配置、DeepSeek Responses 完整性检查、固定错误说明
+  context.py     页面快照与练习活动上下文投影
   system_prompt.py
-  tools/propose_rhythm_exercise.py  参数、候选结果、工具实现
+  tools/propose_rhythm_exercise.py  参数校验、生成练习、Pydantic AI 工具声明
 ```
 
-会话记录独立为 `records.py`，供会话管理和上下文投影共同使用，避免投影依赖会话运行实现。
-具体工具的专用类型就近定义，通用工具接口留在 `agent/tools.py`，不建立全项目共用的类型杂物文件。
+通用模型/工具循环使用 Pydantic AI，不再保留自建 `agent/`。
+业务工具复用 `domain/rhythm.py` 校验节奏，只返回生成练习，不修改草稿、不保存到题库。
+参数错误以 `ModelRetry` 交给模型修正，程序异常终止运行。历史使用 SDK 原生消息；
+`ChatSession` 只管理服务端归属和业务生命周期，不维护第二套 Agent 状态机。
+`assistant/context.py` 在原生用户消息中插入快照数据，系统规则与页面内容分开。
 
-### 工具调用与 AI 生成练习
-
-助手遵循标准顺序：用户输入 → 模型消息（可包含工具调用）→ 执行工具 → 工具结果消息 → 再次请求模型。`ChatSession` 持有统一的 `entries`，通过 Agent 查询运行状态；没有独立的生成练习列表，也不向工具传入会话保存回调。
-
-- `agent/loop.py`：只接收 Agent 消息，在本次上下文中追加模型消息与工具结果，所有事件统一通过同步 `emit(event)` 通知 Agent；不导入会话类型、不修改会话记录。一次运行最多执行 8 次工具调用。未知工具、非法 JSON、参数校验错误会作为工具结果交回模型修正。程序异常终止运行；取消或异常时为未完成的调用补充失败结果，区分结果未确认和未执行，避免后续历史中出现悬空调用。不自动重试工具。
-- `agent/agent.py`：持有独立的消息状态，收到完整消息后先更新状态，再发布 `message_end`。管理互斥、120 秒超时、停止和运行状态；`run(model, messages=...)` 可替换历史投影，不会重新发布旧消息。`_process_event` 是唯一事件入口：先更新状态，再通知订阅者。显示流作为订阅者，通过队列取出文字与运行完成事件；不会再次广播。loop 在独立任务中运行，第一次消费显示流才启动。`stop()` 取消 loop 任务；关闭显示流会取消并等待该任务清理，调用方需等待上下文退出。当前订阅者同步执行，适用于内存记录；未来异步落盘需明确等待与失败策略。
-- `agent/messages.py`：分别定义系统、用户、模型、工具结果消息，各角色只携带自己的字段。`ProviderMetadata` 保留适配器私有数据，只有匹配提供方的适配器解释它。工具详情随消息保留，适配器只发送模型所需内容。
-- `agent/events.py`：定义文字增量、完整消息、整次运行完成事件。`agent/model.py` 的 `ModelEvent` 只描述单次模型调用；会话层将 Agent 运行事件转换为现有聊天事件，二者不再混用。
-- `assistant/sessions.py`：投影历史和当前输入，成功取得 Agent 占用后保存用户记录；订阅 `message_end`，把新模型消息和工具结果包装为会话记录并添加记录时间。用户输入已保存，历史投影也不重发事件，因此不会重复记录。
-- `agent/tools.py`：`AgentTool` 定义名称、说明、参数模型及异步函数；`ToolExecutor` 负责查找和参数校验。工具只返回 `ToolResult(content, details, is_error)`。
-- `assistant/tools/propose_rhythm_exercise.py`：创建并返回生成练习，不修改草稿、不写题库。完整练习在结果的 `details.generated_exercise` 中；ID 和标题在模型可读的 `content` 中，完整候选内容已在 assistant 工具调用参数中。
-- `assistant/records.py`：会话记录及对外快照，包含记录时间；提供方元数据不暴露给界面。
-- `assistant/context.py`：校验页面快照，`build_agent_messages` 将记录投影为 Agent 消息；页面编码及其解释规则放在一起。最近用户快照在工具循环内仍标记为 current。
-- `assistant/system_prompt.py`：节奏助手身份和行为；具体练习格式在工具参数的 schema 描述中。
-- `agent/model.py`：向 DeepSeek Responses 传入工具声明，将调用和结果转换为 `function_call` / `function_call_output`；保留工具调用轮次的原始 response items 以重放 reasoning。只在完整响应后执行工具，不执行流式参数片段。参考 [DeepSeek Responses 文档](https://api-docs.deepseek.com/guides/responses_api/)。
-
-会话查询返回的 `entries` 现在包含 `user`、`assistant`、`tool_result`。工具结果包含调用 ID、工具名称、正文、结构化详情、错误标记和记录时间；普通文字消息格式不变。HTTP SSE 按发生顺序发送 `text_delta` 与已提交记录的 `entry_added`，最后发送 `message_completed` 和 `run_completed`，工具调用轮次不会提前结束 HTTP 流。前端收到成功的练习工具结果便显示谱面卡片，无需等待工具后的模型建议完成，在自定义练习编辑页支持用户点击应用覆盖草稿；不自动保存。卡片支持可调速的整首试听（默认 60 BPM），支持直接进入击拍训练，同时支持听写训练。
+前端收到成功工具结果便显示练习卡片，后续模型建议继续输出。
+卡片可调速试听、进入击拍/听写训练，在编辑页可由用户放入草稿；这些按钮不调用模型。
+供应商 reasoning 保留在模型历史用于后续工具轮次，UI 消息和流中不输出。
+兼容性测试使用模拟 Responses HTTP，覆盖 reasoning 回传、工具调用、提前断流、错误脱敏和取消。
 
 `assistant/tools/propose_rhythm_exercise.py` 中 `ExerciseProposal` 接收 `title`（去除首尾空白后 1–100 字符）、`description`（1–1000 字符）、`exercise`，拒绝额外字段。节奏复用 `domain.rhythm.parse_rhythm_exercise`：4/4、1–64 小节、每小节恰好四拍及现有音符规则。校验保证结构和时值合法，不评判教学效果。`GeneratedExercise(candidate)` 在校验成功后生成 ID、UTC 时间，`snapshot()` 返回独立副本。
 

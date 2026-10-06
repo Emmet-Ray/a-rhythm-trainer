@@ -1,8 +1,5 @@
 """多轮会话接口，接收每次请求的页面快照；运行工具循环并返回最终回答。"""
 
-import json
-from dataclasses import asdict
-from contextlib import aclosing
 from collections.abc import AsyncIterator
 import os
 from typing import Annotated
@@ -12,8 +9,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from agent.model import ModelError, ModelSettings, TextModel, create_model
-from assistant.sessions import EntryAdded, SessionEvent, ChatSession, SessionBusy, SessionStore
+from pydantic_ai.models import Model
+from assistant.model import ModelSettings, create_model
+from assistant.sessions import ChatSession, SessionBusy, SessionStore
 from assistant.context import PageContext
 
 
@@ -43,16 +41,21 @@ def require_assistant_origin(request: Request) -> None:
         raise HTTPException(403, "不允许的助手请求来源，请检查 AI_ALLOWED_ORIGINS。")
 
 
-def get_model() -> TextModel:
+async def get_model() -> AsyncIterator[Model]:
     try:
-        return create_model(ModelSettings.from_env())
+        model = create_model(ModelSettings.from_env())
     except ValueError as error:
         raise HTTPException(503, str(error)) from error
+    try:
+        yield model
+    finally:
+        await model.client.close()
 
 
 class ChatInput(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     text: str = Field(min_length=1, max_length=4000)
+    message_id: str = Field(min_length=1, max_length=100)
     page_context: PageContext | None = Field(
         default=None, description="本次页面快照；省略或 null 表示未知，不沿用上次快照。",
     )
@@ -97,39 +100,17 @@ async def read_session(session: Annotated[ChatSession, Depends(get_session)]):
 async def get_run(
     body: ChatInput,
     session: Annotated[ChatSession, Depends(get_session)],
-    model: Annotated[TextModel, Depends(get_model)],
-) -> AsyncIterator[AsyncIterator[SessionEvent | EntryAdded]]:
-    # request 作用域的 yield 依赖在整个响应结束后退出，包括断连/发送异常。
+    model: Annotated[Model, Depends(get_model)],
+) -> AsyncIterator[StreamingResponse]:
     try:
-        async with session.run(body.text, model, body.page_context) as stream:
-            yield stream
+        async with session.run(body.text, model, body.page_context, message_id=body.message_id) as response:
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["X-Accel-Buffering"] = "no"
+            yield response
     except SessionBusy as error:
         raise HTTPException(409, str(error)) from error
 
 
-def encode_event(event: dict) -> str:
-    return f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-
-
 @router.post("/sessions/{session_id}/messages")
-async def chat(stream: Annotated[AsyncIterator[SessionEvent | EntryAdded], Depends(get_run, scope="request")]):
-    async def events():
-        try:
-            async with aclosing(stream) as events_stream:
-                async for event in events_stream:
-                    yield encode_event(asdict(event))
-                    if event.type == "message_completed":
-                        break
-                else:
-                    raise ModelError("模型连接提前结束，请重试。")
-            yield encode_event({"type": "run_completed"})
-        except ModelError as error:
-            yield encode_event({"type": "run_failed", "message": str(error)})
-        except Exception:
-            yield encode_event({"type": "run_failed", "message": "助手运行失败，请重试。"})
-
-    # StreamingResponse 在断连时取消生成器；CancelledError 不转成失败事件。
-    return StreamingResponse(
-        events(), media_type="text/event-stream",
-        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
-    )
+async def chat(response: Annotated[StreamingResponse, Depends(get_run, scope="request")]):
+    return response

@@ -6,8 +6,7 @@ from copy import deepcopy
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
-from agent.messages import AssistantMessage, Message, SystemMessage, ToolResultMessage, UserMessage
-from assistant.records import AssistantEntry, SessionEntry, ToolResultEntry, UserEntry
+from pydantic_ai.messages import ModelMessage, ModelRequest, UserPromptPart
 from assistant.system_prompt import SYSTEM_PROMPT
 
 
@@ -45,27 +44,21 @@ state.practice_activity 是两次消息之间产生或更新的练习记录，�
 state.practice_focus 是本会话最近产生结果的题目。没有明确指定题目时，分析和后续针对性出题默认围绕它，不能因为覆盖层关闭、底层页面是另一道题而切换。没有新增activity时可以沿用此前同一focus的成绩，但不能称其为新成绩。页面快照practice仍只说明当前界面对象。用户明确指定另一道题时遵循用户意图，资料缺失就说明缺少该题结果。用户明确询问当前目录、设置、记录页或详情时，以对应页面字段为准，不用practice_focus覆盖页面问题。
 听写playbackSettings累计实际播放题目时不同bpm和metronomeEnabled的次数；一次作答可使用多个速度，不能用最后速度代表全程。answerMeasures是用户答案，不是标准答案。完成前的验证、修改、播放和查看答案都更新同一次尝试。不能把每次更新当作新一轮。页面state.recordDetail表示当前打开的题目历史详情，period=all不受记录列表时间筛选限制，summary.session仅是详情当前页的轮次，并非本次训练；其history=unavailable不表示用户没有其他记录。目录列表只提供有限题目摘要，totalCount=null表示总量未知，不能根据摘要推断未公开听写谱面。random_practice的generationSettings是下一次生成条件，不代表已应用到当前题目。页面信息只供解释，不提供修改设置、删除记录或自动跳转能力。活动摘要不提供当前页面的bpm、audioBusy、selectedMeasure或currentAnswer；速度和答案以每次尝试中的实际记录为准，不能把缺失当作默认速度或空白作答。"""
 
-def build_agent_messages(entries: Sequence[SessionEntry]) -> tuple[Message, ...]:
-    """用户输入或工具结果后构建模型上下文；最新用户快照在工具循环内仍属于当前。"""
-    if not entries or not isinstance(entries[-1], (UserEntry, ToolResultEntry)):
-        raise ValueError("模型请求必须以用户消息或工具结果结尾。")
-    messages: list[Message] = [SystemMessage(SYSTEM_PROMPT + "\n" + PAGE_CONTEXT_RULES + "\n" + PRACTICE_CONTEXT_RULES)]
-    current_user = max((i for i, entry in enumerate(entries) if isinstance(entry, UserEntry)), default=-1)
-    input_index = 0
-    for index, entry in enumerate(entries):
-        if isinstance(entry, UserEntry):
-            input_index += 1
-            page_data = json.dumps({"page_context": {
-                "scope": "current" if index == current_user else "historical",
-                "input_index": input_index,
-                "snapshot": entry.page_context.model_dump() if entry.page_context is not None else None,
-            }}, ensure_ascii=False, allow_nan=False)
-            messages.extend((UserMessage(page_data), UserMessage(entry.text)))
-        elif isinstance(entry, AssistantEntry):
-            messages.append(AssistantMessage(entry.text, entry.tool_calls,
-                                             provider_metadata=deepcopy(entry.provider_metadata)))
-        else:
-            messages.append(ToolResultMessage(entry.result.content, tool_call_id=entry.tool_call_id,
-                                    tool_name=entry.tool_name, details=deepcopy(entry.result.details),
-                                    is_error=entry.result.is_error))
-    return tuple(messages)
+def build_agent_messages(history: Sequence[ModelMessage]) -> list[ModelMessage]:
+    """在 SDK 历史副本中为用户输入附加页面快照；不污染正式消息或 UI。"""
+    messages = deepcopy(list(history))
+    requests = [message for message in messages if isinstance(message, ModelRequest)
+                and any(isinstance(part, UserPromptPart) for part in message.parts)]
+    for index, message in enumerate(requests):
+        metadata = message.metadata or {}
+        page_data = json.dumps({"page_context": {
+            "scope": "current" if index == len(requests) - 1 else "historical",
+            "input_index": index + 1,
+            "snapshot": metadata.get("page_context"),
+        }}, ensure_ascii=False, allow_nan=False)
+        message.parts.insert(0, UserPromptPart(page_data))
+    return messages
+
+
+def assistant_instructions() -> str:
+    return SYSTEM_PROMPT + "\n" + PAGE_CONTEXT_RULES + "\n" + PRACTICE_CONTEXT_RULES

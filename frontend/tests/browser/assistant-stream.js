@@ -4,7 +4,7 @@ async (page) => {
   const origin = new URL(page.url()).origin;
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => {
-    const original = window.fetch.bind(window), entries = [];
+    const original = window.fetch.bind(window), messages = [];
     let running = false, status = null, count = 0;
     const json = value => new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } });
     window.streamMock = {};
@@ -13,34 +13,43 @@ async (page) => {
       if (url.includes('/api/auth/me')) return json({ auth_enabled: false });
       if (url.includes('/api/assistant/status')) return json({ status: 'ready', message: '' });
       if (!url.includes('/api/assistant/sessions')) return original(input, options);
-      if (!url.endsWith('/messages')) return json({ id: 'stream', entries, is_running: running, last_run_status: status });
+      if (!url.endsWith('/messages')) return json({ id: 'stream', messages, is_running: running, last_run_status: status });
       const body = JSON.parse(options.body);
       running = true; status = 'running'; count++;
       return new Response(new ReadableStream({ start(controller) {
         const emit = event => controller.enqueue(new TextEncoder().encode('data: ' + JSON.stringify(event) + '\n\n'));
-        const append = entry => {
-          entries.push({ ...entry, created_at: new Date().toISOString() });
-          emit({ type: 'entry_added', index: entries.length - 1, entry: entries.at(-1) });
-        };
-        append({ type: 'user', text: body.text, page_context: body.page_context });
-        emit({ type: 'text_delta', text: '准备这道练习。' });
-        append({ type: 'assistant', text: '准备这道练习。' });
-        append({ type: 'tool_result', tool_name: 'propose_rhythm_exercise', tool_call_id: 'call' + count,
-          content: '生成成功', is_error: false, details: { generated_exercise: {
-            id: 'practice' + count, title: '流式练习 ' + count, mode: 'tapping', description: '',
-            exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [
-              { elements: [{ kind: 'note', noteValue: 'whole' }] },
-              { elements: [{ kind: 'note', noteValue: 'half' }, { kind: 'note', noteValue: 'half' }] },
-            ] },
-          } } });
-        window.streamMock.text = () => emit({ type: 'text_delta', text: '**保持均匀**，先慢速练习。' });
+        messages.push({ id: body.message_id, role: 'user', parts: [{ type: 'text', text: body.text }],
+          metadata: { created_at: new Date().toISOString(), page_context: body.page_context } });
+        const id = 'answer' + count, callId = 'call' + count;
+        const output = { generated_exercise: {
+          id: 'practice' + count, title: '流式练习 ' + count, mode: 'tapping', description: '',
+          exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [
+            { elements: [{ kind: 'note', noteValue: 'whole' }] },
+            { elements: [{ kind: 'note', noteValue: 'half' }, { kind: 'note', noteValue: 'half' }] },
+          ] },
+        } };
+        const saved = { id, role: 'assistant', parts: [{ type: 'step-start' },
+          { type: 'text', text: '准备这道练习。', state: 'done' },
+          { type: 'tool-propose_rhythm_exercise', toolCallId: callId, state: 'output-available', input: {}, output },
+          { type: 'step-start' }] };
+        messages.push(saved);
+        emit({ type: 'start', messageId: id }); emit({ type: 'start-step' });
+        emit({ type: 'text-start', id: 'intro' });
+        emit({ type: 'text-delta', id: 'intro', delta: '准备这道练习。' });
+        emit({ type: 'text-end', id: 'intro' });
+        emit({ type: 'tool-input-available', toolCallId: callId, toolName: 'propose_rhythm_exercise', input: {} });
+        emit({ type: 'tool-output-available', toolCallId: callId, output });
+        emit({ type: 'finish-step' }); emit({ type: 'start-step' });
+        emit({ type: 'text-start', id: 'advice' });
+        const advice = '**保持均匀**，先慢速练习。';
+        window.streamMock.text = () => emit({ type: 'text-delta', id: 'advice', delta: advice });
         window.streamMock.finish = (fail = false) => {
           running = false; status = fail ? 'failed' : 'completed';
-          if (fail) emit({ type: 'run_failed', message: '模拟后续回复失败' });
+          if (fail) emit({ type: 'error', errorText: '模拟后续回复失败' });
           else {
-            append({ type: 'assistant', text: '**保持均匀**，先慢速练习。' });
-            emit({ type: 'message_completed', text: '**保持均匀**，先慢速练习。' });
-            emit({ type: 'run_completed' });
+            saved.parts.push({ type: 'text', text: advice, state: 'done' });
+            emit({ type: 'text-end', id: 'advice' }); emit({ type: 'finish-step' });
+            emit({ type: 'finish' });
           }
           controller.close();
         };

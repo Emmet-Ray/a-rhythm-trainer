@@ -19,17 +19,16 @@ async (page) => {
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  const stamp = '2026-10-04T08:00:00Z';
   const exercise = { id: 'layout-exercise', title: '八分音符入门', mode: 'tapping', description: '测试练习',
     exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [1, 2].map(() => ({
       elements: Array.from({ length: 8 }, () => ({ kind: 'note', noteValue: 'eighth' })),
     })) } };
   let created = 0;
   const submissions = [];
-  let entries = [];
+  let messages = [];
   let releaseResponse;
   let deferResponse = false;
-  const session = () => ({ id: 'layout-session', entries, is_running: false, last_run_status: entries.length ? 'completed' : null });
+  const session = () => ({ id: 'layout-session', messages, is_running: false, last_run_status: messages.length ? 'completed' : null });
   await page.route('**/api/auth/me', route => route.fulfill({ json: { auth_enabled: false } }));
   await page.route('**/api/assistant/status', route => route.fulfill({ json: { status: 'ready', message: '' } }));
   await page.route('**/api/assistant/sessions', route => { created++; return route.fulfill({ json: session() }); });
@@ -38,11 +37,23 @@ async (page) => {
     const body = route.request().postDataJSON();
     submissions.push(body);
     if (deferResponse) await new Promise(resolve => { releaseResponse = resolve; });
-    entries = [...entries, { type: 'user', text: body.text, page_context: body.page_context, created_at: stamp },
-      ...(entries.length ? [] : [{ type: 'tool_result', tool_call_id: 'layout-call', tool_name: 'propose_rhythm_exercise',
-        content: '练习已创建', details: { generated_exercise: exercise }, is_error: false, created_at: stamp }]),
-      { type: 'assistant', text: '先慢速跟着稳定的拍点练习。', created_at: stamp }];
-    await route.fulfill({ contentType: 'text/event-stream', body: 'data: {"type":"message_completed","text":"先慢速跟着稳定的拍点练习。"}\n\ndata: {"type":"run_completed"}\n\n' });
+    const exerciseResult = messages.length ? null : exercise;
+    messages.push({ id: body.message_id, role: 'user', parts: [{ type: 'text', text: body.text }],
+      metadata: { created_at: new Date().toISOString(), page_context: body.page_context } });
+    const id = `answer-${messages.length}`, callId = `call-${messages.length}`;
+    const parts = [{ type: 'step-start' }];
+    const events = [{ type: 'start', messageId: id }, { type: 'start-step' }];
+    if (exerciseResult) {
+      parts.push({ type: 'tool-propose_rhythm_exercise', toolCallId: callId, state: 'output-available', input: {}, output: { generated_exercise: exerciseResult } });
+      events.push({ type: 'tool-input-available', toolName: 'propose_rhythm_exercise', toolCallId: callId, input: {} },
+        { type: 'tool-output-available', toolCallId: callId, output: { generated_exercise: exerciseResult } });
+    }
+    parts.push({ type: 'text', text: '先慢速跟着稳定的拍点练习。', state: 'done' });
+    messages.push({ id, role: 'assistant', parts });
+    events.push({ type: 'text-start', id: 't1' }, { type: 'text-delta', id: 't1', delta: '先慢速跟着稳定的拍点练习。' },
+      { type: 'text-end', id: 't1' }, { type: 'finish-step' }, { type: 'finish' });
+    return route.fulfill({ contentType: 'text/event-stream',
+      body: events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n' });
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(origin);
@@ -178,7 +189,7 @@ async (page) => {
   check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '手机首页不能横向溢出');
   // 听写同样在覆盖层完成，关闭与再次打开保留草稿和答案曝光状态。
   await page.setViewportSize({ width: 1440, height: 1000 });
-  entries = []; deferResponse = false;
+  messages = []; deferResponse = false;
   exercise.id = 'layout-dictation'; exercise.mode = 'dictation'; exercise.title = '听写覆盖层测试';
   await page.getByRole('button', { name: '新对话', exact: true }).click();
   await input.fill('给我一道听写题');

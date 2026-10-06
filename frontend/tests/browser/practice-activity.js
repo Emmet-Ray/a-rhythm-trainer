@@ -4,10 +4,10 @@ async (page) => {
   const origin = new URL(page.url()).origin;
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   const errors = []; page.on('pageerror', error => errors.push(error.message));
-  const stamp = new Date().toISOString(), runId = Date.now();
-  let entries = [], rejectNext = false;
+  const runId = Date.now();
+  let messages = [], rejectNext = false;
   const submissions = [];
-  const session = () => ({ id: 'activity-session', entries, is_running: false, last_run_status: entries.length ? 'completed' : null });
+  const session = () => ({ id: 'activity-session', messages, is_running: false, last_run_status: messages.length ? 'completed' : null });
   await page.route('**/api/auth/me', route => route.fulfill({ json: { auth_enabled: false } }));
   await page.route('**/api/assistant/status', route => route.fulfill({ json: { status: 'ready', message: '' } }));
   await page.route('**/api/assistant/sessions', route => route.fulfill({ json: session() }));
@@ -16,11 +16,23 @@ async (page) => {
     const body = route.request().postDataJSON(); submissions.push(body);
     if (rejectNext) { rejectNext = false; return route.fulfill({ status: 503, json: { detail: '模拟未接收' } }); }
     const mode = body.text.includes('听写') ? 'dictation' : 'tapping';
-    entries.push({ type: 'user', text: body.text, page_context: body.page_context, created_at: stamp });
-    if (body.text.startsWith('生成')) entries.push({ type: 'tool_result', tool_call_id: `call-${submissions.length}`, tool_name: 'propose_rhythm_exercise', content: '练习已创建', is_error: false, created_at: stamp,
-      details: { generated_exercise: { id: `${runId}-${mode}`, title: mode === 'dictation' ? '活动听写 B' : '活动击拍 B', mode, description: '测试练习', exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [1, 2].map(() => ({ elements: [{ kind: 'note', noteValue: 'whole' }] })) } } } });
-    entries.push({ type: 'assistant', text: '模拟分析回答', created_at: stamp });
-    return route.fulfill({ contentType: 'text/event-stream', body: 'data: {"type":"message_completed","text":"模拟分析回答"}\n\ndata: {"type":"run_completed"}\n\n' });
+    const exerciseResult = body.text.startsWith('生成') ? { id: `${runId}-${mode}`, title: mode === 'dictation' ? '活动听写 B' : '活动击拍 B', mode, description: '测试练习', exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [1, 2].map(() => ({ elements: [{ kind: 'note', noteValue: 'whole' }] })) } } : null;
+    messages.push({ id: body.message_id, role: 'user', parts: [{ type: 'text', text: body.text }],
+      metadata: { created_at: new Date().toISOString(), page_context: body.page_context } });
+    const id = `answer-${messages.length}`, callId = `call-${messages.length}`;
+    const parts = [{ type: 'step-start' }];
+    const events = [{ type: 'start', messageId: id }, { type: 'start-step' }];
+    if (exerciseResult) {
+      parts.push({ type: 'tool-propose_rhythm_exercise', toolCallId: callId, state: 'output-available', input: {}, output: { generated_exercise: exerciseResult } });
+      events.push({ type: 'tool-input-available', toolName: 'propose_rhythm_exercise', toolCallId: callId, input: {} },
+        { type: 'tool-output-available', toolCallId: callId, output: { generated_exercise: exerciseResult } });
+    }
+    parts.push({ type: 'text', text: '模拟分析回答', state: 'done' });
+    messages.push({ id, role: 'assistant', parts });
+    events.push({ type: 'text-start', id: 't1' }, { type: 'text-delta', id: 't1', delta: '模拟分析回答' },
+      { type: 'text-end', id: 't1' }, { type: 'finish-step' }, { type: 'finish' });
+    return route.fulfill({ contentType: 'text/event-stream',
+      body: events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n' });
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(`${origin}/preset/basic-values-01`);
