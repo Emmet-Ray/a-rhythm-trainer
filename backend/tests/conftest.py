@@ -20,3 +20,8 @@ def migrated_db(tmp_path, monkeypatch, migration_config):
     engine = create_database_engine()
     yield engine
     engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def isolated_assistant_sessions(tmp_path, monkeypatch):
+    monkeypatch.setenv("AI_SESSIONS_DIR", str(tmp_path / "assistant-sessions"))

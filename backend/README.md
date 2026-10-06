@@ -1,8 +1,8 @@
 # 后端
 
-## 新版 AI 助手：后端内存会话与流式问答
+## 新版 AI 助手：JSONL 会话持久化与流式问答
 
-当前实现 DeepSeek Responses API 的多轮问答与工具循环，会话历史保存在后端内存；前端可携带页面快照，模型可调用工具生成节奏练习。前端已支持候选谱面卡片，并可由用户应用到当前自定义练习草稿。
+当前实现 DeepSeek Responses API 的多轮问答与工具循环，会话历史按会话保存在后端 JSONL 文件中；前端可携带页面快照，模型可调用工具生成节奏练习。前端已支持候选谱面卡片，并可由用户应用到当前自定义练习草稿。
 `api/assistant.py` 负责 HTTP 边界，`assistant/sessions.py` 持有服务端历史、运行互斥与取消后的结果。
 模型请求、工具循环和流解析由 Pydantic AI 负责，`VercelAIAdapter` 输出 AI SDK UI 消息流。
 `assistant/context.py` 投影页面与练习活动上下文；`assistant/model.py` 负责部署配置、完整性检查和错误说明。
@@ -27,10 +27,10 @@ uv run --locked --env-file .env uvicorn main:app --reload --host 127.0.0.1 --por
 
 ```sh
 # 先创建会话，从返回 JSON 中取得 id
-curl -X POST http://127.0.0.1:8000/api/assistant/sessions
+curl -c /tmp/rhythm-cookies -X POST http://127.0.0.1:8000/api/assistant/sessions
 
 # 将 SESSION_ID 替换为刚返回的 id；后续输入继续使用同一 id
-curl -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
+curl -b /tmp/rhythm-cookies -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
   -H 'Content-Type: application/json' \
   -d '{"message_id":"question-1","text":"请解释四分音符和八分音符的时值关系。"}'
 ```
@@ -40,12 +40,19 @@ curl -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
 | 接口 | 用途 |
 | --- | --- |
 | `POST /api/assistant/sessions` | 创建会话，返回 201 和 `{id, messages, is_running, last_run_status}` |
+| `GET /api/assistant/sessions` | 分页查询当前身份的历史对话 |
+| `DELETE /api/assistant/sessions/{id}` | 删除对话；正在生成时返回 409 |
+| `PUT /api/assistant/sessions/{id}/cards/{exercise_id}` | 保存卡片 BPM 与已查看答案状态；已查看不可撤回 |
 | `GET /api/assistant/sessions/{id}` | 获取会话记录（含每次用户输入的快照）与运行状态，不包含正在生成的片段 |
 | `POST /api/assistant/sessions/{id}/messages` | 提交 `{message_id, text, page_context?}`，后端补齐历史，返回 SSE |
 
 同一会话正在运行时，新提交返回 409 且不追加消息；不同会话可以独立运行。
-未知 ID 返回 404。内存存储属于应用生命周期，仅适用于单 worker；重启后旧 ID 失效。
-当前未实现持久化、删除、自动过期或订阅者机制。登录会话与这里的聊天会话是两种独立对象。
+未知或不属于当前身份的 ID 返回 404。匿名使用 HttpOnly Cookie 识别归属，登录后按账号隔离；不自动迁移匿名对话。清除 Cookie 后无法通过原匿名身份访问历史。
+支持历史列表、恢复和删除；尚无自动过期或订阅者机制。登录会话与聊天会话是两种独立对象。
+
+会话文件默认位于 `backend/data/assistant-sessions/<owner>/<session-id>.jsonl`（从 backend 启动），可通过 `AI_SESSIONS_DIR` 指定。Docker Compose 已接入现有持久卷。只支持单 worker，同一目录的第二个进程会拒绝启动。备份整个目录即可；文件包含对话、模型工具记录和提交的页面／练习活动上下文，应按私人数据保管。
+
+每个文件首行为版本与归属信息，随后追加用户输入、轮次检查点和卡片状态；不逐 token 写盘。恢复时将未结束轮次标记为中断，不自动请求模型。未写完的尾行会截断，完整记录损坏则保留文件并报错。SDK 原生历史也会保存，升级 SDK 时需验证旧文件兼容性。
 旧的单次 `/api/assistant/chat` 路由已由会话接口替代。
 
 每次提交携带新的 `message_id`，重复 ID 返回 409。前端只提交新问题和快照，不上传聊天历史；
@@ -112,7 +119,7 @@ curl -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
 
 GET 和实时流使用相同消息 ID 与工具调用 ID，前端同步后能保留卡片的小节、速度等操作状态。
 时间由后端在接受本轮时生成，查询不会重新生成；只作为界面元数据，不作为模型输入或记录排序依据。
-页面快照与会话暂存在后端内存，尚未持久化。
+页面快照与会话一同持久化。查询还返回标题、创建／更新时间和 `card_states`。
 
 流使用 [AI SDK UI Message Stream](https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol)，
 由 Pydantic AI 的 Vercel UI adapter 编码，响应带 `x-vercel-ai-ui-message-stream: v1`。

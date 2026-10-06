@@ -1,17 +1,88 @@
 import { Chat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { AssistantApiError, assistantFetch, createSession, getSession, type AssistantMessage, type ChatSession } from "../api/assistant";
+import { AssistantApiError, assistantFetch, createSession, getSession, type AssistantMessage, type ChatSession, saveCardState, type CardState } from "../api/assistant";
 import type { PageContext } from "./assistantContext";
 
-type State = { session: ChatSession | null;
-  busy: boolean; needsSync: boolean; expired: boolean; error: string; notice: string };
-const initial = (): State => ({ session: null, busy: false,
+type State = { initialized: boolean; session: ChatSession | null;
+  restoring: boolean; busy: boolean; needsSync: boolean; expired: boolean; error: string; notice: string };
+const initial = (): State => ({ initialized: true, session: null, restoring: false, busy: false,
   needsSync: false, expired: false, error: "", notice: "" });
 type Operation = { stream: AbortController; lifetime: AbortController };
 
 /** SDK 管理消息与流；这里仅协调服务端会话、运行互斥及中断后的核对。 */
 export class AssistantConversation {
   private state = initial();
+  private storageKey: string | null;
+  private cardWrites = new Map<string, Promise<void>>();
+  constructor(identity?: string) {
+    this.storageKey = identity ? `rhythm:assistant:v1:${identity}` : null;
+    this.state.initialized = !identity;
+  }
+  private remember(id: string | null) {
+    if (!this.storageKey) return;
+    try { if (id) localStorage.setItem(this.storageKey, id); else localStorage.removeItem(this.storageKey); } catch { /* 后端历史仍可手动打开。 */ }
+  }
+  async restore() {
+    if (this.operation || this.state.session) return;
+    let id: string | null = null;
+    try { if (this.storageKey) id = localStorage.getItem(this.storageKey); } catch { /* 浏览器存储不可用。 */ }
+    if (id) await this.open(id);
+    else this.update({ initialized: true });
+  }
+  async open(id: string): Promise<boolean> {
+    if (this.state.restoring) return false;
+    const interrupted = !!this.operation || this.state.needsSync;
+    if (this.operation) {
+      // 切换只停止旧请求；保留其可见内容，目标读取失败时仍可同步原会话。
+      // 换一个 Chat 实例隔离旧流的迟到片段，避免写入目标对话。
+      const messages = this.chat.messages;
+      this.operation.lifetime.abort();
+      this.operation.stream.abort();
+      void this.chat.stop();
+      this.chat = this.createChat();
+      this.chat.messages = messages;
+    }
+    const op = { stream: new AbortController(), lifetime: new AbortController() };
+    this.operation = op;
+    this.update({ busy: true, restoring: true, error: "", notice: "" });
+    try {
+      const session = await getSession(id, op.lifetime.signal);
+      if (!this.current(op)) return false;
+      this.chat = this.createChat();
+      this.chat.messages = session.messages;
+      this.remember(id);
+      this.update({ session, expired: false, needsSync: session.is_running,
+        notice: session.is_running ? "这段对话仍在生成，正在同步已保存的内容。"
+          : session.last_run_status === "cancelled" ? "上次回答已中断，已恢复保存的内容。"
+          : session.last_run_status === "failed" ? "上次生成未完成，已恢复保存的内容。" : "" });
+      return true;
+    } catch (error) {
+      if (this.current(op)) {
+        // 暂时性网络失败不能遗忘会话，防止下一次刷新悄悄开始新对话。
+        const missing = error instanceof AssistantApiError && error.status === 404;
+        if (missing) this.remember(null);
+        this.update({ error: error instanceof Error ? error.message : "恢复对话失败。", expired: !this.state.session, needsSync: interrupted && !!this.state.session });
+      }
+      return false;
+    } finally {
+      if (this.current(op)) { this.operation = null; this.update({ initialized: true, busy: false, restoring: false }); }
+    }
+  }
+  saveCard(exerciseId: string, value: CardState) {
+    const sessionId = this.state.session?.id;
+    if (!sessionId) return;
+    const key = `${sessionId}:${exerciseId}`;
+    const task = (this.cardWrites.get(key) ?? Promise.resolve()).then(async () => {
+      try {
+        const saved = await saveCardState(sessionId, exerciseId, value, new AbortController().signal);
+        if (this.state.session?.id === sessionId) this.update({ session: { ...this.state.session,
+          card_states: { ...this.state.session.card_states, [exerciseId]: saved } } });
+      } catch {
+        if (this.state.session?.id === sessionId) this.update({ error: "练习卡片状态未能保存，请重新操作后再刷新。" });
+      }
+    }).finally(() => { if (this.cardWrites.get(key) === task) this.cardWrites.delete(key); });
+    this.cardWrites.set(key, task);
+  }
   private operation: Operation | null = null;
   private listeners = new Set<() => void>();
   chat = this.createChat();
@@ -70,6 +141,7 @@ export class AssistantConversation {
       if (!this.state.session) {
         const session = await createSession(op.lifetime.signal);
         if (!this.current(op)) return false;
+        this.remember(session.id);
         this.update({ session });
       }
       op.stream.signal.throwIfAborted();
@@ -115,11 +187,12 @@ export class AssistantConversation {
       if (this.current(op)) { this.operation = null; this.update({ busy: false }); }
     }
   }
-  reset() {
+  reset(forget = true) {
+    if (forget) this.remember(null);
     this.operation?.lifetime.abort(); this.operation?.stream.abort(); this.operation = null;
     void this.chat.stop();
     this.chat = this.createChat();
     this.state = initial(); this.listeners.forEach(listener => listener());
   }
-  dispose() { this.reset(); }
+  dispose() { this.reset(false); }
 }

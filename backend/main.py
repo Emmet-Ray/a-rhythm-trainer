@@ -1,5 +1,9 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
+import os
+from fastapi.responses import JSONResponse
+from assistant.journal import SessionStorageError
 
 from fastapi import FastAPI
 
@@ -19,7 +23,7 @@ def create_app(*, resources: AppResources | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         engine = None
-        app.state.assistant_sessions = SessionStore()
+        app.state.assistant_sessions = SessionStore(Path(os.getenv("AI_SESSIONS_DIR", "data/assistant-sessions")))
         try:
             active_resources = resources
             if active_resources is None:
@@ -32,6 +36,7 @@ def create_app(*, resources: AppResources | None = None) -> FastAPI:
             app.state.auth_enabled = active_resources is not None
             yield
         finally:
+            app.state.assistant_sessions.close()
             app.state.assistant_sessions = None
             app.state.auth_enabled = None
             app.state.resources = None
@@ -39,6 +44,10 @@ def create_app(*, resources: AppResources | None = None) -> FastAPI:
                 engine.dispose()
 
     app = FastAPI(title="Rhythm Trainer API", lifespan=lifespan)
+    @app.exception_handler(SessionStorageError)
+    async def storage_error(_request, error):
+        return JSONResponse({"detail": str(error)}, status_code=503, headers={"Cache-Control": "no-store"})
+
     app.include_router(auth_router)
     app.include_router(assistant_router)
     app.include_router(custom_exercise_router)

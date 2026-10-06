@@ -108,7 +108,7 @@ function AppShell() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
-        <AssistantPanel key={identity} home={pathname === "/"} />
+        <AssistantPanel key={identity} identity={identity} home={pathname === "/"} />
       </main>
     </div></RecordAccessContext.Provider>
     </AssistantContextScope.Provider>

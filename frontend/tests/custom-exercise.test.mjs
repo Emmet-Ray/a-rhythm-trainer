@@ -166,11 +166,12 @@ test("首页检查配置期间隐藏聊天控件，传统入口仅保留在导�
   assert.doesNotMatch(html, /home-rhythm-mark|home-intro|<h1>节奏训练<\/h1>/);
   assert.match(html, /<svg[^>]*class="brand-mark"[^>]*aria-hidden="true"[^>]*focusable="false"/);
   assert.match(withoutSvg(html), /class="brand"[^>]*>节奏训练/);
-  assert.match(html, /正在检查助手配置/);
+  assert.match(html, /aria-label="正在加载对话"/);
+  assert.doesNotMatch(html, /正在检查助手配置|今天想练什么节奏/);
   assert.doesNotMatch(html, /生成击拍练习/);
   assert.doesNotMatch(html, /生成节奏听写/);
   for (const path of ["preset", "random", "custom"]) assert.ok(html.includes(`href="/${path}"`));
-  assert.match(withoutSvg(html), /aria-current="page"[^>]*>首页/);
+  assert.match(withoutSvg(html), /aria-current="page"[^>]*><span>助手/);
   assert.doesNotMatch(html, /topic-section|击拍训练区|节奏听写区/);
 });
 
@@ -203,7 +204,7 @@ test("三个来源页面不再展示来源切换栏，保留首页返回入口�
   for (const path of ["/preset", "/random", "/custom"]) {
     const html = await renderApp(path);
     assert.doesNotMatch(html, /aria-label="内容来源"/);
-    assert.match(withoutSvg(html), /href="\/"[^>]*>首页/);
+    assert.match(withoutSvg(html), /href="\/"[^>]*><span>节奏助手/);
     assert.match(html, /击拍练习/);
     assert.match(html, /节奏听写/);
     if (path === "/preset") {
@@ -214,7 +215,7 @@ test("三个来源页面不再展示来源切换栏，保留首页返回入口�
       assert.doesNotMatch(html, /几何游戏|未开放|href="\/preset\/eighths-01"/);
     }
   }
-  assert.match(withoutSvg(await renderApp("/login")), /href="\/"[^>]*>首页/);
+  assert.match(withoutSvg(await renderApp("/login")), /href="\/"[^>]*><span>节奏助手/);
 });
 
 test("侧栏直接展示所有栏目，移动菜单默认关闭，题目页标识所属栏目", async () => {
@@ -224,8 +225,8 @@ test("侧栏直接展示所有栏目，移动菜单默认关闭，题目页标�
     const html = await renderApp(path);
     const sidebar = html.match(/<aside class="site-sidebar[\s\S]*?<\/aside>/)?.[0];
     assert.ok(sidebar);
-    assert.match(sidebar, /data-collapsed="false"/);
-    assert.match(sidebar, /aria-label="收起导航" aria-expanded="true"/);
+    assert.match(sidebar, /data-collapsed="true"/);
+    assert.doesNotMatch(sidebar, /aria-label="收起导航"/);
     assert.doesNotMatch(html, /practice-navigation|<dialog[^>]*\bopen/);
     assert.match(html, /aria-label="打开导航菜单" aria-expanded="false" aria-controls="site-menu"/);
     for (const target of ["/", "/preset", "/random", "/custom", "/settings"]) assert.ok(sidebar.includes(`href="${target}"`));
@@ -233,34 +234,21 @@ test("侧栏直接展示所有栏目，移动菜单默认关闭，题目页标�
   }
 });
 
-test("折叠导航恢复偏好，保留入口名称，移动抽屉仍显示文字", () => {
-  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
-  try {
-    Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
-      getItem: key => key === "rhythm-trainer.sidebar-collapsed" ? "true" : null,
-    } });
-    const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ["/random/tapping"] }, createElement(SiteNavigation)));
-    const sidebar = html.match(/<aside[^]*?<\/aside>/)[0];
-    assert.match(sidebar, /data-collapsed="true"/);
-    assert.match(sidebar, /aria-label="展开导航" aria-expanded="false"/);
-    for (const name of ["首页", "预设练习", "随机练习", "自定义练习", "设置"]) {
-      assert.ok(sidebar.includes(`aria-label="${name}"`));
-    }
-    assert.match(sidebar, /aria-current="location"[^>]*title="随机练习"/);
-    const drawer = withoutSvg(html.match(/<dialog[^]*?<\/dialog>/)[0]);
-    assert.match(drawer, />随机练习<\/a>/);
-    Object.defineProperty(globalThis, "localStorage", { configurable: true, get() { throw new Error("blocked"); } });
-    const fallback = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(SiteNavigation)));
-    assert.match(fallback, /data-collapsed="false"/);
-  } finally {
-    if (descriptor) Object.defineProperty(globalThis, "localStorage", descriptor);
-    else delete globalThis.localStorage;
+test("窄导航显示简短文字及完整名称，移动抽屉显示完整文字", () => {
+  const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ["/random/tapping"] }, createElement(SiteNavigation)));
+  const sidebar = html.match(/<aside[^]*?<\/aside>/)[0];
+  for (const name of ["节奏助手", "预设练习", "随机练习", "自定义练习", "设置"]) {
+    assert.ok(sidebar.includes(`aria-label="${name}"`));
   }
+  assert.match(sidebar, /<span>随机<\/span>/);
+  assert.match(sidebar, /aria-current="location"[^>]*title="随机练习"/);
+  const drawer = withoutSvg(html.match(/<dialog[^]*?<\/dialog>/)[0]);
+  assert.match(drawer, /<span>随机练习<\/span>/);
 });
 
 test("设计系统覆盖公共页头、首页、预设列表与击拍页，其他主体不受影响", async () => {
   const home = await renderApp("/");
-  assert.match(home, /正在检查助手配置/);
+  assert.match(home, /aria-label="正在加载对话"/);
   assert.doesNotMatch(home, /aria-label="向助手提问"/);
   assert.doesNotMatch(home, /aria-label="练习入口"/);
   assert.equal((home.match(/id="assistant-input"/g) ?? []).length, 0);

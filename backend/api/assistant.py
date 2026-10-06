@@ -2,17 +2,21 @@
 
 from collections.abc import AsyncIterator
 import os
+import hashlib
+import secrets
 from typing import Annotated
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from pydantic_ai.models import Model
 from assistant.model import ModelSettings, create_model
-from assistant.sessions import ChatSession, SessionBusy, SessionStore
+from assistant.sessions import ChatSession, SessionBusy, SessionStore, CardState
 from assistant.context import PageContext
+from api.dependencies import get_session_status, CurrentUser
+from starlette.concurrency import run_in_threadpool
 
 
 def require_assistant_origin(request: Request) -> None:
@@ -80,21 +84,68 @@ def get_store(request: Request) -> SessionStore:
     return request.app.state.assistant_sessions
 
 
-def get_session(session_id: str, store: Annotated[SessionStore, Depends(get_store)]) -> ChatSession:
+def get_owner(request: Request, response: Response) -> str:
+    # 登录会话由既有认证模块验证；不接受请求体里的用户或归属 ID。
+    resources = getattr(request.app.state, "resources", None)
+    if resources and request.cookies.get(resources.settings.cookie_name):
+        user = get_session_status(request)
+        if isinstance(user, CurrentUser):
+            return hashlib.sha256(f"user:{user.id}".encode()).hexdigest()
+    token = request.cookies.get("rhythm_assistant_owner", "")
+    if len(token) != 64 or any(c not in "0123456789abcdef" for c in token):
+        token = secrets.token_hex(32)
+        response.set_cookie("rhythm_assistant_owner", token, max_age=365 * 86400,
+                            httponly=True, samesite="strict", secure=request.url.scheme == "https", path="/api/assistant")
+    return hashlib.sha256(f"anonymous:{token}".encode()).hexdigest()
+
+
+Owner = Annotated[str, Depends(get_owner)]
+Store = Annotated[SessionStore, Depends(get_store)]
+
+
+async def get_session(session_id: str, store: Store, owner: Owner) -> ChatSession:
     try:
-        return store.get(session_id)
+        return await run_in_threadpool(store.get, session_id, owner)
     except KeyError:
-        raise HTTPException(404, "会话不存在或已因后端重启失效，请创建新会话。") from None
+        raise HTTPException(404, "会话不存在或不属于当前身份。") from None
 
 
 @router.post("/sessions", status_code=201)
-async def create_session(store: Annotated[SessionStore, Depends(get_store)]):
-    return JSONResponse(store.create().snapshot(), status_code=201, headers={"Cache-Control": "no-store"})
+def create_session(store: Store, owner: Owner, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    return store.create(owner).snapshot()
+
+
+@router.get("/sessions")
+def list_sessions(store: Store, owner: Owner, response: Response,
+                  offset: int = Query(default=0, ge=0), limit: int = Query(default=30, ge=1, le=100)):
+    response.headers["Cache-Control"] = "no-store"
+    return store.list(owner, offset=offset, limit=limit)
 
 
 @router.get("/sessions/{session_id}")
 async def read_session(session: Annotated[ChatSession, Depends(get_session)]):
     return JSONResponse(session.snapshot(), headers={"Cache-Control": "no-store"})
+
+
+@router.delete("/sessions/{session_id}", status_code=204)
+def delete_session(session_id: str, store: Store, owner: Owner):
+    try:
+        store.delete(session_id, owner)
+    except KeyError:
+        raise HTTPException(404, "会话不存在。") from None
+    except SessionBusy as error:
+        raise HTTPException(409, str(error)) from None
+    return Response(status_code=204, headers={"Cache-Control": "no-store"})
+
+
+@router.put("/sessions/{session_id}/cards/{exercise_id}")
+async def save_card(exercise_id: str, state: CardState, session: Annotated[ChatSession, Depends(get_session)]):
+    try:
+        result = await run_in_threadpool(session.update_card, exercise_id, state)
+    except KeyError:
+        raise HTTPException(404, "当前对话中没有这份练习。") from None
+    return JSONResponse(result, headers={"Cache-Control": "no-store"})
 
 
 async def get_run(

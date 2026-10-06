@@ -1,17 +1,17 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { VisitsContext } from "./usePageNavigation";
 import { Link, useLocation } from "react-router";
-import { House, FileText, Shuffle, PencilLine, History, Settings, Info, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { MessageCircle, FileText, Shuffle, PencilLine, History, Settings, Info, Menu, X } from "lucide-react";
 import BrandMark from "../brand/BrandMark";
 
 const destinations = [
-  { path: "/", label: "首页", icon: House },
-  { path: "/preset", label: "预设练习", icon: FileText },
-  { path: "/random", label: "随机练习", icon: Shuffle },
-  { path: "/custom", label: "自定义练习", icon: PencilLine },
-  { path: "/records", label: "练习记录", icon: History },
-  { path: "/settings", label: "设置", icon: Settings },
-  { path: "/about", label: "关于", icon: Info },
+  { path: "/", shortLabel: "助手", label: "节奏助手", icon: MessageCircle },
+  { path: "/preset", shortLabel: "预设", label: "预设练习", icon: FileText },
+  { path: "/random", shortLabel: "随机", label: "随机练习", icon: Shuffle },
+  { path: "/custom", shortLabel: "自定义", label: "自定义练习", icon: PencilLine },
+  { path: "/records", shortLabel: "记录", label: "练习记录", icon: History },
+  { path: "/settings", shortLabel: "设置", label: "设置", icon: Settings },
+  { path: "/about", shortLabel: "关于", label: "关于", icon: Info },
 ];
 
 function NavigationLinks({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
@@ -19,11 +19,11 @@ function NavigationLinks({ onNavigate, compact = false }: { onNavigate?: () => v
   const visits = useContext(VisitsContext);
   const settingsDestination = pathname === "/settings" ? pathname + search : visits?.destination("/settings") ?? "/settings";
   return <nav className="site-navigation" aria-label="主导航">
-    {destinations.map(({ path, label, icon: Icon }) => <Link key={path} to={path === "/settings" ? settingsDestination : path}
+    {destinations.map(({ path, label, shortLabel, icon: Icon }) => <Link key={path} to={path === "/settings" ? settingsDestination : path}
       className={path === "/settings" ? "site-settings-link" : undefined}
       aria-current={pathname === path ? "page" : path !== "/" && pathname.startsWith(`${path}/`) ? "location" : undefined}
       title={compact ? label : undefined} aria-label={compact ? label : undefined}
-      onClick={onNavigate}><Icon className="ui-icon" aria-hidden="true" focusable="false" />{!compact && label}</Link>)}
+      onClick={onNavigate}><Icon className="ui-icon" aria-hidden="true" focusable="false" /><span>{compact ? shortLabel : label}</span></Link>)}
   </nav>;
 }
 
@@ -31,22 +31,10 @@ function Brand({ compact = false }: { compact?: boolean }) {
   return <Link to="/" className="brand" aria-label={compact ? "节奏训练首页" : undefined} title={compact ? "节奏训练首页" : undefined}><BrandMark className="brand-mark" />{!compact && "节奏训练"}</Link>;
 }
 
-const collapsedStorageKey = "rhythm-trainer.sidebar-collapsed";
-
 /** 桌面固定导航与移动端模态菜单共用入口；关闭抽屉后交还浏览器焦点。 */
 export default function SiteNavigation() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => {
-    try { return localStorage.getItem(collapsedStorageKey) === "true"; }
-    catch { return false; }
-  });
-  const toggleSidebar = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    // 存储不可用时仍可在本次会话中折叠，不影响导航。
-    try { localStorage.setItem(collapsedStorageKey, String(next)); } catch { /* Session-only preference. */ }
-  };
   const location = useLocation();
   useEffect(() => {
     dialog.current?.close();
@@ -64,16 +52,11 @@ export default function SiteNavigation() {
     return () => { document.body.style.overflow = previous; };
   }, [open]);
   return <>
-    <aside className="site-sidebar design-system" data-collapsed={collapsed}>
+    <aside className="site-sidebar design-system" data-collapsed="true">
       <div className="site-sidebar-heading">
-      <Brand compact={collapsed} />
-      <button type="button" className="site-sidebar-toggle" onClick={toggleSidebar}
-        aria-label={collapsed ? "展开导航" : "收起导航"} aria-expanded={!collapsed}
-        title={collapsed ? "展开导航" : "收起导航"}>
-        {collapsed ? <ChevronRight className="ui-icon" aria-hidden="true" /> : <ChevronLeft className="ui-icon" aria-hidden="true" />}
-      </button>
+      <Brand compact />
       </div>
-      <NavigationLinks compact={collapsed} />
+      <NavigationLinks compact />
     </aside>
     <header className="site-mobile-header design-system">
       <Brand />

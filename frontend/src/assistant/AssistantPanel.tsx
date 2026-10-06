@@ -5,6 +5,7 @@ import { AssistantMarkdown } from "./AssistantMarkdown";
 import { PracticeActivityContext } from "./practiceActivity";
 import {
   useContext,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -13,6 +14,8 @@ import {
 } from "react";
 import {
   CircleAlert,
+  History,
+  PanelLeftOpen,
   MessageCircle,
   Plus,
   X,
@@ -29,9 +32,11 @@ import { AssistantConversation } from "./conversation";
 import { useAssistantContext } from "./assistantContext";
 import { useAssistantPresentation } from "./useAssistantPresentation";
 import { useAssistantAvailability } from "./useAssistantAvailability";
+import { ConversationHistory } from "./ConversationHistory";
+import type { CardState } from "../api/assistant";
 import HomePage from "../pages/HomePage";
 
-export function AssistantPanel({ home = false }: { home?: boolean }) {
+export function AssistantPanel({ home = false, identity = "guest" }: { home?: boolean; identity?: string }) {
   const activity = useContext(PracticeActivityContext);
   const activityLabel = useSyncExternalStore(activity?.subscribe ?? (() => () => {}), activity?.getLabel ?? (() => ""), () => "");
   const availability = useAssistantAvailability();
@@ -44,7 +49,28 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
     close: closePanel,
   } = useAssistantPresentation(home, availability.ready);
   const [playbackGroup] = useState(() => new PlaybackGroup());
-  const [conversation] = useState(() => new AssistantConversation());
+  const [conversation] = useState(() => new AssistantConversation(identity));
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const historyAnchor = useRef<HTMLDivElement>(null);
+  const historyButton = useRef<HTMLButtonElement>(null);
+  const closeHistory = useCallback(() => {
+    setHistoryOpen(false);
+    historyButton.current?.focus({ preventScroll: true });
+  }, []);
+  useEffect(() => {
+    if (!historyOpen) return;
+    const dismiss = (event: PointerEvent) => {
+      if (event.target instanceof Node && !historyAnchor.current?.contains(event.target)) setHistoryOpen(false);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [historyOpen]);
+  const saveCard = useCallback((id: string, value: CardState) => conversation.saveCard(id, value), [conversation]);
+  useEffect(() => {
+    if (availability.ready && identity !== "checking" && identity !== "unavailable") void conversation.restore();
+  }, [availability.ready, conversation, identity]);
   const { messages, status } = useChat({ chat: conversation.chat, throttle: 40 });
   const state = useSyncExternalStore(
     conversation.subscribe,
@@ -58,6 +84,21 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
       if (batch && typeof batch === "object" && !Array.isArray(batch) && typeof batch.batchId === "string") activity?.acknowledge(batch.batchId);
     }
   }, [activity, state.session]);
+  useEffect(() => {
+    if (!state.needsSync || state.busy || state.expired) return;
+    const timer = setTimeout(() => void conversation.sync(), 1500);
+    return () => clearTimeout(timer);
+  }, [conversation, state.needsSync, state.busy, state.expired]);
+  const activitySession = useRef<string | null>(null);
+  useEffect(() => {
+    if (activitySession.current === (state.session?.id ?? null)) return;
+    activitySession.current = state.session?.id ?? null;
+    if (state.session) {
+      activity?.start();
+      const focus = state.session.messages.findLast(message => message.role === "user")?.metadata?.page_context?.state.practice_focus;
+      if (!activity?.getFocus()) activity?.restoreFocus(focus);
+    }
+  }, [activity, state.session]);
   const { readCurrentPageContext, practiceLabel } = useAssistantContext();
   const [practice, setPractice] = useState<GeneratedExercise | null>(null);
   const [draft, setDraft] = useState("");
@@ -66,7 +107,9 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
   const follow = useRef(true);
   const generation = useRef(0);
   const scrollPosition = useRef(0);
-  const started = Boolean(messages.length || state.busy);
+  const initializing = availability.loading || (availability.ready &&
+    (identity === "checking" || (identity !== "unavailable" && !state.initialized)));
+  const started = Boolean(messages.length || state.busy || state.expired || identity === "unavailable");
   const lastMessage = messages.at(-1);
   const waitingForContent = status === "submitted" || (status === "streaming" &&
     (lastMessage?.role !== "assistant" || lastMessage.parts.every(part => part.type === "step-start" || part.type === "reasoning")));
@@ -128,7 +171,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
       observer.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [draft, visible, home, availability.ready]);
+  }, [draft, visible, home, availability.ready, initializing]);
 
   useLayoutEffect(() => {
     const element = thread.current;
@@ -146,7 +189,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
   async function send() {
     const before = conversation.getSnapshot();
     if (
-      !availability.ready ||
+      !availability.ready || initializing || identity === "unavailable" ||
       !draft.trim() ||
       before.busy ||
       before.needsSync ||
@@ -176,14 +219,11 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
       setDraft((current) => current || originalDraft);
   }
   function newConversation() {
-    if (
-      (state.session || draft) &&
-      !window.confirm("开始新对话？当前面板将清空，正在生成的回答会停止。")
-    )
-      return;
     generation.current++;
     playbackGroup.stop();
     conversation.reset();
+    setHistoryOpen(false);
+    setPractice(null);
     activity?.reset();
     setDraft("");
     follow.current = true;
@@ -194,10 +234,38 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
     closePanel();
   }
   const blocked =
-    !availability.ready || state.busy || state.needsSync || state.expired;
+    !availability.ready || initializing || identity === "unavailable" || state.busy || state.needsSync || state.expired;
 
+  const deleteConversation = (id: string) => {
+    if (state.session?.id !== id) return;
+    conversation.reset(); activity?.reset(); setDraft(""); setPractice(null);
+  };
+  const openConversation = async (id: string) => {
+    if (id === state.session?.id) {
+      closeHistory(); setMobileHistoryOpen(false); return true;
+    }
+    if (draft && !window.confirm("打开历史对话将清空当前输入草稿，是否继续？")) return false;
+    generation.current++;
+    const opened = await conversation.open(id);
+    if (opened) {
+      activity?.reset(); activity?.start();
+      activity?.restoreFocus(conversation.getSnapshot().session?.messages.findLast(message => message.role === "user")?.metadata?.page_context?.state.practice_focus);
+      setDraft(""); setPractice(null); follow.current = true;
+      setHistoryOpen(false); setMobileHistoryOpen(false);
+      requestAnimationFrame(() => input.current?.focus());
+    }
+    return opened;
+  };
   return (
-    <div className="assistant-shell" data-layout={home ? "home" : "sidebar"}>
+    <div className="assistant-shell" data-layout={home ? "home" : "sidebar"} data-history-expanded={home && sidebarExpanded && availability.ready && !initializing} data-mobile-history={mobileHistoryOpen}>
+      {home && availability.ready && !initializing && <>
+        {mobileHistoryOpen && <button className="assistant-history-backdrop" aria-label="关闭会话列表" onClick={() => setMobileHistoryOpen(false)} />}
+        <aside className="assistant-session-sidebar" onKeyDown={event => { if (event.key === "Escape") { setMobileHistoryOpen(false); setSidebarExpanded(false); } }}>
+          <ConversationHistory placement="sidebar" currentId={state.session?.id} refreshKey={`${state.session?.id ?? ""}:${state.busy}`}
+            onNew={() => { newConversation(); setMobileHistoryOpen(false); }} onOpen={openConversation} onDeleted={deleteConversation}
+            onClose={() => { setSidebarExpanded(false); setMobileHistoryOpen(false); }} />
+        </aside>
+      </>}
       <button
         ref={launcherRef}
         className="assistant-launcher"
@@ -219,18 +287,21 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
         id="assistant-panel"
         className="assistant-panel"
         hidden={!visible}
-        data-empty={availability.ready && !started}
+        data-empty={availability.ready && !initializing && !started}
         role={modal ? "dialog" : home ? "region" : "complementary"}
         aria-modal={modal ? true : undefined}
+        aria-label={home && (availability.ready || initializing) ? "节奏助手" : undefined}
         aria-labelledby={
-          availability.ready ? "assistant-title" : "assistant-unavailable-title"
+          availability.ready || initializing ? (home ? undefined : "assistant-title") : "assistant-unavailable-title"
         }
         onCancel={(event) => {
           event.preventDefault();
-          close();
+          if (historyOpen) closeHistory(); else close();
         }}
         onKeyDown={(event) => {
-          if (!home && event.key === "Escape") {
+          if (historyOpen && event.key === "Escape") {
+            event.preventDefault(); event.stopPropagation(); closeHistory();
+          } else if (!home && event.key === "Escape") {
             event.preventDefault();
             event.stopPropagation();
             close();
@@ -238,7 +309,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
         }}
       >
         {home && !availability.ready && <title>首页 · 节奏训练</title>}
-        {!availability.ready ? (
+        {!availability.ready && !initializing ? (
           <section
             className="assistant-unavailable"
             role={availability.loading ? "status" : "alert"}
@@ -254,12 +325,23 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
         ) : (
           <>
             <header className="assistant-heading">
-              <h2 id="assistant-title">节奏助手</h2>
-              <div className="assistant-actions">
+              {home && <button type="button" className="assistant-session-toggle" aria-label="展开会话列表" onClick={() => { setSidebarExpanded(true); setMobileHistoryOpen(window.matchMedia("(max-width: 1000px)").matches); }}><PanelLeftOpen size={20} aria-hidden="true" /></button>}
+              {!home && <h2 id="assistant-title">节奏助手</h2>}
+              <div className="assistant-actions" hidden={home}>
+                <div className="assistant-history-anchor" ref={historyAnchor}>
+                <button ref={historyButton} type="button" className="assistant-new" aria-label="历史对话" aria-haspopup="dialog" aria-controls="assistant-history" aria-expanded={historyOpen}
+                  disabled={initializing || state.restoring} onClick={() => { playbackGroup.stop(); setHistoryOpen(value => !value); }}>
+                  <History size={16} aria-hidden="true" />历史对话
+                </button>
+            {!home && historyOpen && <ConversationHistory anchor={historyButton} currentId={state.session?.id}
+              onClose={closeHistory}
+              onDeleted={deleteConversation} onOpen={openConversation} />}
+                </div>
                 <button
                   type="button"
                   className="assistant-new"
                   aria-label="新对话"
+                  disabled={initializing}
                   onClick={newConversation}
                 >
                   <Plus size={16} aria-hidden="true" />
@@ -277,6 +359,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                 )}
               </div>
             </header>
+            {initializing ? <div className="assistant-initializing" role="status" aria-label="正在加载对话"><div className="assistant-loading-placeholder" aria-hidden="true"><span /><span /><span /></div></div> : <>
             <div
               ref={thread}
               className="assistant-messages"
@@ -300,13 +383,14 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                   <p>可以生成练习，也可以聊聊节奏。</p>
                 </div>
               ) : null}
-              {messages.map(message => <Fragment key={message.id}>
+              {messages.map(message => <Fragment key={`${state.session?.id ?? "new"}:${message.id}`}>
                 {message.parts.map((part, index) => {
                   if (isToolUIPart(part)) {
                     if (getToolName(part) !== "propose_rhythm_exercise") return null;
                     if (part.state === "output-available") {
                       const output = part.output as { generated_exercise?: unknown };
                       return <ExerciseProposalResult key={part.toolCallId}
+                        savedState={state.session?.card_states?.[(output?.generated_exercise as GeneratedExercise)?.id]} onStateChange={saveCard}
                         value={output?.generated_exercise} playbackGroup={playbackGroup} onPracticeStart={setPractice} />;
                     }
                     if (part.state === "input-streaming" || part.state === "input-available")
@@ -337,6 +421,8 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
               }}
             >
               {(activityLabel || practiceLabel) && <p className="assistant-notice">{activityLabel || practiceLabel}</p>}
+              {identity === "unavailable" && <p className="assistant-error" role="alert">无法确认当前身份，请刷新后重试。</p>}
+              {state.restoring && <p className="assistant-notice" role="status">正在恢复对话…</p>}
               {state.error ? (
                 <p className="assistant-error" role="alert">
                   {state.error}
@@ -357,6 +443,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                   同步状态
                 </button>
               ) : null}
+              {state.expired && !state.session && <button type="button" disabled={state.busy} onClick={() => void conversation.restore()}>重试恢复</button>}
               {state.expired ? (
                 <button type="button" onClick={newConversation}>
                   开始新对话
@@ -417,6 +504,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                 </div>
               </div>
             </form>
+            </>}
           </>
         )}
       </dialog>

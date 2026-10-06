@@ -26,6 +26,16 @@ export class PracticeActivity {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getLabel = () => this.label;
   start() { this.enabled = true; }
+  /** 恢复讨论对象，不把历史成绩重新当成待发送的新活动。 */
+  restoreFocus(value: unknown) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return;
+    const item = value as Record<string, unknown>;
+    if (!["source", "exerciseId", "title", "mode", "practiceRef"].every(key => typeof item[key] === "string")) return;
+    this.focus = { source: item.source as string, exerciseId: item.exerciseId as string, title: item.title as string,
+      mode: item.mode as string, practiceRef: item.practiceRef as string };
+    this.label = `最近练习：${this.focus.title}`;
+    this.listeners.forEach(listener => listener());
+  }
   reset() {
     this.enabled = false; this.revision = 0; this.acknowledged = 0; this.evictedThrough = 0;
     this.references.clear(); this.attempts.clear(); this.batches.clear(); this.label = ""; this.focus = null;

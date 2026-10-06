@@ -210,3 +210,111 @@ test("流中未收到错误事件时，仍按后端最终状态提示失败", as
   assert.equal(c.getSnapshot().needsSync, false);
   c.dispose();
 });
+
+
+test("刷新恢复服务端消息，恢复失败阻止发送且不遗忘会话", async t => {
+  const values = new Map([["rhythm:assistant:v1:test", "session1"]]);
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
+    getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key),
+  } });
+  t.after(() => { if (previous) Object.defineProperty(globalThis, "localStorage", previous); else delete globalThis.localStorage; });
+  let fail = true;
+  t.mock.method(globalThis, "fetch", async () => { if (fail) throw new Error("offline"); return Response.json(final()); });
+  const conversation = new AssistantConversation("test");
+  await conversation.restore();
+  assert.equal(conversation.getSnapshot().expired, true);
+  assert.equal(await conversation.send("不能另开一轮", null), false);
+  assert.equal(values.get("rhythm:assistant:v1:test"), "session1");
+  fail = false;
+  await conversation.restore();
+  assert.equal(conversation.getSnapshot().expired, false);
+  assert.equal(conversation.chat.messages.at(-1).parts.at(-1).text, "完整回答");
+  conversation.dispose();
+  assert.equal(values.get("rhythm:assistant:v1:test"), "session1");
+  const reopened = new AssistantConversation("test");
+  await reopened.restore();
+  reopened.reset();
+  assert.equal(values.has("rhythm:assistant:v1:test"), false);
+});
+
+test("打开历史期间新建会话，迟到响应不能覆盖新会话", async t => {
+  let release;
+  t.mock.method(globalThis, "fetch", async () => { await new Promise(resolve => { release = resolve; }); return Response.json(final()); });
+  const conversation = new AssistantConversation();
+  const loading = conversation.open("session1");
+  assert.equal(conversation.getSnapshot().restoring, true);
+  conversation.reset(); release();
+  assert.equal(await loading, false);
+  assert.equal(conversation.getSnapshot().session, null);
+  assert.deepEqual(conversation.chat.messages, []);
+});
+
+test("恢复仍在运行的会话时禁止重发，后续同步恢复最终回答", async t => {
+  let calls = 0;
+  t.mock.method(globalThis, "fetch", async () => Response.json(++calls === 1 ? { ...empty(), is_running: true, last_run_status: "running" } : final()));
+  const conversation = new AssistantConversation();
+  assert.equal(await conversation.open("session1"), true);
+  assert.equal(conversation.getSnapshot().needsSync, true);
+  assert.equal(await conversation.send("不要重复调用", null), false);
+  await conversation.sync();
+  assert.equal(conversation.getSnapshot().needsSync, false);
+  assert.equal(conversation.chat.messages.at(-1).parts.at(-1).text, "完整回答");
+});
+
+test("初始化在恢复结果确定前保持等待，没有历史时才进入新对话", async t => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  let saved = "session1", release;
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
+    getItem: () => saved, setItem: () => {}, removeItem: () => {},
+  } });
+  t.after(() => { if (previous) Object.defineProperty(globalThis, "localStorage", previous); else delete globalThis.localStorage; });
+  t.mock.method(globalThis, "fetch", async () => { await new Promise(resolve => { release = resolve; }); return Response.json(final()); });
+  const c = new AssistantConversation("test");
+  assert.equal(c.getSnapshot().initialized, false);
+  const pending = c.restore();
+  assert.equal(c.getSnapshot().initialized, false);
+  release(); await pending;
+  assert.equal(c.getSnapshot().initialized, true);
+  assert.equal(c.getSnapshot().session.id, "session1");
+  saved = null;
+  const fresh = new AssistantConversation("test");
+  await fresh.restore();
+  assert.equal(fresh.getSnapshot().initialized, true);
+  assert.equal(fresh.getSnapshot().session, null);
+});
+
+for (const fail of [false, true]) test(`生成中切换历史：${fail ? "失败后保留原会话并要求同步" : "旧流结束不能覆盖目标"}`, async t => {
+  let ready, oldSignal;
+  const streaming = new Promise(resolve => { ready = resolve; });
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    if (url === "/api/assistant/sessions") return Response.json(empty());
+    if (options.method === "POST") {
+      oldSignal = options.signal;
+      return new Response(new ReadableStream({ start(controller) {
+        options.signal.addEventListener("abort", () => controller.error(options.signal.reason), { once: true });
+        ready();
+      } }), { headers: { "Content-Type": "text/event-stream" } });
+    }
+    if (url.endsWith("session2")) {
+      if (fail) throw new TypeError("offline");
+      return Response.json({ ...final(), id: "session2" });
+    }
+    return Response.json({ ...final(), last_run_status: "cancelled" });
+  });
+  const c = new AssistantConversation();
+  const pending = c.send("原会话问题", snapshot);
+  await streaming;
+  assert.equal(c.getSnapshot().busy, true);
+  assert.equal(await c.open("session2"), !fail);
+  await pending;
+  assert.equal(oldSignal.aborted, true);
+  assert.equal(c.getSnapshot().session.id, fail ? "session1" : "session2");
+  assert.equal(c.getSnapshot().needsSync, fail);
+  assert.equal(c.getSnapshot().busy, false);
+  if (fail) {
+    assert.equal(await c.send("不能重复发送", null), false);
+    await c.sync();
+    assert.equal(c.getSnapshot().needsSync, false);
+  } else assert.equal(c.chat.messages.at(-1).parts.at(-1).text, "完整回答");
+});

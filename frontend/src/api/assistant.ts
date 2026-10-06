@@ -2,7 +2,10 @@ import { validateUIMessages, type UIMessage } from "ai";
 import type { PageContext } from "../assistant/assistantContext";
 
 export type AssistantMessage = UIMessage<{ created_at?: string; page_context?: PageContext | null }>;
+export type CardState = { bpm: number; answer_viewed: boolean };
+export type SessionSummary = { id: string; title: string; updated_at: string; is_running: boolean; unreadable: boolean };
 export type ChatSession = {
+  title?: string; created_at?: string; updated_at?: string; card_states?: Record<string, CardState>;
   id: string; messages: AssistantMessage[]; is_running: boolean;
   last_run_status: null | "running" | "completed" | "failed" | "cancelled";
 };
@@ -19,9 +22,10 @@ export async function assistantFetch(path: string, options: RequestInit, signal:
   });
   if (!response.ok) {
     const messages: Record<number, string> = {
-      403: "助手请求来源未获允许，请检查后端 AI_ALLOWED_ORIGINS 配置。", 404: "会话已失效，请开始新对话。",
+      401: "登录已过期，请重新登录后打开对话。",
+      403: "助手请求来源未获允许，请检查后端 AI_ALLOWED_ORIGINS 配置。", 404: "会话不存在或不属于当前身份，请打开历史对话或开始新对话。",
       409: "这个会话仍在运行，请稍后同步状态。", 422: "问题或页面资料格式不正确，或内容过大。",
-      503: "助手尚未配置或服务不可用，请检查后端配置。",
+      503: "助手服务或对话存储不可用，请检查后端配置和日志。",
     };
     throw new AssistantApiError(response.status, messages[response.status] ?? "助手请求失败，请稍后再试。");
   }
@@ -29,6 +33,10 @@ export async function assistantFetch(path: string, options: RequestInit, signal:
 }
 
 function object(value: unknown): value is Record<string, unknown> { return !!value && typeof value === "object"; }
+function isCardState(value: unknown): value is CardState {
+  return object(value) && Number.isInteger(value.bpm) && Number(value.bpm) >= 40 && Number(value.bpm) <= 240
+    && typeof value.answer_viewed === "boolean";
+}
 async function parseSession(response: Response): Promise<ChatSession> {
   const value: unknown = await response.json();
   if (!object(value) || typeof value.id !== "string" || !value.id || !Array.isArray(value.messages)
@@ -36,6 +44,8 @@ async function parseSession(response: Response): Promise<ChatSession> {
     || ![null, "running", "completed", "failed", "cancelled"].includes(value.last_run_status as string | null)) {
     throw new Error("助手会话格式异常，请同步状态后再试。");
   }
+  if (value.card_states !== undefined && (!object(value.card_states) || !Object.values(value.card_states).every(isCardState)))
+    throw new Error("练习卡片状态格式异常，请重试。");
   const messages = value.messages.length
     ? await validateUIMessages<AssistantMessage>({ messages: value.messages }) : [];
   return { ...value, messages } as ChatSession;
@@ -55,4 +65,22 @@ export async function getAssistantStatus(signal: AbortSignal): Promise<{ status:
   if (!object(value) || !["ready", "unconfigured", "invalid"].includes(value.status as string)
       || typeof value.message !== "string") throw new Error("助手配置状态格式异常，请重试。");
   return value as { status: "ready" | "unconfigured" | "invalid"; message: string };
+}
+
+export async function listSessions(signal: AbortSignal, offset = 0): Promise<{ sessions: SessionSummary[]; total: number }> {
+  const value = await (await assistantFetch(`/api/assistant/sessions?offset=${offset}`, {}, signal)).json();
+  if (!object(value) || !Array.isArray(value.sessions) || typeof value.total !== "number"
+    || !value.sessions.every(item => object(item) && typeof item.id === "string" && typeof item.title === "string"
+      && typeof item.updated_at === "string" && typeof item.is_running === "boolean" && typeof item.unreadable === "boolean"))
+    throw new Error("历史对话格式异常，请重试。");
+  return value as { sessions: SessionSummary[]; total: number };
+}
+export async function deleteSession(id: string, signal: AbortSignal) {
+  await assistantFetch(`/api/assistant/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }, signal);
+}
+export async function saveCardState(sessionId: string, exerciseId: string, state: CardState, signal: AbortSignal): Promise<CardState> {
+  const value: unknown = await (await assistantFetch(`/api/assistant/sessions/${encodeURIComponent(sessionId)}/cards/${encodeURIComponent(exerciseId)}`,
+    { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(state), keepalive: true }, signal)).json();
+  if (!isCardState(value)) throw new Error("练习卡片状态格式异常，请重试。");
+  return value;
 }
