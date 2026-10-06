@@ -1,6 +1,7 @@
 """多轮会话接口，接收每次请求的页面快照；运行工具循环并返回最终回答。"""
 
 import json
+from dataclasses import asdict
 from contextlib import aclosing
 from collections.abc import AsyncIterator
 import os
@@ -12,7 +13,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent.model import ModelError, ModelSettings, TextModel, create_model
-from assistant.sessions import SessionEvent, ChatSession, SessionBusy, SessionStore
+from assistant.sessions import EntryAdded, SessionEvent, ChatSession, SessionBusy, SessionStore
 from assistant.context import PageContext
 
 
@@ -97,7 +98,7 @@ async def get_run(
     body: ChatInput,
     session: Annotated[ChatSession, Depends(get_session)],
     model: Annotated[TextModel, Depends(get_model)],
-) -> AsyncIterator[AsyncIterator[SessionEvent]]:
+) -> AsyncIterator[AsyncIterator[SessionEvent | EntryAdded]]:
     # request 作用域的 yield 依赖在整个响应结束后退出，包括断连/发送异常。
     try:
         async with session.run(body.text, model, body.page_context) as stream:
@@ -111,12 +112,12 @@ def encode_event(event: dict) -> str:
 
 
 @router.post("/sessions/{session_id}/messages")
-async def chat(stream: Annotated[AsyncIterator[SessionEvent], Depends(get_run, scope="request")]):
+async def chat(stream: Annotated[AsyncIterator[SessionEvent | EntryAdded], Depends(get_run, scope="request")]):
     async def events():
         try:
             async with aclosing(stream) as events_stream:
                 async for event in events_stream:
-                    yield encode_event({"type": event.type, "text": event.text})
+                    yield encode_event(asdict(event))
                     if event.type == "message_completed":
                         break
                 else:

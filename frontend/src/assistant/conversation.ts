@@ -1,7 +1,7 @@
 import { AssistantApiError, createSession, getSession, sendMessage, type ChatSession } from "../api/assistant";
 import type { PageContext } from "./assistantContext";
 
-type PendingReply = { question: string; text: string };
+type PendingReply = { question: string; text: string; streamedEntries?: boolean; completed?: boolean };
 type State = { session: ChatSession | null; pending: PendingReply | null;
   busy: boolean; needsSync: boolean; expired: boolean; error: string; notice: string };
 const initial = (): State => ({ session: null, pending: null, busy: false,
@@ -53,8 +53,17 @@ export class AssistantConversation {
       op.stream.signal.throwIfAborted();
       await sendMessage(this.state.session!.id, text, pageContext, event => {
         if (!this.current(op) || op.stream.signal.aborted || !this.state.pending) return;
+        if (event.type === "entry_added") {
+          const session = this.state.session!;
+          if (event.index !== session.entries.length) throw new Error("助手记录顺序异常，请同步状态。");
+          this.update({ session: { ...session, entries: [...session.entries, event.entry] },
+            pending: { ...this.state.pending, streamedEntries: true,
+              ...(event.entry.type === "user" ? { question: "" } : {}),
+              ...(event.entry.type === "assistant" ? { text: "" } : {}) } });
+        }
         if (event.type === "text_delta") this.update({ pending: { ...this.state.pending, text: this.state.pending.text + event.text } });
-        if (event.type === "message_completed") this.update({ pending: { ...this.state.pending, text: event.text } });
+        if (event.type === "message_completed") this.update({ pending: { ...this.state.pending,
+          completed: Boolean(this.state.pending.streamedEntries), text: this.state.pending.streamedEntries ? "" : event.text } });
       }, AbortSignal.any([op.stream.signal, op.lifetime.signal]));
     } catch (error) {
       if (this.current(op)) {

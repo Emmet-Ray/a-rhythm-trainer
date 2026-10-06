@@ -213,3 +213,42 @@ test("配置查询拒绝异常响应，不误判为助手可用", async t => {
   t.mock.method(globalThis, "fetch", async () => Response.json({ status: "ready" }));
   await assert.rejects(api.getAssistantStatus(new AbortController().signal), /状态格式异常/);
 });
+
+test("工具卡片在后续文字完成前显示，最终同步不重复记录", async t => {
+  let controller;
+  const entries = [final().entries[0],
+    { type: "assistant", text: "先生成", created_at: stamp },
+    { type: "tool_result", tool_call_id: "c1", tool_name: "propose_rhythm_exercise",
+      content: "已生成", details: { generated_exercise: { id: "exercise1" } }, is_error: false, created_at: stamp }];
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    if (url === "/api/assistant/sessions") return Response.json(empty());
+    if (options.method === "POST") return new Response(new ReadableStream({ start(c) { controller = c; } }),
+      { headers: { "Content-Type": "text/event-stream" } });
+    return Response.json({ ...final(), entries });
+  });
+  const conversation = new AssistantConversation();
+  const sending = conversation.send("问题", snapshot);
+  const emit = event => controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`));
+  const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+  await tick();
+  emit({ type: "entry_added", index: 0, entry: entries[0] });
+  emit({ type: "text_delta", text: "先生成" });
+  emit({ type: "entry_added", index: 1, entry: entries[1] });
+  emit({ type: "entry_added", index: 2, entry: entries[2] });
+  await tick();
+  assert.deepEqual(conversation.getSnapshot().session.entries, entries);
+  assert.equal(conversation.getSnapshot().busy, true);
+  assert.equal(conversation.getSnapshot().pending.question, "");
+  assert.equal(conversation.getSnapshot().pending.text, "");
+  emit({ type: "text_delta", text: "后续建议" });
+  await tick();
+  assert.equal(conversation.getSnapshot().pending.text, "后续建议");
+  entries.push({ type: "assistant", text: "后续建议", created_at: stamp });
+  emit({ type: "entry_added", index: 3, entry: entries[3] });
+  emit({ type: "message_completed", text: "后续建议" });
+  emit({ type: "run_completed" });
+  await sending;
+  assert.deepEqual(conversation.getSnapshot().session.entries, entries);
+  assert.equal(conversation.getSnapshot().pending, null);
+  conversation.dispose();
+});

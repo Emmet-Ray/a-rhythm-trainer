@@ -32,7 +32,7 @@ def test_agent_state_events_isolation_and_repeated_runs():
             with pytest.raises(AgentBusy):
                 async with agent.run(ReplyModel()):
                     pass
-            assert len([e async for e in stream]) == 2
+            assert len([e async for e in stream]) == 3
             assert agent.is_running
         assert not agent.is_running
         assert agent.last_run_status == "completed"

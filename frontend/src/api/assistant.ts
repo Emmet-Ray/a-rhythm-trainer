@@ -8,7 +8,8 @@ export type ChatSession = {
   id: string; entries: SessionEntry[]; is_running: boolean;
   last_run_status: null | "running" | "completed" | "failed" | "cancelled";
 };
-export type ChatEvent = { type: "text_delta" | "message_completed"; text: string } | { type: "run_completed" };
+export type ChatEvent = { type: "text_delta" | "message_completed"; text: string } | { type: "run_completed" }
+  | { type: "entry_added"; index: number; entry: SessionEntry };
 
 export class AssistantApiError extends Error {
   readonly status: number;
@@ -85,7 +86,10 @@ export async function sendMessage(id: string, text: string, pageContext: PageCon
       if (!object(event)) throw new Error("助手事件格式异常。");
       if (event.type === "run_failed") throw new Error(
         typeof event.message === "string" ? event.message : "助手运行失败。");
-      if (event.type === "text_delta" && !completed && typeof event.text === "string") {
+      if (event.type === "entry_added" && !completed && Number.isInteger(event.index)
+          && (event.index as number) >= 0 && isEntry(event.entry)) {
+        onEvent({ type: "entry_added", index: event.index as number, entry: event.entry });
+      } else if (event.type === "text_delta" && !completed && typeof event.text === "string") {
         onEvent({ type: "text_delta", text: event.text });
       } else if (event.type === "message_completed" && !completed && typeof event.text === "string" && event.text.trim()) {
         completed = true;

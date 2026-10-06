@@ -24,5 +24,5 @@ class RunCompleted:
     type: Literal["run_completed"] = field(default="run_completed", init=False)
 
 
-RunEvent = TextDelta | RunCompleted
-AgentEvent = RunEvent | MessageEnd
+RunEvent = TextDelta | MessageEnd | RunCompleted
+AgentEvent = RunEvent

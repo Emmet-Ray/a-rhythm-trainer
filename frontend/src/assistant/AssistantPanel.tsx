@@ -326,16 +326,16 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                   </article>
                 ),
               )}
-              {state.pending ? (
+              {state.pending && !state.pending.completed ? (
                 <div className="assistant-pending">
-                  <article
+                  {state.pending.question && <article
                     className="assistant-message user"
                     aria-label="正在发送的消息"
                   >
                     <p className="assistant-message-text">
                       {state.pending.question}
                     </p>
-                  </article>
+                  </article>}
                   <article
                     className="assistant-message assistant"
                     aria-label="正在生成的回答"

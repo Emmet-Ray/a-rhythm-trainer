@@ -149,3 +149,43 @@ def test_successful_tool_result_survives_later_model_failure():
     assert snapshot["last_run_status"] == "failed"
     assert snapshot["entries"][-1]["type"] == "tool_result"
     assert snapshot["entries"][-1]["details"]["generated_exercise"]
+
+
+def test_tool_result_streams_before_followup_model_finishes():
+    async def scenario():
+        release = asyncio.Event()
+
+        class PausedModel:
+            calls = 0
+
+            async def stream(self, messages, *, tools=()):
+                self.calls += 1
+                if self.calls == 1:
+                    yield ModelEvent("text_delta", "先生成。")
+                    yield ModelEvent("message_completed", "先生成。", (call(),))
+                else:
+                    await release.wait()
+                    yield ModelEvent("text_delta", "建议慢练。")
+                    yield ModelEvent("message_completed", "建议慢练。")
+
+        session = ChatSession()
+        async with session.run("出题", PausedModel()) as stream:
+            received = []
+            while True:
+                event = await asyncio.wait_for(anext(stream), 1)
+                received.append(event)
+                if event.type == "entry_added" and event.entry["type"] == "tool_result":
+                    break
+            assert not release.is_set()
+            assert session.agent.is_running
+            card = received[-1]
+            assert card.entry == session.snapshot()["entries"][card.index]
+            assert card.entry["details"]["generated_exercise"]["exercise"]["measures"]
+            release.set()
+            received.extend([event async for event in stream])
+        entries = [event.entry for event in received if event.type == "entry_added"]
+        assert entries == session.snapshot()["entries"]
+        assert [event.index for event in received if event.type == "entry_added"] == list(range(4))
+        assert received[-1].type == "message_completed"
+
+    asyncio.run(scenario())

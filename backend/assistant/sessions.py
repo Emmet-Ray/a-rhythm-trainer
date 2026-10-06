@@ -6,7 +6,7 @@
 
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import aclosing, asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 from uuid import uuid4
 
@@ -24,10 +24,19 @@ SessionBusy = AgentBusy
 
 @dataclass(frozen=True)
 class SessionEvent:
-    """面向聊天界面的文字流；维持既有 HTTP 事件命名。"""
+    """面向界面的文字增量或本轮回答完成事件。"""
 
     type: Literal["text_delta", "message_completed"]
     text: str
+
+
+@dataclass(frozen=True)
+class EntryAdded:
+    """已提交记录及其稳定会话索引；流与会话查询共用同一种快照。"""
+
+    entry: dict
+    index: int
+    type: Literal["entry_added"] = field(default="entry_added", init=False)
 
 
 class ChatSession:
@@ -49,7 +58,7 @@ class ChatSession:
     @asynccontextmanager
     async def run(
         self, text: str, model: TextModel, page_context: PageContext | None = None,
-    ) -> AsyncGenerator[AsyncIterator[SessionEvent], None]:
+    ) -> AsyncGenerator[AsyncIterator[SessionEvent | EntryAdded], None]:
         entry = UserEntry(text, page_context)
         messages = build_agent_messages([*self._entries, entry])
         async with self.agent.run(model, messages=messages) as stream:
@@ -58,9 +67,17 @@ class ChatSession:
             async with aclosing(self._display_events(stream)) as display:
                 yield display
 
-    async def _display_events(self, stream: AsyncIterator[RunEvent]) -> AsyncGenerator[SessionEvent, None]:
+    async def _display_events(self, stream: AsyncIterator[RunEvent]) -> AsyncGenerator[SessionEvent | EntryAdded, None]:
+        cursor = len(self._entries) - 1
+        yield EntryAdded(entry_snapshot(self._entries[cursor]), cursor)
+        cursor += 1
         async for event in stream:
-            yield SessionEvent("message_completed" if event.type == "run_completed" else "text_delta", event.text)
+            if event.type == "message_end":
+                # 每个消息事件对应一条已提交记录；不要读取可能已领先的最新记录。
+                yield EntryAdded(entry_snapshot(self._entries[cursor]), cursor)
+                cursor += 1
+            else:
+                yield SessionEvent("message_completed" if event.type == "run_completed" else "text_delta", event.text)
 
     def _record_message(self, event: AgentEvent):
         if event.type != "message_end":

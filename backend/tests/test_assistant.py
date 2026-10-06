@@ -122,7 +122,7 @@ def test_http_event_contract_and_cleanup(fail):
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store"
     assert [e["type"] for e in events] == (
-        ["text_delta", "run_failed"] if fail else ["text_delta", "message_completed", "run_completed"])
+        ["entry_added", "text_delta", "run_failed"] if fail else ["entry_added", "text_delta", "entry_added", "message_completed", "run_completed"])
     assert model.closed
 
 

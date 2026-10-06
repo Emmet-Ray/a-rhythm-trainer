@@ -84,12 +84,11 @@ class Agent:
 
     async def _respond(self, model: TextModel) -> AsyncGenerator[RunEvent, None]:
         # 回调产生事件，HTTP 拉取事件；队列只做这两种消费方式的适配。
-        # 仅缓存显示事件，完整消息由同步订阅立即记录，不依赖前端继续读取。
+        # 完整消息先由同步订阅记录，再按顺序交给流消费者。
         queue: asyncio.Queue[RunEvent | None] = asyncio.Queue()
 
         def forward(event: AgentEvent):
-            if event.type != "message_end":
-                queue.put_nowait(event)
+            queue.put_nowait(event)
 
         unsubscribe = self.subscribe(forward)
         task = asyncio.create_task(self._execute(model))

@@ -137,8 +137,9 @@ curl -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
 
 | type | 字段与含义 |
 | --- | --- |
-| `text_delta` | `text`：追加显示的文字片段 |
-| `message_completed` | `text`：完整回答，应替换临时文字而非再次追加 |
+| `entry_added` | `index`、`entry`：已写入会话的记录，按索引顺序追加；与 GET 会话中的记录格式一致 |
+| `text_delta` | `text`：当前助手消息的临时文字片段；对应的助手 `entry_added` 到达后清空临时文字 |
+| `message_completed` | 本轮回答完成；`text` 为本轮文字汇总，接收了 `entry_added` 的界面不再重复展示 |
 | `run_completed` | 本次运行成功结束 |
 | `run_failed` | `message`：固定错误说明；此前部分文字不代表完整回答 |
 
@@ -367,7 +368,7 @@ assistant/
 - `assistant/system_prompt.py`：节奏助手身份和行为；具体练习格式在工具参数的 schema 描述中。
 - `agent/model.py`：向 DeepSeek Responses 传入工具声明，将调用和结果转换为 `function_call` / `function_call_output`；保留工具调用轮次的原始 response items 以重放 reasoning。只在完整响应后执行工具，不执行流式参数片段。参考 [DeepSeek Responses 文档](https://api-docs.deepseek.com/guides/responses_api/)。
 
-会话查询返回的 `entries` 现在包含 `user`、`assistant`、`tool_result`。工具结果包含调用 ID、工具名称、正文、结构化详情、错误标记和记录时间；普通文字消息格式不变。HTTP SSE 仍发送 `text_delta`、最终的 `message_completed` 和 `run_completed`，工具调用轮次不会提前结束 HTTP 流。前端将成功的练习工具结果显示为谱面卡片，在自定义练习编辑页支持用户点击应用覆盖草稿；不自动保存。卡片支持可调速的整首试听（默认 60 BPM），支持直接进入击拍训练，同时支持听写训练。
+会话查询返回的 `entries` 现在包含 `user`、`assistant`、`tool_result`。工具结果包含调用 ID、工具名称、正文、结构化详情、错误标记和记录时间；普通文字消息格式不变。HTTP SSE 按发生顺序发送 `text_delta` 与已提交记录的 `entry_added`，最后发送 `message_completed` 和 `run_completed`，工具调用轮次不会提前结束 HTTP 流。前端收到成功的练习工具结果便显示谱面卡片，无需等待工具后的模型建议完成，在自定义练习编辑页支持用户点击应用覆盖草稿；不自动保存。卡片支持可调速的整首试听（默认 60 BPM），支持直接进入击拍训练，同时支持听写训练。
 
 `assistant/tools/propose_rhythm_exercise.py` 中 `ExerciseProposal` 接收 `title`（去除首尾空白后 1–100 字符）、`description`（1–1000 字符）、`exercise`，拒绝额外字段。节奏复用 `domain.rhythm.parse_rhythm_exercise`：4/4、1–64 小节、每小节恰好四拍及现有音符规则。校验保证结构和时值合法，不评判教学效果。`GeneratedExercise(candidate)` 在校验成功后生成 ID、UTC 时间，`snapshot()` 返回独立副本。
 
