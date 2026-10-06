@@ -1,18 +1,35 @@
-import { AssistantApiError, createSession, getSession, sendMessage, type ChatSession } from "../api/assistant";
+import { Chat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import { AssistantApiError, assistantFetch, createSession, getSession, type AssistantMessage, type ChatSession } from "../api/assistant";
 import type { PageContext } from "./assistantContext";
 
-type PendingReply = { question: string; text: string; streamedEntries?: boolean; completed?: boolean };
-type State = { session: ChatSession | null; pending: PendingReply | null;
+type State = { session: ChatSession | null;
   busy: boolean; needsSync: boolean; expired: boolean; error: string; notice: string };
-const initial = (): State => ({ session: null, pending: null, busy: false,
+const initial = (): State => ({ session: null, busy: false,
   needsSync: false, expired: false, error: "", notice: "" });
 type Operation = { stream: AbortController; lifetime: AbortController };
 
-/** 面板只缓存服务端记录用于显示；临时回答单独管理，不向后端回传历史。 */
+/** SDK 管理消息与流；这里仅协调服务端会话、运行互斥及中断后的核对。 */
 export class AssistantConversation {
   private state = initial();
   private operation: Operation | null = null;
   private listeners = new Set<() => void>();
+  chat = this.createChat();
+  private createChat() {
+    return new Chat<AssistantMessage>({
+      transport: new DefaultChatTransport({
+        prepareSendMessagesRequest: ({ messages, body }) => {
+          const message = messages.at(-1)!;
+          return { api: `/api/assistant/sessions/${encodeURIComponent(this.state.session!.id)}/messages`,
+            body: { text: message.parts.filter(part => part.type === "text").map(part => part.text).join(""),
+              message_id: message.id, page_context: body?.page_context ?? null } };
+        },
+        fetch: (url, options) => assistantFetch(String(url), options ?? {},
+          AbortSignal.any([options?.signal ?? new AbortController().signal,
+            this.operation!.stream.signal, this.operation!.lifetime.signal]), 135_000),
+      }),
+    });
+  }
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private update(patch: Partial<State>) {
@@ -23,14 +40,19 @@ export class AssistantConversation {
   private async reconcile(op: Operation) {
     const id = this.state.session?.id;
     if (!id) return;
-    // run_completed 可能略早于服务器释放占用；短暂读取重试不重发模型请求。
+    // SDK 流结束可能略早于服务器释放占用；短暂读取重试不重发模型请求。
     for (let attempt = 0; attempt < 8; attempt++) {
       const session = await getSession(id, op.lifetime.signal);
       if (!this.current(op)) return;
-      this.update({ session, pending: null, needsSync: session.is_running });
+      this.update({ session, needsSync: session.is_running });
+      if (!session.is_running) this.chat.messages = session.messages;
       if (!session.is_running) {
         if (op.stream.signal.aborted) this.update({ notice: session.last_run_status === "completed"
           ? "回答已完成，已从后端恢复完整记录。" : "已停止，下面的记录已与后端同步。" });
+        else if (session.last_run_status === "failed" && !this.state.error)
+          this.update({ error: "本轮生成未完成，已保留生成的练习和完整记录。" });
+        else if (session.last_run_status === "cancelled")
+          this.update({ notice: "本轮回答已中断，已与后端同步记录。" });
         return;
       }
       await new Promise(resolve => setTimeout(resolve, 150));
@@ -43,7 +65,7 @@ export class AssistantConversation {
     const op = { stream: new AbortController(), lifetime: new AbortController() };
     this.operation = op;
     const pageContext = structuredClone(context);
-    this.update({ busy: true, error: "", notice: "", pending: { question: text, text: "" } });
+    this.update({ busy: true, error: "", notice: "" });
     try {
       if (!this.state.session) {
         const session = await createSession(op.lifetime.signal);
@@ -51,20 +73,11 @@ export class AssistantConversation {
         this.update({ session });
       }
       op.stream.signal.throwIfAborted();
-      await sendMessage(this.state.session!.id, text, pageContext, event => {
-        if (!this.current(op) || op.stream.signal.aborted || !this.state.pending) return;
-        if (event.type === "entry_added") {
-          const session = this.state.session!;
-          if (event.index !== session.entries.length) throw new Error("助手记录顺序异常，请同步状态。");
-          this.update({ session: { ...session, entries: [...session.entries, event.entry] },
-            pending: { ...this.state.pending, streamedEntries: true,
-              ...(event.entry.type === "user" ? { question: "" } : {}),
-              ...(event.entry.type === "assistant" ? { text: "" } : {}) } });
-        }
-        if (event.type === "text_delta") this.update({ pending: { ...this.state.pending, text: this.state.pending.text + event.text } });
-        if (event.type === "message_completed") this.update({ pending: { ...this.state.pending,
-          completed: Boolean(this.state.pending.streamedEntries), text: this.state.pending.streamedEntries ? "" : event.text } });
-      }, AbortSignal.any([op.stream.signal, op.lifetime.signal]));
+      const chat = this.chat;
+      chat.clearError();
+      await chat.sendMessage({ text, metadata: { created_at: new Date().toISOString(), page_context: pageContext } },
+        { body: { page_context: pageContext } });
+      if (chat.error) throw chat.error;
     } catch (error) {
       if (this.current(op)) {
         if (op.stream.signal.aborted) this.update({ notice: "已请求停止，正在核对已保存的记录。" });
@@ -81,13 +94,13 @@ export class AssistantConversation {
         }
         if (this.current(op)) {
           this.operation = null;
-          this.update({ busy: false, ...(!this.state.session ? { pending: null } : {}) });
+          this.update({ busy: false });
         }
       }
     }
     return true;
   }
-  stop() { this.operation?.stream.abort(); }
+  stop() { this.operation?.stream.abort(); void this.chat.stop(); }
   async sync() {
     if (this.operation || !this.state.session || this.state.expired) return;
     const op = { stream: new AbortController(), lifetime: new AbortController() };
@@ -104,6 +117,8 @@ export class AssistantConversation {
   }
   reset() {
     this.operation?.lifetime.abort(); this.operation?.stream.abort(); this.operation = null;
+    void this.chat.stop();
+    this.chat = this.createChat();
     this.state = initial(); this.listeners.forEach(listener => listener());
   }
   dispose() { this.reset(); }

@@ -5,7 +5,7 @@ async (page) => {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => {
     const fetchOriginal = window.fetch.bind(window);
-    const entries = [], requests = [];
+    const messages = [], requests = [];
     let running = false;
     const json = body => new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
     const emit = (controller, event) => controller.enqueue(new TextEncoder().encode('data: ' + JSON.stringify(event) + '\n\n'));
@@ -16,24 +16,40 @@ async (page) => {
       if (url.includes('/api/auth/me')) return json({ auth_enabled: false });
       if (url.includes('/api/assistant/status')) return json({ status: 'ready', message: '' });
       if (!url.includes('/api/assistant/sessions')) return fetchOriginal(input, options);
-      if (!url.endsWith('/messages')) return json({ id: 'ux', entries, is_running: running, last_run_status: running ? 'running' : entries.length ? 'completed' : null });
+      if (!url.endsWith('/messages')) return json({ id: 'ux', messages, is_running: running, last_run_status: running ? 'running' : messages.length ? 'completed' : null });
       const body = JSON.parse(options.body); requests.push(body);
       if (body.text === '模拟未接收') return new Promise(resolve => { window.uxMock.reject = () => resolve(new Response('{}', { status: 503 })); });
-      entries.push({ type: 'user', text: body.text, page_context: body.page_context, created_at: new Date().toISOString() });
+      messages.push({ id: body.message_id, role: 'user', parts: [{ type: 'text', text: body.text }],
+        metadata: { created_at: new Date().toISOString(), page_context: body.page_context } });
+      const id = 'a' + requests.length;
+      const saved = { id, role: 'assistant', parts: [{ type: 'step-start' }] };
       if (requests.length === 1) {
-        entries.push({ type: 'tool_result', tool_name: 'propose_rhythm_exercise', tool_call_id: 'c1', content: '练习', is_error: false, created_at: new Date().toISOString(), details: { generated_exercise: { id: 'ux-practice', title: '可随时练习', mode: 'tapping', description: '', exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: 'note', noteValue: 'whole' }] }] } } } });
-        entries.push({ type: 'assistant', text: answer, created_at: new Date().toISOString() });
-        return new Response('data: ' + JSON.stringify({ type: 'message_completed', text: answer }) + '\n\ndata: {"type":"run_completed"}\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+        const output = { generated_exercise: { id: 'ux-practice', title: '可随时练习', mode: 'tapping', description: '',
+          exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: 'note', noteValue: 'whole' }] }] } } };
+        saved.parts.push({ type: 'tool-propose_rhythm_exercise', toolCallId: 'c1', state: 'output-available', input: {}, output },
+          { type: 'text', text: answer, state: 'done' });
+        messages.push(saved);
+        const events = [{ type: 'start', messageId: id }, { type: 'start-step' },
+          { type: 'tool-input-available', toolName: 'propose_rhythm_exercise', toolCallId: 'c1', input: {} },
+          { type: 'tool-output-available', toolCallId: 'c1', output },
+          { type: 'text-start', id: 't1' }, { type: 'text-delta', id: 't1', delta: answer },
+          { type: 'text-end', id: 't1' }, { type: 'finish-step' }, { type: 'finish' }];
+        return new Response(events.map(e => 'data: ' + JSON.stringify(e) + '\n\n').join(''), { headers: { 'Content-Type': 'text/event-stream' } });
       }
       running = true;
       return new Response(new ReadableStream({ start(controller) {
-        emit(controller, { type: 'text_delta', text: '# 正在分析\n\n**保持均匀**\n\n1. 慢速' });
+        emit(controller, { type: 'start', messageId: id }); emit(controller, { type: 'start-step' });
+        emit(controller, { type: 'text-start', id: 't1' });
+        const partial = '# 正在分析\n\n**保持均匀**\n\n1. 慢速';
+        emit(controller, { type: 'text-delta', id: 't1', delta: partial });
         window.uxMock.finish = () => {
           if (!running) return;
           running = false;
-          entries.push({ type: 'assistant', text: answer, created_at: new Date().toISOString() });
-          emit(controller, { type: 'message_completed', text: answer });
-          emit(controller, { type: 'run_completed' }); controller.close();
+          saved.parts.push({ type: 'text', text: partial + '\n\n' + answer, state: 'done' });
+          messages.push(saved);
+          emit(controller, { type: 'text-delta', id: 't1', delta: '\n\n' + answer });
+          emit(controller, { type: 'text-end', id: 't1' }); emit(controller, { type: 'finish-step' });
+          emit(controller, { type: 'finish' }); controller.close();
         };
         options.signal.addEventListener('abort', () => { if (running) { running = false; controller.error(options.signal.reason); } }, { once: true });
       } }), { headers: { 'Content-Type': 'text/event-stream' } });

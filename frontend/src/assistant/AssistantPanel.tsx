@@ -1,3 +1,6 @@
+import { useChat } from "@ai-sdk/react";
+import { isToolUIPart, getToolName } from "ai";
+import { Fragment } from "react";
 import { AssistantMarkdown } from "./AssistantMarkdown";
 import { PracticeActivityContext } from "./practiceActivity";
 import {
@@ -42,15 +45,16 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
   } = useAssistantPresentation(home, availability.ready);
   const [playbackGroup] = useState(() => new PlaybackGroup());
   const [conversation] = useState(() => new AssistantConversation());
+  const { messages, status } = useChat({ chat: conversation.chat, throttle: 40 });
   const state = useSyncExternalStore(
     conversation.subscribe,
     conversation.getSnapshot,
     conversation.getSnapshot,
   );
   useEffect(() => {
-    for (const entry of state.session?.entries ?? []) {
-      if (entry.type !== "user") continue;
-      const batch = entry.page_context?.state.practice_activity;
+    for (const entry of state.session?.messages ?? []) {
+      if (entry.role !== "user") continue;
+      const batch = entry.metadata?.page_context?.state.practice_activity;
       if (batch && typeof batch === "object" && !Array.isArray(batch) && typeof batch.batchId === "string") activity?.acknowledge(batch.batchId);
     }
   }, [activity, state.session]);
@@ -62,7 +66,10 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
   const follow = useRef(true);
   const generation = useRef(0);
   const scrollPosition = useRef(0);
-  const started = Boolean(state.session?.entries.length || state.pending);
+  const started = Boolean(messages.length || state.busy);
+  const lastMessage = messages.at(-1);
+  const waitingForContent = status === "submitted" || (status === "streaming" &&
+    (lastMessage?.role !== "assistant" || lastMessage.parts.every(part => part.type === "step-start" || part.type === "reasoning")));
   useEffect(
     () => () => {
       generation.current++;
@@ -77,7 +84,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
   useEffect(() => {
     if (visible && follow.current && thread.current)
       thread.current.scrollTop = thread.current.scrollHeight;
-  }, [visible, state]);
+  }, [visible, state, messages]);
 
   useLayoutEffect(() => {
     const field = input.current;
@@ -149,7 +156,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
     const originalDraft = draft;
     const text = draft.trim(),
       version = generation.current;
-    const previousEntryCount = before.session?.entries.length ?? 0;
+    const previousEntryCount = before.session?.messages.length ?? 0;
     follow.current = true;
     setDraft("");
     activity?.start();
@@ -162,9 +169,9 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
     if (version !== generation.current) return;
     const after = conversation.getSnapshot();
     // 仅在已确认本次输入没有写入会话时恢复。不能用文字相等判断：用户可能连续发送相同内容。
-    const accepted = after.session?.entries
+    const accepted = after.session?.messages
       .slice(previousEntryCount)
-      .some((entry) => entry.type === "user");
+      .some((entry) => entry.role === "user");
     if (!after.needsSync && !accepted)
       setDraft((current) => current || originalDraft);
   }
@@ -293,62 +300,34 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                   <p>可以生成练习，也可以聊聊节奏。</p>
                 </div>
               ) : null}
-              {state.session?.entries.map((entry, index) =>
-                entry.type === "tool_result" ? (
-                  entry.tool_name === "propose_rhythm_exercise" &&
-                  !entry.is_error ? (
-                    <ExerciseProposalResult
-                      key={index}
-                      value={entry.details.generated_exercise}
-                      playbackGroup={playbackGroup}
-                      onPracticeStart={setPractice}
-                    />
-                  ) : null
-                ) : !entry.text.trim() ? null : (
-                  <article
-                    className={`assistant-message ${entry.type}`}
-                    key={index}
-                    aria-label={entry.type === "user" ? "你的消息" : "助手回答"}
-                  >
-                    {entry.type === "assistant" ? <AssistantMarkdown text={entry.text} />
-                      : <p className="assistant-message-text">{entry.text}</p>}
-                    <div className="assistant-message-meta">
-                      <time
-                        dateTime={entry.created_at}
-                        title={new Date(entry.created_at).toLocaleString()}
-                      >
-                        {new Date(entry.created_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+              {messages.map(message => <Fragment key={message.id}>
+                {message.parts.map((part, index) => {
+                  if (isToolUIPart(part)) {
+                    if (getToolName(part) !== "propose_rhythm_exercise") return null;
+                    if (part.state === "output-available") {
+                      const output = part.output as { generated_exercise?: unknown };
+                      return <ExerciseProposalResult key={part.toolCallId}
+                        value={output?.generated_exercise} playbackGroup={playbackGroup} onPracticeStart={setPractice} />;
+                    }
+                    if (part.state === "input-streaming" || part.state === "input-available")
+                      return <p key={part.toolCallId} className="assistant-notice" role="status">正在生成练习…</p>;
+                    return null;
+                  }
+                  if (part.type !== "text" || !part.text.trim()) return null;
+                  return <article className={`assistant-message ${message.role}${part.state === "streaming" ? " assistant-pending" : ""}`} key={index}
+                    aria-label={message.role === "user" ? "你的消息" : "助手回答"}>
+                    {message.role === "assistant" ? <AssistantMarkdown text={part.text} />
+                      : <p className="assistant-message-text">{part.text}</p>}
+                    {message.metadata?.created_at && index === message.parts.findLastIndex(value => value.type === "text") && <div className="assistant-message-meta">
+                      <time dateTime={message.metadata.created_at}>
+                        {new Date(message.metadata.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </time>
-                    </div>
-                  </article>
-                ),
-              )}
-              {state.pending && !state.pending.completed ? (
-                <div className="assistant-pending">
-                  {state.pending.question && <article
-                    className="assistant-message user"
-                    aria-label="正在发送的消息"
-                  >
-                    <p className="assistant-message-text">
-                      {state.pending.question}
-                    </p>
-                  </article>}
-                  <article
-                    className="assistant-message assistant"
-                    aria-label="正在生成的回答"
-                  >
-                    <AssistantMarkdown text={state.pending.text || (state.busy ? "正在思考…" : "等待同步…")} />
-                    {!state.busy && state.pending.text ? (
-                      <small className="assistant-notice">
-                        临时内容，等待同步
-                      </small>
-                    ) : null}
-                  </article>
-                </div>
-              ) : null}
+                    </div>}
+                  </article>;
+                })}
+              </Fragment>)}
+              {waitingForContent && <p className="assistant-notice" role="status">正在思考…</p>}
+
             </div>
             <form
               className="assistant-composer"

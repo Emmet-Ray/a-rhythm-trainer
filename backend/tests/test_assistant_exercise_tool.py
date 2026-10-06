@@ -5,12 +5,12 @@ import json
 
 import pytest
 
-from agent.tools import ToolExecutor
+from pydantic_ai import ModelRetry
 from assistant.tools import create_tools
 
 
 def invoke(arguments):
-    return asyncio.run(ToolExecutor(create_tools()).execute("call-1", "propose_rhythm_exercise", arguments))
+    return asyncio.run(create_tools()[0].function(**arguments))
 
 
 def arguments():
@@ -22,26 +22,23 @@ def arguments():
 
 def test_tool_returns_result_without_session_storage():
     result = invoke(arguments())
-    saved = result.details["generated_exercise"]
-    assert not result.is_error
-    assert json.loads(result.content) == {"exercise_id": saved["id"], "title": "稳定四拍", "mode": "tapping"}
+    saved = result["generated_exercise"]
+    assert saved["title"] == "稳定四拍"
     assert saved["exercise"] == arguments()["exercise"]
 
 
 def test_invalid_rhythm_returns_error_and_can_be_corrected():
     bad = arguments()
     bad["exercise"]["measures"][0]["elements"][0]["noteValue"] = "quarter"
-    result = invoke(bad)
-    assert result.is_error
-    assert "第 1 小节" in result.content
-    assert result.details == {}
-    assert not invoke(arguments()).is_error
+    with pytest.raises(ModelRetry, match="第 1 小节"):
+        invoke(bad)
+    assert invoke(arguments())["generated_exercise"]
 
 
 def test_invalid_metadata_does_not_echo_input():
-    result = invoke({**arguments(), "title": ["PRIVATE_INPUT"]})
-    assert result.is_error
-    assert "PRIVATE_INPUT" not in result.content
+    with pytest.raises(ModelRetry) as error:
+        invoke({**arguments(), "title": ["PRIVATE_INPUT"]})
+    assert "PRIVATE_INPUT" not in str(error.value)
 
 
 def test_programming_error_propagates(monkeypatch):

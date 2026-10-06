@@ -13,78 +13,21 @@ try {
 } finally { await server.close(); }
 const stamp = "2026-10-03T02:00:00+00:00";
 const snapshot = { page: "editor", description: "编辑页", state: { measure_count: 2 } };
-const empty = () => ({ id: "session1", entries: [], is_running: false, last_run_status: null });
-const final = () => ({ ...empty(), last_run_status: "completed", entries: [
-  { type: "user", text: "问题", created_at: stamp, page_context: snapshot },
-  { type: "assistant", text: "完整回答", created_at: stamp },
+const empty = () => ({ id: "session1", messages: [], is_running: false, last_run_status: null });
+const final = () => ({ ...empty(), last_run_status: "completed", messages: [
+  { id: "u1", role: "user", parts: [{ type: "text", text: "问题" }], metadata: { created_at: stamp, page_context: snapshot } },
+  { id: "a1", role: "assistant", parts: [{ type: "step-start" }, { type: "text", text: "完整回答", state: "done" }] },
 ] });
-const events = [ { type: "text_delta", text: "部分" },
-  { type: "message_completed", text: "完整回答" }, { type: "run_completed" } ];
+const events = [{ type: "start", messageId: "a1" }, { type: "start-step" },
+  { type: "text-start", id: "t1" }, { type: "text-delta", id: "t1", delta: "完整回答" },
+  { type: "text-end", id: "t1" }, { type: "finish-step" }, { type: "finish" }];
 function sse(values = events) {
-  const bytes = new TextEncoder().encode(values.map(e => `data: ${JSON.stringify(e)}\r\n\r\n`).join(""));
+  const bytes = new TextEncoder().encode(values.map(e => `data: ${JSON.stringify(e)}\r\n\r\n`).join("") + "data: [DONE]\n\n");
   return new Response(new ReadableStream({ start(controller) {
-    // 刻意按字节切块，覆盖中文 UTF-8 和 CRLF 的边界。
     for (let i = 0; i < bytes.length; i++) controller.enqueue(bytes.slice(i, i + 1));
     controller.close();
-  } }), { headers: { "Content-Type": "text/event-stream" } });
+  } }), { headers: { "Content-Type": "text/event-stream", "x-vercel-ai-ui-message-stream": "v1" } });
 }
-
-test("发送只包含新消息和本次快照，解析新版事件和分片中文", async t => {
-  const fetch = t.mock.method(globalThis, "fetch", async () => sse());
-  const received = [];
-  await api.sendMessage("a/b", "问题", snapshot, e => received.push(e), new AbortController().signal);
-  assert.deepEqual(received, events);
-  const [url, options] = fetch.mock.calls[0].arguments;
-  assert.equal(url, "/api/assistant/sessions/a%2Fb/messages");
-  assert.deepEqual(JSON.parse(options.body), { text: "问题", page_context: snapshot });
-  assert.equal(options.credentials, "same-origin");
-});
-
-test("缺少运行完成、错误事件、错误顺序均不算成功", async t => {
-  const fetch = t.mock.method(globalThis, "fetch", async () => sse(events.slice(0, 2)));
-  const call = () => api.sendMessage("s", "问题", null, () => {}, new AbortController().signal);
-  await assert.rejects(call(), /连接中断/);
-  fetch.mock.mockImplementation(async () => sse([{ type: "run_failed", message: "模拟失败" }]));
-  await assert.rejects(call(), /模拟失败/);
-  fetch.mock.mockImplementation(async () => sse([{ type: "run_completed" }]));
-  await assert.rejects(call(), /顺序/);
-});
-
-test("过期会话明确报错，不自动创建或重发", async t => {
-  const fetch = t.mock.method(globalThis, "fetch", async () => new Response("secret", { status: 404 }));
-  await assert.rejects(api.getSession("s", new AbortController().signal), e => e.status === 404 && !e.message.includes("secret"));
-  assert.equal(fetch.mock.calls.length, 1);
-});
-
-test("完成后使用后端 entries 校准显示，多轮复用会话 ID", async t => {
-  const calls = [];
-  t.mock.method(globalThis, "fetch", async (url, options) => {
-    calls.push([url, options]);
-    if (url === "/api/assistant/sessions") return Response.json(empty(), { status: 201 });
-    if (options.method === "POST") return sse();
-    return Response.json(final());
-  });
-  const conversation = new AssistantConversation();
-  await conversation.send("问题", snapshot);
-  assert.deepEqual(conversation.getSnapshot().session.entries, final().entries);
-  assert.equal(conversation.getSnapshot().pending, null);
-  await conversation.send("再问", null);
-  assert.equal(calls.filter(([url]) => url === "/api/assistant/sessions").length, 1);
-  assert.deepEqual(JSON.parse(calls.filter(([, o]) => o.method === "POST").at(-1)[1].body), { text: "再问", page_context: null });
-});
-
-test("失败保留服务端用户记录，临时回答不混进历史", async t => {
-  t.mock.method(globalThis, "fetch", async (url, options) => {
-    if (url === "/api/assistant/sessions") return Response.json(empty());
-    if (options.method === "POST") return sse([{ type: "text_delta", text: "未完成" }, { type: "run_failed", message: "失败" }]);
-    return Response.json({ ...final(), entries: final().entries.slice(0, 1), last_run_status: "failed" });
-  });
-  const conversation = new AssistantConversation();
-  await conversation.send("问题", snapshot);
-  assert.equal(conversation.getSnapshot().session.entries.length, 1);
-  assert.equal(conversation.getSnapshot().pending, null);
-  assert.equal(conversation.getSnapshot().busy, false);
-});
 
 test("双击不重复提交，同步失败时阻止下一次发送", async t => {
   let release;
@@ -104,6 +47,7 @@ test("双击不重复提交，同步失败时阻止下一次发送", async t => 
   assert.equal(fetch.mock.calls.length, before);
 });
 
+
 test("新对话或身份重置后，旧请求不会恢复旧历史", async t => {
   let release;
   t.mock.method(globalThis, "fetch", async () => {
@@ -117,23 +61,6 @@ test("新对话或身份重置后，旧请求不会恢复旧历史", async t => 
   assert.equal(conversation.getSnapshot().busy, false);
 });
 
-test("停止取消流并查询后端，已完成的回答可以恢复", async t => {
-  let started;
-  const ready = new Promise(resolve => { started = resolve; });
-  t.mock.method(globalThis, "fetch", async (url, options) => {
-    if (url === "/api/assistant/sessions") return Response.json(empty());
-    if (options.method === "POST") {
-      started();
-      return new Promise((resolve, reject) => options.signal.addEventListener("abort", () => reject(options.signal.reason), { once: true }));
-    }
-    return Response.json(final());
-  });
-  const conversation = new AssistantConversation();
-  const running = conversation.send("问题", snapshot);
-  await ready; conversation.stop(); await running;
-  assert.deepEqual(conversation.getSnapshot().session.entries, final().entries);
-  assert.match(conversation.getSnapshot().notice, /已完成/);
-});
 
 test("页面快照深复制，旧页面卸载不清除新页面，离开页面清空", () => {
   const context = new AssistantContext(), old = Symbol(), current = Symbol();
@@ -150,24 +77,6 @@ test("页面快照深复制，旧页面卸载不清除新页面，离开页面�
   assert.equal(context.readCurrentPageContext(), null);
 });
 
-test("会话保留工具调用与工具结果，供后续卡片使用", async t => {
-  const value = { ...empty(), entries: [
-    { type: "assistant", text: "", created_at: stamp,
-      tool_calls: [{ id: "c1", name: "propose_rhythm_exercise", arguments: "{}" }] },
-    { type: "tool_result", tool_call_id: "c1", tool_name: "propose_rhythm_exercise",
-      content: "已生成", details: { generated_exercise: { id: "exercise1" } }, is_error: false, created_at: stamp },
-  ] };
-  t.mock.method(globalThis, "fetch", async () => Response.json(value));
-  assert.deepEqual(await api.getSession("session1", new AbortController().signal), value);
-});
-
-test("拒绝字段不完整的工具结果", async t => {
-  t.mock.method(globalThis, "fetch", async () => Response.json({ ...empty(), entries: [
-    { type: "tool_result", created_at: stamp, content: "text" },
-  ] }));
-  await assert.rejects(api.getSession("session1", new AbortController().signal), /会话格式异常/);
-});
-
 
 test("候选练习先校验节奏，返回独立数据", () => {
   const value = { id: "proposal", title: "四拍", description: "基础", exercise: {
@@ -180,6 +89,7 @@ test("候选练习先校验节奏，返回独立数据", () => {
   assert.throws(() => parseGeneratedExercise({ ...value, id: "" }));
   assert.throws(() => parseGeneratedExercise({ ...value, exercise: { ...value.exercise, measures: [{ elements: [] }] } }));
 });
+
 
 test("应用能力随编辑目标注册与注销，旧编辑器不能注销新目标", () => {
   const scope = new AssistantContext();
@@ -201,6 +111,7 @@ test("应用能力随编辑目标注册与注销，旧编辑器不能注销新�
 });
 
 
+
 test("配置状态区分可用、未配置与配置错误，不创建会话", async t => {
   for (const status of ["ready", "unconfigured", "invalid"]) {
     const mock = t.mock.method(globalThis, "fetch", async () => Response.json({ status, message: "提示" }));
@@ -209,46 +120,93 @@ test("配置状态区分可用、未配置与配置错误，不创建会话", as
     mock.mock.restore();
   }
 });
+
 test("配置查询拒绝异常响应，不误判为助手可用", async t => {
   t.mock.method(globalThis, "fetch", async () => Response.json({ status: "ready" }));
   await assert.rejects(api.getAssistantStatus(new AbortController().signal), /状态格式异常/);
 });
 
-test("工具卡片在后续文字完成前显示，最终同步不重复记录", async t => {
-  let controller;
-  const entries = [final().entries[0],
-    { type: "assistant", text: "先生成", created_at: stamp },
-    { type: "tool_result", tool_call_id: "c1", tool_name: "propose_rhythm_exercise",
-      content: "已生成", details: { generated_exercise: { id: "exercise1" } }, is_error: false, created_at: stamp }];
+test("SDK 消费分片中文，仅提交新消息与快照，结束后核对服务端历史", async t => {
+  let request;
   t.mock.method(globalThis, "fetch", async (url, options) => {
     if (url === "/api/assistant/sessions") return Response.json(empty());
-    if (options.method === "POST") return new Response(new ReadableStream({ start(c) { controller = c; } }),
-      { headers: { "Content-Type": "text/event-stream" } });
-    return Response.json({ ...final(), entries });
+    if (options.method === "POST") { request = JSON.parse(options.body); return sse(); }
+    const saved = final(); saved.messages[0].id = request.message_id;
+    return Response.json(saved);
   });
-  const conversation = new AssistantConversation();
-  const sending = conversation.send("问题", snapshot);
+  const c = new AssistantConversation();
+  await c.send("问题", snapshot);
+  assert.deepEqual(Object.keys(request).sort(), ["message_id", "page_context", "text"]);
+  assert.deepEqual(request.page_context, snapshot);
+  assert.equal(request.text, "问题");
+  assert.equal(c.chat.messages[1].parts[1].text, "完整回答");
+  assert.equal(c.getSnapshot().busy, false);
+  assert.deepEqual(c.chat.messages, c.getSnapshot().session.messages);
+  c.dispose();
+});
+
+test("SDK 工具结果在后续回复前可用，停止后从服务端保留已生成练习", async t => {
+  let controller, userId;
+  const output = { generated_exercise: { id: "p1" } };
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    if (url === "/api/assistant/sessions") return Response.json(empty());
+    if (options.method === "POST") {
+      userId = JSON.parse(options.body).message_id;
+      return new Response(new ReadableStream({ start(c) {
+        controller = c;
+        options.signal.addEventListener("abort", () => c.error(options.signal.reason), { once: true });
+      } }), { headers: { "Content-Type": "text/event-stream" } });
+    }
+    return Response.json({ ...empty(), last_run_status: "cancelled", messages: [
+      { id: userId, role: "user", parts: [{ type: "text", text: "问题" }] },
+      { id: "a1", role: "assistant", parts: [{ type: "step-start" }, {
+        type: "tool-propose_rhythm_exercise", toolCallId: "c1", state: "output-available", input: {}, output,
+      }] },
+    ] });
+  });
+  const c = new AssistantConversation();
+  const pending = c.send("问题", snapshot);
+  const tick = () => new Promise(resolve => setTimeout(resolve, 5));
+  await tick();
   const emit = event => controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`));
-  const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+  emit({ type: "start", messageId: "a1" }); emit({ type: "start-step" });
+  emit({ type: "tool-input-start", toolCallId: "c1", toolName: "propose_rhythm_exercise" });
+  emit({ type: "tool-input-available", toolCallId: "c1", toolName: "propose_rhythm_exercise", input: {} });
+  emit({ type: "tool-output-available", toolCallId: "c1", output });
   await tick();
-  emit({ type: "entry_added", index: 0, entry: entries[0] });
-  emit({ type: "text_delta", text: "先生成" });
-  emit({ type: "entry_added", index: 1, entry: entries[1] });
-  emit({ type: "entry_added", index: 2, entry: entries[2] });
-  await tick();
-  assert.deepEqual(conversation.getSnapshot().session.entries, entries);
-  assert.equal(conversation.getSnapshot().busy, true);
-  assert.equal(conversation.getSnapshot().pending.question, "");
-  assert.equal(conversation.getSnapshot().pending.text, "");
-  emit({ type: "text_delta", text: "后续建议" });
-  await tick();
-  assert.equal(conversation.getSnapshot().pending.text, "后续建议");
-  entries.push({ type: "assistant", text: "后续建议", created_at: stamp });
-  emit({ type: "entry_added", index: 3, entry: entries[3] });
-  emit({ type: "message_completed", text: "后续建议" });
-  emit({ type: "run_completed" });
-  await sending;
-  assert.deepEqual(conversation.getSnapshot().session.entries, entries);
-  assert.equal(conversation.getSnapshot().pending, null);
-  conversation.dispose();
+  assert.equal(c.getSnapshot().busy, true);
+  assert.deepEqual(c.chat.messages[1].parts[1].output, output);
+  c.stop(); await pending;
+  assert.deepEqual(c.chat.messages[1].parts[1].output, output);
+  assert.equal(c.getSnapshot().busy, false);
+  assert.match(c.getSnapshot().notice, /已停止/);
+  c.dispose();
+});
+
+test("SDK 错误与过期会话不自动重发，未确认同步时阻止继续发送", async t => {
+  let posts = 0;
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    if (url === "/api/assistant/sessions") return Response.json(empty());
+    if (options.method === "POST") { posts++; return new Response("", { status: 404 }); }
+    return new Response("", { status: 404 });
+  });
+  const c = new AssistantConversation();
+  await c.send("问题", snapshot);
+  assert.equal(c.getSnapshot().expired, true);
+  assert.equal(posts, 1);
+  assert.equal(await c.send("问题", snapshot), false);
+  c.dispose();
+});
+
+test("流中未收到错误事件时，仍按后端最终状态提示失败", async t => {
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    if (url === "/api/assistant/sessions") return Response.json(empty());
+    if (options.method === "POST") return sse(events.slice(0, -2));
+    return Response.json({ ...final(), last_run_status: "failed" });
+  });
+  const c = new AssistantConversation();
+  await c.send("问题", snapshot);
+  assert.match(c.getSnapshot().error, /未完成/);
+  assert.equal(c.getSnapshot().needsSync, false);
+  c.dispose();
 });
