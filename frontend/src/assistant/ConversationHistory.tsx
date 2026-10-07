@@ -70,7 +70,7 @@ export function ConversationHistory({ anchor, currentId, onOpen, onDeleted, onCl
     </div>
     {placement === "sidebar" && <><button type="button" className="assistant-sidebar-new" onClick={onNew}><Plus size={18} aria-hidden="true" />新对话</button><p className="assistant-history-caption">最近对话</p></>}
     {error && <p className="assistant-error" role="alert">{error} <button type="button" disabled={busy} onClick={() => { setError(""); setBusy(true); setRevision(value => value + 1); }}>重试</button></p>}
-    {!busy && !error && !items.length && <p className="assistant-notice">还没有历史对话。发送第一条消息后会自动保存。</p>}
+    {!busy && !error && !items.length && <p className="assistant-history-empty">暂无对话</p>}
     <ul>{items.map(item => <li key={item.id} data-current={item.id === currentId}>
       <button type="button" className="assistant-history-open" title={`${item.title}${item.updated_at ? ` · ${new Date(item.updated_at).toLocaleString()}` : ""}`} disabled={busy || item.unreadable} aria-current={item.id === currentId ? "true" : undefined}
         onClick={async () => { setBusy(true); if (!await onOpen(item.id)) setError("无法打开对话，请重试。"); setBusy(false); }}>

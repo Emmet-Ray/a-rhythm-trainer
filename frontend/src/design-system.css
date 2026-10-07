@@ -506,7 +506,7 @@
 .rhythm-editor fieldset.rhythm-editor-controls { border: 0; padding: 0; margin: 0; min-width: 0; }
 .practice-records-page { max-width: 960px; }
 .practice-records-page .page-heading { margin-bottom: 24px; }
-.records-description, .records-empty { color: var(--ds-muted); font-size: var(--ds-text-sm); line-height: 1.7; }
+.records-description { color: var(--ds-muted); font-size: var(--ds-text-sm); line-height: 1.7; }
 .record-filters { width: fit-content; max-width: 100%; margin: 20px 0; }
 .record-list { list-style: none; padding: 0; margin: 0; }
 .design-system .record-list > .record-entry { display: flex; align-items: center; gap: 24px; padding: 24px 12px; }
@@ -1064,7 +1064,9 @@
 .assistant-history--sidebar .assistant-history-heading h3 { font-size: 16px; font-weight: 600; color: var(--ds-ink); }
 .assistant-history--sidebar ul { flex: 1; min-height: 0; overflow-y: auto; }
 .assistant-history--sidebar .assistant-sidebar-new { display: flex; align-items: center; gap: 10px; justify-content: flex-start; margin-bottom: 24px; padding: 10px; background: transparent; border: 0; text-align: left; }
-.assistant-history-caption { margin: 0 10px 8px; font-size: 12px; color: var(--ds-muted); }
+.assistant-history-caption { margin: 0 10px 12px; font-size: 12px; font-weight: 500; color: var(--ds-muted); }
+.assistant-history--sidebar .assistant-history-open { font-size: 14px; font-weight: 400; color: var(--ds-ink); }
+.assistant-history-empty { margin: 0 10px; font-size: 14px; font-weight: 400; line-height: 1.5; color: var(--ds-muted); }
 .assistant-history--sidebar .assistant-history-delete { opacity: 0; }
 .assistant-history--sidebar li:is(:hover, :focus-within) .assistant-history-delete { opacity: 1; }
 .assistant-heading .assistant-actions[hidden] { display: none; }
@@ -1105,3 +1107,6 @@
 }
 
 .random-generation .random-range-error { min-height: 24px; margin: 8px 0 0; color: var(--ds-error); font-size: 16px; line-height: 24px; }
+
+/* 主列表空状态与侧栏提示区分，保留页面已有操作入口。 */
+.library-empty-state { display: grid; place-items: center; min-height: 240px; margin: 0; padding: 48px 24px; text-align: center; color: var(--ds-muted); font-size: var(--ds-text-sm); line-height: 1.7; }

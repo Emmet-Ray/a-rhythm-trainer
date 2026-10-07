@@ -10,7 +10,7 @@ import { useBrowsingState } from "../navigation/usePageNavigation";
 import { SuccessToast } from "../navigation/SuccessToast";
 import {
   deletePracticeRecord,
-  queryPracticeRecords, recordListQuery, useRecordQuery, type RecordSummary,
+  queryPracticeRecords, queryRecordTotals, recordListQuery, useRecordQuery, type RecordSummary,
 } from "../practice-records/practiceRecordStorage";
 import { StoredRecordDetail } from "../practice-records/RecordDetail";
 import { RecordPagination } from "../practice-records/RecordPagination";
@@ -41,7 +41,9 @@ function LocalRecords() {
   }, []);
   const queryKey = recordListQuery(filter, period, page, now);
   const query = useRecordQuery(queryKey, () => queryPracticeRecords(queryKey));
-  const data = { records: query.data?.records ?? [], error: query.error };
+  const totals = useRecordQuery("record-totals", queryRecordTotals);
+  const hasRecords = (totals.data?.recordCount ?? 0) > 0;
+  const data = { records: query.data?.records ?? [], error: query.error || totals.error };
   const overview = query.data?.overview ?? { count: 0, days: 0, tappingCount: 0, passedCount: 0, passRate: null, dictationCount: 0, completedCount: 0, independentCount: 0 };
   const filtered = data.records;
   const selected = data.records.find(record => record.id === selectedId);
@@ -78,7 +80,7 @@ function LocalRecords() {
         <p role="alert" className="practice-record-error">
           {data.error}
         </p>
-        <button type="button" onClick={query.reload}>
+        <button type="button" onClick={() => { query.reload(); totals.reload(); }}>
           重新读取
         </button>
       </>
@@ -121,8 +123,8 @@ function LocalRecords() {
           </button>
         ))}
       </div>
-      {!query.data && <p role="status">正在读取练习记录…</p>}
-      <section className="record-overview" aria-label="练习统计">
+      {(!query.data || !totals.data) && <p role="status">正在读取练习记录…</p>}
+      {hasRecords && <section className="record-overview" aria-label="练习统计">
         <dl className="record-metrics">
           <div><dt>{filter === "dictation" ? "作答次数" : "练习次数"}</dt><dd>{overview.count}<span>次</span></dd></div>
           <div><dt>练习天数</dt><dd>{overview.days}<span>天</span></dd></div>
@@ -135,11 +137,10 @@ function LocalRecords() {
             <div><dt title="全部验证正确，且完成前未查看答案">独立完成</dt><dd>{overview.independentCount}<span>次</span></dd></div>
           </>}
         </dl>
-      </section>
-      {!query.data ? null : filtered.length === 0 ? (
-        <p className="records-empty">
-          {period === "all" ? "暂无" : "所选时间范围内暂无"}{filter === "all" ? "" : filter === "tapping" ? "击拍" : "听写"}
-          练习记录。
+      </section>}
+      {!query.data || !totals.data ? null : filtered.length === 0 ? (
+        <p className="library-empty-state">
+          {hasRecords ? "当前条件下暂无记录" : "暂无练习记录"}
         </p>
       ) : (
         <ul className="record-list navigation-list">

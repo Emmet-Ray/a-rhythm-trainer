@@ -238,8 +238,8 @@ function CustomExerciseList({
           正在读取练习…
         </p>
       ) : result.items.length === 0 ? (
-        <p className="empty-questions">
-          还没有练习，点击上方「新建练习」开始创建。
+        <p className="library-empty-state">
+          {mode === "tapping" ? "暂无击拍练习" : "暂无听写练习"}
         </p>
       ) : (
         <ul className="question-list navigation-list" aria-label="已保存的自定义练习">
@@ -266,7 +266,7 @@ function CustomExerciseList({
           ))}
         </ul>
       )}
-      {(
+      {!result.loading && !result.error && result.items.length > 0 && (offset > 0 || result.items.length === 50) && (
         <nav aria-label="题目分页">
           <button
             type="button"
