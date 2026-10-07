@@ -29,7 +29,6 @@ async (page) => {
   let releaseResponse;
   let deferResponse = false;
   const session = () => ({ id: 'layout-session', messages, is_running: false, last_run_status: messages.length ? 'completed' : null });
-  await page.route('**/api/auth/me', route => route.fulfill({ json: { auth_enabled: false } }));
   await page.route('**/api/assistant/status', route => route.fulfill({ json: { status: 'ready', message: '' } }));
   await page.route('**/api/assistant/sessions', route => { created++; return route.fulfill({ json: session() }); });
   await page.route('**/api/assistant/sessions/*', route => route.fulfill({ json: session() }));
@@ -219,8 +218,8 @@ async (page) => {
   await dictation.getByRole('button', { name: '停止', exact: true }).waitFor();
   await dictation.getByRole('button', { name: '关闭练习', exact: true }).click();
   check(await background.getByRole('button', { name: '试听', exact: true }).isVisible(), '关闭覆盖层不自动恢复后台');
-  const attemptCount = () => page.evaluate(() => {
-    const data = JSON.parse(localStorage.getItem('rhythm-trainer.practice-records') || '{"records":[]}');
+  const attemptCount = () => page.evaluate(async () => {
+    const data = await (await fetch("/api/local-data/records")).json();
     return data.records.filter(record => record.exerciseId === 'basic-values-01' && record.mode === 'tapping')
       .reduce((sum, record) => sum + record.attempts.length, 0);
   });
@@ -239,8 +238,8 @@ async (page) => {
   await panel.getByRole('button', { name: '试听', exact: true }).click();
   await background.getByRole('button', { name: '击拍练习', exact: true }).waitFor();
   check(await attemptCount() === beforeAttempts + 1, '正式训练中断只记录一次');
-  check(await page.evaluate(() => {
-    const data = JSON.parse(localStorage.getItem('rhythm-trainer.practice-records'));
+  check(await page.evaluate(async () => {
+    const data = await (await fetch("/api/local-data/records")).json();
     return data.records.find(record => record.exerciseId === 'basic-values-01' && record.mode === 'tapping')
       .attempts.at(-1).passed === false;
   }), '中断轮次不能被记录为通过');

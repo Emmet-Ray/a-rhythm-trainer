@@ -1,9 +1,8 @@
-import { useContext, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Check, History } from "lucide-react";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import type { ExerciseContext, PracticeRecord } from "./PracticeRecord";
-import { RecordAccessContext } from "./recordAccess";
-import { listPracticeRecords, RECORDS_CHANGED } from "./practiceRecordStorage";
+import { refreshPracticeRecords, listPracticeRecords, RECORDS_CHANGED } from "./practiceRecordStorage";
 import { recordKey, historicalStatus } from "./practiceRecords";
 import { RecordDetail } from "./RecordDetail";
 
@@ -22,10 +21,9 @@ export type ExerciseHistoryProps = {
   /** The heading places status and action separately; storage and dialog remain owned here. */
   children: (slots: { status: ReactNode; action: ReactNode }) => ReactNode;
 };
-/** Only guest history is read; a new random ID or score version never borrows another record. */
+/** Instance history is read; a new random ID or score version never borrows another record. */
 export function ExerciseHistory(props: ExerciseHistoryProps) {
-  const access = useContext(RecordAccessContext);
-  return access === "guest" ? <LocalHistory key={recordKey(props.context, props.exercise, props.mode)} {...props} /> : props.children({ status: null, action: null });
+  return <LocalHistory key={recordKey(props.context, props.exercise, props.mode)} {...props} />;
 }
 
 function LocalHistory({ context, exercise, mode, children }: ExerciseHistoryProps) {
@@ -45,7 +43,7 @@ function LocalHistory({ context, exercise, mode, children }: ExerciseHistoryProp
   const status = achievement ? <span className="practice-achievement"><Check className="ui-icon" aria-hidden="true" />{achievement}</span> : null;
   const action = <div className="exercise-history text-actions">
     {data.error && <span>历史读取失败</span>}
-    {data.error ? <button type="button" title={data.error} onClick={() => setData(readHistory(key))}>重试读取</button> :
+    {data.error ? <button type="button" title={data.error} onClick={() => { void refreshPracticeRecords().catch(() => {}); }}>重试读取</button> :
       <button type="button" disabled={!data.record} aria-haspopup="dialog" onClick={() => setOpen(true)}>
         <History className="ui-icon" aria-hidden="true" />练习历史
       </button>}

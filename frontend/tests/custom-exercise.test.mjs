@@ -322,30 +322,26 @@ test("设置页不要求登录，明暗模式与三套配色独立选择", async
   assert.doesNotMatch(html, /请登录后/);
 });
 
-test("设置页提供五个分类，默认只展示账号内容", async () => {
+test("设置页提供四个分类，默认展示外观且没有账号入口", async () => {
   const html = await renderApp("/settings");
   for (const [id, title] of [
-    ["account", "账号"], ["appearance", "外观"], ["local-data", "本地数据"],
+    ["appearance", "外观"], ["local-data", "本地数据"],
     ["sound", "声音"], ["tapping-precision", "击拍精度"],
   ]) {
     const badge = id === "sound" ? '<span class="settings-unavailable">未开放</span>' : "";
-    assert.match(withoutSvg(html), new RegExp(`<button[^>]*aria-pressed="${id === "account"}"[^>]*>${title}${badge}</button>`));
+    assert.match(withoutSvg(html), new RegExp(`<button[^>]*aria-pressed="${id === "appearance"}"[^>]*>${title}${badge}</button>`));
   }
   for (const id of ["local-data", "sound", "tapping-precision"]) {
     assert.doesNotMatch(html, new RegExp(`id="${id}-heading"`));
   }
   assert.match(html, /aria-label="设置分类"/);
-  assert.match(html, /<h2 id="account-heading">账号<\/h2>/);
+  assert.match(html, /<h2 id="appearance-heading">外观<\/h2>/);
 });
 
-function renderSettings(state, error = "") {
-  const auth = { state, error, busy: false, refresh() {}, login() {}, logout() {} };
-  return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ["/settings?category=account"] }, createElement(SettingsPage, { auth })));
-}
 
 test("设置分类图标保留文字名称且不参与朗读", async () => {
   const cases = [
-    [await renderApp("/settings?category=appearance"), ["账号", "外观", "本地数据", "声音未开放", "击拍精度"]],
+    [await renderApp("/settings?category=appearance"), ["外观", "本地数据", "声音未开放", "击拍精度"]],
   ];
   for (const [html, labels] of cases) {
     for (const label of labels) {
@@ -356,79 +352,23 @@ test("设置分类图标保留文字名称且不参与朗读", async () => {
   }
 });
 
-test("账号设置统一承载会话状态、重试和退出，顶部不再显示登录入口", async () => {
-  const checking = renderSettings({ status: "checking" });
-  assert.match(checking, /正在确认登录/);
-  assert.doesNotMatch(checking, /login-form/);
-  const loggedIn = renderSettings({ status: "authenticated", user: { id: 1 } });
-  assert.match(loggedIn, /已登录/);
-  assert.match(loggedIn, /退出登录/);
-  assert.doesNotMatch(loggedIn, /login-form/);
-  const unavailable = renderSettings({ status: "unavailable" }, "无法确认退出结果。");
-  assert.match(unavailable, /重新检查/);
-  assert.match(unavailable, /无法确认退出结果/);
-  assert.match(unavailable, /login-form/);
-  const html = await renderApp("/settings");
-  const header = html.match(/<aside class="site-sidebar[\s\S]*?<\/aside>/)?.[0] ?? "";
-  assert.doesNotMatch(header, /登录|退出|auth-status/);
-});
-
-test("登录表单保留标签、自动填充和反馈语义，未发送验证码时不能登录", async () => {
-  const html = renderSettings({ status: "guest" });
-  assert.match(html, /aria-label="登录"/);
-  assert.match(html, /for="login-phone"/);
-  assert.match(html, /type="tel"[^>]*autoComplete="tel-national"/);
-  assert.match(html, /for="login-code"/);
-  assert.match(html, /autoComplete="one-time-code"/);
-  assert.match(html, /id="login-phone"[^>]*aria-invalid="false"/);
-  assert.match(html, /id="login-code"[^>]*aria-invalid="false"/);
-  for (const field of ["phone", "code"]) {
-    assert.match(html, new RegExp(`<p id="login-${field}-error" class="login-field-error" aria-live="polite"></p>`));
-  }
-  assert.match(withoutSvg(html), /<button type="submit" disabled="">登录/);
-});
-
-test("账号关闭时设置说明本地使用，不显示登录和退出操作", () => {
-  const html = renderSettings({ status: "disabled" });
-  assert.match(html, /此站点未启用账号功能/);
-  assert.match(html, /当前浏览器/);
-  assert.doesNotMatch(html, /login-form|发送验证码|退出登录|正在确认登录/);
-});
-
-test("账号关闭时两种模式可以读取本地题目、新建并提供可用的保存按钮", async (t) => {
-  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
-  const auth = { state: { status: "disabled" }, busy: false };
-  for (const mode of ["tapping", "dictation"]) {
-    const list = await renderPage(`/custom/${mode}`, "/custom/:mode", auth);
-    assert.match(list, new RegExp(`saved-${mode}`));
-    const detail = await renderPage(`/custom/${mode}/saved-${mode}`, "/custom/:mode/:exerciseId", auth);
-    assert.match(detail, new RegExp(`${mode}题目`));
-    const editor = await renderPage(`/custom/${mode}/new`, "/custom/:mode/new", auth);
-    assert.match(editor, /编辑自定义练习/);
-    assert.match(withoutSvg(editor), /<button[^>]*>保存练习<\/button>/);
-    assert.doesNotMatch(withoutSvg(editor), /<button[^>]*disabled[^>]*>保存练习<\/button>/);
-  }
-  const account = await renderPage("/custom/tapping/account/saved-tapping", "/custom/:mode/account/:exerciseId", auth);
-  assert.match(account, /此站点未启用账号功能，无法读取账号练习/);
-  assert.doesNotMatch(account, /tapping题目|击拍训练区|>登录<\/a>/);
-});
 
 async function renderPage(path, route, auth = { state: { status: "guest" }, busy: false }, visits = null, state = null) {
   const stream = await renderToReadableStream(createElement(VisitsContext, { value: visits }, createElement(MemoryRouter, { initialEntries: [{ pathname: path, key: "test-visit", state }] },
     createElement(Routes, null,
-      createElement(Route, { path: route, element: createElement(CustomPracticePage, { auth }) }),
+      createElement(Route, { path: route, element: createElement(CustomPracticePage) }),
     ),
   )));
   await stream.allReady;
   return new Response(stream).text();
 }
 
-test("工作区恢复听写答案、验证及设置但不恢复结果遮罩，账号来源隔离", () => {
+test("工作区恢复听写答案、验证及设置但不恢复结果遮罩，题目来源隔离", () => {
   const visits = new PageVisits();
   const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: "note", noteValue: "whole" }] }] };
-  const scope = "custom:account:1:account:dictation:item";
+  const scope = "custom:dictation:item";
   visits.write("session", `practice:${scope}:settings`, { bpm: 97, metronomeEnabled: false });
-  visits.write("session", `practice:checking:${scope}:dictation`, {
+  visits.write("session", `practice:${scope}:dictation`, {
     binding: dictationBinding(1, exercise),
     state: { answerMeasures: [exercise.measures[0].elements], selectedMeasureIndex: 0, playbackScope: "measure", measureVerdicts: ["correct"] },
   });
@@ -444,42 +384,34 @@ test("工作区恢复听写答案、验证及设置但不恢复结果遮罩，�
   assert.match(html, /小节 1 验证结果/);
   assert.doesNotMatch(html, /关闭练习结果|预备拍：|停止题目|停止答案/);
   assert.doesNotMatch(render(scope, 2), /小节 1 验证结果/);
-  const other = render("custom:account:2:account:dictation:item");
+  const other = render("custom:dictation:other");
   assert.doesNotMatch(other, /小节 1 验证结果/);
   assert.match(other, /value="60"/);
 });
 
-test("原访问恢复草稿内容和生效设置，身份及模式不同不载入，清除后回到空草稿", async () => {
+test("原访问恢复草稿内容和生效设置，模式不同不载入，清除后回到空草稿", async () => {
   const visits = new PageVisits();
   const draft = {
-    name: "账号一草稿",
+    name: "本地草稿",
     measures: [[], [], [{ kind: "note", noteValue: "half" }]],
     selectedMeasureIndex: 2,
     settings: { bpm: 93, metronomeEnabled: false },
   };
-  const field = "custom:account:1:account:tapping:new:draft";
+  const field = "custom:tapping:new:draft";
   visits.write("test-visit", field, draft);
   const auth = { state: { status: "authenticated", user: { id: 1 } }, busy: false };
   const html = await renderPage("/custom/tapping/new", "/custom/:mode/new", auth, visits);
-  assert.match(html, /value="账号一草稿"/);
+  assert.match(html, /value="本地草稿"/);
   assert.match(html, /aria-label="当前小节数量">3/);
   assert.match(html, /aria-label="跳到小节 3" aria-pressed="true"/);
   assert.match(html, /aria-label="节拍器" aria-pressed="false"/);
   assert.match(html, /value="93"/);
   assert.doesNotMatch(html, /预备拍：|>停止<|正在保存/);
-  for (const other of [
-    { state: { status: "guest" }, busy: false },
-    { state: { status: "authenticated", user: { id: 2 } }, busy: false },
-  ]) {
-    const isolated = await renderPage("/custom/tapping/new", "/custom/:mode/new", other, visits);
-    assert.doesNotMatch(isolated, /账号一草稿/);
-    assert.match(isolated, /aria-label="当前小节数量">2/);
-  }
   const otherMode = await renderPage("/custom/dictation/new", "/custom/:mode/new", auth, visits);
-  assert.doesNotMatch(otherMode, /账号一草稿/);
+  assert.doesNotMatch(otherMode, /本地草稿/);
   visits.forget("test-visit", field, draft);
   const cleared = await renderPage("/custom/tapping/new", "/custom/:mode/new", auth, visits);
-  assert.doesNotMatch(cleared, /账号一草稿/);
+  assert.doesNotMatch(cleared, /本地草稿/);
   assert.match(cleared, /aria-label="当前小节数量">2/);
 });
 
@@ -496,34 +428,6 @@ const savedQuestions = ["tapping", "dictation"].map((mode) => ({
   ] },
 }));
 
-test("自定义练习复用组件自身样式，不需要页面开启设计开关", async (t) => {
-  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
-  for (const mode of ["tapping", "dictation"]) {
-    const html = await renderPage(`/custom/${mode}/saved-${mode}`, "/custom/:mode/:exerciseId");
-    assert.match(html, /class="design-system practice-page custom-detail"/);
-    assert.match(html, /class="practice-settings design-system"/);
-    assert.match(html, mode === "tapping"
-      ? /class="rhythm-trainer design-system"/
-      : /class="rhythm-dictation design-system"/);
-    assert.match(html, /practice-layout--training/);
-  }
-});
-
-test("已保存列表链接到所属模式的题目", async (t) => {
-  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
-  for (const mode of ["tapping", "dictation"]) {
-    const html = await renderPage(`/custom/${mode}`, "/custom/:mode");
-    assert.match(html, /class="design-system practice-page custom-library"/);
-    assert.ok(html.includes(`href="/custom/${mode}/saved-${mode}"`));
-    assert.match(html, /开始练习/);
-    assert.doesNotMatch(html, /question-meta|4\/4 拍|\d+ 小节/);
-    assert.match(html, /practice-titlebar custom-list-heading/);
-    assert.match(html, /<section class="custom-catalog" aria-label="题目列表">[\s\S]*aria-label="已保存的自定义练习"/);
-    assert.match(html.match(/<header class="practice-titlebar custom-list-heading">[\s\S]*?<\/header>/)?.[0] ?? "", /custom-new-link/);
-    assert.doesNotMatch(html, /未开放|eyebrow/);
-    assert.doesNotMatch(html, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
-  }
-});
 
 test("历史保存标记不再产生常驻提示或高亮，返回列表不重播创建通知", async (t) => {
   mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
@@ -537,58 +441,13 @@ test("历史保存标记不再产生常驻提示或高亮，返回列表不重�
   }
 });
 
-test("账号列表等待远程响应，不读取本地题库", async (t) => {
+test("实例列表等待远程响应，不读取本地题库", async (t) => {
   mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
   const html = await renderPage("/custom/tapping", "/custom/:mode", { state: { status: "authenticated", user: { id: 1 } }, busy: false });
   assert.match(html, /正在读取练习/);
   assert.doesNotMatch(html, /saved-tapping|暂无题目/);
 });
 
-test("登录未知或正在切换身份时不读取本地题库", async (t) => {
-  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
-  for (const auth of [
-    { state: { status: "checking" }, busy: false },
-    { state: { status: "unavailable" }, busy: false },
-    { state: { status: "authenticated", user: { id: 1 } }, busy: true },
-  ]) {
-    const html = await renderPage("/custom/tapping", "/custom/:mode", auth);
-    assert.match(html, /class="design-system practice-page custom-status"/);
-    assert.doesNotMatch(html, /saved-tapping|暂无题目/);
-    assert.match(html, /登录/);
-  }
-});
-
-test("账号详情未登录时要求登录，已登录也不会用同 ID 的本地题目兜底", async (t) => {
-  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
-  const path = "/custom/tapping/account/saved-tapping";
-  const route = "/custom/:mode/account/:exerciseId";
-  const guest = await renderPage(path, route);
-  assert.match(guest, /请登录后查看账号练习/);
-  assert.match(guest, /class="design-system practice-page custom-status"/);
-  const html = await renderPage(path, route, { state: { status: "authenticated", user: { id: 1 } }, busy: false });
-  assert.match(html, /正在读取练习/);
-  assert.doesNotMatch(html, /tapping题目|击拍训练区/);
-});
-
-test("已登录打开旧本地链接仍读取本地题目，不隐式改为账号来源", async (t) => {
-  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
-  const html = await renderPage("/custom/tapping/saved-tapping", "/custom/:mode/:exerciseId", { state: { status: "authenticated", user: { id: 1 } }, busy: false });
-  assert.match(html, /<h1>tapping题目<\/h1>/);
-  assert.doesNotMatch(html, /class="eyebrow"/);
-  assert.match(html, /tapping题目/);
-});
-
-test("编辑器不显示存储提示，登录状态未知时先确认草稿身份", async () => {
-  for (const status of ["authenticated", "checking", "unavailable"]) {
-    const html = await renderPage("/custom/tapping/new", "/custom/:mode/new", { state: { status, user: { id: 1 } }, busy: false });
-    if (status === "authenticated") assert.match(html, /编辑自定义练习/);
-    else {
-      assert.doesNotMatch(html, /编辑自定义练习|保存练习/);
-      assert.match(html, /正在确认登录|无法确认登录状态/);
-    }
-    assert.doesNotMatch(html, /class="custom-draft-notice"/);
-  }
-});
 
 test("公共练习设置可从已生效快照初始化，不自动触发变化或播放", () => {
   let changes = 0;
@@ -602,39 +461,6 @@ test("公共练习设置可从已生效快照初始化，不自动触发变化�
   assert.equal(changes, 0);
 });
 
-test("保存题目可按地址直接进入相应训练，共用 BPM 和节拍器", async (t) => {
-  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
-  for (const mode of ["tapping", "dictation"]) {
-    const html = await renderPage(`/custom/${mode}/saved-${mode}`, "/custom/:mode/:exerciseId");
-    assert.ok(html.includes(`<h1>${mode}题目</h1>`));
-    assert.ok(html.includes(`href="/custom/${mode}"`));
-    assert.match(html, /aria-label="速度滑块"/);
-    assert.doesNotMatch(html, /应用速度|未应用/);
-    assert.match(html, /value="60"/);
-    assert.match(html, /aria-label="节拍器" aria-pressed="true"/);
-    assert.ok(html.includes(mode === "tapping" ? 'aria-label="击拍训练区"' : 'aria-label="节奏听写区"'));
-    assert.doesNotMatch(html, /编辑自定义练习|保存练习/);
-  }
-});
-
-test("题目不存在或模式不匹配不启动训练", async (t) => {
-  mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
-  for (const id of ["missing", "saved-dictation"]) {
-    const html = await renderPage(`/custom/tapping/${id}`, "/custom/:mode/:exerciseId");
-    assert.match(html, /未找到该练习/);
-    assert.match(withoutSvg(html), /href="\/custom\/tapping"[^>]*>题目列表/);
-    assert.doesNotMatch(html, /击拍训练区|节奏听写区|速度滑块/);
-  }
-});
-
-test("题目页读取损坏数据时显示错误与重试，不冒充题目不存在", async (t) => {
-  mockSavedExercises(t, "broken-json");
-  const html = await renderPage("/custom/tapping/saved-tapping", "/custom/:mode/:exerciseId");
-  assert.match(html, /无法读取练习/);
-  assert.match(html, /class="design-system practice-page custom-detail"/);
-  assert.match(html, /重试读取/);
-  assert.doesNotMatch(html, /未找到该练习|击拍训练区/);
-});
 
 test("自定义题库提供模式切换和新建入口", async () => {
   const html = await renderPage("/custom/tapping", "/custom/:mode");
@@ -645,60 +471,6 @@ test("自定义题库提供模式切换和新建入口", async () => {
   assert.doesNotMatch(html, /class="practice-return"|选择训练方式|几何游戏/);
 });
 
-test("模式列表保留新建入口，空存储引导创建", async (t) => {
-  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
-  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { getItem: () => null } });
-  t.after(() => previous ? Object.defineProperty(globalThis, "localStorage", previous) : delete globalThis.localStorage);
-  for (const mode of ["tapping", "dictation"]) {
-    const html = await renderPage(`/custom/${mode}`, "/custom/:mode");
-    assert.ok(html.includes(`href="/custom/${mode}/new"`));
-    assert.match(html, /还没有练习，点击上方「新建练习」开始创建。/);
-    assert.doesNotMatch(html, /已保存的自定义练习|编辑自定义练习/);
-  }
-});
-
-test("自定义列表管理操作与练习链接独立，编辑读取原题且拒绝错误模式", async (t) => {
-  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
-  const item = {id: "edit-test", name: "原题", mode: "tapping", exercise: {
-    timeSignature: {beats: 4, beatType: 4}, measures: [{elements: [{kind: "note", noteValue: "whole"}]}],
-  }};
-  Object.defineProperty(globalThis, "localStorage", {configurable: true, value: {
-    getItem: () => JSON.stringify({version: 1, exercises: [item]}),
-  }});
-  t.after(() => previous ? Object.defineProperty(globalThis, "localStorage", previous) : delete globalThis.localStorage);
-  const list = await renderPage("/custom/tapping", "/custom/:mode");
-  assert.match(list, /href="\/custom\/tapping\/edit-test\/edit"/);
-  assert.doesNotMatch(list, /class="question-link"/);
-  for (const label of ["开始练习", "编辑", "删除"]) {
-    const control = (list.match(/<(?:a|button)\b[^]*?<\/(?:a|button)>/g) ?? [])
-      .find(item => withoutSvg(item).replace(/<[^>]*>/g, "").trim() === label);
-    assert.ok(control, label);
-    assert.match(control, new RegExp(`<svg[^]*<\\/svg>${label}`));
-  }
-  assert.match(withoutSvg(list), /<button[^>]*>删除<\/button>/);
-  for (const anchor of list.match(/<a\b[^]*?<\/a>/g) ?? []) assert.doesNotMatch(anchor, /<button/);
-  const edit = await renderPage("/custom/tapping/edit-test/edit", "/custom/:mode/:exerciseId/edit");
-  assert.match(edit, /编辑：原题/);
-  assert.match(edit, /value="原题"/);
-  assert.match(edit, /保存修改/);
-  assert.match(edit, /aria-label="当前小节数量">1/);
-  const wrongMode = await renderPage("/custom/dictation/edit-test/edit", "/custom/:mode/:exerciseId/edit");
-  assert.match(wrongMode, /没有该模式/);
-  assert.doesNotMatch(wrongMode, /保存修改/);
-  const account = await renderPage("/custom/tapping/account/edit-test/edit", "/custom/:mode/account/:exerciseId/edit");
-  assert.match(account, /请登录后/);
-  assert.doesNotMatch(account, /保存修改|value="原题"/);
-});
-
-test("存储访问失败时列表显示错误与重试，不显示空题库", async (t) => {
-  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
-  Object.defineProperty(globalThis, "localStorage", { configurable: true, get() { throw new Error("blocked"); } });
-  t.after(() => previous ? Object.defineProperty(globalThis, "localStorage", previous) : delete globalThis.localStorage);
-  const html = await renderPage("/custom/tapping", "/custom/:mode");
-  assert.match(html, /无法访问本地练习/);
-  assert.match(html, /重试读取/);
-  assert.doesNotMatch(html, /暂无题目/);
-});
 
 test("未知模式和未开放的几何模式不回退到默认编辑器", async () => {
   for (const mode of ["unknown", "geometry"]) {
@@ -856,5 +628,13 @@ test("共用播放器禁止全空草稿，允许纯休止符和欠拍草稿，�
     assert.equal(html.includes('disabled=""'), disabled);
     assert.equal((html.match(/<button\b/g) ?? []).length, 1);
     assert.doesNotMatch(html, /播放题目|播放我的答案/);
+  }
+});
+
+test("新建练习无需身份检查，两种模式均提供保存入口", async () => {
+  for (const mode of ["tapping", "dictation"]) {
+    const html = await renderPage(`/custom/${mode}/new`, "/custom/:mode/new");
+    assert.match(html, /保存练习/);
+    assert.doesNotMatch(html, /登录|验证码|正在确认/);
   }
 });

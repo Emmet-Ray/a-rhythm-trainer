@@ -11,6 +11,11 @@ from pathlib import Path
 from threading import RLock
 
 
+import hashlib
+
+INSTANCE_OWNER = hashlib.sha256(b"local-instance").hexdigest()
+
+
 class SessionStorageError(Exception):
     pass
 

@@ -22,7 +22,7 @@ def test_import_does_not_read_config_or_create_files(tmp_path, monkeypatch):
     # 独立进程验证导入，避免 reload 重建 Base，破坏其他测试已注册的模型。
     backend_path = str(Path(__file__).resolve().parents[1])
     monkeypatch.setenv("PYTHONPATH", backend_path)
-    subprocess.run([sys.executable, "-c", "import db.database; import db.users; import db.sessions; import db.sms_logins; import db.custom_exercises; import domain.rhythm; import domain.auth; import integrations.sms; import api.auth; import api.custom_exercises; import main"], check=True)
+    subprocess.run([sys.executable, "-c", "import db.database; import db.custom_exercises; import domain.rhythm; import api.custom_exercises; import main"], check=True)
     assert list(tmp_path.iterdir()) == []
 
 
@@ -99,7 +99,9 @@ def test_invalid_config_has_no_filesystem_side_effects(value, tmp_path, monkeypa
     assert list(tmp_path.iterdir()) == []
 
 
-def test_missing_env(monkeypatch):
+def test_default_database_is_local(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("DATABASE_URL", raising=False)
-    with pytest.raises(ValueError, match="DATABASE_URL"):
-        database.create_database_engine()
+    engine = database.create_database_engine()
+    assert engine.url.database == str(tmp_path / "data/rhythm_trainer.db")
+    engine.dispose()

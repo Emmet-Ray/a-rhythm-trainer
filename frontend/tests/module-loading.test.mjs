@@ -54,7 +54,7 @@ test("预加载范围不把首页、列表或设置变成全量训练代码入�
   for (const section of ["preset", "custom", "settings"]) assert.deepEqual(destinationModules(`/${section}`), [routeModules[section]]);
   assert.deepEqual(destinationModules("/custom/tapping"), [routeModules.custom]);
   assert.deepEqual(destinationModules("/custom/dictation/new"), [routeModules.custom, editorModule]);
-  assert.deepEqual(destinationModules("/custom/tapping/account/123"), [routeModules.custom, workspaceModule]);
+  assert.deepEqual(destinationModules("/custom/tapping/123"), [routeModules.custom, workspaceModule]);
   assert.deepEqual(destinationModules("/preset/basic-values-01"), [routeModules.preset, workspaceModule]);
   assert.deepEqual(destinationModules("/random"), [routeModules.random, workspaceModule]);
   assert.deepEqual(destinationModules("/random/dictation"), [routeModules.random, workspaceModule]);

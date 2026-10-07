@@ -22,7 +22,6 @@ export async function assistantFetch(path: string, options: RequestInit, signal:
   });
   if (!response.ok) {
     const messages: Record<number, string> = {
-      401: "登录已过期，请重新登录后打开对话。",
       403: "助手请求来源未获允许，请检查后端 AI_ALLOWED_ORIGINS 配置。", 404: "会话不存在或不属于当前身份，请打开历史对话或开始新对话。",
       409: "这个会话仍在运行，请稍后同步状态。", 422: "问题或页面资料格式不正确，或内容过大。",
       503: "助手服务或对话存储不可用，请检查后端配置和日志。",

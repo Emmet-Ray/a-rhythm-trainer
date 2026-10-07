@@ -1,6 +1,5 @@
 async (page) => {
   const check = (condition, message) => { if (!condition) throw new Error(message); };
-  await page.route('**/api/auth/me', route => route.fulfill({ json: { auth_enabled: false } }));
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto('http://localhost:5173/custom');
   await page.waitForURL('**/custom/tapping');

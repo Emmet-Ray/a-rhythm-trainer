@@ -1,17 +1,16 @@
+import { refreshPracticeRecords } from "./practice-records/practiceRecordStorage";
 import { PracticeActivity, PracticeActivityContext } from "./assistant/practiceActivity";
 import { PlaybackContext, PlaybackGroup } from "./practice/PlaybackGroup";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { routeModules, preloadDestination, preloadLinkIntent } from "./navigation/routeModules";
 import { LoadingPlaceholder } from "./navigation/LoadingPlaceholder";
-import { Navigate, Route, Routes, useLocation } from "react-router";
+import { Route, Routes, useLocation } from "react-router";
 import SiteNavigation from "./navigation/SiteNavigation";
 import NotFoundPage from "./pages/NotFoundPage";
-import { useAuth } from "./auth/useAuth";
 import { PageNavigation } from "./navigation/PageNavigation";
 import { useNavigationScroll } from "./navigation/usePageNavigation";
 import "./App.css";
 import "./design-system.css";
-import { RecordAccessContext, recordAccess } from "./practice-records/recordAccess";
 import { GeneratedExerciseStore, GeneratedExercisesContext } from "./exercises/GeneratedExerciseStore";
 import { AssistantPanel } from "./assistant/AssistantPanel";
 import { AssistantContext, AssistantContextScope } from "./assistant/assistantContext";
@@ -31,25 +30,25 @@ function App() {
 }
 
 function AppShell() {
-  const auth = useAuth();
   const { pathname, key } = useLocation();
+  useEffect(() => {
+    const refresh = () => { void refreshPracticeRecords().catch(() => {}); };
+    refresh(); window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [pathname]);
   useEffect(() => { void preloadDestination(pathname); }, [pathname]);
   const mainRef = useRef<HTMLElement>(null);
-  const identity = auth.state.status === "authenticated" ? `account:${auth.state.user.id}` : auth.state.status;
-  // 临时生成题目与助手一样按身份隔离，路由切换不清空。
+  const [generatedExercises] = useState(() => new GeneratedExerciseStore());
+  // 路由访问隔离上下文快照，助手本身保持挂载
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const generatedExercises = useMemo(() => new GeneratedExerciseStore(), [identity]);
-  // 每次访问创建独立快照容器；面板在路由边界外保留，身份变化时重新挂载。
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const assistantContext = useMemo(() => new AssistantContext(), [key, identity]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const practiceActivity = useMemo(() => new PracticeActivity(), [identity]);
-  useNavigationScroll(pathname.startsWith("/custom") ? identity : "public");
+  const assistantContext = useMemo(() => new AssistantContext(), [key]);
+  const [practiceActivity] = useState(() => new PracticeActivity());
+  useNavigationScroll();
 
   return (
     <PracticeActivityContext value={practiceActivity}><GeneratedExercisesContext value={generatedExercises}>
     <AssistantContextScope.Provider value={assistantContext}>
-    <RecordAccessContext.Provider value={recordAccess(auth)}><div className="site-shell" onPointerOver={preloadLinkIntent} onFocusCapture={preloadLinkIntent} onPointerDownCapture={preloadLinkIntent}>
+    <div className="site-shell" onPointerOver={preloadLinkIntent} onFocusCapture={preloadLinkIntent} onPointerDownCapture={preloadLinkIntent}>
       <a className="skip-link" href="#main-content">
         跳到主要内容
       </a>
@@ -62,8 +61,7 @@ function AppShell() {
           }
         >
           <Routes>
-            <Route path="/login" element={<Navigate to="/settings?category=account" replace />} />
-            <Route path="/settings" element={<SettingsPage auth={auth} />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/records" element={<PracticeRecordsPage />} />
             <Route path="/about" element={<AboutPage />} />
             {/* 首页内容由下方持续挂载的助手呈现，避免路由切换重建对话。 */}
@@ -73,44 +71,36 @@ function AppShell() {
               path="/preset/:questionId"
               element={<PresetPracticePage />}
             />
-            <Route path="/ai/dictation/:exerciseId" element={<AiPracticePage key={identity} mode="dictation" />} />
-            <Route path="/ai/tapping/:exerciseId" element={<AiPracticePage key={identity} mode="tapping" />} />
+            <Route path="/ai/dictation/:exerciseId" element={<AiPracticePage mode="dictation" />} />
+            <Route path="/ai/tapping/:exerciseId" element={<AiPracticePage mode="tapping" />} />
             <Route path="/random" element={<RandomPracticePage />} />
             <Route path="/random/:mode" element={<RandomPracticePage />} />
             <Route
               path="/custom"
-              element={<CustomPracticePage auth={auth} />}
+              element={<CustomPracticePage />}
             />
             <Route
               path="/custom/:mode"
-              element={<CustomPracticePage auth={auth} />}
+              element={<CustomPracticePage />}
             />
             <Route
               path="/custom/:mode/new"
-              element={<CustomPracticePage auth={auth} />}
+              element={<CustomPracticePage />}
             />
             <Route
               path="/custom/:mode/:exerciseId"
-              element={<CustomPracticePage auth={auth} />}
+              element={<CustomPracticePage />}
             />
             <Route
               path="/custom/:mode/:exerciseId/edit"
-              element={<CustomPracticePage auth={auth} />}
-            />
-            <Route
-              path="/custom/:mode/account/:exerciseId/edit"
-              element={<CustomPracticePage auth={auth} />}
-            />
-            <Route
-              path="/custom/:mode/account/:exerciseId"
-              element={<CustomPracticePage auth={auth} />}
+              element={<CustomPracticePage />}
             />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
-        <AssistantPanel key={identity} identity={identity} home={pathname === "/"} />
+        <AssistantPanel home={pathname === "/"} />
       </main>
-    </div></RecordAccessContext.Provider>
+    </div>
     </AssistantContextScope.Provider>
     </GeneratedExercisesContext></PracticeActivityContext>
   );

@@ -1,5 +1,5 @@
 import { ActionError } from "../navigation/ActionError";
-import { ArrowLeft, LoaderCircle, Minus, Plus, Save, Pencil, Trash2, Play } from "lucide-react";
+import { LoaderCircle, Minus, Plus, Save, Pencil, Trash2, Play } from "lucide-react";
 import { SuccessToast } from "../navigation/SuccessToast";
 import { useAssistantExerciseTarget, useAssistantPageContext } from "../assistant/assistantContext";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
@@ -23,7 +23,6 @@ import {
   useParams,
 } from "react-router";
 import NotFoundPage from "./NotFoundPage";
-import { ReturnLink } from "../navigation/PageNavigation";
 import { PracticeHeading } from "../practice/PracticeHeading";
 import { editorModule, workspaceModule } from "../practice/practiceModules";
 import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
@@ -35,14 +34,13 @@ import {
   type RhythmElement,
   type RhythmExercise,
 } from "../rhythm/RhythmModel";
-import type { useAuth } from "../auth/useAuth";
 import {
-  getAccountExercise,
-  listAccountExercises,
-  saveAccountExercise,
-  updateAccountExercise,
-  deleteAccountExercise,
-  type AccountExerciseSummary,
+  getExercise,
+  listExercises,
+  saveExercise,
+  updateExercise,
+  deleteExercise,
+  type ExerciseSummary,
 } from "../api/customExercises";
 import type { RhythmEditorHandle } from "../practice/RhythmEditor";
 import PracticeSettings, {
@@ -51,10 +49,6 @@ import PracticeSettings, {
 import RhythmPlayback from "../practice/RhythmPlayback";
 import PracticeCue from "../practice/PracticeCue";
 import {
-  listCustomExercises,
-  saveCustomExercise,
-  updateCustomExercise,
-  deleteCustomExercise,
   type CustomExercise,
   type CustomMode,
 } from "../exercises/customExercises";
@@ -69,59 +63,16 @@ const customModes = [
   { id: "dictation", label: "节奏听写" },
 ] as const;
 
-type Auth = ReturnType<typeof useAuth>;
-type Source = "local" | "account";
 
-export default function CustomPracticePage({ auth }: { auth: Auth }) {
+export default function CustomPracticePage() {
   const { mode, exerciseId } = useParams();
   const isNew = useMatch("/custom/:mode/new") !== null;
-  const accountMatch = useMatch("/custom/:mode/account/:exerciseId/*");
-  const isAccount = accountMatch !== null;
-  const isLocalEdit = useMatch("/custom/:mode/:exerciseId/edit") !== null;
-  const isEdit = isLocalEdit || accountMatch?.params["*"] === "edit";
-  const source: Source =
-    auth.state.status === "authenticated" ? "account" : "local";
-  const identity =
-    auth.state.status === "authenticated"
-      ? `account:${auth.state.user.id}`
-      : auth.state.status;
+  const isEdit = useMatch("/custom/:mode/:exerciseId/edit") !== null;
   const [lastMode, setLastMode] = useBrowsingState("custom:last-mode", "tapping");
   const selectedMode = customModes.find((item) => item.id === mode);
   useEffect(() => { if (selectedMode) setLastMode(selectedMode.id); }, [selectedMode, setLastMode]);
-  useAssistantPageContext(selectedMode && (auth.busy || auth.state.status === "checking" || auth.state.status === "unavailable") ? {
-    page: "custom_exercises", description: "自定义练习暂时无法读取，正在确认访问状态。", state: { mode: selectedMode.id, status: auth.state.status } } : null);
   if (mode === undefined) return <Navigate to={`/custom/${lastMode}`} replace />;
   if (mode !== undefined && !selectedMode) return <NotFoundPage />;
-
-  if (
-    selectedMode &&
-    (auth.state.status === "checking" ||
-      auth.state.status === "unavailable" ||
-      auth.busy)
-  ) {
-    return (
-      <div className="design-system practice-page custom-status">
-        <ReturnLink className="back-link" to="/custom">
-          <ArrowLeft className="ui-icon" aria-hidden="true" focusable="false" /> 返回自定义练习
-        </ReturnLink>
-        <p
-          role="status"
-          data-navigation-pending={
-            auth.state.status === "checking" || auth.busy ? true : undefined
-          }
-        >
-          {auth.state.status === "unavailable"
-            ? "无法确认登录状态，请重试后读取练习。"
-            : "正在确认登录…"}
-        </p>
-        {auth.state.status === "unavailable" && (
-          <button type="button" disabled={auth.busy} onClick={auth.refresh}>
-            重试
-          </button>
-        )}
-      </div>
-    );
-  }
 
   if (selectedMode && isNew) {
     return (
@@ -139,10 +90,8 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
         >
           {/* 换模式即新草稿，不把一道题自动共享给两种训练方式。 */}
           <CustomExerciseEditor
-            key={`${identity}:${selectedMode.id}`}
+            key={`${selectedMode.id}`}
             mode={selectedMode.id}
-            auth={auth}
-            identity={identity}
           />
         </Suspense>
       </div>
@@ -150,27 +99,14 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
   }
 
   if (selectedMode && exerciseId) {
-    if (isAccount && source !== "account")
-      return (
-        <div className="design-system practice-page custom-status">
-          <p>{auth.state.status === "disabled" ? "此站点未启用账号功能，无法读取账号练习。" : "请登录后查看账号练习。"}</p>
-          {auth.state.status !== "disabled" && <><Link to="/settings?category=account">登录</Link> ·{" "}</>}
-          <ReturnLink to={`/custom/${selectedMode.id}`}>
-            返回题目列表
-          </ReturnLink>
-        </div>
-      );
     // 路由参数改变时重新读取题目，并卸载旧训练及其音频、草稿和设置。
     return (
       <CustomExercisePractice
-        key={`${identity}:${isAccount}:${selectedMode.id}:${exerciseId}`}
-        identity={identity}
-        source={isAccount ? "account" : "local"}
+        key={`${selectedMode.id}:${exerciseId}`}
         mode={selectedMode.id}
         label={selectedMode.label}
         exerciseId={exerciseId}
         editing={isEdit}
-        auth={auth}
       />
     );
   }
@@ -178,9 +114,7 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
   if (selectedMode)
     return (
       <CustomExerciseList
-        key={`${identity}:${selectedMode.id}`}
-        source={source}
-        identity={identity}
+        key={`${selectedMode.id}`}
         mode={selectedMode.id}
         label={selectedMode.label}
       />
@@ -192,52 +126,37 @@ export default function CustomPracticePage({ auth }: { auth: Auth }) {
 function CustomExerciseList({
   mode,
   label,
-  source,
-  identity,
 }: {
   mode: CustomMode;
   label: string;
-  source: Source;
-  identity: string;
 }) {
   const navigate = useNavigate();
   const { state } = useLocation();
   const navigationType = useNavigationType();
   type ListResult = {
-    items: (CustomExercise | AccountExerciseSummary)[];
+    items: ExerciseSummary[];
     error: string | null;
     loading: boolean;
   };
-  function readExercises(): ListResult {
-    if (source === "account") return { items: [], error: null, loading: true };
-    try {
-      return { items: listCustomExercises(mode), error: null, loading: false };
-    } catch (error) {
-      return {
-        items: [],
-        error: error instanceof Error ? error.message : "读取失败，请重试。",
-        loading: false,
-      };
-    }
-  }
+  function readExercises(): ListResult { return {items: [], error: null, loading: true}; }
   const [result, setResult] = useState(readExercises);
   const [offset, setOffset] = useBrowsingState(
-    `custom:${identity}:${mode}:offset`,
+    `custom:${mode}:offset`,
     0,
   );
   const [revision, setRevision] = useState(0);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [mutationMessage, setMutationMessage] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
-  useAssistantPageContext({ page: "custom_library", description: "自定义题目列表，仅有题目摘要，不代表已读取每道题的谱面。账号列表仅表示已加载的一页。",
-    state: { mode, source, status: result.loading ? "loading" : result.error ? "read-error" : "ready",
-      offset: source === "account" ? offset : 0, loadedCount: result.items.length, totalCount: source === "local" ? result.items.length : null,
+  useAssistantPageContext({ page: "custom_library", description: "自定义题目列表，仅有题目摘要，不代表已读取每道题的谱面。列表仅表示已加载的一页。",
+    state: { mode, source: "instance", status: result.loading ? "loading" : result.error ? "read-error" : "ready",
+      offset, loadedCount: result.items.length, totalCount: null,
       items: result.items.slice(0, 50).map(item => ({ id: item.id, name: item.name, mode: item.mode,
-        measureCount: "exercise" in item ? item.exercise.measures.length : null })), truncated: result.items.length > 50 } });
+        measureCount: null })), truncated: result.items.length > 50 } });
   const mutationActive = useRef(false);
   const lifetime = useRef(0);
   useEffect(() => () => { lifetime.current += 1; }, []);
-  async function remove(item: CustomExercise | AccountExerciseSummary) {
+  async function remove(item: ExerciseSummary) {
     if (mutationActive.current || !window.confirm(`确定删除「${item.name}」吗？删除后无法恢复。`)) return;
     mutationActive.current = true;
     const generation = lifetime.current;
@@ -245,8 +164,7 @@ function CustomExerciseList({
     setMutationError(null);
     setMutationMessage(null);
     try {
-      if (source === "account") await deleteAccountExercise(item.id);
-      else deleteCustomExercise(item.id, mode);
+      await deleteExercise(item.id);
       if (generation !== lifetime.current) return;
       setMutationMessage(`已删除「${item.name}」。`);
       reload();
@@ -260,9 +178,8 @@ function CustomExerciseList({
     }
   }
   useEffect(() => {
-    if (source !== "account") return;
     const controller = new AbortController();
-    void listAccountExercises(mode, { offset, signal: controller.signal })
+    void listExercises(mode, { offset, signal: controller.signal })
       .then((page) => {
         if (
           !controller.signal.aborted &&
@@ -286,7 +203,7 @@ function CustomExerciseList({
           });
       });
     return () => controller.abort();
-  }, [source, mode, offset, revision, setOffset]);
+  }, [mode, offset, revision, setOffset]);
   function reload(nextOffset = offset) {
     setResult(readExercises());
     setOffset(nextOffset);
@@ -335,10 +252,10 @@ function CustomExerciseList({
                   <h2>{item.name}</h2>
                 </div>
               <div className="custom-question-actions" aria-label={`${item.name}的管理操作`}>
-                <Link className="custom-start-action" to={`/custom/${mode}/${source === "account" ? "account/" : ""}${encodeURIComponent(item.id)}`}>
+                <Link className="custom-start-action" to={`/custom/${mode}/${encodeURIComponent(item.id)}`}>
                   <Play className="ui-icon" aria-hidden="true" focusable="false" />开始练习
                 </Link>
-                <Link to={`/custom/${mode}/${source === "account" ? "account/" : ""}${encodeURIComponent(item.id)}/edit`}>
+                <Link to={`/custom/${mode}/${encodeURIComponent(item.id)}/edit`}>
                   <Pencil className="ui-icon" aria-hidden="true" />编辑
                 </Link>
                 <button type="button" disabled={deleting !== null} onClick={() => void remove(item)}>
@@ -349,7 +266,7 @@ function CustomExerciseList({
           ))}
         </ul>
       )}
-      {source === "account" && (
+      {(
         <nav aria-label="题目分页">
           <button
             type="button"
@@ -379,49 +296,21 @@ function CustomExercisePractice({
   mode,
   label,
   exerciseId,
-  source,
-  identity,
   editing,
-  auth,
 }: {
   mode: CustomMode;
   label: string;
   exerciseId: string;
-  source: Source;
-  identity: string;
   editing: boolean;
-  auth: Auth;
 }) {
-  function readExercise(): {
-    item: CustomExercise | undefined;
-    error: string | null;
-    loading: boolean;
-  } {
-    if (source === "account")
-      return { item: undefined, error: null, loading: true };
-    try {
-      // 只在所属模式中查找，不能修改 URL 把听写题作为击拍题打开。
-      return {
-        item: listCustomExercises(mode).find((item) => item.id === exerciseId),
-        error: null,
-        loading: false,
-      };
-    } catch (error) {
-      return {
-        item: undefined,
-        error: error instanceof Error ? error.message : "读取失败，请重试。",
-        loading: false,
-      };
-    }
-  }
+  function readExercise(): { item: CustomExercise | undefined; error: string | null; loading: boolean } { return {item: undefined, error: null, loading: true}; }
   const [result, setResult] = useState(readExercise);
   useAssistantPageContext(result.loading || result.error || !result.item ? { page: "custom_practice", description: "自定义题目读取状态。",
-    state: { mode, source, status: result.loading ? "loading" : result.error ? "read-error" : "not-found" } } : null);
+    state: { mode, source: "instance", status: result.loading ? "loading" : result.error ? "read-error" : "not-found" } } : null);
   const [revision, setRevision] = useState(0);
   useEffect(() => {
-    if (source !== "account") return;
     const controller = new AbortController();
-    void getAccountExercise(exerciseId, controller.signal)
+    void getExercise(exerciseId, controller.signal)
       .then((item) => {
         if (!controller.signal.aborted)
           setResult({
@@ -440,7 +329,7 @@ function CustomExercisePractice({
           });
       });
     return () => controller.abort();
-  }, [source, exerciseId, mode, revision]);
+  }, [exerciseId, mode, revision]);
   return (
     <div className={`design-system practice-page ${editing ? "custom-create" : "custom-detail"}`}>
       <title>{`${result.item?.name ?? "自定义练习"} · ${label}`}</title>
@@ -480,9 +369,8 @@ function CustomExercisePractice({
             <LoadingPlaceholder workspace label="正在加载练习…" />
           }
         >
-          {editing ? <CustomExerciseEditor mode={mode} auth={auth} identity={identity} initial={result.item} source={source}
-            onSaved={(item) => setResult({ item, error: null, loading: false })} /> : <PracticeWorkspace
-            recoveryScope={`custom:${identity}:${source}:${mode}:${result.item.id}`}
+          {editing ? <CustomExerciseEditor mode={mode} initial={result.item} onSaved={(item) => setResult({ item, error: null, loading: false })} /> : <PracticeWorkspace
+            recoveryScope={`custom:${mode}:${result.item.id}`}
             exercise={result.item.exercise}
             mode={mode}
             exerciseKey={result.item.id}
@@ -491,9 +379,7 @@ function CustomExercisePractice({
         </Suspense>
       ) : (
         <p>
-          {source === "account"
-            ? "当前账号中没有该模式的这道练习。"
-            : "当前浏览器中没有该模式的这道练习。"}
+          当前实例中没有该模式的这道练习
         </p>
       )}
     </div>
@@ -512,18 +398,12 @@ const timeSignature: RhythmExercise["timeSignature"] = {
  */
 function CustomExerciseEditor({
   mode,
-  auth,
-  identity,
   initial,
   onSaved,
-  source = auth.state.status === "authenticated" ? "account" : "local",
 }: {
   mode: CustomMode;
-  auth: Auth;
-  identity: string;
   initial?: CustomExercise;
   onSaved?: (item: CustomExercise) => void;
-  source?: Source;
 }) {
   const navigate = useNavigate();
   const nameErrorId = useId();
@@ -536,7 +416,7 @@ function CustomExerciseEditor({
     measures: RhythmElement[][];
     selectedMeasureIndex: number;
     settings: PracticeSettingsValue;
-  }>(`custom:${identity}:${source}:${mode}:${initial?.id ?? "new"}:draft`, {
+  }>(`custom:${mode}:${initial?.id ?? "new"}:draft`, {
     name: initial?.name ?? "",
     measures: initial?.exercise.measures.map(measure => measure.elements) ?? [[], []],
     selectedMeasureIndex: 0,
@@ -546,7 +426,7 @@ function CustomExerciseEditor({
   useAssistantPageContext({
     page: "custom_exercise_editor",
     description: "自定义练习编辑页，正在编辑未保存草稿；小节可能未填满，selectedMeasureIndex 从 0 开始。",
-    state: { mode, name, exercise_id: initial?.id ?? null, source: source ?? "local",
+    state: { mode, name, exercise_id: initial?.id ?? null, source: "instance",
       timeSignature: { beats: 4, beatType: 4 }, measure_count: measures.length,
       measures: measures.map(elements => ({ elements })), selectedMeasureIndex,
       bpm: draft.settings.bpm, metronomeEnabled: draft.settings.metronomeEnabled },
@@ -569,15 +449,13 @@ function CustomExerciseEditor({
   const [saving, setSaving] = useState(false);
   const locked = useRef(false);
   const saveGeneration = useRef(0);
-  const canSave =
-    !auth.busy &&
-    (auth.state.status === "guest" || auth.state.status === "disabled" || auth.state.status === "authenticated");
+
   useEffect(() => {
-    // 身份变化或卸载后，旧保存仍可能在服务器完成，但不能再导航或覆盖当前草稿提示。
+    // 卸载后，旧保存仍可能在服务器完成，但不能再导航或覆盖当前草稿提示。
     return () => {
       saveGeneration.current += 1;
     };
-  }, [identity, auth.busy]);
+  }, []);
 
   const [assistantApplied, setAssistantApplied] = useState(false);
   const [assistantRevision, setAssistantRevision] = useState(0);
@@ -587,7 +465,7 @@ function CustomExerciseEditor({
     return () => window.clearTimeout(timer);
   }, [assistantRevision]);
   const applyAssistantExercise = useCallback((proposal: GeneratedExercise) => {
-    if (locked.current || auth.busy) return false;
+    if (locked.current) return false;
     setDraft(previous => ({ ...previous, name: proposal.title,
       measures: structuredClone(proposal.exercise.measures.map(measure => measure.elements)),
       selectedMeasureIndex: 0 }));
@@ -598,8 +476,8 @@ function CustomExerciseEditor({
     setSaveError(null);
     editorRef.current?.clearMessage();
     return true;
-  }, [setDraft, auth.busy]);
-  useAssistantExerciseTarget(saving || auth.busy ? null : applyAssistantExercise);
+  }, [setDraft]);
+  useAssistantExerciseTarget(saving ? null : applyAssistantExercise);
 
   function addMeasure() {
     setSaveError(null);
@@ -635,7 +513,7 @@ function CustomExerciseEditor({
   }
 
   async function save() {
-    if (locked.current || !canSave) return;
+    if (locked.current) return;
     setSaveError(null);
     if (!name.trim()) {
       setNameError(true);
@@ -667,8 +545,8 @@ function CustomExerciseEditor({
       candidate.exercise = parseRhythmExercise(candidate.exercise);
       const saved =
         initial
-          ? source === "account" ? await updateAccountExercise(initial.id, candidate) : updateCustomExercise(initial.id, candidate)
-          : source === "account" ? await saveAccountExercise(candidate) : saveCustomExercise(candidate);
+          ? await updateExercise(initial.id, candidate)
+          : await saveExercise(candidate);
       // 即使已离开，确认保存成功也清除原提交快照；后来修改的新版本不会被清除。
       forgetDraft(draft);
       if (generation !== saveGeneration.current) return;
@@ -784,7 +662,7 @@ function CustomExerciseEditor({
                   <button
                     className="custom-save-button"
                     type="button"
-                    disabled={saving || !canSave}
+                    disabled={saving}
                     onClick={() => void save()}
                   >
                     {saving ? <LoaderCircle className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" /> : <Save className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />}

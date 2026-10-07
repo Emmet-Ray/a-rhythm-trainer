@@ -10,7 +10,6 @@ async (page) => {
     window.streamMock = {};
     window.fetch = async (input, options = {}) => {
       const url = String(input);
-      if (url.includes('/api/auth/me')) return json({ auth_enabled: false });
       if (url.includes('/api/assistant/status')) return json({ status: 'ready', message: '' });
       if (!url.includes('/api/assistant/sessions')) return original(input, options);
       if (!url.endsWith('/messages')) return json({ id: 'stream', messages, is_running: running, last_run_status: status });

@@ -14,7 +14,6 @@ async (page) => {
   const submissions = [];
   let messages = [];
   const session = () => ({ id: 'layout-session', messages, is_running: false, last_run_status: messages.length ? 'completed' : null });
-  await page.route('**/api/auth/me', route => route.fulfill({ json: { auth_enabled: false } }));
   await page.route('**/api/assistant/status', route => route.fulfill({ json: { status: 'ready', message: '' } }));
   await page.route('**/api/assistant/sessions', route => route.fulfill({ json: session() }));
   await page.route('**/api/assistant/sessions/*', route => route.fulfill({ json: session() }));

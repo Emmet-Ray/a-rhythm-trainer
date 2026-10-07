@@ -1,6 +1,5 @@
 async (page) => {
   const check = (value, message) => { if (!value) throw new Error(message); };
-  await page.route('**/api/auth/me', route => route.fulfill({ json: { auth_enabled: false } }));
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('http://localhost:5173/custom/tapping/new');
   const name = page.getByRole('textbox', { name: '练习名称', exact: true });

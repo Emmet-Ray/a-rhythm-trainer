@@ -47,18 +47,7 @@ def parse_rhythm_exercise(value: object) -> dict:
             # 最短普通音符为十六分音符，合法四拍最多 16 个顶层元素。
             if not isinstance(elements, list) or not 1 <= len(elements) <= 16:
                 raise ValueError("小节须包含 1–16 个节奏元素。")
-            copied, total = [], 0
-            for element in elements:
-                if isinstance(element, dict) and element.get("kind") == "triplet":
-                    notes = _object(element, ("kind", "notes"))["notes"]
-                    if not isinstance(notes, list) or len(notes) != 3:
-                        raise ValueError("小三连必须恰好包含三个音符。")
-                    copied.append({"kind": "triplet", "notes": [_event(note, triplet=True)[0] for note in notes]})
-                    total += 24
-                else:
-                    event, ticks = _event(element)
-                    copied.append(event)
-                    total += ticks
+            copied, total = parse_rhythm_elements(elements)
             if total != 96:
                 raise ValueError("小节必须恰好四拍。")
             result.append({"elements": copied})
@@ -66,3 +55,23 @@ def parse_rhythm_exercise(value: object) -> dict:
             raise ValueError(f"第 {index} 小节：{error}") from None
     return {"timeSignature": {"beats": 4, "beatType": 4}, "measures": result}
 
+
+def parse_rhythm_elements(elements):
+    """校验一小节草稿（允许空白和欠拍），返回元素副本与 tick 总长。"""
+    if not isinstance(elements, list) or len(elements) > 16:
+        raise ValueError("小节节奏元素无效")
+    copied, total = [], 0
+    for element in elements:
+        if isinstance(element, dict) and element.get("kind") == "triplet":
+            notes = _object(element, ("kind", "notes"))["notes"]
+            if not isinstance(notes, list) or len(notes) != 3:
+                raise ValueError("小三连必须恰好包含三个音符。")
+            copied.append({"kind": "triplet", "notes": [_event(note, triplet=True)[0] for note in notes]})
+            total += 24
+        else:
+            event, ticks = _event(element)
+            copied.append(event)
+            total += ticks
+    if total > 96:
+        raise ValueError("小节必须恰好四拍")
+    return copied, total

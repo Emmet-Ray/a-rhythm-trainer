@@ -131,3 +131,60 @@ export function recordOverview(records: readonly PracticeRecord[], mode: RecordF
     dictationCount, completedCount, independentCount,
   };
 }
+
+export type RecordAction =
+  | { mode: "tapping"; attempt: TappingAttempt }
+  | {
+      mode: "dictation";
+      attemptId: string;
+      event: DictationRecordEvent;
+      at: string;
+    };
+
+/** 纯函数：从最新累计值应用待保存行为，不修改输入记录。
+ * 调用方负责持久化返回值，保存成功后才移除行为队列。
+ * 不回写页面进入时的旧快照；已删除的记录也不能被旧页面复活。
+ */
+export function applyPracticeActions(
+  records: readonly PracticeRecord[],
+  context: ExerciseContext,
+  exercise: RhythmExercise,
+  mode: PracticeRecord["mode"],
+  actions: readonly RecordAction[],
+  expectedId?: string,
+): { records: PracticeRecord[]; result: string | undefined } {
+  if (!actions.length) throw new Error("没有待保存的练习行为。");
+  const key = recordKey(context, exercise, mode);
+  const index = records.findIndex(
+    (item) => recordKey(item, item.exercise, item.mode) === key,
+  );
+  let record: PracticeRecord | null = records[index] ?? null;
+  if (expectedId && record?.id !== expectedId)
+    throw new Error("这条练习记录已被删除，请从题目列表重新进入后记录。");
+  for (const action of actions) {
+    if (action.mode !== mode) throw new Error("记录模式不匹配。");
+    record =
+      action.mode === "tapping"
+        ? recordTappingAttempt(
+            record?.mode === "tapping" ? record : null,
+            context,
+            exercise,
+            action.attempt,
+          )
+        : recordDictationEvent(
+            record?.mode === "dictation" ? record : null,
+            context,
+            exercise,
+            action.attemptId,
+            action.event,
+            action.at,
+          );
+  }
+  if (!record || record === records[index])
+    return { records: [...records], result: record?.id };
+  const next =
+    index < 0
+      ? [...records, record]
+      : records.map((item, i) => (i === index ? record : item));
+  return { records: next, result: record.id };
+}

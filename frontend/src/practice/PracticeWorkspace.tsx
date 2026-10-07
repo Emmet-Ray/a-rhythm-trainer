@@ -1,5 +1,5 @@
 import { ActionError } from "../navigation/ActionError";
-import { useCallback, useContext, useMemo, useState, type SetStateAction } from "react";
+import { useCallback, useMemo, useState, type SetStateAction } from "react";
 import { useAssistantPractice } from "../assistant/assistantContext";
 import { buildPracticeContextSummary } from "../assistant/practiceContextSummary";
 import PracticeShortcutHelp from "./PracticeShortcutHelp";
@@ -10,7 +10,6 @@ import { RhythmDictation } from "./RhythmDictation";
 import { useVisitState } from "../navigation/usePageNavigation";
 import { createDictationState, dictationBinding, restoreDictation, type DictationSnapshot, type DictationState } from "./DictationState";
 import type { ExerciseContext } from "../practice-records/PracticeRecord";
-import { RecordAccessContext, recordAccessMessage, type RecordAccess } from "../practice-records/recordAccess";
 import { usePracticeRecorder } from "../practice-records/usePracticeRecorder";
 
 type WorkspaceProps = {
@@ -25,14 +24,13 @@ type WorkspaceProps = {
 };
 
 export default function PracticeWorkspace(props: WorkspaceProps) {
-  const access = useContext(RecordAccessContext);
   const binding = dictationBinding(props.exerciseKey ?? 0, props.exercise);
-  return <WorkspaceSession key={`${access}:${binding}`} {...props} access={access} binding={binding} />;
+  return <WorkspaceSession key={binding} {...props} binding={binding} />;
 }
 
 /** 设置始终存在；exercise 为 null 时显示不可操作的训练区。
  * exerciseKey 标识本轮题目；恢复时核对题目内容与编号，不恢复音频、轮次及遮罩。
- * recoveryScope 隔离来源及账号；设置独立于换题，仍由 PracticeSettings 管理输入过程。
+ * recoveryScope 隔离题目来源与访问；设置独立于换题，仍由 PracticeSettings 管理输入过程。
  */
 function WorkspaceSession({
   exercise,
@@ -43,15 +41,14 @@ function WorkspaceSession({
   recordContext,
   answerExposed = false,
   onAnswerViewed,
-  access,
   binding,
-}: WorkspaceProps & { access: RecordAccess; binding: string }) {
+}: WorkspaceProps & { binding: string }) {
   const [audioBusy, setAudioBusy] = useState(false);
   const reportBusy = useCallback((busy: boolean) => { setAudioBusy(busy); onBusyChange?.(busy); }, [onBusyChange]);
   const [settings, rememberSettings] = useVisitState<PracticeSettingsValue>(`practice:${recoveryScope}:settings`, { bpm: 60, metronomeEnabled: true });
-  const [snapshot, setSnapshot] = useVisitState<DictationSnapshot | null>(`practice:${access}:${recoveryScope}:dictation`, null);
-  const recorder = usePracticeRecorder({ mode, context: recordContext, exercise, enabled: access === "guest",
-    answerExposed, scope: `${access}:${recoveryScope}:${binding}` });
+  const [snapshot, setSnapshot] = useVisitState<DictationSnapshot | null>(`practice:${recoveryScope}:dictation`, null);
+  const recorder = usePracticeRecorder({ mode, context: recordContext, exercise, enabled: true,
+    answerExposed, scope: `${recoveryScope}:${binding}` });
   const empty = useMemo(() => createDictationState(exercise), [exercise]);
   const state = restoreDictation(snapshot, binding, empty);
   const update = useCallback((next: SetStateAction<DictationState>) => {
@@ -66,7 +63,7 @@ function WorkspaceSession({
     const viewed = answerExposed || (session?.mode === "dictation" && session.attempts.some(attempt => attempt.viewedAnswer));
     return {
       ...buildPracticeContextSummary({ context: recordContext, exercise, mode,
-        answerExposed: viewed, session, historyEnabled: access === "guest" }),
+        answerExposed: viewed, session, historyEnabled: true }),
       bpm: settings.bpm,
       metronomeEnabled: settings.metronomeEnabled,
       audioBusy,
@@ -79,7 +76,6 @@ function WorkspaceSession({
     <PracticeSettings layout="sidebar" initialValue={settings} onChange={rememberSettings}>
       {({ bpm, metronomeEnabled }, settingsPanel) => (
         <section aria-label={mode === "dictation" ? "节奏听写区" : "击拍训练区"}>
-          {recordContext && recordAccessMessage(access) && <p className="practice-record-notice" role="status">{recordAccessMessage(access)}</p>}
           {recorder.error && <ActionError message={recorder.error} onRetry={recorder.retry} />}
           {mode === "dictation" ? (
             // BPM 改变只重建听写内部播放器，保留草稿、验证结果和参考答案状态。

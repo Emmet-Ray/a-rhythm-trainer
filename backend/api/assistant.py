@@ -1,9 +1,7 @@
 """多轮会话接口，接收每次请求的页面快照；运行工具循环并返回最终回答。"""
 
-from collections.abc import AsyncIterator
 import os
-import hashlib
-import secrets
+from collections.abc import AsyncIterator
 from typing import Annotated
 from urllib.parse import urlsplit
 
@@ -15,7 +13,6 @@ from pydantic_ai.models import Model
 from assistant.model import ModelSettings, create_model
 from assistant.sessions import ChatSession, SessionBusy, SessionStore, CardState
 from assistant.context import PageContext
-from api.dependencies import get_session_status, CurrentUser
 from starlette.concurrency import run_in_threadpool
 
 
@@ -27,10 +24,7 @@ def require_assistant_origin(request: Request) -> None:
         if request.headers.get("sec-fetch-site") == "cross-site":
             raise HTTPException(403, "不允许的助手请求来源。")
         return
-    allowed = {value.strip() for value in os.getenv(
-        "AI_ALLOWED_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000,http://localhost:8080,http://127.0.0.1:8080",
-    ).split(",") if value.strip()}
+    allowed = request.app.state.resources.settings.allowed_origins
     try:
         origin = urlsplit(origins[0])
         valid = (len(origins) == 1 and origin.scheme in ("http", "https")
@@ -42,7 +36,7 @@ def require_assistant_origin(request: Request) -> None:
     except ValueError:
         valid = False
     if not valid or origins[0] not in allowed:
-        raise HTTPException(403, "不允许的助手请求来源，请检查 AI_ALLOWED_ORIGINS。")
+        raise HTTPException(403, "不允许的助手请求来源，请检查 ALLOWED_ORIGINS。")
 
 
 async def get_model() -> AsyncIterator[Model]:
@@ -84,19 +78,9 @@ def get_store(request: Request) -> SessionStore:
     return request.app.state.assistant_sessions
 
 
-def get_owner(request: Request, response: Response) -> str:
-    # 登录会话由既有认证模块验证；不接受请求体里的用户或归属 ID。
-    resources = getattr(request.app.state, "resources", None)
-    if resources and request.cookies.get(resources.settings.cookie_name):
-        user = get_session_status(request)
-        if isinstance(user, CurrentUser):
-            return hashlib.sha256(f"user:{user.id}".encode()).hexdigest()
-    token = request.cookies.get("rhythm_assistant_owner", "")
-    if len(token) != 64 or any(c not in "0123456789abcdef" for c in token):
-        token = secrets.token_hex(32)
-        response.set_cookie("rhythm_assistant_owner", token, max_age=365 * 86400,
-                            httponly=True, samesite="strict", secure=request.url.scheme == "https", path="/api/assistant")
-    return hashlib.sha256(f"anonymous:{token}".encode()).hexdigest()
+def get_owner() -> str:
+    from assistant.journal import INSTANCE_OWNER
+    return INSTANCE_OWNER
 
 
 Owner = Annotated[str, Depends(get_owner)]

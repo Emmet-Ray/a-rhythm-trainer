@@ -1,4 +1,4 @@
-"""当前账号的自定义练习接口；不接收归属信息，不导入浏览器本地内容。"""
+"""本地实例的自定义练习接口。"""
 
 from datetime import UTC, datetime
 from typing import Annotated, Literal
@@ -7,15 +7,15 @@ from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from api.dependencies import AuthenticatedUser, DatabaseEngine
-from api.http_policy import SessionApiRoute
+from api.dependencies import DatabaseEngine
+from api.http_policy import LocalApiRoute
 from db.custom_exercises import (
     CustomExercise, create_custom_exercise, get_custom_exercise, list_custom_exercises,
     update_custom_exercise, delete_custom_exercise,
 )
 
 
-router = APIRouter(prefix="/api/custom-exercises", tags=["custom-exercises"], route_class=SessionApiRoute)
+router = APIRouter(prefix="/api/custom-exercises", tags=["custom-exercises"], route_class=LocalApiRoute)
 Mode = Literal["tapping", "dictation"]
 
 
@@ -63,11 +63,11 @@ def _detail(item: CustomExercise) -> ExerciseResponse:
 
 
 @router.post("", status_code=201, response_model=ExerciseResponse)
-def save_exercise(body: CreateExerciseBody, user: AuthenticatedUser, engine: DatabaseEngine):
+def save_exercise(body: CreateExerciseBody, engine: DatabaseEngine):
     with Session(engine) as session, session.begin():
         try:
             item = create_custom_exercise(
-                session, user.id, name=body.name, mode=body.mode, exercise=body.exercise,
+                session, name=body.name, mode=body.mode, exercise=body.exercise,
             )
         except ValueError as error:
             # 存取模块的校验消息是固定说明，不含提交内容；不捕获数据库错误。
@@ -79,29 +79,29 @@ def save_exercise(body: CreateExerciseBody, user: AuthenticatedUser, engine: Dat
 
 @router.get("", response_model=ExercisePage)
 def list_exercises(
-    user: AuthenticatedUser, engine: DatabaseEngine, mode: Mode,
+    engine: DatabaseEngine, mode: Mode,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
     with Session(engine) as session:
-        items = list_custom_exercises(session, user.id, mode, limit=limit, offset=offset)
+        items = list_custom_exercises(session, mode, limit=limit, offset=offset)
         return ExercisePage(items=[_summary(item) for item in items], limit=limit, offset=offset)
 
 
 @router.get("/{exercise_id}", response_model=ExerciseResponse)
-def read_exercise(exercise_id: str, user: AuthenticatedUser, engine: DatabaseEngine):
+def read_exercise(exercise_id: str, engine: DatabaseEngine):
     with Session(engine) as session:
-        item = get_custom_exercise(session, user.id, exercise_id)
+        item = get_custom_exercise(session, exercise_id)
         if item is None:
             raise HTTPException(404, "练习不存在。")
         return _detail(item)
 
 
 @router.put("/{exercise_id}", response_model=ExerciseResponse)
-def update_exercise(exercise_id: str, body: UpdateExerciseBody, user: AuthenticatedUser, engine: DatabaseEngine):
+def update_exercise(exercise_id: str, body: UpdateExerciseBody, engine: DatabaseEngine):
     with Session(engine) as session, session.begin():
         try:
-            item = update_custom_exercise(session, user.id, exercise_id, name=body.name, exercise=body.exercise)
+            item = update_custom_exercise(session, exercise_id, name=body.name, exercise=body.exercise)
         except ValueError as error:
             raise HTTPException(422, str(error)) from None
         if item is None:
@@ -111,8 +111,8 @@ def update_exercise(exercise_id: str, body: UpdateExerciseBody, user: Authentica
 
 
 @router.delete("/{exercise_id}", status_code=204)
-def delete_exercise(exercise_id: str, user: AuthenticatedUser, engine: DatabaseEngine):
+def delete_exercise(exercise_id: str, engine: DatabaseEngine):
     with Session(engine) as session, session.begin():
-        if not delete_custom_exercise(session, user.id, exercise_id):
+        if not delete_custom_exercise(session, exercise_id):
             raise HTTPException(404, "练习不存在。")
     return Response(status_code=204)

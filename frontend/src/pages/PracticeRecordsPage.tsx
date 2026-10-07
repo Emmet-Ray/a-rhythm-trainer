@@ -2,7 +2,6 @@ import { ActionError } from "../navigation/ActionError";
 import { useAssistantPageContext } from "../assistant/assistantContext";
 import { exerciseSources } from "../practice-records/PracticeRecord";
 import {
-  useContext,
   useEffect,
   useState,
 } from "react";
@@ -14,13 +13,10 @@ import type {
 } from "../practice-records/PracticeRecord";
 import {
   deletePracticeRecord,
+  refreshPracticeRecords,
   listPracticeRecords,
   RECORDS_CHANGED,
 } from "../practice-records/practiceRecordStorage";
-import {
-  RecordAccessContext,
-  recordAccessMessage,
-} from "../practice-records/recordAccess";
 import { RecordDetail } from "../practice-records/RecordDetail";
 import { RecordPagination } from "../practice-records/RecordPagination";
 import { recordPage, recordOverview, type RecordFilter, type RecordPeriod } from "../practice-records/practiceRecords";
@@ -38,20 +34,7 @@ function readRecords() {
 }
 
 export default function PracticeRecordsPage() {
-  const access = useContext(RecordAccessContext);
-  useAssistantPageContext(access !== "guest" ? { page: "practice_records", description: "练习记录当前不可读取。",
-    state: { status: "unavailable", reason: recordAccessMessage(access) } } : null);
-  return (
-    <section className="design-system practice-records-page">
-      <title>练习记录 · 节奏训练</title>
-      {access === "guest" ? (
-        <LocalRecords />
-      ) : (
-        <><header className="page-heading"><h1>练习记录</h1></header>
-        <p role="status">{recordAccessMessage(access)}</p></>
-      )}
-    </section>
-  );
+  return <section className="design-system practice-records-page"><title>练习记录 · 节奏训练</title><LocalRecords /></section>;
 }
 
 function LocalRecords() {
@@ -93,7 +76,7 @@ function LocalRecords() {
       records: data.error ? [] : filtered.slice(pagination.start, pagination.end).map(record => ({ id: record.id, source: record.source,
         exerciseId: record.exerciseId, title: record.title, mode: record.mode, allTimeAttempts: record.attempts.length })), selectedRecordId: selected?.id ?? null } });
   if (page !== pagination.page) setPage(pagination.page);
-  function remove(record: PracticeRecord) {
+  async function remove(record: PracticeRecord) {
     if (
       !window.confirm(
         `确定删除“${record.title}”的全部 ${record.attempts.length} 次尝试？此操作无法撤销。`,
@@ -103,7 +86,7 @@ function LocalRecords() {
     setActionError("");
     setDeleteAttempt(value => value + 1);
     try {
-      deletePracticeRecord(record.id);
+      await deletePracticeRecord(record.id);
       setDeletedCount((value) => value + 1);
     } catch (error) {
       setActionError(
@@ -118,7 +101,7 @@ function LocalRecords() {
         <p role="alert" className="practice-record-error">
           {data.error}
         </p>
-        <button type="button" onClick={() => setData(readRecords())}>
+        <button type="button" onClick={() => { void refreshPracticeRecords().catch(() => {}); }}>
           重新读取
         </button>
       </>

@@ -35,7 +35,7 @@ import { ConversationHistory } from "./ConversationHistory";
 import type { CardState } from "../api/assistant";
 import HomePage from "../pages/HomePage";
 
-export function AssistantPanel({ home = false, identity = "guest" }: { home?: boolean; identity?: string }) {
+export function AssistantPanel({ home = false }: { home?: boolean }) {
   const activity = useContext(PracticeActivityContext);
   const activityLabel = useSyncExternalStore(activity?.subscribe ?? (() => () => {}), activity?.getLabel ?? (() => ""), () => "");
   const availability = useAssistantAvailability();
@@ -48,7 +48,7 @@ export function AssistantPanel({ home = false, identity = "guest" }: { home?: bo
     close: closePanel,
   } = useAssistantPresentation(home, availability.ready);
   const [playbackGroup] = useState(() => new PlaybackGroup());
-  const [conversation] = useState(() => new AssistantConversation(identity));
+  const [conversation] = useState(() => new AssistantConversation("instance"));
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -102,8 +102,8 @@ export function AssistantPanel({ home = false, identity = "guest" }: { home?: bo
   }, [historyOpen]);
   const saveCard = useCallback((id: string, value: CardState) => conversation.saveCard(id, value), [conversation]);
   useEffect(() => {
-    if (availability.ready && identity !== "checking" && identity !== "unavailable") void conversation.restore();
-  }, [availability.ready, conversation, identity]);
+    if (availability.ready) void conversation.restore();
+  }, [availability.ready, conversation]);
   const { messages, status } = useChat({ chat: conversation.chat, throttle: 40 });
   const state = useSyncExternalStore(
     conversation.subscribe,
@@ -141,8 +141,8 @@ export function AssistantPanel({ home = false, identity = "guest" }: { home?: bo
   const generation = useRef(0);
   const scrollPosition = useRef(0);
   const initializing = availability.loading || (availability.ready &&
-    (identity === "checking" || (identity !== "unavailable" && !state.initialized)));
-  const started = Boolean(messages.length || state.busy || state.expired || identity === "unavailable");
+    !state.initialized);
+  const started = Boolean(messages.length || state.busy || state.expired);
   const lastMessage = messages.at(-1);
   const waitingForContent = status === "submitted" || (status === "streaming" &&
     (lastMessage?.role !== "assistant" || lastMessage.parts.every(part => part.type === "step-start" || part.type === "reasoning")));
@@ -222,7 +222,7 @@ export function AssistantPanel({ home = false, identity = "guest" }: { home?: bo
   async function send() {
     const before = conversation.getSnapshot();
     if (
-      !availability.ready || initializing || identity === "unavailable" ||
+      !availability.ready || initializing ||
       !draft.trim() ||
       before.busy ||
       before.needsSync ||
@@ -267,7 +267,7 @@ export function AssistantPanel({ home = false, identity = "guest" }: { home?: bo
     closePanel();
   }
   const blocked =
-    !availability.ready || initializing || identity === "unavailable" || state.busy || state.needsSync || state.expired;
+    !availability.ready || initializing || state.busy || state.needsSync || state.expired;
 
   const deleteConversation = (id: string) => {
     if (state.session?.id !== id) return;
@@ -455,7 +455,6 @@ export function AssistantPanel({ home = false, identity = "guest" }: { home?: bo
               }}
             >
               {(activityLabel || practiceLabel) && <p className="assistant-notice">{activityLabel || practiceLabel}</p>}
-              {identity === "unavailable" && <p className="assistant-error" role="alert">无法确认当前身份，请刷新后重试。</p>}
               {state.restoring && <p className="assistant-notice" role="status">正在恢复对话…</p>}
               {state.error ? (
                 <p className="assistant-error" role="alert">

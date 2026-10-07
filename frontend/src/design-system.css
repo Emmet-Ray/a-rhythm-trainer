@@ -721,29 +721,6 @@
   .settings-options { flex-direction: column; }
   .settings-options label { flex-basis: auto; width: 100%; }
 }
-/* 登录沿用基础控件；固定发送按钮宽度和反馈区高度，避免状态切换挤动表单。 */
-.login-page.design-system { max-width: 400px; }
-.account-login { margin: 24px 0 0; }
-.settings-section > .account-description { max-width: 400px; font-size: var(--ds-text-sm); line-height: 1.6; }
-.account-connection { max-width: 480px; margin-bottom: 24px; }
-.account-connection p { color: var(--ds-muted); margin: 0 0 12px; }
-.login-page .back-link { color: var(--ds-muted); font-size: var(--ds-text-sm); font-weight: 650; }
-.login-page h1 { margin: var(--ds-space-4) 0 var(--ds-space-8); }
-.login-page .login-form { gap: var(--ds-space-2); }
-.login-page .login-form > label { font-weight: 650; }
-.login-page .login-form > label:not(:first-child) { margin-top: var(--ds-space-4); }
-.login-page .login-form input { min-height: 48px; padding: 10px 12px; border: 2px solid var(--ds-field-border); border-radius: var(--ds-radius-sm); color: var(--ds-ink); background: var(--ds-surface); font-size: var(--ds-text); font-variant-numeric: tabular-nums; }
-.login-page .login-form input:disabled { color: var(--ds-muted); background: var(--ds-disabled); }
-.login-page .login-code-row { grid-template-columns: minmax(0, 1fr) 140px; gap: var(--ds-space-3); }
-.login-page .login-code-row button { padding-inline: var(--ds-space-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.login-page .login-feedback { min-height: 40px; padding: var(--ds-space-2) 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
-.login-page .login-field-error { margin: 0; color: var(--ds-error); font-size: var(--ds-text-sm); overflow-wrap: anywhere; }
-.login-page .login-form input[aria-invalid="true"] { border-color: var(--ds-error); }
-.login-page .login-feedback p { margin: 0; overflow-wrap: anywhere; }
-.login-page .auth-error { color: var(--ds-error); font-size: inherit; }
-.login-page .login-form > button[type="submit"]:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: var(--ds-on-primary); box-shadow: 0 4px 0 var(--ds-primary-base); }
-.login-page .login-form > button[type="submit"]:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
-.login-page .login-form > button[type="submit"]:active:not(:disabled) { box-shadow: none; }
 /* 新建页只负责外层表单；谱面、设置和播放仍由共享组件负责。 */
 .custom-create .custom-name { flex: 0 1 396px; flex-wrap: nowrap; gap: var(--ds-space-3); font-weight: 650; }
 .custom-create .custom-name > span { flex-shrink: 0; }
@@ -1127,6 +1104,4 @@
   .custom-create .custom-name .custom-name-error { grid-column: 1; }
 }
 
-/* 字段提示常驻占位；长手机号说明按两行预留，避免校验时移动表单。 */
-.login-page .login-field-error { min-height: 2lh; }
 .random-generation .random-range-error { min-height: 24px; margin: 8px 0 0; color: var(--ds-error); font-size: 16px; line-height: 24px; }

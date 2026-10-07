@@ -6,7 +6,6 @@ async (page) => {
   let calls = 0;
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.route('**/api/auth/me', route => route.fulfill({ json: { auth_enabled: false } }));
   await page.route('**/api/assistant/status', route => route.fulfill({ json: status }));
   await page.route('**/api/assistant/sessions', route => { calls++; return route.abort(); });
   await page.reload();

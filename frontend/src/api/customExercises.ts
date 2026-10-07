@@ -1,20 +1,19 @@
 import type { CustomExercise, CustomMode } from "../exercises/customExercises";
 import { parseRhythmExercise } from "../rhythm/RhythmModel";
 
-export type AccountExerciseSummary = Pick<CustomExercise, "id" | "name" | "mode"> & { createdAt: string };
-export type AccountExercise = AccountExerciseSummary & Pick<CustomExercise, "exercise">;
-export type AccountExercisePage = { items: AccountExerciseSummary[]; limit: number; offset: number };
+export type ExerciseSummary = Pick<CustomExercise, "id" | "name" | "mode"> & { createdAt: string };
+export type Exercise = ExerciseSummary & Pick<CustomExercise, "exercise">;
+export type ExercisePage = { items: ExerciseSummary[]; limit: number; offset: number };
 
 export class CustomExerciseApiError extends Error {
   readonly status: number;
   constructor(status: number) {
     const messages: Record<number, string> = {
-      0: "网络请求失败；保存或删除的结果可能尚未确认，请先检查账号练习列表。",
-      401: "尚未登录或登录已过期，请重新登录。",
+      0: "网络请求失败；保存或删除的结果可能尚未确认，请先检查练习列表。",
       403: "请求来源不受允许，请检查网站配置。",
-      404: "练习不存在或不属于当前账号。",
+      404: "练习不存在或不属于当前实例。",
       422: "练习内容或请求参数不合法，请检查名称、模式和小节内容。",
-      502: "练习服务响应格式异常；保存或删除的结果可能尚未确认，请先检查账号练习列表。",
+      502: "练习服务响应格式异常；保存或删除的结果可能尚未确认，请先检查练习列表。",
       503: "练习服务暂不可用，请稍后再试。",
     };
     super(messages[status] ?? "练习请求失败，请稍后再试。");
@@ -22,10 +21,10 @@ export class CustomExerciseApiError extends Error {
   }
 }
 
-/** 新建账号题目，只提交名称、模式、节奏；不提交归属，不自动重试或回退本地保存。
+/** 新建实例题目，只提交名称、模式、节奏；不提交归属，不自动重试或回退本地保存。
  * 网络中断或响应异常不代表服务器没有保存成功，调用方不应自动再次提交。
  */
-export async function saveAccountExercise(input: Omit<CustomExercise, "id">): Promise<AccountExercise> {
+export async function saveExercise(input: Omit<CustomExercise, "id">): Promise<Exercise> {
   const value = await request("", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name: input.name, mode: input.mode, exercise: input.exercise }),
@@ -34,9 +33,9 @@ export async function saveAccountExercise(input: Omit<CustomExercise, "id">): Pr
 }
 
 /** 返回单页摘要；只有成功的空页才返回空列表，错误不伪装成空题库。 */
-export async function listAccountExercises(
+export async function listExercises(
   mode: CustomMode, options: { limit?: number; offset?: number; signal?: AbortSignal } = {},
-): Promise<AccountExercisePage> {
+): Promise<ExercisePage> {
   const { limit = 50, offset = 0, signal } = options;
   if ((mode !== "tapping" && mode !== "dictation") || !Number.isSafeInteger(limit)
     || limit < 1 || limit > 100 || !Number.isSafeInteger(offset) || offset < 0) {
@@ -54,7 +53,7 @@ export async function listAccountExercises(
 }
 
 /** 读取完整题目；401、404、503 均抛出带状态的错误，取消请求保留 AbortError。 */
-export async function getAccountExercise(id: string, signal?: AbortSignal): Promise<AccountExercise> {
+export async function getExercise(id: string, signal?: AbortSignal): Promise<Exercise> {
   if (typeof id !== "string" || !id.trim()) throw new CustomExerciseApiError(422);
   const value = parseDetail(await request(`/${encodeURIComponent(id)}`, { signal }, 200));
   if (value.id !== id) throw new CustomExerciseApiError(502);
@@ -83,7 +82,7 @@ async function request(path: string, options: RequestInit, expectedStatus: numbe
 }
 
 /** 更新原题，不允许切换模式；失败时不自动重试或回退本地。 */
-export async function updateAccountExercise(id: string, input: Omit<CustomExercise, "id">): Promise<AccountExercise> {
+export async function updateExercise(id: string, input: Omit<CustomExercise, "id">): Promise<Exercise> {
   if (!id.trim()) throw new CustomExerciseApiError(422);
   const item = parseDetail(await request(`/${encodeURIComponent(id)}`, {
     method: "PUT", headers: { "Content-Type": "application/json" },
@@ -93,7 +92,7 @@ export async function updateAccountExercise(id: string, input: Omit<CustomExerci
   return item;
 }
 
-export async function deleteAccountExercise(id: string): Promise<void> {
+export async function deleteExercise(id: string): Promise<void> {
   if (!id.trim()) throw new CustomExerciseApiError(422);
   await request(`/${encodeURIComponent(id)}`, { method: "DELETE" }, 204);
 }
@@ -102,7 +101,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function parseSummary(value: unknown): AccountExerciseSummary {
+function parseSummary(value: unknown): ExerciseSummary {
   if (!isRecord(value) || typeof value.id !== "string" || !value.id.trim()
     || typeof value.name !== "string" || !value.name.trim()
     || (value.mode !== "tapping" && value.mode !== "dictation")
@@ -111,7 +110,7 @@ function parseSummary(value: unknown): AccountExerciseSummary {
   return { id: value.id, name: value.name, mode: value.mode, createdAt: value.created_at };
 }
 
-function parseDetail(value: unknown): AccountExercise {
+function parseDetail(value: unknown): Exercise {
   const summary = parseSummary(value);
   try {
     return { ...summary, exercise: parseRhythmExercise((value as Record<string, unknown>).exercise) };

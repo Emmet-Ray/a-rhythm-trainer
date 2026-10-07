@@ -1,4 +1,3 @@
-import { ActionError } from "../navigation/ActionError";
 import { useAssistantPageContext, useAssistantPageSection } from "../assistant/assistantContext";
 import { useContext, useLayoutEffect, useState } from "react";
 import { VisitsContext } from "../navigation/usePageNavigation";
@@ -6,15 +5,10 @@ import {
   Database,
   Palette,
   Target,
-  Trash2,
-  UserRound,
   Volume2,
 } from "lucide-react";
-import { SuccessToast } from "../navigation/SuccessToast";
 import { useSearchParams } from "react-router";
-import type { useAuth } from "../auth/useAuth";
-import LoginForm from "../settings/LoginForm";
-import LocalRecordSettings from "../settings/LocalRecordSettings";
+import LocalDataSettings from "../settings/LocalDataSettings";
 import {
   colorModes,
   getAppearance,
@@ -24,10 +18,7 @@ import {
   themes,
   type Theme,
 } from "../settings/appearance";
-import {
-  clearCustomExercises,
-  getCustomExerciseSummary,
-} from "../exercises/customExercises";
+
 import {
   DEFAULT_TAPPING_PRECISION,
   getTappingPrecision,
@@ -36,26 +27,21 @@ import {
 } from "../settings/tappingPrecision";
 
 const categories = [
-  { id: "account", label: "账号", icon: UserRound },
   { id: "appearance", label: "外观", icon: Palette },
   { id: "local-data", label: "本地数据", icon: Database },
   { id: "sound", label: "声音", icon: Volume2 },
   { id: "tapping-precision", label: "击拍精度", icon: Target },
 ] as const;
 
-export default function SettingsPage({
-  auth,
-}: {
-  auth: ReturnType<typeof useAuth>;
-}) {
+export default function SettingsPage() {
   const [params, setParams] = useSearchParams();
   const category =
     categories.find((item) => item.id === params.get("category"))?.id ??
-    "account";
+    "appearance";
   const [appearance, setAppearance] = useState(getAppearance);
-  useAssistantPageContext({ page: "settings", description: "设置页，仅提供公开设置和登录状态，不包含账号资料、密码或模型凭证；声音设置尚未开放。",
+  useAssistantPageContext({ page: "settings", description: "设置页，仅提供公开偏好，不包含模型凭证；声音设置尚未开放。",
     state: { category, categories: categories.map(({ id, label }) => ({ id, label, available: id !== "sound" })),
-      accountStatus: auth.state.status, appearance: { colorMode: appearance.colorMode, theme: appearance.theme } } });
+      appearance: { colorMode: appearance.colorMode, theme: appearance.theme } } });
   const visits = useContext(VisitsContext);
   useLayoutEffect(() => {
     visits?.rememberDestination("/settings", `/settings?category=${category}`);
@@ -106,7 +92,6 @@ export default function SettingsPage({
           ))}
         </nav>
         <div id="settings-content" className="settings-content">
-          {category === "account" && <AccountSettings auth={auth} />}
           {category === "appearance" && (
             <section
               className="settings-section"
@@ -182,51 +167,6 @@ export default function SettingsPage({
   );
 }
 
-function AccountSettings({ auth }: { auth: ReturnType<typeof useAuth> }) {
-  return (
-    <section className="settings-section" aria-labelledby="account-heading">
-      <h2 id="account-heading">账号</h2>
-      {auth.error && <ActionError message={auth.error} />}
-      {auth.state.status === "checking" ? (
-        <p role="status" data-navigation-pending>
-          正在确认登录…
-        </p>
-      ) : auth.state.status === "disabled" ? (
-        <p role="status">
-          此站点未启用账号功能。你仍可使用预设、随机和本地自定义练习；本地题目保存在当前浏览器中。
-        </p>
-      ) : auth.state.status === "authenticated" ? (
-        <>
-          <p role="status">已登录</p>
-          <div className="settings-actions">
-            <button
-              type="button"
-              disabled={auth.busy}
-              onClick={() => void auth.logout()}
-            >
-              {auth.busy ? "正在退出…" : "退出登录"}
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          {auth.state.status === "unavailable" && (
-            <div className="account-connection">
-              <p role="status">
-                暂时无法确认登录状态，可以重试检查或重新登录。
-              </p>
-              <button type="button" disabled={auth.busy} onClick={auth.refresh}>
-                重新检查
-              </button>
-            </div>
-          )}
-          <LoginForm auth={auth} />
-        </>
-      )}
-    </section>
-  );
-}
-
 function TappingPrecisionSettings() {
   const [preference, setPreference] = useState(getTappingPrecision);
   useAssistantPageSection("tappingPrecision", { selected: preference.precision, storageAvailable: preference.storageAvailable,
@@ -269,118 +209,6 @@ function TappingPrecisionSettings() {
         {!preference.storageAvailable &&
           "浏览器存储不可用，本次选择仍会生效，但刷新后可能恢复标准。"}
       </p>
-    </section>
-  );
-}
-
-type LocalDataState =
-  | { summary: ReturnType<typeof getCustomExerciseSummary>; error: null }
-  | { summary: null; error: string };
-
-function formatStorageSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-}
-
-function readLocalData(): LocalDataState {
-  try {
-    return { summary: getCustomExerciseSummary(), error: null };
-  } catch (error) {
-    return {
-      summary: null,
-      error: error instanceof Error ? error.message : "无法读取本地练习。",
-    };
-  }
-}
-
-// 每次进入此分类重新读取；不根据登录状态切换数据来源。
-function LocalDataSettings() {
-  const [data, setData] = useState(readLocalData);
-  const [notice, setNotice] = useState(0);
-  const [clearError, setClearError] = useState("");
-  const [clearAttempt, setClearAttempt] = useState(0);
-  useAssistantPageSection("localExercises", { status: data.error ? "read-error" : "ready", summary: data.summary ? { ...data.summary } : null });
-
-  function clear() {
-    if (
-      !window.confirm(
-        "将删除当前浏览器保存的全部自定义题目，无法恢复，确定清空吗？",
-      )
-    )
-      return;
-    setClearError("");
-    setClearAttempt(value => value + 1);
-    try {
-      clearCustomExercises();
-      setData(readLocalData());
-      setNotice((value) => value + 1);
-    } catch (error) {
-      setClearError(
-        error instanceof Error ? error.message : "清空本地练习失败。",
-      );
-    }
-  }
-
-  return (
-    <section className="settings-section" aria-labelledby="local-data-heading">
-      <h2 id="local-data-heading">本地数据</h2>
-      <section
-        className="local-data-group"
-        aria-labelledby="local-library-heading"
-      >
-        <div className="local-data-copy">
-          <h3 id="local-library-heading">自定义题库</h3>
-          {data.summary ? (
-            <>
-              <p className="local-data-totals">
-                {data.summary.total} 道题目 <span aria-hidden="true">·</span>{" "}
-                <span title="仅估算自定义题库存储文本的大小">
-                  {data.summary.estimatedBytes > 0 ? "约 " : ""}
-                  {formatStorageSize(data.summary.estimatedBytes)}
-                </span>
-              </p>
-              <p className="local-data-breakdown">
-                <span>击拍 {data.summary.tapping} 道</span>
-                <span>听写 {data.summary.dictation} 道</span>
-              </p>
-            </>
-          ) : (
-            <div className="settings-actions">
-              <p role="alert" className="settings-message">
-                {data.error}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setData(readLocalData());
-                }}
-              >
-                重新读取
-              </button>
-            </div>
-          )}
-        </div>
-        <div className="local-data-actions text-actions">
-          <button
-            type="button"
-            className="local-data-clear"
-            disabled={data.summary?.total === 0}
-            onClick={clear}
-          >
-            <Trash2 className="ui-icon" aria-hidden="true" />
-            清空题库
-          </button>
-        </div>
-        {clearError && <ActionError key={clearAttempt} message={clearError} />}
-        {notice > 0 && (
-          <SuccessToast
-            key={notice}
-            message="自定义题库已清空，练习记录未修改"
-          />
-        )}
-      </section>
-      <LocalRecordSettings />
     </section>
   );
 }

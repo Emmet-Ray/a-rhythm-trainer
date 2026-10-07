@@ -1,9 +1,4 @@
-"""账号相关 API 的公共 HTTP 规则；不定义业务端点、不验证身份、不管理事务。
-
-只支持同源前端（开发时通过 Vite 代理），不开放凭证 CORS。修改状态的请求必须
-携带允许的 Origin，包括登录前的发送/核验；缺失或 null 均拒绝，不替代反滥用限流。
-健康检查不使用此规则；需要身份的业务另行声明 AuthenticatedUser 依赖。
-"""
+"""本地 API 的来源检查、错误转换与缓存策略。"""
 
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -14,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from api.dependencies import get_http_settings
 
 
-class SessionApiRoute(APIRoute):
+class LocalApiRoute(APIRoute):
     def get_route_handler(self):
         handler = super().get_route_handler()
 

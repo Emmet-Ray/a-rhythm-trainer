@@ -121,26 +121,23 @@ def test_unfinished_checkpoint_recovers_tool_result_without_model_call(tmp_path)
     asyncio.run(scenario())
 
 
-def test_http_cookie_isolation_restart_list_and_delete():
+def test_http_instance_restart_list_and_delete():
     def app():
         instance = create_app()
         instance.dependency_overrides[get_model] = lambda: SDKTestModel(call_tools=[], custom_output_text='回答')
         return instance
     with TestClient(app()) as client:
         first = client.post('/api/assistant/sessions')
-        assert 'HttpOnly' in first.headers['set-cookie']
+        assert 'set-cookie' not in first.headers
         sid = first.json()['id']
         endpoint = f'/api/assistant/sessions/{sid}'
-        token = client.cookies.get('rhythm_assistant_owner')
         client.post(endpoint + '/messages', json={'text': '第一条问题', 'message_id': 'u1'})
         saved = client.get(endpoint).json()
         assert client.get('/api/assistant/sessions').json()['total'] == 1
         client.cookies.clear()
-        assert client.get(endpoint).status_code == 404
-        assert client.delete(endpoint).status_code == 404
-        assert client.get('/api/assistant/sessions').json()['total'] == 0
+        assert client.get(endpoint).status_code == 200
+        assert client.get('/api/assistant/sessions').json()['total'] == 1
     with TestClient(app()) as client:
-        client.cookies.set('rhythm_assistant_owner', token)
         assert client.get(endpoint).json() == saved
         assert client.post(endpoint + '/messages', json={'text': '再问', 'message_id': 'u1'}).status_code == 409
         assert client.put(endpoint + '/cards/unknown', json={'bpm': 60, 'answer_viewed': False}).status_code == 404
@@ -215,28 +212,3 @@ def test_deleted_session_cannot_be_resurrected_by_pending_write(tmp_path):
         assert not store.journal.path(OWNER, session.id).exists()
     finally:
         store.close()
-
-
-def test_account_history_is_isolated_from_anonymous_and_other_accounts(migrated_db, monkeypatch):
-    from types import SimpleNamespace
-    from unittest.mock import AsyncMock
-    from api.dependencies import AppResources
-    from domain.auth import Auth
-    from settings import AuthHttpSettings, SESSION_LIFETIME
-    origin = 'https://testserver'
-    monkeypatch.setenv('AI_ALLOWED_ORIGINS', origin)
-    sms = SimpleNamespace(send_code=AsyncMock(), verify_code=AsyncMock(return_value=True))
-    runtime = AppResources(migrated_db, Auth(migrated_db, sms, session_lifetime=SESSION_LIFETIME), AuthHttpSettings((origin,)))
-    with TestClient(create_app(resources=runtime), base_url=origin, headers={'Origin': origin}) as client:
-        anonymous = client.post('/api/assistant/sessions').json()['id']
-        def login(phone):
-            rid = client.post('/api/auth/sms-code', json={'phone_number': phone}).json()['request_id']
-            assert client.post('/api/auth/login', json={'request_id': rid, 'code': '012345'}).status_code == 200
-        login('13800138000')
-        account = client.post('/api/assistant/sessions').json()['id']
-        assert client.get(f'/api/assistant/sessions/{anonymous}').status_code == 404
-        client.post('/api/auth/logout')
-        assert client.get(f'/api/assistant/sessions/{anonymous}').status_code == 200
-        assert client.get(f'/api/assistant/sessions/{account}').status_code == 404
-        login('13800138001')
-        assert client.get(f'/api/assistant/sessions/{account}').status_code == 404

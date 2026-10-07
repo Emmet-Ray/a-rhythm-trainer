@@ -17,7 +17,7 @@ export const routeModules = {
 export function destinationModules(pathname: string) {
   const segments = pathname.split("/").filter(Boolean);
   const [section, mode, target] = segments;
-  const page = section === "login" ? "settings" : section;
+  const page = section;
   if (!Object.hasOwn(routeModules, page)) return [];
   const modules = [routeModules[page as keyof typeof routeModules]];
   if (section === "custom" && ["tapping", "dictation"].includes(mode)

@@ -4,19 +4,18 @@ async page => {
   const writes = [];
   const proposal = { id: 'exercise', title: '节奏听写', description: '', mode: 'dictation',
     exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: 'note', noteValue: 'whole' }] }] } };
-  await page.route(`${origin}/api/**`, route => {
+  await page.route(`${origin}/api/assistant/**`, route => {
     const path = new URL(route.request().url()).pathname;
     if (path.includes('/cards/')) {
       const state = route.request().postDataJSON(); writes.push(state);
       return route.fulfill({ json: state });
     }
-    return route.fulfill({ json: path.endsWith('/me') ? { auth_enabled: false }
-      : path.endsWith('/status') ? { status: 'ready', message: '' }
+    return route.fulfill({ json: path.endsWith('/status') ? { status: 'ready', message: '' }
       : path.endsWith('/sessions') ? { sessions: [], total: 0 }
       : { id: 'toggle', is_running: false, last_run_status: 'completed', messages: [{ id: 'reply', role: 'assistant',
         parts: [{ type: 'tool-propose_rhythm_exercise', toolCallId: 'call', state: 'output-available', input: {}, output: { generated_exercise: proposal } }] }] } });
   });
-  await page.evaluate(() => localStorage.setItem('rhythm:assistant:v1:disabled', 'toggle'));
+  await page.evaluate(() => localStorage.setItem('rhythm:assistant:v1:instance', 'toggle'));
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.reload();
   const reveal = page.getByRole('button', { name: '查看答案', exact: true });

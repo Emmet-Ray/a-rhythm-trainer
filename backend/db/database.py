@@ -21,7 +21,7 @@ def create_database_engine(database_url: str | None = None) -> Engine:
     首次连接才打开或创建数据库文件，不建表。调用方负责事务及最终 dispose()。
     第一版只支持 sqlite/sqlite+pysqlite 文件地址，不接受内存库或 URL 查询参数。
     """
-    value = database_url if database_url is not None else os.environ.get("DATABASE_URL", "")
+    value = database_url if database_url is not None else os.environ.get("DATABASE_URL", "sqlite:///./data/rhythm_trainer.db")
     if not isinstance(value, str) or not value.strip():
         raise ValueError("请配置后端环境变量 DATABASE_URL。")
     try:

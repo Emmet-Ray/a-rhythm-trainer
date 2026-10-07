@@ -38,7 +38,7 @@ _动图仅演示操作，不含声音。_
    cp .env.example .env
    ```
 
-2. 编辑根目录 `.env`，填写 DeepSeek API Key：
+2. 编辑根目录 `.env`，填写 DeepSeek API Key 使用AI助手功能（可选）
 
    ```dotenv
    AI_PROVIDER=deepseek

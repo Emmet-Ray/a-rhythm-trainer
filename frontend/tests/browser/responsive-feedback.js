@@ -4,10 +4,9 @@ async page => {
   const origin = new URL(page.url()).origin;
   const proposal = { id: 'responsive', title: '两小节入门节奏听写', description: '', mode: 'dictation',
     exercise: { timeSignature: { beats: 4, beatType: 4 }, measures: [1, 2].map(() => ({ elements: [{ kind: 'note', noteValue: 'whole' }] })) } };
-  await page.route(`${origin}/api/**`, route => {
+  await page.route(`${origin}/api/assistant/**`, route => {
     const path = new URL(route.request().url()).pathname;
-    return route.fulfill({ json: path.endsWith('/me') ? { auth_enabled: false }
-      : path.endsWith('/status') ? { status: 'ready', message: '' }
+    return route.fulfill({ json: path.endsWith('/status') ? { status: 'ready', message: '' }
       : path.endsWith('/sessions') ? { sessions: [], total: 0 }
       : path.includes('/cards/') ? route.request().postDataJSON()
       : { id: 'responsive', is_running: false, last_run_status: 'completed', messages: Array.from({length: 5}, (_, i) => ({ id: `reply-${i}`, role: 'assistant',
@@ -30,7 +29,7 @@ async page => {
       check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width} ${path} 横向溢出`);
     }
   }
-  await page.evaluate(() => localStorage.setItem('rhythm:assistant:v1:disabled', 'responsive'));
+  await page.evaluate(() => localStorage.setItem('rhythm:assistant:v1:instance', 'responsive'));
   await page.setViewportSize({width: 390, height: 850});
   await page.goto(origin);
   await page.getByRole('button', {name: '查看答案', exact: true}).last().waitFor();

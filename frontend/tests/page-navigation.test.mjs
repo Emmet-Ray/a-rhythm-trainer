@@ -34,10 +34,10 @@ test("浏览状态按身份及字段隔离，不改变作答快照或跨刷新�
 
 test("只有浏览列表跨访问保留滚动，练习和编辑页面不继承", () => {
   for (const path of ["/preset", "/records", "/random", "/custom", "/custom/tapping", "/custom/dictation"])
-    assert.ok(browsingScrollScope(path, "guest"));
+    assert.ok(browsingScrollScope(path));
   for (const path of ["/preset/question", "/random/tapping", "/custom/tapping/new", "/custom/tapping/test/edit"])
-    assert.equal(browsingScrollScope(path, "guest"), undefined);
-  assert.notEqual(browsingScrollScope("/custom/tapping", "account:1"), browsingScrollScope("/custom/tapping", "account:2"));
+    assert.equal(browsingScrollScope(path), undefined);
+  assert.notEqual(browsingScrollScope("/custom/tapping"), browsingScrollScope("/custom/dictation"));
 });
 
 test("惰性初值每条访问每个字段只创建一次，返回和后续更新复用原状态", () => {

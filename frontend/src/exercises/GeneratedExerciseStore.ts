@@ -1,7 +1,7 @@
 import { createContext } from "react";
 import { parseGeneratedExercise, type GeneratedExercise } from "./GeneratedExercise";
 
-/** 当前身份的临时题目。按生成 ID 保留版本；不写入题库，刷新或切换身份后失效。 */
+/** 当前页面会话的临时题目。按生成 ID 保留版本；不写入题库，刷新后需从助手对话恢复。 */
 export class GeneratedExerciseStore {
   private exposed = new Set<string>();
   private listeners = new Set<() => void>();

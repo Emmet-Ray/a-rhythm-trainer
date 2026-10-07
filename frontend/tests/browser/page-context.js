@@ -7,7 +7,6 @@ async (page) => {
   let messages = [];
   const requests = [];
   const session = () => ({ id: 'pages', messages, is_running: false, last_run_status: messages.length ? 'completed' : null });
-  await page.route('**/api/auth/me', route => route.fulfill({ json: { auth_enabled: false } }));
   await page.route('**/api/assistant/status', route => route.fulfill({ json: { status: 'ready', message: '' } }));
   await page.route('**/api/assistant/sessions', route => { messages = []; return route.fulfill({ json: session() }); });
   await page.route('**/api/assistant/sessions/*', route => route.fulfill({ json: session() }));
@@ -75,17 +74,17 @@ async (page) => {
   check(c.page === 'preset_practice' && c.state.position === 1 && c.state.topic.id, '预设导航');
 
   await page.evaluate(async () => {
-    const { saveCustomExercise, clearCustomExercises } = await import('/src/exercises/customExercises.ts');
+    const { saveExercise } = await import('/src/api/customExercises.ts');
     const { savePracticeActions, clearPracticeRecords } = await import('/src/practice-records/practiceRecordStorage.ts');
     const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: 'note', noteValue: 'whole' }] }] };
-    clearCustomExercises(); clearPracticeRecords();
-    saveCustomExercise({ mode: 'tapping', name: '上下文测试题', exercise });
+    await clearPracticeRecords();
+    await saveExercise({ mode: 'tapping', name: '上下文测试题', exercise });
     const actions = Array.from({ length: 12 }, (_, i) => ({ mode: 'tapping', attempt: { id: 'context-' + i, completedAt: new Date().toISOString(), bpm: 60, timingWindows: { perfectMs: 50, hitMs: 150 }, passed: true, targetCount: 1, hitCount: 1, missCount: 0, wrongTapCount: 0 } }));
-    savePracticeActions({ source: 'custom', exerciseId: 'context', title: '上下文测试记录' }, exercise, 'tapping', actions);
+    await savePracticeActions({ source: 'custom', exerciseId: 'context', title: '上下文测试记录' }, exercise, 'tapping', actions);
   });
   await visit('/custom'); check((await ask()).page === 'custom_library', '自定义直接进入题库');
   await visit('/custom/tapping'); c = await ask();
-  check(c.page === 'custom_library' && c.state.items.some(i => i.name === '上下文测试题' && i.measureCount === 1), '自定义摘要');
+  check(c.page === 'custom_library' && c.state.items.some(i => i.name === '上下文测试题'), '自定义摘要');
   check(!JSON.stringify(c.state.items).includes('elements'), '列表只传摘要');
 
   await visit('/records'); c = await ask();

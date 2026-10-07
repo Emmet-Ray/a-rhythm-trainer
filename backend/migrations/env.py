@@ -5,10 +5,8 @@ from logging.config import fileConfig
 from alembic import context
 
 from db.database import Base, create_database_engine
-from db.users import User  # noqa: F401 -- 注册用户表到 Base.metadata，供自动差异检查。
-from db.sessions import LoginSession  # noqa: F401 -- 注册登录会话表。
-from db.sms_logins import SmsLoginRequest  # noqa: F401 -- 注册登录前短信请求表。
-from db.custom_exercises import CustomExercise  # noqa: F401 -- 注册账号自定义练习表。
+from db.practice_records import Document  # noqa: F401
+from db.custom_exercises import CustomExercise  # noqa: F401 -- 注册实例自定义练习表。
 
 
 config = context.config
@@ -18,8 +16,20 @@ if config.config_file_name:
 if context.is_offline_mode():
     # 只生成 SQLite SQL，不连接数据库，也不需要实际配置或创建数据目录。
     context.configure(
-        dialect_name="sqlite", target_metadata=Base.metadata,
-        literal_binds=True, render_as_batch=True, compare_type=True,
+        dialect_name="sqlite",
+        target_metadata=Base.metadata,
+        literal_binds=True,
+        render_as_batch=True,
+        compare_type=True,
+        transactional_ddl=True,
+    )
+    with context.begin_transaction():
+        context.run_migrations()
+elif config.attributes.get("connection") is not None:
+    context.configure(
+        connection=config.attributes["connection"],
+        target_metadata=Base.metadata,
+        render_as_batch=True,
         transactional_ddl=True,
     )
     with context.begin_transaction():
@@ -29,8 +39,10 @@ else:
     try:
         with engine.connect() as connection:
             context.configure(
-                connection=connection, target_metadata=Base.metadata,
-                render_as_batch=True, compare_type=True,
+                connection=connection,
+                target_metadata=Base.metadata,
+                render_as_batch=True,
+                compare_type=True,
                 # db/database.py 已启用非旧式事务模式，DDL 也可以参与事务。
                 transactional_ddl=True,
             )

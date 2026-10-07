@@ -26,14 +26,14 @@ export function useBrowsingState<T>(field: string, initial: T | (() => T)): [T, 
 }
 
 /** 只给浏览列表延续滚动；练习、编辑页的新访问仍从顶部开始。 */
-export function browsingScrollScope(pathname: string, identity: string): string | undefined {
+export function browsingScrollScope(pathname: string): string | undefined {
   if (["/preset", "/records", "/random", "/custom"].includes(pathname)
     || /^\/custom\/(tapping|dictation)$/.test(pathname)) {
-    return `browse-scroll:${pathname}:${identity}`;
+    return `browse-scroll:${pathname}`;
   }
 }
 
-/** 页面须按 location.key 及字段所属身份挂载，状态以不可变数据更新。
+/** 页面须按 location.key 及状态字段挂载，状态以不可变数据更新。
  * 函数初值按访问惰性创建并保存，返回时不会重新调用；状态值本身不支持函数。
  * forget 仅清除匹配版本的快照，不改变当前画面，可在异步保存成功后调用。
  */
@@ -59,9 +59,9 @@ export function useVisitState<T>(field: string, initial: T | (() => T)): [T, Dis
 }
 
 /** 等待路由及异步页面内容就绪后恢复；用户主动滚动时停止接管视野。
- * 数据身份纳入滚动快照，避免不同账号复用位置。加载区须标记 data-navigation-pending。
+ * 加载区须标记 data-navigation-pending。
  */
-export function useNavigationScroll(identity: string) {
+export function useNavigationScroll() {
   const visits = useContext(VisitsContext);
   const location = useLocation();
   const action = useNavigationType();
@@ -69,8 +69,8 @@ export function useNavigationScroll(identity: string) {
     if (!visits) return;
     const path = location.pathname + location.search + location.hash;
     visits.enter({ key: location.key, path }, action);
-    const key = location.pathname.startsWith("/custom") ? `${location.key}:${identity}` : location.key;
-    const scope = browsingScrollScope(location.pathname, identity);
+    const key = location.key;
+    const scope = browsingScrollScope(location.pathname);
     const target = scope
       ? visits.readBrowsing(key, scope, () => 0)
       : action === "POP" ? visits.position(key) : 0;
@@ -128,5 +128,5 @@ export function useNavigationScroll(identity: string) {
       window.removeEventListener("keydown", interrupt);
       document.removeEventListener("click", remember, true);
     };
-  }, [visits, location.key, location.pathname, location.search, location.hash, action, identity]);
+  }, [visits, location.key, location.pathname, location.search, location.hash, action]);
 }

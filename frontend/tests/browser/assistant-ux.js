@@ -13,7 +13,6 @@ async (page) => {
     window.uxMock = { requests, answer, finish: () => {}, reject: () => {} };
     window.fetch = async (input, options = {}) => {
       const url = String(input);
-      if (url.includes('/api/auth/me')) return json({ auth_enabled: false });
       if (url.includes('/api/assistant/status')) return json({ status: 'ready', message: '' });
       if (!url.includes('/api/assistant/sessions')) return fetchOriginal(input, options);
       if (!url.endsWith('/messages')) return json({ id: 'ux', messages, is_running: running, last_run_status: running ? 'running' : messages.length ? 'completed' : null });

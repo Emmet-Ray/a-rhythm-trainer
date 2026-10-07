@@ -9,7 +9,6 @@ const server = await createServer({ configFile: false, server: { middlewareMode:
 after(() => server.close());
 const { historicalStatus, recordKey } = await server.ssrLoadModule("/src/practice-records/practiceRecords.ts");
 const { ExerciseHistory } = await server.ssrLoadModule("/src/practice-records/ExerciseHistory.tsx");
-const { RecordAccessContext } = await server.ssrLoadModule("/src/practice-records/recordAccess.ts");
 const { PresetQuestionNavigation } = await server.ssrLoadModule("/src/practice/PresetQuestionNavigation.tsx");
 const { canUsePracticeShortcut, practiceShortcutAction } = await server.ssrLoadModule("/src/practice/usePracticeShortcuts.ts");
 const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: "note", noteValue: "whole" }] }] };
@@ -76,17 +75,16 @@ test("两种练习通过工具栏插槽组合说明，不提供时不出现快�
   }
 });
 
-test("不读取游客历史时，历史插槽仍保留题名与题头操作", async () => {
+test("历史尚未加载时，历史插槽仍保留题名与题头操作", async () => {
   const { PracticeHeading } = await server.ssrLoadModule("/src/practice/PracticeHeading.tsx");
   const html = renderToStaticMarkup(createElement(MemoryRouter, null,
-    createElement(RecordAccessContext, { value: "account" },
       createElement(PracticeHeading, {
         backTo: "/preset", backLabel: "预设练习", title: "四分音符",
         history: { context: { source: "preset", exerciseId: "one", title: "四分音符" }, exercise, mode: "tapping" },
-      }, createElement("button", null, "下一题")))));
+      }, createElement("button", null, "下一题"))));
   assert.match(html, /<h1>四分音符<\/h1>/);
   assert.match(html, /下一题/);
-  assert.doesNotMatch(html, /练习历史|已通过/);
+  assert.doesNotMatch(html, /已通过/);
 });
 
 test("题头历史匹配隔离来源、模式、随机题 ID 和内容版本", () => {
@@ -106,23 +104,7 @@ test("预设导航不越过传入主题边界，首尾禁用；单题两侧均�
   assert.equal((render(["a"], "a").match(/disabled=""/g) ?? []).length, 2);
 });
 
-test("非游客不读取本地历史；读取失败不能显示成暂无记录", () => {
-  const original = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
-  let reads = 0;
-  Object.defineProperty(globalThis, "localStorage", { configurable: true, get() { reads++; throw new Error("blocked"); } });
-  try {
-    const render = access => renderToStaticMarkup(createElement(RecordAccessContext, { value: access }, createElement(ExerciseHistory, { context: { source: "preset", exerciseId: "a", title: "题目" }, exercise, mode: "tapping", children: ({ action }) => action })));
-    for (const access of ["checking", "account", "unavailable"]) assert.equal(render(access), "");
-    assert.equal(reads, 0);
-    const html = render("guest");
-    assert.match(html, /历史读取失败/);
-    assert.match(html, /重试读取/);
-    assert.doesNotMatch(html, /暂无记录/);
-  } finally {
-    if (original) Object.defineProperty(globalThis, "localStorage", original);
-    else delete globalThis.localStorage;
-  }
-});
+
 
 test("快捷键避开弹窗、输入控件、组合输入、长按与系统修饰键", () => {
   const previousDocument = globalThis.document;
@@ -154,4 +136,15 @@ test("快捷键避开弹窗、输入控件、组合输入、长按与系统修�
     target.closest = () => ({});
     assert.equal(canUsePracticeShortcut({ target }), false);
   } finally { globalThis.document = previousDocument; globalThis.HTMLElement = previousElement; }
+});
+
+test("服务读取失败显示重试，不回退浏览器历史或显示为空", async () => {
+  const { refreshPracticeRecords } = await server.ssrLoadModule("/src/practice-records/practiceRecordStorage.ts");
+  const previous = globalThis.fetch;
+  globalThis.fetch = async () => { throw Error("服务不可用"); };
+  try { await assert.rejects(refreshPracticeRecords()); } finally { globalThis.fetch = previous; }
+  const html = renderToStaticMarkup(createElement(ExerciseHistory, { context: { source: "preset", exerciseId: "a", title: "题目" }, exercise, mode: "tapping", children: ({ action }) => action }));
+  assert.match(html, /历史读取失败/);
+  assert.match(html, /重试读取/);
+  assert.doesNotMatch(html, /暂无记录/);
 });

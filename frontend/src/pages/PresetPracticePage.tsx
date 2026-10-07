@@ -1,8 +1,7 @@
-import { RecordAccessContext } from "../practice-records/recordAccess";
 import { listPracticeRecords, RECORDS_CHANGED } from "../practice-records/practiceRecordStorage";
 import { historicalStatus, recordKey } from "../practice-records/practiceRecords";
 import { useAssistantPageContext } from "../assistant/assistantContext";
-import { useCallback, useContext, useState, Suspense, useEffect, useSyncExternalStore, useLayoutEffect, useRef, type UIEvent } from "react";
+import { useCallback, useState, Suspense, useEffect, useSyncExternalStore, useLayoutEffect, useRef, type UIEvent } from "react";
 import { presetCatalogStore } from "../exercises/presetCatalogStore";
 import { workspaceModule } from "../practice/practiceModules";
 import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
@@ -57,12 +56,10 @@ function PresetLibrary({ presetTopics }: { presetTopics: PracticeTopic[] }) {
   const [topicId, setTopicId] = useBrowsingState("preset:topic", presetTopics[0].id);
   const topic = presetTopics.find(item => item.id === topicId) ?? presetTopics[0];
   const questions = topic.modes.find(group => group.mode === selectedMode)?.questions ?? [];
-  const access = useContext(RecordAccessContext);
   const readProgress = useCallback(() => {
-    if (access !== "guest") return { status: "unavailable", records: [] };
     try { return { status: "available", records: listPracticeRecords() }; }
     catch { return { status: "read-error", records: [] }; }
-  }, [access]);
+  }, []);
   const [progress, setProgress] = useState(readProgress);
   useEffect(() => {
     const refresh = () => setProgress(readProgress());

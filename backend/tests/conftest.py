@@ -25,3 +25,7 @@ def migrated_db(tmp_path, monkeypatch, migration_config):
 @pytest.fixture(autouse=True)
 def isolated_assistant_sessions(tmp_path, monkeypatch):
     monkeypatch.setenv("AI_SESSIONS_DIR", str(tmp_path / "assistant-sessions"))
+
+@pytest.fixture(autouse=True)
+def isolated_instance_database(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'instance.db'}")
