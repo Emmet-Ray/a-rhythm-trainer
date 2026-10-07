@@ -34,7 +34,6 @@ main:focus { outline: none; }
 .back-link { display: inline-flex; align-items: center; min-height: 40px; color: var(--muted); font-size: 14px; }
 .back-link:hover { color: var(--accent); }
 .practice-heading { margin: 8px 0 18px; }
-.practice-heading h1 { font-size: 30px; }
 .practice-heading > p { margin-top: 6px; }
 .page-heading .eyebrow { margin: 0 0 8px; font-size: 13px; color: var(--accent); }
 .practice-settings { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); }

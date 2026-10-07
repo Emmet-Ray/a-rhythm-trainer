@@ -58,15 +58,18 @@ export function useVisitState<T>(field: string, initial: T | (() => T)): [T, Dis
   return [value, update, forget];
 }
 
-/** 等待路由及异步页面内容就绪后恢复；用户主动滚动时停止接管视野。
+/** 等待正文就绪后恢复焦点与滚动，再执行一次路由入场；用户操作立即中止接管。
  * 加载区须标记 data-navigation-pending。
  */
-export function useNavigationScroll() {
+export function useNavigationPresentation() {
   const visits = useContext(VisitsContext);
   const location = useLocation();
   const action = useNavigationType();
+  const previousPath = useRef(location.pathname);
   useLayoutEffect(() => {
     if (!visits) return;
+    const entering = previousPath.current !== location.pathname && location.pathname !== "/";
+    previousPath.current = location.pathname;
     const path = location.pathname + location.search + location.hash;
     visits.enter({ key: location.key, path }, action);
     const key = location.key;
@@ -80,6 +83,10 @@ export function useNavigationScroll() {
     window.history.scrollRestoration = "manual";
     let restoring = true;
     let frame = 0;
+    let entrance: Animation | undefined;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const cancelEntrance = () => entrance?.cancel();
+    reducedMotion.addEventListener("change", cancelEntrance);
     function remember() {
       if (!restoring) {
         visits!.savePosition(key, window.scrollY);
@@ -103,12 +110,16 @@ export function useNavigationScroll() {
         window.scrollTo({ top: target, behavior: "instant" });
         finish();
         remember();
+        if (entering && !reducedMotion.matches && typeof main!.animate === "function") {
+          entrance = main!.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: "ease-out" });
+        }
       });
     }
     const observer = new MutationObserver(restore);
     observer.observe(main, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-navigation-pending"] });
     function interrupt(event: Event) {
       if (event instanceof KeyboardEvent && !["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(event.key)) return;
+      cancelEntrance();
       finish();
       remember();
     }
@@ -120,6 +131,8 @@ export function useNavigationScroll() {
     document.addEventListener("click", remember, true);
     restore();
     return () => {
+      cancelEntrance();
+      reducedMotion.removeEventListener("change", cancelEntrance);
       finish();
       window.history.scrollRestoration = previous;
       window.removeEventListener("scroll", remember);

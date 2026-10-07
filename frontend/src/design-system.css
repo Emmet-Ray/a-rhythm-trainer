@@ -129,15 +129,16 @@
   --ds-space-12: 48px;
   --ds-text-sm: 14px;
   --ds-text: 16px;
-  --ds-title: clamp(28px, 4vw, 36px);
+  --ds-title: 28px;
+  --ds-section-title: 20px;
   --ds-motion: 140ms;
   color: var(--ds-ink);
   font-family: ui-rounded, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   font-size: var(--ds-text);
   line-height: 1.6;
 }
-.design-system h1 { font-size: var(--ds-title); font-weight: 800; letter-spacing: -.025em; }
-.design-system h2 { font-weight: 750; font-size: 21px; }
+.design-system h1 { font-size: var(--ds-title); font-weight: 750; letter-spacing: -.025em; }
+.design-system h2 { font-weight: 750; font-size: var(--ds-section-title); }
 /* 普通 UI 图标共用尺寸和线条规范；音乐符号与谱面绘制不使用此类。 */
 .ui-icon { display: inline-block; width: 18px; height: 18px; flex-shrink: 0; vertical-align: -3px; stroke-width: 2; }
 .ui-icon--control { width: 24px; height: 24px; }
@@ -240,7 +241,7 @@
   .preset-questions { display: flex; flex-direction: column; min-height: 0; }
   .preset-question-scroll { flex: 1; padding-inline: 0; }
 }
-.preset-questions h2 { margin: 8px 0 24px; font-size: 22px; line-height: 1.5; overflow-wrap: anywhere; }
+.preset-questions h2 { margin: 8px 0 24px; font-size: var(--ds-section-title); line-height: 1.5; overflow-wrap: anywhere; }
 .preset-library .question-copy { min-width: 0; }
 .preset-library .question-action { flex-shrink: 0; }
 @media (max-width: 760px) {
@@ -266,7 +267,7 @@
 .design-system .navigation-list a.question-link:hover, .design-system .navigation-list a.question-link:focus-visible { background: var(--ds-hover); }
 .design-system .navigation-list a.question-link:active { background: var(--ds-hover); transform: none; box-shadow: none; }
 .design-system .navigation-list a.question-link:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: -2px; }
-.preset-library .question-link h3 { font-size: var(--ds-text); font-weight: 700; overflow-wrap: anywhere; }
+.preset-library .question-link h3 { font-size: var(--ds-text); font-weight: 750; overflow-wrap: anywhere; }
 .preset-library .question-action { font-weight: 750; color: var(--ds-primary); font-size: var(--ds-text-sm); }
 .preset-library .empty-questions { padding: var(--ds-space-6) var(--ds-space-4); color: var(--ds-muted); }
 
@@ -352,7 +353,7 @@
 .practice-page h1 { overflow-wrap: anywhere; }
 .practice-titlebar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: 49px; gap: 12px 24px; margin: 0 0 var(--site-heading-gap); }
 .practice-titlebar .practice-return { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; min-height: 44px; font-size: 18px; font-weight: 650; color: var(--ds-muted); flex: 0 0 auto; }
-.practice-titlebar h1 { flex: 0 1 auto; min-width: 0; max-width: 100%; margin: 0; font-size: 28px; line-height: 1.4; font-weight: 650; overflow-wrap: anywhere; }
+.practice-titlebar h1 { flex: 0 1 auto; min-width: 0; max-width: 100%; margin: 0; overflow-wrap: anywhere; }
 .practice-heading-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
 .practice-achievement { display: inline-flex; align-items: center; gap: 6px; color: var(--ds-success); font-size: var(--ds-text-sm); white-space: nowrap; }
 .practice-heading-actions { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
@@ -511,7 +512,7 @@
 .design-system .record-list > .record-entry { display: flex; align-items: center; gap: 24px; padding: 24px 0; }
 .record-entry-content { flex: 1; min-width: 0; }
 .record-entry-actions { display: flex; align-items: center; flex-shrink: 0; gap: 8px; }
-.record-entry h2 { margin: 0 0 8px; font-size: 18px; overflow-wrap: anywhere; }
+.record-entry h2 { margin: 0 0 8px; font-size: var(--ds-text); overflow-wrap: anywhere; }
 .record-entry p { margin: 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .record-detail { padding: 0 0 24px; }
 .record-drawer { box-sizing: border-box; position: fixed; inset: 0 0 0 auto; width: min(1000px, 90vw); max-width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; padding: 32px; border: 0; border-left: 1px solid var(--ds-line); background: var(--ds-surface); color: var(--ds-ink); overflow-y: auto; overscroll-behavior: contain; }

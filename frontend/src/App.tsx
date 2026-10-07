@@ -8,7 +8,7 @@ import { Route, Routes, useLocation } from "react-router";
 import SiteNavigation from "./navigation/SiteNavigation";
 import NotFoundPage from "./pages/NotFoundPage";
 import { PageNavigation } from "./navigation/PageNavigation";
-import { useNavigationScroll } from "./navigation/usePageNavigation";
+import { useNavigationPresentation } from "./navigation/usePageNavigation";
 import "./App.css";
 import "./design-system.css";
 import { GeneratedExerciseStore, GeneratedExercisesContext } from "./exercises/GeneratedExerciseStore";
@@ -43,7 +43,7 @@ function AppShell() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const assistantContext = useMemo(() => new AssistantContext(), [key]);
   const [practiceActivity] = useState(() => new PracticeActivity());
-  useNavigationScroll();
+  useNavigationPresentation();
 
   return (
     <PracticeActivityContext value={practiceActivity}><GeneratedExercisesContext value={generatedExercises}>
