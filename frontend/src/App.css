@@ -5,7 +5,7 @@ body { background: var(--ds-surface); }
 .brand { font-size: 21px; font-weight: 700; letter-spacing: .03em; }
 .brand { flex-shrink: 0; }
 .nav-button { padding: 8px 0; border: 0; color: var(--accent); background: transparent; }
-.site-shell > main { display: flow-root; min-width: 0; width: 100%; max-width: calc(var(--site-content-width) + 2 * var(--site-gutter)); margin: 0 auto; padding: 32px var(--site-gutter) 48px; }
+.site-shell > main { display: flow-root; min-width: 0; width: 100%; max-width: calc(var(--site-content-width) + 2 * var(--site-gutter)); margin: 0; padding: 32px var(--site-gutter) 48px; }
 main:focus { outline: none; }
 .page-heading { margin-bottom: 20px; }
 .page-heading > p { margin-top: 10px; color: var(--muted); }

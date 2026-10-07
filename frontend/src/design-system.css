@@ -215,7 +215,7 @@
 .preset-library { width: 100%; min-width: 0; }
 .preset-library .page-heading { min-height: 49px; margin: 0 0 var(--site-heading-gap); }
 .preset-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
-.preset-question-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 4px 4px 20px; flex-shrink: 0; }
+.preset-question-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 4px 0 20px; flex-shrink: 0; }
 .preset-library .preset-question-heading h2 { flex: 1 1 280px; margin: 0; }
 .preset-library .preset-question-heading .topic-modes { flex: 0 0 auto; margin: 0; }
 .preset-browser { display: grid; grid-template-columns: var(--site-sidebar-width) minmax(0, 1fr); gap: var(--site-column-gap); align-items: start; }
@@ -238,7 +238,7 @@
   .preset-topics, .preset-question-scroll { min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding-block: 4px; }
   .preset-topics { align-content: start; grid-auto-rows: max-content; }
   .preset-questions { display: flex; flex-direction: column; min-height: 0; }
-  .preset-question-scroll { flex: 1; padding-inline: 4px; }
+  .preset-question-scroll { flex: 1; padding-inline: 0; }
 }
 .preset-questions h2 { margin: 8px 0 24px; font-size: 22px; line-height: 1.5; overflow-wrap: anywhere; }
 .preset-library .question-copy { min-width: 0; }
@@ -262,7 +262,7 @@
 .design-system .navigation-list { display: grid; gap: 0; }
 .design-system .navigation-list > li { padding: 4px 0; border: 0; }
 .design-system .navigation-list > li + li { border-top: 1px solid var(--ds-line); }
-.design-system .navigation-list a.question-link { min-height: 64px; min-width: 0; padding: 16px; gap: 16px; border: 0; border-radius: var(--ds-radius-sm); background: transparent; box-shadow: none; transition: background-color var(--ds-motion); }
+.design-system .navigation-list a.question-link { min-height: 64px; min-width: 0; padding: 16px 0; gap: 16px; border: 0; border-radius: var(--ds-radius-sm); background: transparent; box-shadow: none; transition: background-color var(--ds-motion); }
 .design-system .navigation-list a.question-link:hover, .design-system .navigation-list a.question-link:focus-visible { background: var(--ds-hover); }
 .design-system .navigation-list a.question-link:active { background: var(--ds-hover); transform: none; box-shadow: none; }
 .design-system .navigation-list a.question-link:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: -2px; }
@@ -353,8 +353,8 @@
 .practice-page.custom-library { width: 100%; max-width: none; margin: 0; }
 .custom-catalog { width: 100%; }
 .practice-page h1 { overflow-wrap: anywhere; }
-.practice-titlebar { display: flex; flex-wrap: wrap; align-items: center; min-height: 49px; gap: 12px 24px; margin: 0 0 var(--site-heading-gap); }
-.practice-titlebar .practice-return { display: inline-flex; align-items: center; min-height: 44px; font-size: 18px; font-weight: 650; color: var(--ds-muted); flex: 0 0 auto; }
+.practice-titlebar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: 49px; gap: 12px 24px; margin: 0 0 var(--site-heading-gap); }
+.practice-titlebar .practice-return { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; min-height: 44px; font-size: 18px; font-weight: 650; color: var(--ds-muted); flex: 0 0 auto; }
 .practice-titlebar h1 { flex: 0 1 auto; min-width: 0; max-width: 100%; margin: 0; font-size: 28px; line-height: 1.4; font-weight: 650; overflow-wrap: anywhere; }
 .practice-heading-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
 .practice-achievement { display: inline-flex; align-items: center; gap: 6px; color: var(--ds-success); font-size: var(--ds-text-sm); white-space: nowrap; }
@@ -378,7 +378,7 @@
 .practice-shortcuts-panel dd { margin: 0; }
 .practice-shortcuts-panel kbd { display: inline-block; min-width: 28px; padding: 2px 6px; border: 1px solid var(--ds-line); border-radius: 4px; background: var(--ds-subtle); font: inherit; font-size: 13px; text-align: center; }
 @media (max-width: 700px) {
-  .practice-heading-actions { margin-left: 0; width: 100%; justify-content: space-between; }
+  .practice-heading-actions { grid-column: 1 / -1; margin-left: 0; width: 100%; justify-content: space-between; }
 }
 .custom-status > p { margin: var(--ds-space-4) 0; color: var(--ds-muted); }
 .custom-status > a:not(.back-link) { display: inline-flex; align-items: center; min-height: 44px; color: var(--ds-primary); font-weight: 650; }
@@ -450,7 +450,7 @@
 .practice-layout--sidebar .trainer-actions { justify-content: flex-start; flex-wrap: wrap; }
 /* 训练页是连续工作区；覆盖层的边界由 dialog 自身负责。 */
 .site-shell:has(> main .practice-layout--training) { background: var(--ds-surface); }
-.practice-layout--training { min-width: 0; background: transparent; container-type: inline-size; }
+.practice-layout--training { --practice-gutter: 0px; min-width: 0; background: transparent; container-type: inline-size; }
 .practice-layout--training > .practice-body > .practice-content { width: 100%; }
 .rhythm-dictation .practice-layout--training > .practice-body > .practice-content { padding-top: 28px; }
 
@@ -475,8 +475,8 @@
 /* 助手会压缩工作区；按容器宽度让播放区与设置区整组换行。 */
 @container (max-width: 1050px) {
   .practice-controls .practice-toolbar { flex-basis: 100%; }
-  .practice-controls > .practice-settings { margin-left: auto; }
-  .practice-controls .practice-utilities { margin-left: 0; }
+  .practice-controls > .practice-settings { margin-left: 0; }
+  .practice-controls .practice-utilities { margin-left: auto; }
 }
 @container (max-width: 600px) {
   .practice-controls { padding: 16px; gap: 12px 8px; }
@@ -511,7 +511,7 @@
 .records-description { color: var(--ds-muted); font-size: var(--ds-text-sm); line-height: 1.7; }
 .record-filters { width: fit-content; max-width: 100%; margin: 20px 0; }
 .record-list { list-style: none; padding: 0; margin: 0; }
-.design-system .record-list > .record-entry { display: flex; align-items: center; gap: 24px; padding: 24px 12px; }
+.design-system .record-list > .record-entry { display: flex; align-items: center; gap: 24px; padding: 24px 0; }
 .record-entry-content { flex: 1; min-width: 0; }
 .record-entry-actions { display: flex; align-items: center; flex-shrink: 0; gap: 8px; }
 .record-entry h2 { margin: 0 0 8px; font-size: 18px; overflow-wrap: anywhere; }
@@ -633,7 +633,7 @@
 .rhythm-editor .rhythm-editor-controls button:active:not(:disabled) { box-shadow: none; transform: none; background: var(--ds-tint); }
 .rhythm-editor button.rhythm-editor-dot[aria-pressed="true"]:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); border-color: var(--ds-primary); }
 .rhythm-editor .rhythm-editor-input-message { min-height: 2lh; margin: 0; color: var(--ds-error); }
-.rhythm-dictation .dictation-verification { margin-top: var(--ds-space-4); padding-top: var(--ds-space-6); border-top: 1px solid var(--ds-line); gap: var(--ds-space-3); justify-content: flex-end; }
+.rhythm-dictation .dictation-verification { margin-top: var(--ds-space-4); padding-top: var(--ds-space-6); border-top: 1px solid var(--ds-line); gap: var(--ds-space-3); justify-content: flex-start; }
 .rhythm-dictation .dictation-verification-result { gap: var(--ds-space-3); }
 .rhythm-draft-score [data-verdict="correct"] { color: var(--ds-success); }
 .rhythm-draft-score [data-verdict="incorrect"] { color: var(--ds-error); }
@@ -692,7 +692,7 @@
 .design-system .settings-navigation button:hover:not(:disabled) { border-color: transparent; background: var(--ds-hover); color: var(--ds-ink); }
 .design-system .settings-navigation button[aria-pressed="true"], .design-system .settings-navigation button[aria-pressed="true"]:hover:not(:disabled) { border-color: transparent; background: var(--ds-hover); color: var(--ds-ink); }
 .settings-unavailable { margin-left: 8px; font-size: 12px; font-weight: 400; color: var(--ds-muted); }
-.settings-content { min-width: 0; min-height: 360px; max-width: 768px; padding: 4px; }
+.settings-content { min-width: 0; min-height: 360px; max-width: 768px; padding: 4px 0; }
 .design-system .local-data-clear:not(:disabled) { color: var(--ds-error); }
 .settings-section-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-4); flex-wrap: wrap; margin-bottom: var(--ds-space-3); }
 .settings-section-heading h2 { margin: 0; }
@@ -983,12 +983,13 @@
 .design-system .generated-practice-close { display: grid; place-items: center; width: 40px; height: 40px; min-height: 40px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; }
 .design-system .generated-practice-close:hover:not(:disabled) { background: var(--ds-subtle); color: var(--ds-ink); }
 .generated-practice-content { padding: 0; background: var(--ds-surface); }
-.generated-practice-content .practice-layout--training { border: 0; border-radius: 0; }
+.generated-practice-content .practice-layout--training { --practice-gutter: 28px; border: 0; border-radius: 0; }
 .generated-practice-overlay:focus { outline: none; }
 .generated-practice-overlay button:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 3px; }
 @media (max-width: 700px) {
   .generated-practice-overlay { width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; border-radius: 0; }
   .generated-practice-heading { padding: 12px 16px; }
+  .generated-practice-content .practice-layout--training { --practice-gutter: 16px; }
   .generated-practice-heading h2 { font-size: 18px; }
   .generated-practice-actions { gap: 8px; }
   .generated-practice-content { padding-bottom: env(safe-area-inset-bottom); }
@@ -1069,7 +1070,7 @@
 }
 @media (hover: none) { .assistant-history--sidebar .assistant-history-delete { opacity: 1; } }
 
-/* 普通浏览页限宽居中；练习与编辑工作区沿用宽幅谱面布局。 */
+/* 浏览页和工作区共用左侧基准，仅按内容类型限制宽度。 */
 .site-shell > main:has(> :is(.preset-library, .settings-page, .practice-records-page, .custom-library)) { max-width: calc(1040px + 2 * var(--site-gutter)); }
 .site-shell > main:has(> .about-page) { max-width: calc(720px + 2 * var(--site-gutter)); }
 .practice-records-page, .custom-library { width: 100%; max-width: none; }
@@ -1179,3 +1180,8 @@
 
 .assistant-shell .assistant-message-copy { display: inline-flex; align-items: center; justify-content: center; width: 28px; min-height: 28px; padding: 4px; border: 0; border-radius: 6px; box-shadow: none; background: transparent; color: var(--ds-muted); }
 .assistant-shell .assistant-message-copy:hover { background: var(--ds-hover); color: var(--ds-ink); }
+
+/* 连续练习工作区与题目标题共用内容边界；谱面保留自身记谱留白。
+ * 容器变窄（包括展开助手）时，控制区和内容区不再使用不同的水平缩进。 */
+.practice-layout--training > .practice-controls,
+.practice-layout--training > .practice-body > .practice-content { padding-inline: var(--practice-gutter); }
