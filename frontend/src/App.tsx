@@ -12,7 +12,7 @@ import { useNavigationScroll } from "./navigation/usePageNavigation";
 import "./App.css";
 import "./design-system.css";
 import { GeneratedExerciseStore, GeneratedExercisesContext } from "./exercises/GeneratedExerciseStore";
-import { AssistantPanel } from "./assistant/AssistantPanel";
+import { AssistantWorkspace } from "./assistant/AssistantWorkspace";
 import { AssistantContext, AssistantContextScope } from "./assistant/assistantContext";
 
 // 题库和训练代码进入对应页面后再加载；助手在路由边界外持续挂载。
@@ -49,11 +49,12 @@ function AppShell() {
     <PracticeActivityContext value={practiceActivity}><GeneratedExercisesContext value={generatedExercises}>
     <AssistantContextScope.Provider value={assistantContext}>
     <div className="site-shell" onPointerOver={preloadLinkIntent} onFocusCapture={preloadLinkIntent} onPointerDownCapture={preloadLinkIntent}>
-      <a className="skip-link" href="#main-content">
+      <a className="skip-link" href={pathname === "/" ? "#assistant" : "#main-content"}>
         跳到主要内容
       </a>
       <SiteNavigation />
-      <main id="main-content" ref={mainRef} tabIndex={-1} className={pathname === "/" ? "assistant-home-main" : undefined}>
+      <AssistantWorkspace home={pathname === "/"}>
+      <main id="main-content" hidden={pathname === "/"} ref={mainRef} tabIndex={-1} className={pathname === "/" ? "assistant-home-main" : undefined}>
         {/* 按历史记录重挂载以恢复访问快照；预加载缓存不随此 key 重置。 */}
         <Suspense key={key}
           fallback={
@@ -98,8 +99,8 @@ function AppShell() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
-        <AssistantPanel home={pathname === "/"} />
       </main>
+      </AssistantWorkspace>
     </div>
     </AssistantContextScope.Provider>
     </GeneratedExercisesContext></PracticeActivityContext>

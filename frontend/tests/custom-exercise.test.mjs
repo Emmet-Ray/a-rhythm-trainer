@@ -251,9 +251,9 @@ test("窄导航显示简短文字及完整名称，移动抽屉显示完整文�
 test("设计系统覆盖公共页头、首页、预设列表与击拍页，其他主体不受影响", async () => {
   const home = await renderApp("/");
   assert.match(home, /aria-label="正在加载对话"/);
-  assert.doesNotMatch(home, /aria-label="向助手提问"/);
+  assert.match(home, /<form hidden="" class="assistant-composer"/);
   assert.doesNotMatch(home, /aria-label="练习入口"/);
-  assert.equal((home.match(/id="assistant-input"/g) ?? []).length, 0);
+  assert.equal((home.match(/id="assistant-input"/g) ?? []).length, 1);
   assert.match(await renderApp("/preset"), /class="design-system preset-library"/);
   const tapping = await renderApp("/preset/basic-values-01");
   assert.doesNotMatch(tapping, /random-toolbar-actions|random-settings-drawer/);

@@ -14,8 +14,10 @@ async (page) => {
     window.fetch = async (input, options = {}) => {
       const url = String(input);
       if (url.includes('/api/assistant/status')) return json({ status: 'ready', message: '' });
+      if (url.includes('/api/model-connections')) return json({ provider: 'deepseek', deepseek: { configured: true, model: 'test', models: [{ id: 'test', name: 'Test', supports_images: true }] }, chatgpt: { configured: false, models: [] } });
+      if (url.includes('/cards/')) return json(JSON.parse(options.body));
       if (!url.includes('/api/assistant/sessions')) return fetchOriginal(input, options);
-      if (!url.endsWith('/messages')) return json({ id: 'ux', messages, is_running: running, last_run_status: running ? 'running' : messages.length ? 'completed' : null });
+      if (!url.endsWith('/messages')) return json({ id: 'ux', model_selection: { provider: 'deepseek', model: 'test' }, messages, is_running: running, last_run_status: running ? 'running' : messages.length ? 'completed' : null });
       const body = JSON.parse(options.body); requests.push(body);
       if (body.text === '模拟未接收') return new Promise(resolve => { window.uxMock.reject = () => resolve(new Response('{}', { status: 503 })); });
       messages.push({ id: body.message_id, role: 'user', parts: [{ type: 'text', text: body.text }],
@@ -72,22 +74,30 @@ async (page) => {
   check((await input.inputValue()).includes('\n'), '生成中 Enter 换行，不误触停止或发送');
   check(await page.evaluate(() => window.uxMock.requests.length) === 2, '不并发发送');
   check(await page.locator('.assistant-pending strong').innerText() === '保持均匀', '流式回复也渲染 Markdown');
+  await page.getByRole('link', { name: '随机练习', exact: true }).click();
+  await page.getByRole('button', { name: '打开 AI 助手' }).click();
+  await page.getByRole('separator', { name: '调整助手宽度' }).focus();
+  await page.keyboard.press('ArrowLeft');
+  check(await page.getByRole('button', { name: '停止生成' }).isVisible(), '分栏调整不中断生成');
+  await page.getByRole('link', { name: '节奏助手', exact: true }).click();
+  await page.locator('.assistant-workspace[data-home="true"]').waitFor();
+  check((await input.inputValue()).startsWith('下一条问题'), '生成中跨页面保留草稿');
   await page.getByRole('button', { name: '开始击拍', exact: true }).click();
   await page.locator('.generated-practice-overlay').waitFor();
   await page.getByRole('button', { name: '关闭练习', exact: true }).click();
   check((await input.inputValue()).startsWith('下一条问题'), '练习关闭后保留草稿');
   await page.evaluate(() => window.uxMock.finish());
-  await page.getByRole('button', { name: '发送', exact: true }).waitFor();
+  await page.waitForFunction(() => { const send = document.querySelector('button[aria-label="发送"]'); return send && !send.disabled; });
   check((await input.inputValue()).startsWith('下一条问题'), '回答完成不覆盖草稿');
   await input.press('Enter'); await page.getByRole('button', { name: '停止生成' }).waitFor();
   await input.fill('停止后还要问'); await page.getByRole('button', { name: '停止生成' }).click();
-  await page.getByRole('button', { name: '发送', exact: true }).waitFor();
+  await page.waitForFunction(() => { const send = document.querySelector('button[aria-label="发送"]'); return send && !send.disabled; });
   check(await input.inputValue() === '停止后还要问', '停止保留新草稿');
   await input.fill('模拟未接收'); await input.press('Enter');
   await page.getByRole('button', { name: '停止生成' }).waitFor();
   await input.fill('失败期间写好的草稿'); await page.evaluate(() => window.uxMock.reject());
-  await page.getByRole('button', { name: '发送', exact: true }).waitFor();
-  check(await input.inputValue() === '失败期间写好的草稿', '失败恢复不能覆盖新草稿');
+  await page.waitForFunction(() => { const send = document.querySelector('button[aria-label="发送"]'); return send && !send.disabled; });
+  check(await input.inputValue() === '模拟未接收\n\n失败期间写好的草稿', '失败恢复同时保留原消息与新草稿');
   await page.setViewportSize({ width: 390, height: 844 });
   check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), '窄屏无横向溢出');
   check(errors.length === 0, errors.join('\n'));

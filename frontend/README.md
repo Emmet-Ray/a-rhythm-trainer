@@ -34,7 +34,7 @@
 
 `tests/browser/practice-insight.js` 验证多轮练习、关闭覆盖层后的引用、针对性出题请求、同题历史和听写上下文。它使用模拟模型；回答质量及诊断准确性需真实模型试用评估。
 
-本地联调按 [后端助手说明](../backend/README.md) 配置模型并启动后端，再启动前端。真实提问会产生模型 API 费用；自动测试使用模拟响应。代码入口：`assistant/AssistantPanel.tsx` 持有会话和共用界面，`assistant/useAssistantPresentation.ts` 管理布局、开关与原生模态行为，`pages/HomePage.tsx` 提供首页引导和上下文，`assistant/conversation.ts` 负责请求生命周期，`api/assistant.ts` 校验会话快照并统一 HTTP 错误，SSE 解析由 SDK 负责。
+本地联调按 [后端助手说明](../backend/README.md) 配置模型并启动后端，再启动前端。真实提问会产生模型 API 费用；自动测试使用模拟响应。代码入口：`assistant/AssistantWorkspace.tsx` 使用 react-resizable-panels 管理普通页面与右侧助手的宽度，`assistant/AssistantPanel.tsx` 持有会话和共用界面，`assistant/useAssistantPresentation.ts` 管理布局、开关与原生模态行为，`pages/HomePage.tsx` 提供首页引导和上下文，`assistant/conversation.ts` 负责请求生命周期，`api/assistant.ts` 校验会话快照并统一 HTTP 错误，SSE 解析由 SDK 负责。
 
 除 `npm test` 外，`tests/browser/assistant-layout.js` 提供布局交互回归。启动前端后，在前端目录用 Playwright CLI 打开本地地址，再执行：
 
@@ -155,7 +155,7 @@ npm run preview
 
 ## 数据保存
 
-应用面向本地单人使用，无登录或账号状态。自定义题库与练习记录统一保存到本地后端 SQLite，助手对话保存到后端 JSONL；浏览器仅保留外观、击拍精度和当前对话 ID。未保存草稿仅在当前应用会话保留。
+应用面向本地单人使用，无登录或账号状态。自定义题库与练习记录统一保存到本地后端 SQLite，助手对话保存到后端 JSONL；浏览器仅保留外观、击拍精度、助手侧栏宽度和当前对话 ID。未保存草稿仅在当前应用会话保留。
 
 设置提供外观、本地数据、声音（未开放）、击拍精度四个分类，默认外观。设置 → 本地数据提供题库统计、记录摘要及清空操作。备份步骤见 [后端说明](../backend/README.md#数据与备份)。
 
@@ -297,3 +297,5 @@ AI 卡片的“开始击拍／开始听写”将生成练习加入当前身份�
 `assistant/Composer.tsx` 统一管理文字与图片草稿、添加菜单、发送校验及失败恢复；`ModelSelector.tsx` 管理模型目录与选择，`AssistantPanel.tsx` 管理会话和消息展示。图片草稿在输入框内读取并做文件类型和大小检查，后端负责图片内容、像素和动画校验。支持选择、粘贴、发送前移除与放大预览，每条最多 3 张、每张 2 MiB；图片随消息发送，刷新后从会话恢复。含图草稿或历史只允许使用目录标记为支持图片的模型。
 
 用户消息按图片、文字、操作与时间排列，多图在同一附件区域换行。用户与助手消息各有一个复制入口，只复制文字原文（保留 Markdown），不包含时间、附件或工具参数；纯图片消息不显示复制按钮，助手生成期间暂不显示。`tests/browser/assistant-images.js` 以模拟接口覆盖菜单、图片草稿、失败恢复、图文分组和复制反馈。
+
+普通页面的右侧助手支持拖动分隔线或聚焦后用方向键调整宽度；助手最窄 360px、最宽 960px，同时为正文保留至少 480px。宽度偏好保存在本机浏览器，收起、切换页面及刷新后恢复；窗口缩小引起的临时收缩不覆盖偏好。首页保持原有会话列表布局，窄屏继续使用全屏模态助手。`tests/browser/assistant-resize.js` 验证拖动、键盘、尺寸边界、宽度记忆及路由／布局切换时输入框的持续挂载。

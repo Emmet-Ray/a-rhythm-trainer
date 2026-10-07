@@ -26,7 +26,7 @@ type Props = {
 
 /** 输入草稿、附件读取与失败恢复归输入框所有；父级只接收一次发送的完整内容。 */
 export function Composer({ ref, conversation, ready, visible, welcome, streaming, historyHasImages, onPreview: setExpandedImage, onSend, children }: Props) {
-  const state = useSyncExternalStore(conversation.subscribe, conversation.getSnapshot);
+  const state = useSyncExternalStore(conversation.subscribe, conversation.getSnapshot, conversation.getSnapshot);
   const initializing = !state.initialized;
   const [draft, setDraft] = useState("");
   const [images, setImages] = useState<FileUIPart[]>([]);

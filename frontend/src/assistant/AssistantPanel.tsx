@@ -37,7 +37,7 @@ import type { ModelSelection } from "../api/modelConnections";
 import type { CardState } from "../api/assistant";
 import HomePage from "../pages/HomePage";
 
-export function AssistantPanel({ home = false }: { home?: boolean }) {
+export function AssistantPanel({ home = false, onDockChange }: { home?: boolean; onDockChange?: (docked: boolean) => void }) {
   const activity = useContext(PracticeActivityContext);
   const availability = useAssistantAvailability();
   const {
@@ -48,6 +48,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
     open,
     close: closePanel,
   } = useAssistantPresentation(home, availability.ready);
+  useLayoutEffect(() => { onDockChange?.(!home && visible && !modal); }, [home, visible, modal, onDockChange]);
   const [playbackGroup] = useState(() => new PlaybackGroup());
   const [conversation] = useState(() => new AssistantConversation("instance"));
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
