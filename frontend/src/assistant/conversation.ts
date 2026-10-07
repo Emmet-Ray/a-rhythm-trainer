@@ -1,11 +1,12 @@
 import { Chat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { AssistantApiError, assistantFetch, createSession, getSession, type AssistantMessage, type ChatSession, saveCardState, type CardState } from "../api/assistant";
+import { AssistantApiError, assistantFetch, createSession, getSession, type AssistantMessage, type ChatSession, saveCardState, selectSessionModel, type CardState } from "../api/assistant";
+import { selectionChanged, type ModelSelection } from "../api/modelConnections";
 import type { PageContext } from "./assistantContext";
 
 type State = { initialized: boolean; session: ChatSession | null;
-  restoring: boolean; busy: boolean; needsSync: boolean; expired: boolean; error: string; notice: string };
-const initial = (): State => ({ initialized: true, session: null, restoring: false, busy: false,
+  restoring: boolean; busy: boolean; selectingModel: boolean; needsSync: boolean; expired: boolean; error: string; notice: string };
+const initial = (): State => ({ initialized: true, session: null, restoring: false, busy: false, selectingModel: false,
   needsSync: false, expired: false, error: "", notice: "" });
 type Operation = { stream: AbortController; lifetime: AbortController };
 
@@ -31,6 +32,8 @@ export class AssistantConversation {
   }
   async open(id: string): Promise<boolean> {
     if (this.state.restoring) return false;
+    this.modelWrite?.abort(); this.modelWrite = null;
+    this.update({ selectingModel: false });
     const interrupted = !!this.operation || this.state.needsSync;
     if (this.operation) {
       // 切换只停止旧请求；保留其可见内容，目标读取失败时仍可同步原会话。
@@ -84,6 +87,8 @@ export class AssistantConversation {
     this.cardWrites.set(key, task);
   }
   private operation: Operation | null = null;
+  private modelWrite: AbortController | null = null;
+  private modelRevision = 0;
   private listeners = new Set<() => void>();
   chat = this.createChat();
   private createChat() {
@@ -113,8 +118,10 @@ export class AssistantConversation {
     if (!id) return;
     // SDK 流结束可能略早于服务器释放占用；短暂读取重试不重发模型请求。
     for (let attempt = 0; attempt < 8; attempt++) {
+      const modelRevision = this.modelRevision;
       const session = await getSession(id, op.lifetime.signal);
       if (!this.current(op)) return;
+      if (modelRevision !== this.modelRevision) session.model_selection = this.state.session?.model_selection;
       this.update({ session, needsSync: session.is_running });
       if (!session.is_running) this.chat.messages = session.messages;
       if (!session.is_running) {
@@ -131,15 +138,42 @@ export class AssistantConversation {
     }
     this.update({ notice: "后端仍在收尾，请稍后同步状态。" });
   }
-  async send(text: string, context: PageContext | null): Promise<boolean> {
-    if (this.operation || this.state.needsSync || this.state.expired || !text.trim()) return false;
+  /** Changing the next model never interrupts the active response or replaces its messages. */
+  async selectModel(selection: ModelSelection): Promise<boolean> {
+    if (this.modelWrite || this.state.restoring || this.state.needsSync || this.state.expired || (this.operation && !this.state.session)) return false;
+    const controller = new AbortController();
+    this.modelWrite = controller;
+    const active = () => this.modelWrite === controller && !controller.signal.aborted;
+    this.update({ selectingModel: true, error: "" });
+    try {
+      if (!this.state.session) {
+        const session = await createSession(controller.signal, selection);
+        if (!active()) return false;
+        this.remember(session.id);
+        this.update({ session });
+      }
+      const saved = await selectSessionModel(this.state.session!.id, selection, controller.signal);
+      if (!active()) return false;
+      this.modelRevision++;
+      this.update({ session: { ...this.state.session!, model_selection: saved.model_selection }, notice: saved.selection_notice || "" });
+      if (!saved.selection_notice) selectionChanged(selection);
+      return true;
+    } catch (error) {
+      if (active()) this.update({ error: error instanceof Error ? error.message : "模型选择未能保存", needsSync: !!this.state.session });
+      return false;
+    } finally {
+      if (active()) { this.modelWrite = null; this.update({ selectingModel: false }); }
+    }
+  }
+  async send(text: string, context: PageContext | null, selection?: ModelSelection): Promise<boolean> {
+    if (this.operation || this.modelWrite || this.state.needsSync || this.state.expired || !text.trim()) return false;
     const op = { stream: new AbortController(), lifetime: new AbortController() };
     this.operation = op;
     const pageContext = structuredClone(context);
     this.update({ busy: true, error: "", notice: "" });
     try {
       if (!this.state.session) {
-        const session = await createSession(op.lifetime.signal);
+        const session = await createSession(op.lifetime.signal, selection);
         if (!this.current(op)) return false;
         this.remember(session.id);
         this.update({ session });
@@ -189,6 +223,7 @@ export class AssistantConversation {
   }
   reset(forget = true) {
     if (forget) this.remember(null);
+    this.modelWrite?.abort(); this.modelWrite = null;
     this.operation?.lifetime.abort(); this.operation?.stream.abort(); this.operation = null;
     void this.chat.stop();
     this.chat = this.createChat();

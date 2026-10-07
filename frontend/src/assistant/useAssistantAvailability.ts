@@ -8,13 +8,18 @@ export function useAssistantAvailability() {
   useEffect(() => {
     const controller = new AbortController();
     void getAssistantStatus(controller.signal).then(result => {
-      if (!controller.signal.aborted) setState({ ready: result.status === "ready", loading: false, title: result.status === "unconfigured" ? "未配置 API Key" : "助手配置有误", message: result.message });
+      if (!controller.signal.aborted) setState({ ready: result.status === "ready", loading: false, title: result.status === "unconfigured" ? "未配置模型服务" : "助手配置有误", message: result.message });
     }, error => {
       if (!controller.signal.aborted) setState({ ready: false, loading: false, title: "无法连接助手服务",
         message: error instanceof Error ? error.message : "无法检查助手配置，请重试。" });
     });
     return () => controller.abort();
   }, [attempt]);
+  useEffect(() => {
+    const refresh = () => setAttempt(value => value + 1);
+    window.addEventListener("model-connections-changed", refresh);
+    return () => window.removeEventListener("model-connections-changed", refresh);
+  }, []);
   function retry() {
     setState({ ready: false, loading: true, title: "正在检查助手配置", message: "正在检查助手配置…" });
     setAttempt(value => value + 1);

@@ -25,7 +25,7 @@ _动图仅演示操作，不含声音。_
 ## 技术栈
 
 - **前端**：React、TypeScript、Vite；React Router（路由）、Lucide（图标）、react-markdown（Markdown 渲染）、VexFlow（谱面渲染）、Web Audio API（音频与节拍调度）；AI SDK UI（助手流式消息）
-- **后端**：Python、FastAPI；SQLite、SQLAlchemy、Alembic（数据存储与迁移）；Pydantic AI（模型接入与工具调用）、OpenAI Python SDK（DeepSeek Responses）
+- **后端**：Python、FastAPI；SQLite、SQLAlchemy、Alembic（数据存储与迁移）；Pydantic AI（模型接入与工具调用）、OpenAI Python SDK（DeepSeek 与 ChatGPT 订阅 Responses）
 - **部署**：Docker、Nginx
 
 ## 快速启动（Docker）
@@ -38,13 +38,7 @@ _动图仅演示操作，不含声音。_
    cp .env.example .env
    ```
 
-2. 编辑根目录 `.env`，填写 DeepSeek API Key 使用AI助手功能（可选）
-
-   ```dotenv
-   AI_PROVIDER=deepseek
-   AI_MODEL=deepseek-flash
-   AI_API_KEY=你的APIKey
-   ```
+2. 默认配置即可启动；模型服务可以启动后在网页中配置
 
 3. 启动：
 
@@ -52,7 +46,7 @@ _动图仅演示操作，不含声音。_
    docker compose up -d --build
    ```
 
-打开 <http://localhost:8080> 即可使用。
+打开 <http://localhost:8080> 即可使用
 
 ## TODO
 
@@ -63,8 +57,8 @@ _动图仅演示操作，不含声音。_
   - [x] 编辑保存 AI 生成的题目
   - [x] 页面上下文：练习与编辑、题目目录、生成设置、练习记录和设置页
   - [x] 会话持久化
-  - [ ] 模型切换与认证
-  - [ ] 图片输入
+  - [x] 模型切换与认证
+  - [ ] 图片、pdf输入
   - [ ] 搜索功能
 - [ ] 几何节奏游戏模式
 - [ ] 击拍练习支持调整开始小节（现在都是默认从开头开始）

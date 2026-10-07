@@ -4,7 +4,6 @@ from api.assistant import get_model
 from main import create_app
 
 def test_missing_configuration_and_input_validation(monkeypatch):
-    monkeypatch.delenv("AI_API_KEY", raising=False)
     app = create_app()
     with TestClient(app, client=("127.0.0.1", 1234)) as client:
         session_id = client.post("/api/assistant/sessions").json()["id"]
@@ -44,13 +43,13 @@ def test_proxy_origins(monkeypatch, origin, expected):
     ("secret-test", "deepseek", "ready"), ("secret-test", "unsupported", "invalid"),
 ])
 def test_configuration_status_never_calls_model(monkeypatch, key, provider, status):
-    monkeypatch.setenv("AI_API_KEY", key)
-    monkeypatch.setenv("AI_PROVIDER", provider)
-    monkeypatch.setenv("AI_MODEL", "test-model")
     def forbidden(*args, **kwargs):
         raise AssertionError("status must not create a model client")
-    monkeypatch.setattr("assistant.model.AsyncOpenAI", forbidden)
+    monkeypatch.setattr("assistant.providers.deepseek.AsyncOpenAI", forbidden)
     with TestClient(create_app()) as client:
+        with client.app.state.model_connections.edit() as state:
+            state["provider"] = provider
+            state["deepseek"].update(key=key.strip(), model="test-model")
         response = client.get("/api/assistant/status")
     assert response.status_code == 200
     assert response.json()["status"] == status
@@ -69,10 +68,11 @@ def test_model_client_is_closed_when_request_validation_fails(monkeypatch):
         client = AsyncOpenAI(**kwargs, http_client=httpx.AsyncClient(transport=httpx.MockTransport(forbidden)))
         clients.append(client)
         return client
-    monkeypatch.setenv("AI_API_KEY", "test-only")
-    monkeypatch.setenv("AI_PROVIDER", "deepseek")
-    monkeypatch.setattr("assistant.model.AsyncOpenAI", create_client)
+    monkeypatch.setattr("assistant.providers.deepseek.AsyncOpenAI", create_client)
     with TestClient(create_app()) as client:
+        with client.app.state.model_connections.edit() as state:
+            state['deepseek'].update(key='test-only', model='test-model')
+            state['deepseek']['models'] = [{'id': state['deepseek']['model'], 'name': state['deepseek']['model']}]
         sid = client.post("/api/assistant/sessions").json()["id"]
         response = client.post(f"/api/assistant/sessions/{sid}/messages", json={"message_id": "u1", "text": "  "})
         assert response.status_code == 422

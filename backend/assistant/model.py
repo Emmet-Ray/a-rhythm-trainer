@@ -1,30 +1,31 @@
-"""部署配置与 DeepSeek Responses 接入；请求和流式事件解析由 Pydantic AI 负责。"""
-import os
+"""模型选择与错误契约、Responses 流完整性和跨服务历史处理。"""
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import replace
+from typing import Literal
 
-from openai import AsyncOpenAI, OpenAIError
+from pydantic import BaseModel, ConfigDict, Field
+
+from openai import OpenAIError
 from pydantic_ai.exceptions import ModelHTTPError, UsageLimitExceeded, UnexpectedModelBehavior
 from pydantic_ai.models.openai import OpenAIResponsesModel
-from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.messages import ModelResponse, ThinkingPart
 
 
-@dataclass(frozen=True)
-class ModelSettings:
-    provider: str
-    model: str
-    api_key: str = field(repr=False)
+class ConnectionError(ValueError):
+    """可直接呈现给用户的错误，不包含供应商响应。"""
 
-    @classmethod
-    def from_env(cls):
-        provider = os.getenv("AI_PROVIDER", "deepseek").strip()
-        model = os.getenv("AI_MODEL", "deepseek-flash").strip()
-        key = os.getenv("AI_API_KEY", "").strip()
-        if not key:
-            raise ValueError("助手尚未配置 API Key。请在部署环境中设置 AI_API_KEY，并重启后端服务。")
-        if provider != "deepseek" or not model:
-            raise ValueError("请配置受支持的 AI_PROVIDER、AI_MODEL 和 AI_API_KEY。")
-        return cls(provider, model, key)
+
+class AuthorizationRequired(ConnectionError):
+    """供应商明确拒绝凭证；网络故障不属于授权失效。"""
+
+
+ProviderName = Literal['deepseek', 'chatgpt']
+
+
+class ModelSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    provider: ProviderName
+    model: str = Field(min_length=1, max_length=200)
 
 
 class CompleteResponsesModel(OpenAIResponsesModel):
@@ -32,24 +33,30 @@ class CompleteResponsesModel(OpenAIResponsesModel):
 
     @asynccontextmanager
     async def request_stream(self, messages, model_settings, model_request_parameters, run_context=None):
-        async with super().request_stream(messages, model_settings, model_request_parameters, run_context) as stream:
+        portable = []
+        for message in messages:
+            if isinstance(message, ModelResponse):
+                # Earlier DeepSeek sessions used the generic OpenAI provider label.
+                if message.provider_name == "openai" and (message.model_name or "").startswith("deepseek"):
+                    message = replace(message, provider_name="deepseek", parts=[
+                        replace(part, provider_name="deepseek") if part.provider_name == "openai" else part
+                        for part in message.parts])
+                if message.provider_name != self.system:
+                    message = replace(message, parts=[part for part in message.parts if not isinstance(part, ThinkingPart)])
+            portable.append(message)
+        async with super().request_stream(portable, model_settings, model_request_parameters, run_context) as stream:
             yield stream
             if stream.get().state != "complete" or stream.get().finish_reason not in ("stop", "tool_call"):
                 raise UnexpectedModelBehavior("模型连接提前结束或回答未完成，请重试。")
-
-
-def create_model(settings: ModelSettings) -> OpenAIResponsesModel:
-    client = AsyncOpenAI(api_key=settings.api_key, base_url="https://api.deepseek.com", max_retries=0, timeout=30)
-    return CompleteResponsesModel(settings.model, provider=OpenAIProvider(openai_client=client))
 
 
 def public_model_error(error: Exception) -> str:
     """只展示固定说明，不把供应商响应、请求体和认证信息发送给浏览器。"""
     status = getattr(error, "status_code", None)
     if isinstance(error, (ModelHTTPError, OpenAIError)):
-        return {401: "模型 API Key 无效，请检查后端 AI_API_KEY 配置。",
-                402: "模型账户额度不足，请检查模型账户余额。",
-                429: "模型请求受限，请稍后重试或检查模型账户额度。"}.get(status, "模型服务请求失败，请稍后重试。")
+        return {401: "模型凭证无效，请在设置 → 模型服务中更新 API Key 或重新授权",
+                402: "模型额度不足，请检查当前服务的额度",
+                429: "模型请求受限，请稍后重试或检查当前服务的额度"}.get(status, "模型服务请求失败，请稍后重试。")
     if isinstance(error, TimeoutError):
         return "助手运行超时，请稍后继续。"
     if isinstance(error, UsageLimitExceeded):

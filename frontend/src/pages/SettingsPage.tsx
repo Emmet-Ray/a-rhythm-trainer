@@ -3,11 +3,13 @@ import { useContext, useLayoutEffect, useState } from "react";
 import { VisitsContext } from "../navigation/usePageNavigation";
 import {
   Database,
+  Bot,
   Palette,
   Target,
   Volume2,
 } from "lucide-react";
 import { useSearchParams } from "react-router";
+import ModelServiceSettings from "../settings/ModelServiceSettings";
 import LocalDataSettings from "../settings/LocalDataSettings";
 import {
   colorModes,
@@ -28,6 +30,7 @@ import {
 
 const categories = [
   { id: "appearance", label: "外观", icon: Palette },
+  { id: "models", label: "模型服务", icon: Bot },
   { id: "local-data", label: "本地数据", icon: Database },
   { id: "sound", label: "声音", icon: Volume2 },
   { id: "tapping-precision", label: "击拍精度", icon: Target },
@@ -147,6 +150,7 @@ export default function SettingsPage() {
               </p>
             </section>
           )}
+          {category === "models" && <ModelServiceSettings />}
           {category === "local-data" && <LocalDataSettings />}
           {category === "sound" && (
             <section

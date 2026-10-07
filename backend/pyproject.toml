@@ -6,15 +6,16 @@ requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.16,<2",
     "fastapi",
+    "httpx>=0.28,<1",
     "openai>=3.24.0",
     "pydantic-ai-slim[openai]>=2.54.0",
+    "pyjwt[crypto]>=2.10,<3",
     "sqlalchemy>=2.0,<3",
     "uvicorn[standard]",
 ]
 
 [dependency-groups]
 dev = [
-    "httpx",
     "pytest",
 ]
 

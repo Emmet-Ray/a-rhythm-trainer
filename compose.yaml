@@ -25,9 +25,6 @@ services:
     restart: unless-stopped
     environment:
       AI_SESSIONS_DIR: /var/lib/rhythm-trainer/assistant-sessions
-      AI_PROVIDER: "${AI_PROVIDER:-deepseek}"
-      AI_MODEL: "${AI_MODEL:-deepseek-flash}"
-      AI_API_KEY: "${AI_API_KEY:-}"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-}"
       AI_ALLOWED_ORIGINS: "${AI_ALLOWED_ORIGINS:-http://localhost:${HTTP_PORT:-8080},http://127.0.0.1:${HTTP_PORT:-8080}}"
       DATABASE_URL: sqlite:////var/lib/rhythm-trainer/rhythm_trainer.db

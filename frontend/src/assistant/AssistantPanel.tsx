@@ -31,7 +31,9 @@ import { AssistantConversation } from "./conversation";
 import { useAssistantContext } from "./assistantContext";
 import { useAssistantPresentation } from "./useAssistantPresentation";
 import { useAssistantAvailability } from "./useAssistantAvailability";
+import { ModelSelector } from "./ModelSelector";
 import { ConversationHistory } from "./ConversationHistory";
+import type { ModelSelection } from "../api/modelConnections";
 import type { CardState } from "../api/assistant";
 import HomePage from "../pages/HomePage";
 
@@ -49,6 +51,11 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
   } = useAssistantPresentation(home, availability.ready);
   const [playbackGroup] = useState(() => new PlaybackGroup());
   const [conversation] = useState(() => new AssistantConversation("instance"));
+  const [modelAvailable, setModelAvailable] = useState(false);
+  const [modelChoice, setModelChoice] = useState<ModelSelection | null>(null);
+  const modelAvailabilityChanged = useCallback((available: boolean, selection: ModelSelection | null) => {
+    setModelAvailable(available); setModelChoice(selection);
+  }, []);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -179,7 +186,8 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
         parseFloat(style.paddingRight) -
         controls.offsetWidth -
         actions.offsetWidth -
-        2 * parseFloat(style.columnGap);
+        (box.querySelector<HTMLElement>(".assistant-model-control")?.offsetWidth ?? 0) -
+        3 * parseFloat(style.columnGap);
       field.style.width = `${Math.max(width, 1)}px`;
       field.style.height = "0px";
       box.dataset.multiline = String(
@@ -204,7 +212,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
       observer.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [draft, visible, home, availability.ready, initializing]);
+  }, [draft, visible, home, availability.ready, initializing, modelChoice?.model]);
 
   useLayoutEffect(() => {
     const element = thread.current;
@@ -222,7 +230,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
   async function send() {
     const before = conversation.getSnapshot();
     if (
-      !availability.ready || initializing ||
+      !availability.ready || !modelAvailable || initializing ||
       !draft.trim() ||
       before.busy ||
       before.needsSync ||
@@ -241,7 +249,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
     const focus = activity?.getFocus();
     const context = batch || focus ? { ...(page ?? { page: "unknown", description: "当前页面未提供上下文", state: {} }),
       state: { ...page?.state, practice_activity: batch ?? null, practice_focus: focus ?? null } } : page;
-    await conversation.send(text, context);
+    await conversation.send(text, context, modelChoice ?? undefined);
     if (version !== generation.current) return;
     const after = conversation.getSnapshot();
     // 仅在已确认本次输入没有写入会话时恢复。不能用文字相等判断：用户可能连续发送相同内容。
@@ -266,8 +274,8 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
     playbackGroup.stop();
     closePanel();
   }
-  const blocked =
-    !availability.ready || initializing || state.busy || state.needsSync || state.expired;
+  const blocked = state.selectingModel ||
+    !availability.ready || !modelAvailable || initializing || state.busy || state.needsSync || state.expired;
 
   const deleteConversation = (id: string) => {
     if (state.session?.id !== id) return;
@@ -414,7 +422,6 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                 <div className="assistant-empty">
                   <MessageCircle size={30} aria-hidden="true" />
                   <h3>从一个节奏问题开始</h3>
-                  <p>可以生成练习，也可以聊聊节奏。</p>
                 </div>
               ) : null}
               {messages.map(message => <div className="assistant-turn" key={`${state.session?.id ?? "new"}:${message.id}`}>
@@ -514,8 +521,11 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                     }
                   }}
                 />
+                <ModelSelector selection={state.session ? state.session.model_selection ?? null : undefined}
+                  disabled={initializing || state.selectingModel || state.restoring || (state.busy && !state.session) || state.needsSync || state.expired}
+                  onSelect={selection => conversation.selectModel(selection)} onAvailable={modelAvailabilityChanged} />
                 <div className="assistant-input-actions">
-                  {state.busy ? (
+                  {status === "submitted" || status === "streaming" ? (
                     <button
                       type="button"
                       aria-label="停止生成"

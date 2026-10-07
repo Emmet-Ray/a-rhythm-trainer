@@ -21,6 +21,7 @@ from pydantic_ai.usage import UsageLimits
 
 from assistant.context import PageContext, assistant_instructions, build_agent_messages
 from assistant.model import public_model_error
+from assistant.model import ModelSelection
 from assistant.tools import create_tools
 
 
@@ -80,6 +81,7 @@ class ChatSession:
         self.created_at = datetime.now(UTC).isoformat()
         self.updated_at = self.created_at
         self.title = "新对话"
+        self.model_selection: ModelSelection | None = None
         self.card_states: dict[str, dict] = {}
         self._save_lock = RLock()
         self.deleted = False
@@ -92,7 +94,8 @@ class ChatSession:
         return {"id": self.id, "messages": [message for turn in self.turns for message in turn.ui_messages()],
                 "is_running": self.is_running, "last_run_status": self.last_run_status,
                 "title": self.title, "created_at": self.created_at, "updated_at": self.updated_at,
-                "card_states": deepcopy(self.card_states)}
+                "card_states": deepcopy(self.card_states),
+                "model_selection": self.model_selection.model_dump() if self.model_selection else None}
 
     def save(self, record: dict):
         with self._save_lock:
@@ -102,6 +105,13 @@ class ChatSession:
             if self.journal:
                 self.journal.append(self.owner, self.id, {**record, "timestamp": timestamp})
             self.updated_at = timestamp
+
+    def select_model(self, selection: ModelSelection):
+        """持久化后续请求的模型；运行中的回答持有自己的模型实例。"""
+        with self._save_lock:
+            if self.model_selection != selection:
+                self.save({"type": "model_selection", "selection": selection.model_dump()})
+                self.model_selection = selection
 
     async def checkpoint(self, turn: Turn):
         try:
@@ -129,7 +139,7 @@ class ChatSession:
             return value
 
     @asynccontextmanager
-    async def run(self, text: str, model: Model, page_context: PageContext | None = None, *, message_id: str):
+    async def run(self, text: str, model: Model, page_context: PageContext | None = None, *, message_id: str, expected_selection: ModelSelection | None = None):
         if self.is_running:
             raise SessionBusy("当前会话正在运行，请等待完成或停止后再发送。")
         if any(turn.user_id == message_id for turn in self.turns):
@@ -146,6 +156,10 @@ class ChatSession:
         with self._save_lock:
             if self.deleted:
                 raise SessionStorageError("对话已删除，请开始新对话。")
+            if self.is_running:
+                raise SessionBusy("当前会话正在运行，请等待完成")
+            if expected_selection is not None and self.model_selection != expected_selection:
+                raise SessionBusy("模型选择已更新，请同步对话后重新发送")
             self.is_running = True
         interrupted = False
         write = asyncio.create_task(asyncio.to_thread(self.save, {"type": "turn_started", "turn": {
@@ -253,12 +267,14 @@ class SessionStore:
         if self.journal:
             self.journal.close()
 
-    def create(self, owner: str = "") -> ChatSession:
+    def create(self, owner: str = "", selection: ModelSelection | None = None) -> ChatSession:
         with self._lock:
             session = ChatSession(self.journal, owner)
+            session.model_selection = selection
             if self.journal:
                 self.journal.append(owner, session.id, {"type": "session", "version": 1,
-                    "id": session.id, "owner": owner, "created_at": session.created_at}, create=True)
+                    "id": session.id, "owner": owner, "created_at": session.created_at,
+                    "model_selection": selection.model_dump() if selection else None}, create=True)
             self._sessions[owner, session.id] = session
             return session
 
@@ -275,6 +291,8 @@ class SessionStore:
                 if header["type"] != "session" or header["version"] != 1 or header["id"] != session_id or header["owner"] != owner:
                     raise ValueError()
                 session = ChatSession(self.journal, owner)
+                if header.get("model_selection"):
+                    session.model_selection = ModelSelection.model_validate(header["model_selection"])
                 session.id = session_id
                 session.created_at = session.updated_at = header["created_at"]
                 for entry in entries:
@@ -294,10 +312,20 @@ class SessionStore:
                                 raise ValueError()
                             session.turns[-1].messages = ModelMessagesTypeAdapter.validate_python(entry["messages"])
                             session.last_run_status = TypeAdapter(Literal["running", "completed", "failed", "cancelled"]).validate_python(entry["status"])
+                        case "model_selection":
+                            session.model_selection = ModelSelection.model_validate(entry["selection"])
                         case "card_state":
                             session.card_states[entry["exercise_id"]] = CardState.model_validate(entry["state"]).model_dump()
                         case _:
                             raise ValueError()
+                if session.model_selection is None:
+                    # Older journals lack an explicit choice; recover the last actual model,
+                    # never the global default which may since have changed.
+                    previous = next((message for turn in reversed(session.turns) for message in reversed(turn.messages)
+                                     if isinstance(message, ModelResponse) and message.model_name), None)
+                    if previous and (previous.model_name.startswith("deepseek") or previous.provider_name in ("deepseek", "openai")):
+                        provider = "deepseek" if previous.model_name.startswith("deepseek") or previous.provider_name == "deepseek" else "chatgpt"
+                        session.model_selection = ModelSelection(provider=provider, model=previous.model_name)
                 if session.last_run_status == "running":
                     session.last_run_status = "cancelled"
                     session.save({"type": "checkpoint", "user_id": session.turns[-1].user_id,

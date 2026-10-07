@@ -30,8 +30,11 @@ function presetContent(): Plugin {
 export default defineConfig({
   plugins: [react(), presetContent()],
   server: {
+    // OAuth 回调固定使用 IPv4 loopback；避免 localhost 仅监听 ::1。
+    host: '127.0.0.1',
     proxy: {
       // 保留 /api 前缀，与 FastAPI 路由一致；不代理前端页面路径。
+      '^/auth/callback(?:\\?|$)': process.env.BACKEND_URL || 'http://127.0.0.1:8000',
       '^/api(?:/|$)': process.env.BACKEND_URL || 'http://127.0.0.1:8000',
     },
   },

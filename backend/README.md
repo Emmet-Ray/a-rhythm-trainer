@@ -2,35 +2,39 @@
 
 ## 新版 AI 助手：JSONL 会话持久化与流式问答
 
-当前实现 DeepSeek Responses API 的多轮问答与工具循环，会话历史按会话保存在后端 JSONL 文件中；前端可携带页面快照，模型可调用工具生成节奏练习。前端已支持候选谱面卡片，并可由用户应用到当前自定义练习草稿。
-`api/assistant.py` 负责 HTTP 边界，`assistant/sessions.py` 持有服务端历史、运行互斥与取消后的结果。
-模型请求、工具循环和流解析由 Pydantic AI 负责，`VercelAIAdapter` 输出 AI SDK UI 消息流。
-`assistant/context.py` 投影页面与练习活动上下文；`assistant/model.py` 负责部署配置、完整性检查和错误说明。
-当前配置仅支持 DeepSeek Responses，不表示其他提供方或订阅认证已实现。
+当前支持 DeepSeek API Key 和 ChatGPT 订阅授权，多轮问答与工具循环由 Pydantic AI 负责，`VercelAIAdapter` 输出 AI SDK UI 消息流
 
-在本地 `backend/.env` 追加配置，不覆盖已有设置或提交密钥：
+- `api/assistant.py` 负责 HTTP 边界，`assistant/sessions.py` 持有会话历史与运行状态
+- `assistant/connections.py` 管理凭证持久化、模型目录缓存和请求客户端生命周期
+- `assistant/providers/` 收纳对等的服务接入模块，统一提供模型目录读取与模型创建
+- `assistant/providers/deepseek.py` 负责 DeepSeek API；`assistant/providers/chatgpt.py` 负责 ChatGPT 订阅授权与协议适配
+- 接入模块不直接读写配置文件，也不持有会话历史
+- `assistant/model.py` 定义模型选择与错误契约，检查流完整性并处理跨服务历史
+- `assistant/context.py` 集中维护助手指令，并校验、投影页面与练习活动上下文
 
-```dotenv
-AI_PROVIDER=deepseek
-AI_MODEL=deepseek-flash
-AI_API_KEY=填写自己的密钥
-```
+启动后在「设置 → 模型服务」配置连接，在助手输入框中选择模型，无需模型环境变量
+凭证默认保存在 `backend/data/model-connections.json`，会话历史按会话保存在 JSONL 文件中
+连接配置的文件锁仅用于本地读写，远端目录请求与令牌刷新使用独立服务锁
+会话选择是每次请求的依据，最近选择仅作为新对话默认值
 
-从 `backend/` 启动并显式加载配置：
+一次请求由 API 层协调：读取会话选择 → 连接模块准备凭证 → 对应接入模块创建模型 → 会话运行回答和工具循环 → 连接模块释放客户端
+新增服务时，在 `providers/` 实现目录与模型创建并登记服务名称，再按认证方式补充连接配置入口；会话和工具逻辑继续使用 Pydantic AI 模型接口
+
+从 `backend/` 启动：
 
 ```sh
 uv sync --locked
-uv run --locked --env-file .env uvicorn main:app --reload --host 127.0.0.1 --port 8000
+uv run --locked uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 也可以通过终端验证后端。以下请求会调用真实模型并产生费用：
 
 ```sh
-# 先创建会话，从返回 JSON 中取得 id
-curl -c /tmp/rhythm-cookies -X POST http://127.0.0.1:8000/api/assistant/sessions
+# 先在界面配置连接并选择模型，再创建会话，从返回 JSON 中取得 id
+curl -X POST http://127.0.0.1:8000/api/assistant/sessions
 
 # 将 SESSION_ID 替换为刚返回的 id；后续输入继续使用同一 id
-curl -b /tmp/rhythm-cookies -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
+curl -N http://127.0.0.1:8000/api/assistant/sessions/SESSION_ID/messages \
   -H 'Content-Type: application/json' \
   -d '{"message_id":"question-1","text":"请解释四分音符和八分音符的时值关系。"}'
 ```
@@ -40,14 +44,15 @@ curl -b /tmp/rhythm-cookies -N http://127.0.0.1:8000/api/assistant/sessions/SESS
 | 接口 | 用途 |
 | --- | --- |
 | `POST /api/assistant/sessions` | 创建会话，返回 201 和 `{id, messages, is_running, last_run_status}` |
-| `GET /api/assistant/sessions` | 分页查询当前身份的历史对话 |
+| `GET /api/assistant/sessions` | 分页查询本地历史对话 |
+| `PUT /api/assistant/sessions/{id}/model` | 保存后续消息使用的模型；`selection_notice` 非空表示会话已切换，但默认值保存失败 |
 | `DELETE /api/assistant/sessions/{id}` | 删除对话；正在生成时返回 409 |
 | `PUT /api/assistant/sessions/{id}/cards/{exercise_id}` | 保存卡片 BPM 与已查看答案状态；已查看不可撤回 |
 | `GET /api/assistant/sessions/{id}` | 获取会话记录（含每次用户输入的快照）与运行状态，不包含正在生成的片段 |
 | `POST /api/assistant/sessions/{id}/messages` | 提交 `{message_id, text, page_context?}`，后端补齐历史，返回 SSE |
 
 同一会话正在运行时，新提交返回 409 且不追加消息；不同会话可以独立运行。
-未知 ID 返回 404。所有对话归当前本地实例所有，清除 Cookie 或更换浏览器仍可从历史列表恢复。旧归属目录通过设置页显式导入。
+未知 ID 返回 404。所有对话归当前本地实例所有，清除 Cookie 或更换浏览器仍可从历史列表恢复。
 支持历史列表、恢复和删除；尚无自动过期机制。
 
 会话文件默认位于 `backend/data/assistant-sessions/<owner>/<session-id>.jsonl`（从 backend 启动），可通过 `AI_SESSIONS_DIR` 指定。Docker Compose 已接入现有持久卷。只支持单 worker，同一目录的第二个进程会拒绝启动。备份整个目录即可；文件包含对话、模型工具记录和提交的页面／练习活动上下文，应按私人数据保管。
@@ -134,15 +139,21 @@ OpenAI 客户端关闭自动重试。取消或断连会关闭上游连接，不�
 
 助手不额外要求登录；部署者提供共用的模型凭证。助手接口允许反向代理连接，浏览器 Origin 必须匹配 `ALLOWED_ORIGINS`（逗号分隔的完整地址，不含路径、通配符）。本地开发默认允许 localhost / 127.0.0.1 的 5173、8000、8080 端口；自定义域名或端口需显式配置。无 Origin 的非浏览器请求允许访问，因此来源校验不是身份认证，也不能限制额度消耗。
 
-`GET /api/assistant/status` 只检查配置，返回 `ready`、`unconfigured` 或 `invalid` 及固定提示，不调用模型、不返回凭证。没有 `AI_API_KEY` 时，首页显示独立配置错误提示，隐藏聊天界面和其他页面的助手入口；配置好后重启后端，再点击“重新检查配置”。Key 是否有效在实际调用时判断。
+`GET /api/assistant/status` 只读取已保存的连接状态，返回 `ready`、`unconfigured` 或 `invalid` 及提示，不调用模型、不返回凭证
+在设置页配置或更新连接后即时生效，不需要重启后端
 
-Docker Compose 使用根目录 `.env`，不读取 `backend/.env`：填写 `AI_API_KEY`，按需设置 `AI_PROVIDER`（目前仅 deepseek）、`AI_MODEL`，运行 `docker compose up -d --build`。更新配置后用 `docker compose up -d backend` 重建容器，单纯 `restart` 不会更新容器环境变量。Compose 默认允许 localhost / 127.0.0.1 的 `HTTP_PORT`；域名部署需设置 `ALLOWED_ORIGINS=https://你的域名`。默认只绑定本机；开放给其他访客后，他们共用部署者的模型额度。不要把真实 Key 提交到仓库。
+Docker Compose 的根目录 `.env` 只用于端口、绑定地址和允许来源等部署配置
+模型连接通过设置页管理，默认保存在 `backend-data` 卷的 `/var/lib/rhythm-trainer/model-connections.json`
+本机与 Docker 默认使用各自的数据目录，重建容器保留数据卷即可保留连接
+Compose 默认允许 localhost / 127.0.0.1 的 `HTTP_PORT`，域名部署需设置 `ALLOWED_ORIGINS=https://你的域名`
+默认只绑定本机，开放给其他访客后会共用部署者的模型额度
 
-本地直接启动后端则从 `backend/` 执行 `uv run --locked --env-file .env uvicorn main:app --reload --host 127.0.0.1 --port 8000`，显式加载 `backend/.env`；项目不会自动加载该文件。
+
+本地使用额外部署环境变量时，可在启动命令中加上 `--env-file .env` 显式加载 `backend/.env`，项目不会自动加载该文件，模型连接仍由设置页管理
 不应通过反向代理或隧道公开；公开部署前需接入身份与用量控制。后端内置的通用
 API 文档可能展示本接口，但不会因未配置模型而影响健康检查及其他接口。
 
-验证使用 `uv run --locked --no-env-file pytest tests/test_assistant*.py`；测试模拟上游 HTTP，
+验证使用 `uv run --locked --no-env-file pytest tests/test_assistant*.py tests/test_model_connections.py`；测试模拟上游 HTTP，
 不读取真实密钥、不调用模型。接口依据 [DeepSeek Responses 文档](https://api-docs.deepseek.com/guides/responses_api/)。
 
 Python 3.12+、FastAPI，使用 uv 管理依赖，SQLite 存储数据，SQLAlchemy 访问数据库，Alembic 管理表结构迁移。
@@ -221,9 +232,10 @@ uv run --locked --no-env-file pytest
 ```text
 assistant/
   sessions.py    服务端轮次、运行互斥、结果保留、UI 消息投影
-  model.py       部署配置、DeepSeek Responses 完整性检查、固定错误说明
-  context.py     页面快照与练习活动上下文投影
-  system_prompt.py
+  model.py       公共模型约定、流完整性检查、历史兼容与错误说明
+  connections.py 凭证保存、刷新协调、目录缓存与客户端生命周期
+  providers/     DeepSeek 与 ChatGPT 的服务接入实现
+  context.py     助手指令、页面快照校验与练习活动上下文投影
   tools/propose_rhythm_exercise.py  参数校验、生成练习、Pydantic AI 工具声明
 ```
 
@@ -240,7 +252,7 @@ assistant/
 
 `assistant/tools/propose_rhythm_exercise.py` 中 `ExerciseProposal` 接收 `title`（去除首尾空白后 1–100 字符）、`description`（1–1000 字符）、`exercise`，拒绝额外字段。节奏复用 `domain.rhythm.parse_rhythm_exercise`：4/4、1–64 小节、每小节恰好四拍及现有音符规则。校验保证结构和时值合法，不评判教学效果。`GeneratedExercise(candidate)` 在校验成功后生成 ID、UTC 时间，`snapshot()` 返回独立副本。
 
-接口与循环测试使用模拟模型及 HTTP transport，不产生 API 费用；真实模型的生成效果还需本机试用。图片输入、数据库持久化、并行工具和执行 hooks 尚未实现。
+接口与循环测试使用模拟模型及 HTTP transport，不产生 API 费用；真实模型的生成效果还需本机试用。图片输入、对话历史的数据库存储、并行工具和执行 hooks 尚未实现，对话历史目前保存在本地 JSONL 文件中。
 
 生成工具支持 `mode: tapping | dictation`（默认 tapping）；听写题前端隐藏谱面，模型须避免在标题、说明和回复中提前泄露答案。该字段属于节奏助手业务协议，通用 Agent 循环不参与展示策略。
 

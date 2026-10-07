@@ -6,7 +6,7 @@ import httpx
 import pytest
 from openai import AsyncOpenAI
 
-from assistant.model import ModelSettings, create_model
+from assistant.providers.deepseek import create_model
 from assistant.sessions import ChatSession
 
 
@@ -41,8 +41,8 @@ def upstream(output, response_id='r1'):
 def install(monkeypatch, handler):
     def client(**kwargs):
         return AsyncOpenAI(**kwargs,http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)))
-    monkeypatch.setattr('assistant.model.AsyncOpenAI',client)
-    return create_model(ModelSettings('deepseek','test-model','secret-test'))
+    monkeypatch.setattr('assistant.providers.deepseek.AsyncOpenAI',client)
+    return create_model('test-model','secret-test')
 
 
 async def consume(model):
@@ -85,7 +85,7 @@ def test_responses_tool_round_trip(monkeypatch):
     assert '规划节奏' not in json.dumps(session.snapshot(), ensure_ascii=False)
 
 
-@pytest.mark.parametrize('code,message',[(401,'API Key 无效'),(402,'额度不足'),(429,'请求受限'),(500,'模型服务请求失败')])
+@pytest.mark.parametrize('code,message',[(401,'凭证无效'),(402,'额度不足'),(429,'请求受限'),(500,'模型服务请求失败')])
 def test_upstream_errors_are_sanitized_without_retries(monkeypatch,code,message):
     calls=[]
     def handler(request):

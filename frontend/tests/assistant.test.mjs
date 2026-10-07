@@ -318,3 +318,131 @@ for (const fail of [false, true]) test(`生成中切换历史：${fail ? "失败
     assert.equal(c.getSnapshot().needsSync, false);
   } else assert.equal(c.chat.messages.at(-1).parts.at(-1).text, "完整回答");
 });
+
+
+test("按对话保存模型，保存期间不发送消息，切换失败保留原选择", async t => {
+  const deep = { provider: "deepseek", model: "deepseek-test" };
+  const chat = { provider: "chatgpt", model: "gpt-test" };
+  const originalWindow = globalThis.window;
+  globalThis.window = new EventTarget();
+  t.after(() => { if (originalWindow === undefined) delete globalThis.window; else globalThis.window = originalWindow; });
+  let release;
+  let fail = false;
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    if (options.method === "PUT") {
+      await new Promise(resolve => { release = resolve; });
+      return fail ? Response.json({ detail: "模型不可用" }, { status: 400 }) : Response.json({ ...empty(), model_selection: JSON.parse(options.body) });
+    }
+    return Response.json({ ...empty(), model_selection: deep });
+  });
+  const conversation = new AssistantConversation();
+  await conversation.open("session1");
+  const selecting = conversation.selectModel(chat);
+  assert.equal(await conversation.send("不应发送", null), false);
+  release();
+  assert.equal(await selecting, true);
+  assert.deepEqual(conversation.getSnapshot().session.model_selection, chat);
+  fail = true;
+  const rejected = conversation.selectModel(deep);
+  release();
+  assert.equal(await rejected, false);
+  assert.deepEqual(conversation.getSnapshot().session.model_selection, chat);
+  assert.equal(conversation.getSnapshot().error, "模型不可用");
+});
+
+test("新对话取消了未完成的模型选择，迟到结果不能恢复旧会话", async t => {
+  let release;
+  t.mock.method(globalThis, "fetch", async () => {
+    await new Promise(resolve => { release = resolve; });
+    return Response.json(empty());
+  });
+  const conversation = new AssistantConversation();
+  const pending = conversation.selectModel({ provider: "deepseek", model: "deepseek-test" });
+  conversation.reset(); release();
+  assert.equal(await pending, false);
+  assert.equal(conversation.getSnapshot().session, null);
+});
+
+
+test("新对话发送时固定界面上展示的模型，不受另一页面更改默认值影响", async t => {
+  let creation;
+  const selection = { provider: "deepseek", model: "deepseek-test" };
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    if (url === "/api/assistant/sessions") { creation = JSON.parse(options.body); return Response.json({ ...empty(), model_selection: selection }); }
+    if (options.method === "POST") return sse();
+    return Response.json({ ...final(), model_selection: selection });
+  });
+  const conversation = new AssistantConversation();
+  await conversation.send("问题", null, selection);
+  assert.deepEqual(creation, selection);
+});
+
+for (const duringSync of [false, true]) test(`回复${duringSync ? '同步时' : '生成时'}切换模型不会中断消息，也不会被旧快照覆盖`, async t => {
+  const deep = { provider: 'deepseek', model: 'deepseek-test' };
+  const gpt = { provider: 'chatgpt', model: 'gpt-test' };
+  const previousWindow = globalThis.window;
+  globalThis.window = new EventTarget();
+  t.after(() => { if (previousWindow === undefined) delete globalThis.window; else globalThis.window = previousWindow; });
+  let release, reached;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const checkpoint = new Promise(resolve => { reached = resolve; });
+  let sending = false, streamSignal, selected = deep;
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    if (options.method === 'PUT') {
+      selected = JSON.parse(options.body);
+      return Response.json({ ...empty(), model_selection: selected });
+    }
+    if (options.method === 'POST') {
+      streamSignal = options.signal;
+      sending = true;
+      if (!duringSync) { reached(); await blocked; }
+      return sse();
+    }
+    const value = { ...(sending ? final() : empty()), model_selection: selected };
+    if (sending && duringSync) { reached(); await blocked; }
+    return Response.json(value);
+  });
+  const conversation = new AssistantConversation();
+  await conversation.open('session1');
+  const running = conversation.send('问题', null);
+  await checkpoint;
+  const chatInstance = conversation.chat;
+  assert.equal(await conversation.selectModel(gpt), true);
+  assert.equal(conversation.getSnapshot().busy, true);
+  assert.deepEqual(conversation.getSnapshot().session.model_selection, gpt);
+  assert.equal(streamSignal.aborted, false);
+  assert.equal(conversation.chat, chatInstance);
+  release(); await running;
+  assert.deepEqual(conversation.getSnapshot().session.model_selection, gpt);
+  assert.equal(conversation.chat.messages.at(-1).parts.at(-1).text, '完整回答');
+  assert.equal(conversation.getSnapshot().busy, false);
+});
+
+test("默认选择保存失败不把已成功的会话切换报成失败，也不触发目录刷新", async t => {
+  const previousWindow = globalThis.window;
+  globalThis.window = new EventTarget();
+  t.after(() => { if (previousWindow === undefined) delete globalThis.window; else globalThis.window = previousWindow; });
+  let connectionEvents = 0, selectionEvents = 0;
+  window.addEventListener('model-connections-changed', () => connectionEvents++);
+  window.addEventListener('model-selection-changed', () => selectionEvents++);
+  const choice = { provider: 'chatgpt', model: 'gpt-test' };
+  const notice = '当前对话已切换模型，但未能保存新对话的默认选择';
+  let failedDefault = true;
+  t.mock.method(globalThis, 'fetch', async (url, options) => Response.json({ ...empty(),
+    ...(options.method === 'PUT' ? { model_selection: choice, selection_notice: failedDefault ? notice : '' } : {}),
+  }));
+  const conversation = new AssistantConversation();
+  await conversation.open('session1');
+  assert.equal(await conversation.selectModel(choice), true);
+  assert.deepEqual(conversation.getSnapshot().session.model_selection, choice);
+  assert.equal(conversation.getSnapshot().notice, notice);
+  assert.equal(conversation.getSnapshot().needsSync, false);
+  assert.equal(conversation.getSnapshot().error, '');
+  assert.equal(connectionEvents, 0);
+  assert.equal(selectionEvents, 0);
+  failedDefault = false;
+  assert.equal(await conversation.selectModel(choice), true);
+  assert.equal(selectionEvents, 1);
+  assert.equal(connectionEvents, 0);
+  assert.equal(conversation.getSnapshot().notice, '');
+});
