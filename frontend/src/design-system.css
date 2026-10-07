@@ -315,10 +315,7 @@
 }
 .rhythm-playback-toolbar, .rhythm-playback-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; min-width: 0; }
 .rhythm-playback-toolbar { justify-content: space-between; }
-@media (prefers-reduced-motion: no-preference) {
-  .random-settings-drawer[open] { animation: random-settings-enter 160ms ease-out; }
-  @keyframes random-settings-enter { from { transform: translateX(32px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-}
+
 @media (max-width: 600px) {
   .random-settings-drawer { padding: 16px; }
   .rhythm-playback-controls { width: 100%; }
@@ -1204,3 +1201,66 @@
 }
 
 @media (max-width: 1099px) { .assistant-workspace { min-height: 0; } }
+
+/* 浮层只移动自身；谱面、页面布局和分栏拖动不参与插值。 */
+:root { --surface-duration: 180ms; --menu-duration: 140ms; --surface-ease: cubic-bezier(.2, .8, .2, 1); }
+.site-menu-drawer { --surface-offset: -20px 0; }
+.random-settings-drawer, .record-drawer { --surface-offset: 20px 0; }
+.assistant-panel, .generated-practice-overlay, .model-service-dialog, .assistant-image-viewer { --surface-offset: 0 6px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes surface-enter {
+    from { opacity: 0; translate: var(--surface-offset, 0 6px); }
+    to { opacity: 1; translate: 0 0; }
+  }
+  .assistant-composer-menu, .assistant-model-dialog {
+    --surface-offset: 0 4px;
+    transform-origin: var(--radix-popover-content-transform-origin);
+  }
+  :is(.assistant-composer-menu, .assistant-model-dialog)[data-side="bottom"] { --surface-offset: 0 -4px; }
+  :is(.assistant-composer-menu, .assistant-model-dialog)[data-state="open"] {
+    animation: surface-enter var(--menu-duration) var(--surface-ease);
+  }
+  :is(.assistant-composer-menu, .assistant-model-dialog)[data-state="closed"] {
+    animation: none;
+    pointer-events: none;
+  }
+  .assistant-history--popover { --surface-offset: 0 -4px; animation: surface-enter var(--menu-duration) var(--surface-ease); }
+  .generated-practice-overlay[open], .record-drawer[open], .model-service-dialog[open], .assistant-image-viewer[open],
+  .assistant-shell[data-layout="sidebar"] .assistant-panel[open] {
+    animation: surface-enter var(--surface-duration) var(--surface-ease);
+  }
+  /* 常驻原生 dialog 由浏览器延续 display 与顶层位置，close() 的焦点恢复不需要延迟。 */
+  :is(.site-menu-drawer, .random-settings-drawer) {
+    opacity: 0;
+    translate: var(--surface-offset, 0 6px);
+    transition: opacity var(--surface-duration) var(--surface-ease), translate var(--surface-duration) var(--surface-ease),
+      display var(--surface-duration) allow-discrete, overlay var(--surface-duration) allow-discrete;
+  }
+  :is(.site-menu-drawer, .random-settings-drawer)[open] {
+    opacity: 1; translate: 0 0;
+  }
+  :is(.site-menu-drawer, .random-settings-drawer)::backdrop {
+    opacity: 0;
+    transition: opacity var(--surface-duration), display var(--surface-duration) allow-discrete, overlay var(--surface-duration) allow-discrete;
+  }
+  :is(.site-menu-drawer, .random-settings-drawer)[open]::backdrop { opacity: 1; }
+  @starting-style {
+    :is(.site-menu-drawer, .random-settings-drawer)[open] { opacity: 0; translate: var(--surface-offset, 0 6px); }
+    :is(.site-menu-drawer, .random-settings-drawer)[open]::backdrop { opacity: 0; }
+  }
+  :is(.record-drawer, .generated-practice-overlay, .model-service-dialog, .assistant-image-viewer)::backdrop { transition: opacity 140ms ease-in; }
+  :is(.record-drawer, .generated-practice-overlay, .model-service-dialog, .assistant-image-viewer)[data-dismissing]::backdrop { opacity: 0; }
+  @starting-style { :is(.record-drawer, .generated-practice-overlay, .model-service-dialog, .assistant-image-viewer)[open]::backdrop { opacity: 0; } }
+  .assistant-session-sidebar {
+    --surface-offset: -16px 0;
+    transition: opacity var(--surface-duration), translate var(--surface-duration), display var(--surface-duration) allow-discrete;
+    opacity: 0; translate: var(--surface-offset);
+  }
+  .assistant-shell[data-history-expanded="true"] .assistant-session-sidebar { opacity: 1; translate: 0 0; }
+  @starting-style { .assistant-shell[data-history-expanded="true"] .assistant-session-sidebar { opacity: 0; translate: -16px 0; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; }
+  .assistant-loading-placeholder { opacity: 1; }
+}

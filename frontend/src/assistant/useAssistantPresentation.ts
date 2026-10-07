@@ -1,3 +1,4 @@
+import { useAnimatedDismiss } from "../navigation/useAnimatedDismiss";
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 const narrowQuery = "(max-width: 1099px)";
@@ -41,9 +42,9 @@ export function useAssistantPresentation(home: boolean, enabled = true) {
     return () => { document.body.style.overflow = previous; };
   }, [modal]);
 
-  function close() {
+  const close = useAnimatedDismiss(panel, () => {
     setOpen(false);
     requestAnimationFrame(() => launcher.current?.focus({ preventScroll: true }));
-  }
+  }, !home && visible);
   return { panel, launcher, visible, modal, open: () => setOpen(true), close };
 }

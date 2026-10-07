@@ -22,6 +22,21 @@ async page => {
   const width = () => page.locator('#assistant').evaluate(element => element.getBoundingClientRect().width);
   const near = (actual, expected, message) => { if (Math.abs(actual - expected) > 2) throw new Error(`${message}: ${actual} != ${expected}`); };
   const noOverflow = async () => { if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('horizontal overflow'); };
+  // 首页必须独占工作区，不能沿用普通页面中已收起助手的零宽度。
+  for (let i = 0; i < 8; i++) {
+    await page.setViewportSize({ width: i % 2 ? 1920 : 1440, height: 900 });
+    await page.getByRole('link', { name: '节奏助手', exact: true }).click();
+    await page.waitForFunction(() => {
+      const group = document.querySelector('.assistant-workspace');
+      return group?.getAttribute('data-home') === 'true'
+        && Math.abs(document.querySelector('#assistant').getBoundingClientRect().width - group.getBoundingClientRect().width) < 2
+        && document.querySelector('#page').getBoundingClientRect().width < 2;
+    });
+    await input.waitFor();
+    await page.getByRole('link', { name: i % 2 ? '设置' : '预设练习', exact: true }).click();
+    await open.waitFor();
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
   await open.click();
   near(await width(), 460, 'initial width');
   await input.fill('切换页面和布局后保留的草稿');
@@ -46,6 +61,7 @@ async page => {
   if (resized <= dragged) throw new Error('keyboard resize failed');
   near(Number(await page.evaluate(() => localStorage.getItem('rhythm:assistant-width:v1'))), resized, 'saved width');
   await close.click();
+  await separator.waitFor({ state: 'hidden' });
   if (await separator.isVisible()) throw new Error('closed separator visible');
   near(await page.locator('#page').evaluate(element => element.getBoundingClientRect().width), 1364, 'closed page expands');
   await open.click();

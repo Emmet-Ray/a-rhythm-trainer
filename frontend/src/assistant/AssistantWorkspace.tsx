@@ -24,8 +24,9 @@ export function AssistantWorkspace({ home, children }: { home: boolean; children
   const width = useRef(initialWidth);
   const split = !home && docked;
   useLayoutEffect(() => {
-    assistant?.resize(home ? "100%" : split ? width.current : 0);
-  }, [assistant, home, split]);
+    // 首页与收起由尺寸约束保证；只在展开分栏时恢复用户偏好。
+    if (split) assistant?.resize(width.current);
+  }, [assistant, split]);
 
   return <Group className="assistant-workspace" orientation="horizontal" disabled={!split}
     elementRef={groupElement} data-home={home} data-split={split} style={{ overflow: "visible" }}
@@ -36,13 +37,13 @@ export function AssistantWorkspace({ home, children }: { home: boolean; children
       width.current = Math.round(availableWidth * layout.assistant / 100);
       try { localStorage.setItem(storageKey, String(width.current)); } catch { /* 偏好存储可选。 */ }
     }}>
-    <Panel id="page" minSize={split ? 480 : 0} defaultSize={home ? "0%" : "100%"} style={{ overflow: "visible" }}>
+    <Panel id="page" maxSize={home ? "0%" : "100%"} minSize={split ? 480 : 0} defaultSize={home ? "0%" : "100%"} style={{ overflow: "visible" }}>
       {children}
     </Panel>
     <Separator elementRef={separatorElement} disableDoubleClick className="assistant-resize-handle" disabled={!split} hidden={!split}
       aria-label="调整助手宽度" />
     <Panel id="assistant" role={home ? "main" : undefined} tabIndex={home ? -1 : undefined} panelRef={assistantRef} defaultSize={home ? "100%" : "0%"}
-      minSize={split ? minAssistantWidth : 0} maxSize={home ? "100%" : split ? maxAssistantWidth : "0%"}
+      minSize={home ? "100%" : split ? minAssistantWidth : 0} maxSize={home ? "100%" : split ? maxAssistantWidth : "0%"}
       groupResizeBehavior="preserve-pixel-size" style={{ overflow: "visible" }}>
       <AssistantPanel home={home} onDockChange={setDocked} />
     </Panel>

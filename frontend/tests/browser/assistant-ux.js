@@ -85,6 +85,7 @@ async (page) => {
   await page.getByRole('button', { name: '开始击拍', exact: true }).click();
   await page.locator('.generated-practice-overlay').waitFor();
   await page.getByRole('button', { name: '关闭练习', exact: true }).click();
+  await page.locator('.generated-practice-overlay').waitFor({ state: 'hidden' });
   check((await input.inputValue()).startsWith('下一条问题'), '练习关闭后保留草稿');
   await page.evaluate(() => window.uxMock.finish());
   await page.waitForFunction(() => { const send = document.querySelector('button[aria-label="发送"]'); return send && !send.disabled; });

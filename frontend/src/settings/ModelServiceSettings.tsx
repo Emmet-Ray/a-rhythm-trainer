@@ -1,3 +1,4 @@
+import { useAnimatedDismiss } from "../navigation/useAnimatedDismiss";
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { ActionError } from "../navigation/ActionError";
@@ -14,10 +15,11 @@ export default function ModelServiceSettings() {
       if (managing === "deepseek") dialog.current?.querySelector("input")?.focus();
     } else dialog.current?.close();
   }, [managing]);
-  function close() { if (!running.current) { setManaging(null); setKey(""); } }
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
+  const dismiss = useAnimatedDismiss(dialog, () => { setManaging(null); setKey(""); }, !!managing);
+  function close() { if (!running.current) dismiss(); }
   const loading = useRef<AbortController | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");

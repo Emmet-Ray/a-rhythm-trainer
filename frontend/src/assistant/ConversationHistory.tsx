@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref, type RefObject } from "react";
 import { X, Trash2, Plus, PanelLeftClose } from "lucide-react";
 import { deleteSession, listSessions, type SessionSummary } from "../api/assistant";
 
 /** 按需读取历史摘要；打开和删除都由后端检查归属。 */
-export function ConversationHistory({ anchor, currentId, onOpen, onDeleted, onClose, placement = "popover", onNew, refreshKey }: {
-  anchor?: RefObject<HTMLButtonElement | null>; placement?: "popover" | "sidebar"; onNew?: () => void; refreshKey?: string; currentId?: string; onOpen: (id: string) => Promise<boolean>; onDeleted: (id: string) => void; onClose: () => void;
+export function ConversationHistory({ panelRef, anchor, currentId, onOpen, onDeleted, onClose, placement = "popover", onNew, refreshKey }: {
+  panelRef?: Ref<HTMLElement>; anchor?: RefObject<HTMLButtonElement | null>; placement?: "popover" | "sidebar"; onNew?: () => void; refreshKey?: string; currentId?: string; onOpen: (id: string) => Promise<boolean>; onDeleted: (id: string) => void; onClose: () => void;
 }) {
   const [items, setItems] = useState<SessionSummary[]>([]);
   const [total, setTotal] = useState(0);
@@ -14,6 +14,7 @@ export function ConversationHistory({ anchor, currentId, onOpen, onDeleted, onCl
   const lifetime = useRef<AbortController | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const panel = useRef<HTMLElement>(null);
+  useImperativeHandle(panelRef, () => panel.current!);
   useLayoutEffect(() => {
     if (placement === "sidebar" || !anchor) return;
     const place = () => {

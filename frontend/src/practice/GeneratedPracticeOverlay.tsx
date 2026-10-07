@@ -1,3 +1,4 @@
+import { useAnimatedDismiss } from "../navigation/useAnimatedDismiss";
 import { PlaybackContext } from "./PlaybackGroup";
 import { useContext, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -11,6 +12,8 @@ import { ExerciseHistory } from "../practice-records/ExerciseHistory";
 export function GeneratedPracticeOverlay({ generated, onClose }: { generated: GeneratedExercise; onClose: () => void }) {
   const playback = useContext(PlaybackContext);
   const dialog = useRef<HTMLDialogElement>(null);
+  const dismiss = useAnimatedDismiss(dialog, onClose);
+  const close = () => { playback?.stop(); dismiss(); };
   useLayoutEffect(() => {
     playback?.stop();
     const element = dialog.current!;
@@ -29,13 +32,13 @@ export function GeneratedPracticeOverlay({ generated, onClose }: { generated: Ge
     aria-labelledby="generated-practice-title" aria-modal="true"
     onCancel={event => {
       if (event.target !== event.currentTarget) return;
-      event.preventDefault(); event.stopPropagation(); onClose();
+      event.preventDefault(); event.stopPropagation(); close();
     }}>
     <ExerciseHistory context={{ source: "ai", exerciseId: generated.id, title: generated.title }} exercise={generated.exercise} mode={generated.mode}>
       {({ status, action }) => <header className="generated-practice-heading">
         <div className="generated-practice-title"><h2 id="generated-practice-title">{generated.title}</h2>{status}</div>
         <div className="generated-practice-actions">{action}
-          <button type="button" className="generated-practice-close" aria-label="关闭练习" onClick={onClose}><X size={22} aria-hidden="true" /></button>
+          <button type="button" className="generated-practice-close" aria-label="关闭练习" onClick={close}><X size={22} aria-hidden="true" /></button>
         </div>
       </header>}
     </ExerciseHistory>

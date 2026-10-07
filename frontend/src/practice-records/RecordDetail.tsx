@@ -1,3 +1,4 @@
+import { useAnimatedDismiss } from "../navigation/useAnimatedDismiss";
 import { queryRecordAttempts, useRecordQuery, type RecordSummary } from "./practiceRecordStorage";
 import { useAssistantPageSection } from "../assistant/assistantContext";
 import { buildPracticeContextSummary } from "../assistant/practiceContextSummary";
@@ -103,6 +104,7 @@ export function RecordDetail({
       session: visibleRecord, historyEnabled: false, answerExposed: tab === "score" || (record.mode === "dictation" && record.attempts.some(attempt => attempt.viewedAnswer)) }) });
   if (!archive && page !== pagination.page) setPage(pagination.page);
   const dialog = useRef<HTMLDialogElement>(null);
+  const dismiss = useAnimatedDismiss(dialog, onClose);
   const titleId = useId();
   useEffect(() => {
     const element = dialog.current!;
@@ -124,7 +126,7 @@ export function RecordDetail({
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        dismiss();
       }}
       onClick={(event) => {
         if (event.target !== event.currentTarget) return;
@@ -135,7 +137,7 @@ export function RecordDetail({
           event.clientY < bounds.top ||
           event.clientY > bounds.bottom
         )
-          onClose();
+          dismiss();
       }}
     >
       <header className="record-detail-heading">
@@ -148,7 +150,7 @@ export function RecordDetail({
           </p>
         </div>
         <div className="text-actions">
-          <button type="button" aria-label="关闭记录详情" onClick={onClose}>
+          <button type="button" aria-label="关闭记录详情" onClick={dismiss}>
             <X className="ui-icon" aria-hidden="true" />
           </button>
         </div>

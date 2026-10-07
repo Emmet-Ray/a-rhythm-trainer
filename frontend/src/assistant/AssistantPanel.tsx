@@ -1,3 +1,4 @@
+import { useAnimatedDismiss } from "../navigation/useAnimatedDismiss";
 import { useChat } from "@ai-sdk/react";
 import { isToolUIPart, getToolName, type FileUIPart } from "ai";
 import { isMessageImage } from "../api/assistant";
@@ -90,18 +91,19 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
   }, [mobileHistoryOpen]);
   const historyAnchor = useRef<HTMLDivElement>(null);
   const historyButton = useRef<HTMLButtonElement>(null);
-  const closeHistory = useCallback(() => {
+  const historyPanel = useRef<HTMLElement>(null);
+  const closeHistory = useAnimatedDismiss(historyPanel, () => {
     setHistoryOpen(false);
-    historyButton.current?.focus({ preventScroll: true });
-  }, []);
+    if (document.activeElement === document.body) historyButton.current?.focus({ preventScroll: true });
+  }, historyOpen);
   useEffect(() => {
     if (!historyOpen) return;
     const dismiss = (event: PointerEvent) => {
-      if (event.target instanceof Node && !historyAnchor.current?.contains(event.target)) setHistoryOpen(false);
+      if (event.target instanceof Node && !historyAnchor.current?.contains(event.target)) closeHistory();
     };
     document.addEventListener("pointerdown", dismiss);
     return () => document.removeEventListener("pointerdown", dismiss);
-  }, [historyOpen]);
+  }, [historyOpen, closeHistory]);
   const saveCard = useCallback((id: string, value: CardState) => conversation.saveCard(id, value), [conversation]);
   useEffect(() => {
     if (availability.ready) void conversation.restore();
@@ -139,6 +141,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
   const composer = useRef<ComposerHandle>(null);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const imageDialog = useRef<HTMLDialogElement>(null);
+  const closeImage = useAnimatedDismiss(imageDialog, () => setExpandedImage(null), !!expandedImage);
   useEffect(() => {
     if (expandedImage) imageDialog.current?.showModal();
     else imageDialog.current?.close();
@@ -309,10 +312,10 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
               <div className="assistant-actions" hidden={home}>
                 <div className="assistant-history-anchor" ref={historyAnchor}>
                 <button ref={historyButton} type="button" className="assistant-new" aria-label="历史对话" aria-haspopup="dialog" aria-controls="assistant-history" aria-expanded={historyOpen}
-                  disabled={initializing || state.restoring} onClick={() => { playbackGroup.stop(); setHistoryOpen(value => !value); }}>
+                  disabled={initializing || state.restoring} onClick={() => { playbackGroup.stop(); if (historyOpen) closeHistory(); else setHistoryOpen(true); }}>
                   <History size={16} aria-hidden="true" />历史对话
                 </button>
-            {!home && historyOpen && <ConversationHistory anchor={historyButton} currentId={state.session?.id}
+            {!home && historyOpen && <ConversationHistory panelRef={historyPanel} anchor={historyButton} currentId={state.session?.id}
               onClose={closeHistory}
               onDeleted={deleteConversation} onOpen={openConversation} />}
                 </div>
@@ -437,8 +440,8 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
               ) : null}
             </Composer>
       </dialog>
-      <dialog ref={imageDialog} className="design-system assistant-image-viewer" aria-label="图片预览" onClose={() => setExpandedImage(null)} onClick={event => { if (event.target === event.currentTarget) setExpandedImage(null); }}>
-        <button type="button" aria-label="关闭图片预览" onClick={() => setExpandedImage(null)}><X size={20} /></button>
+      <dialog ref={imageDialog} className="design-system assistant-image-viewer" aria-label="图片预览" onCancel={event => { event.preventDefault(); closeImage(); }} onClose={() => setExpandedImage(null)} onClick={event => { if (event.target === event.currentTarget) closeImage(); }}>
+        <button type="button" aria-label="关闭图片预览" onClick={closeImage}><X size={20} /></button>
         {expandedImage && <img src={expandedImage} alt="图片预览" />}
       </dialog>
       {practice && (
