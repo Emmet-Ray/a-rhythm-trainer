@@ -66,19 +66,19 @@ async (page) => {
   const nav = page.locator('.site-sidebar');
   check(await input.count() === 1, '首页只能有一个输入框');
   check(!await page.getByRole('navigation', { name: '练习入口', exact: true }).count(), '不重复展示传统入口');
-  check(await page.locator('.assistant-input-box').getAttribute('data-multiline') === 'false', '空输入采用单行布局');
+  const initialHeight = await input.evaluate(el => el.clientHeight);
   const initialInputBox = await page.locator('.assistant-input-box').boundingBox();
   await input.fill('第一行\n第二行');
-  check(await page.locator('.assistant-input-box').getAttribute('data-multiline') === 'true', '多行输入展开');
+  check(await input.evaluate(el => el.clientHeight) > initialHeight, '多行输入展开');
   await input.fill('');
-  check(await page.locator('.assistant-input-box').getAttribute('data-multiline') === 'false', '清空后恢复单行');
+  check(await input.evaluate(el => el.clientHeight) === initialHeight, '清空后恢复输入高度');
   check(await page.locator('.site-sidebar-toggle').evaluate(el => {
     const box = el.getBoundingClientRect();
     return [box.left + 8, box.right - 8].every(x => el.contains(document.elementFromPoint(x, box.top + box.height / 2)));
   }), '导航折叠按钮的左右两侧都应完整可点击');
   check(!await page.getByRole('button', { name: '打开 AI 助手' }).isVisible(), '首页不显示重复助手入口');
-  await page.locator('.assistant-templates summary').click();
-  await page.getByRole('button', { name: '生成击拍练习', exact: true }).click();
+  await page.getByRole('button', { name: '添加内容', exact: true }).click();
+  await page.getByRole('option', { name: '生成击拍练习', exact: true }).click();
   check((await input.inputValue()).includes('两小节'), '快捷提示应填入输入框');
   check(submissions.length === 0, '快捷提示不自动调用模型');
   await input.fill('尚未发送的文字');

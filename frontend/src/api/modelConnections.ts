@@ -1,7 +1,7 @@
 export type Provider = "deepseek" | "chatgpt";
 export type ModelSelection = { provider: Provider; model: string };
 export type Connection = {
-  configured: boolean; model: string; models: { id: string; name: string }[];
+  configured: boolean; model: string; models: { id: string; name: string; supports_images?: boolean }[];
   catalog_updated_at: number; needs_authorization?: boolean; account?: string;
 };
 export type Connections = { provider: Provider; deepseek: Connection; chatgpt: Connection };

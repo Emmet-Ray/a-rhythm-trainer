@@ -50,25 +50,16 @@ export class AssistantContext {
   removeSection(owner: symbol) { this.sections.delete(owner); }
   private practices = new Map<symbol, { title: string; read: () => JsonValue }>();
   private recentPractice: { title: string; read: () => JsonValue } | null = null;
-  private practiceLabel = "";
   /** 工作区独立于页面注册；覆盖层优先，关闭后恢复底层练习或保留刚才的练习。 */
   publishPractice(owner: symbol, title: string, read: () => JsonValue) {
     this.practices.set(owner, { title, read });
-    this.updatePracticeLabel();
   }
   removePractice(owner: symbol) {
     const practice = this.practices.get(owner);
     if (!practice) return;
     this.recentPractice = practice;
     this.practices.delete(owner);
-    this.updatePracticeLabel();
   }
-  private updatePracticeLabel() {
-    const active = [...this.practices.values()].at(-1);
-    const next = active ? `当前练习：${active.title}` : this.recentPractice ? `刚才练习：${this.recentPractice.title}` : "";
-    if (next !== this.practiceLabel) { this.practiceLabel = next; this.notify(); }
-  }
-  getPracticeLabel = () => this.practiceLabel;
   readCurrentPageContext = (): PageContext | null => {
     const active = [...this.practices.values()].at(-1);
     const practice = active ?? this.recentPractice;
@@ -103,8 +94,7 @@ export function useAssistantContext() {
   const scope = useContext(AssistantContextScope);
   const snapshot = useSyncExternalStore(scope?.subscribe ?? emptySubscribe,
     scope?.getSnapshot ?? emptySnapshot, emptySnapshot);
-  const practiceLabel = useSyncExternalStore(scope?.subscribe ?? emptySubscribe, scope?.getPracticeLabel ?? (() => ""), () => "");
-  return { snapshot, practiceLabel, readCurrentPageContext: scope?.readCurrentPageContext ?? emptySnapshot };
+  return { snapshot, readCurrentPageContext: scope?.readCurrentPageContext ?? emptySnapshot };
 }
 
 /** 应用能力仅在当前编辑器挂载时存在，路由或身份切换会注销。 */

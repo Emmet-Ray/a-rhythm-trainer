@@ -2,7 +2,6 @@
 import asyncio
 from contextlib import aclosing, asynccontextmanager
 from copy import deepcopy
-from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import uuid4
 from pathlib import Path
@@ -13,7 +12,7 @@ from assistant.journal import SessionJournal, SessionStorageError
 
 from pydantic_ai import Agent, capture_run_messages
 from pydantic_ai.messages import FunctionToolResultEvent, ModelMessagesTypeAdapter
-from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, UserPromptPart
+from pydantic_ai.messages import ModelRequest, ModelResponse, UserPromptPart
 from pydantic_ai.models import Model
 from pydantic_ai.ui.vercel_ai import VercelAIAdapter
 from pydantic_ai.ui.vercel_ai.request_types import SubmitMessage
@@ -21,7 +20,8 @@ from pydantic_ai.usage import UsageLimits
 
 from assistant.context import PageContext, assistant_instructions, build_agent_messages
 from assistant.model import public_model_error
-from assistant.model import ModelSelection
+from assistant.model import ModelSelection, supports_images, ConnectionError
+from assistant.messages import MessageImage, Turn, SavedTurn
 from assistant.tools import create_tools
 
 
@@ -29,49 +29,10 @@ class SessionBusy(Exception):
     pass
 
 
-@dataclass
-class Turn:
-    user_id: str
-    text: str
-    page_context: PageContext | None
-    assistant_id: str = field(default_factory=lambda: uuid4().hex)
-    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
-    messages: list[ModelMessage] = field(default_factory=list)
-
-    def user_message(self) -> ModelRequest:
-        return ModelRequest(parts=[UserPromptPart(self.text)], metadata={
-            "page_context": self.page_context.model_dump() if self.page_context else None,
-        })
-
-    def ui_messages(self) -> list[dict]:
-        user = {"id": self.user_id, "role": "user", "parts": [{"type": "text", "text": self.text}],
-                "metadata": {"created_at": self.created_at,
-                             "page_context": self.page_context.model_dump() if self.page_context else None}}
-        # SDK 按模型步骤导出；浏览器按一轮回复呈现。合并 parts 保留 text/tool/step 的顺序和稳定 id。
-        messages = VercelAIAdapter.dump_messages(self.messages, sdk_version=7)
-        parts = []
-        for message in messages:
-            if message.role == "assistant":
-                parts.extend([{"type": "step-start"}, *[
-                    part.model_dump(mode="json", by_alias=True, exclude_none=True) for part in message.parts if part.type != "reasoning"
-                ]])
-        return [user, *([{"id": self.assistant_id, "role": "assistant", "parts": parts,
-                         "metadata": {"created_at": self.created_at}}] if parts else [])]
-
-
 class CardState(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     bpm: int = Field(default=60, ge=40, le=240)
     answer_viewed: bool = False
-
-
-class SavedTurn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    user_id: str
-    text: str
-    page_context: PageContext | None
-    assistant_id: str
-    created_at: str
 
 
 class ChatSession:
@@ -88,6 +49,7 @@ class ChatSession:
         self.id = uuid4().hex
         self.turns: list[Turn] = []
         self.is_running = False
+        self._pending_images = False
         self.last_run_status = None
 
     def snapshot(self) -> dict:
@@ -109,6 +71,8 @@ class ChatSession:
     def select_model(self, selection: ModelSelection):
         """持久化后续请求的模型；运行中的回答持有自己的模型实例。"""
         with self._save_lock:
+            if (self._pending_images or any(turn.images for turn in self.turns)) and not supports_images(selection):
+                raise ConnectionError("此对话包含图片，请选择支持图片的模型")
             if self.model_selection != selection:
                 self.save({"type": "model_selection", "selection": selection.model_dump()})
                 self.model_selection = selection
@@ -139,16 +103,18 @@ class ChatSession:
             return value
 
     @asynccontextmanager
-    async def run(self, text: str, model: Model, page_context: PageContext | None = None, *, message_id: str, expected_selection: ModelSelection | None = None):
+    async def run(self, text: str, model: Model, page_context: PageContext | None = None, *, message_id: str, expected_selection: ModelSelection | None = None, images: list[MessageImage] | None = None):
         if self.is_running:
             raise SessionBusy("当前会话正在运行，请等待完成或停止后再发送。")
         if any(turn.user_id == message_id for turn in self.turns):
             raise SessionBusy("这条消息已被接受，请同步会话，不要重复发送。")
-        turn = Turn(message_id, text, page_context.model_copy(deep=True) if page_context else None)
+        if (images or any(previous.images for previous in self.turns)) and not supports_images(expected_selection or self.model_selection):
+            raise ConnectionError("请选择支持图片的模型")
+        turn = Turn(message_id, text, page_context.model_copy(deep=True) if page_context else None, images=list(images or []))
         history = [message for previous in self.turns for message in [previous.user_message(), *previous.messages]]
         history.append(turn.user_message())
         agent = Agent(model, instructions=assistant_instructions(), tools=create_tools(), retries=2,
-                      model_settings={"max_tokens": 2048, "parallel_tool_calls": False,
+                      model_settings={"parallel_tool_calls": False,
                                       "openai_store": False, "openai_send_reasoning_ids": True})
         adapter = VercelAIAdapter(agent, run_input=SubmitMessage(id=self.id, messages=[]), sdk_version=7,
                                  server_message_id=turn.assistant_id)
@@ -161,9 +127,10 @@ class ChatSession:
             if expected_selection is not None and self.model_selection != expected_selection:
                 raise SessionBusy("模型选择已更新，请同步对话后重新发送")
             self.is_running = True
+            self._pending_images = bool(images)
         interrupted = False
         write = asyncio.create_task(asyncio.to_thread(self.save, {"type": "turn_started", "turn": {
-                "user_id": turn.user_id, "text": text,
+                "user_id": turn.user_id, "text": text, "images": [image.model_dump() for image in turn.images],
                 "page_context": page_context.model_dump() if page_context else None,
                 "assistant_id": turn.assistant_id, "created_at": turn.created_at,
             }}))
@@ -175,11 +142,13 @@ class ChatSession:
                 await write
                 interrupted = True
         except BaseException:
+            self._pending_images = False
             self.is_running = False
             raise
         if not self.turns:
-            self.title = text.strip().replace("\n", " ")[:60]
+            self.title = text.strip().replace("\n", " ")[:60] or "图片对话"
         self.turns.append(turn)
+        self._pending_images = False
         self.last_run_status = "running"
         if interrupted:
             self.last_run_status = "cancelled"
@@ -302,9 +271,9 @@ class SessionStore:
                             saved = SavedTurn.model_validate(entry["turn"])
                             if any(turn.user_id == saved.user_id for turn in session.turns):
                                 raise ValueError()
-                            turn = Turn(**saved.model_dump(exclude={"page_context"}), page_context=saved.page_context)
+                            turn = Turn(**saved.model_dump(exclude={"page_context", "images"}), page_context=saved.page_context, images=saved.images)
                             if not session.turns:
-                                session.title = turn.text.strip().replace("\n", " ")[:60]
+                                session.title = (turn.text.strip().replace("\n", " ")[:60] or "图片对话")
                             session.turns.append(turn)
                             session.last_run_status = "running"
                         case "checkpoint":

@@ -80,7 +80,6 @@ test('页面上下文与练习引用独立，覆盖层优先且关闭后恢复�
   assert.equal(scope.readCurrentPageContext().state.practice.snapshot.id, 'A');
   scope.removePractice(lower);
   assert.equal(scope.readCurrentPageContext().state.practice.scope, 'recent');
-  assert.equal(scope.getPracticeLabel(), '刚才练习：A');
   assert.equal(new AssistantContext().readCurrentPageContext(), null);
 });
 

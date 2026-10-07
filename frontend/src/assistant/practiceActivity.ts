@@ -19,12 +19,8 @@ export class PracticeActivity {
     return this.references.get(key)!;
   }
   private batches = new Map<string, number>();
-  private label = "";
   private focus: { source: string; exerciseId: string; title: string; mode: string; practiceRef: string } | null = null;
   getFocus = () => this.focus ? { ...this.focus } : null;
-  private listeners = new Set<() => void>();
-  subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
-  getLabel = () => this.label;
   start() { this.enabled = true; }
   /** 恢复讨论对象，不把历史成绩重新当成待发送的新活动。 */
   restoreFocus(value: unknown) {
@@ -33,13 +29,10 @@ export class PracticeActivity {
     if (!["source", "exerciseId", "title", "mode", "practiceRef"].every(key => typeof item[key] === "string")) return;
     this.focus = { source: item.source as string, exerciseId: item.exerciseId as string, title: item.title as string,
       mode: item.mode as string, practiceRef: item.practiceRef as string };
-    this.label = `最近练习：${this.focus.title}`;
-    this.listeners.forEach(listener => listener());
   }
   reset() {
     this.enabled = false; this.revision = 0; this.acknowledged = 0; this.evictedThrough = 0;
-    this.references.clear(); this.attempts.clear(); this.batches.clear(); this.label = ""; this.focus = null;
-    this.listeners.forEach(listener => listener());
+    this.references.clear(); this.attempts.clear(); this.batches.clear(); this.focus = null;
   }
   record(record: PracticeRecord, attemptId: string, historyEnabled: boolean) {
     if (!this.enabled) return;
@@ -57,8 +50,6 @@ export class PracticeActivity {
       this.attempts.delete(oldest);
     }
     this.focus = { source: record.source, exerciseId: record.exerciseId, title: record.title, mode: record.mode, practiceRef: this.reference(record) };
-    const label = `最近练习：${record.title}`;
-    if (label !== this.label) { this.label = label; this.listeners.forEach(listener => listener()); }
   }
   prepare() {
     const pending = [...this.attempts.values()].filter(item => item.revision > this.acknowledged);

@@ -24,8 +24,8 @@ export async function assistantFetch(path: string, options: RequestInit, signal:
   });
   if (!response.ok) {
     const messages: Record<number, string> = {
-      403: "助手请求来源未获允许，请检查后端 AI_ALLOWED_ORIGINS 配置。", 404: "会话不存在或不属于当前身份，请打开历史对话或开始新对话。",
-      409: "这个会话仍在运行，请稍后同步状态。", 422: "问题或页面资料格式不正确，或内容过大。",
+      403: "助手请求来源未获允许，请检查后端 ALLOWED_ORIGINS 配置。", 404: "会话不存在或不属于当前身份，请打开历史对话或开始新对话。",
+      409: "这个会话仍在运行，请稍后同步状态。", 413: "消息过大，请减少图片后重试", 422: "消息或图片格式不正确，或内容过大",
       503: "助手服务暂不可用，请检查设置中的模型服务或稍后重试",
     };
     throw new AssistantApiError(response.status, messages[response.status] ?? "助手请求失败，请稍后再试。");
@@ -103,4 +103,9 @@ export async function saveCardState(sessionId: string, exerciseId: string, state
     { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(state), keepalive: true }, signal)).json();
   if (!isCardState(value)) throw new Error("练习卡片状态格式异常，请重试。");
   return value;
+}
+
+/** 只展示受支持的内联图片，不加载消息中的外部地址。 */
+export function isMessageImage(part: { type: string; url?: string }): part is import("ai").FileUIPart {
+  return part.type === "file" && /^data:image\/(png|jpeg|webp);base64,/.test(part.url ?? "");
 }

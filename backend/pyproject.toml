@@ -8,6 +8,7 @@ dependencies = [
     "fastapi",
     "httpx>=0.28,<1",
     "openai>=3.24.0",
+    "pillow>=12.3.0",
     "pydantic-ai-slim[openai]>=2.54.0",
     "pyjwt[crypto]>=2.10,<3",
     "sqlalchemy>=2.0,<3",

@@ -1,5 +1,6 @@
 import { useChat } from "@ai-sdk/react";
-import { isToolUIPart, getToolName } from "ai";
+import { isToolUIPart, getToolName, type FileUIPart } from "ai";
+import { isMessageImage } from "../api/assistant";
 import { AssistantMarkdown } from "./AssistantMarkdown";
 import { PracticeActivityContext } from "./practiceActivity";
 import {
@@ -12,6 +13,8 @@ import {
   useSyncExternalStore,
 } from "react";
 import {
+  Copy,
+  Check,
   CircleAlert,
   History,
   PanelLeftOpen,
@@ -19,19 +22,16 @@ import {
   Plus,
   X,
   RefreshCw,
-  ArrowUp,
-  Square,
 } from "lucide-react";
 import { ExerciseProposalResult } from "./tool-results/ExerciseProposalResult";
 import { GeneratedPracticeOverlay } from "../practice/GeneratedPracticeOverlay";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
-import { PracticeTemplates } from "./PracticeTemplates";
+import { Composer, type ComposerHandle } from "./Composer";
 import { PlaybackGroup } from "../practice/PlaybackGroup";
 import { AssistantConversation } from "./conversation";
 import { useAssistantContext } from "./assistantContext";
 import { useAssistantPresentation } from "./useAssistantPresentation";
 import { useAssistantAvailability } from "./useAssistantAvailability";
-import { ModelSelector } from "./ModelSelector";
 import { ConversationHistory } from "./ConversationHistory";
 import type { ModelSelection } from "../api/modelConnections";
 import type { CardState } from "../api/assistant";
@@ -39,7 +39,6 @@ import HomePage from "../pages/HomePage";
 
 export function AssistantPanel({ home = false }: { home?: boolean }) {
   const activity = useContext(PracticeActivityContext);
-  const activityLabel = useSyncExternalStore(activity?.subscribe ?? (() => () => {}), activity?.getLabel ?? (() => ""), () => "");
   const availability = useAssistantAvailability();
   const {
     panel: panelRef,
@@ -51,11 +50,6 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
   } = useAssistantPresentation(home, availability.ready);
   const [playbackGroup] = useState(() => new PlaybackGroup());
   const [conversation] = useState(() => new AssistantConversation("instance"));
-  const [modelAvailable, setModelAvailable] = useState(false);
-  const [modelChoice, setModelChoice] = useState<ModelSelection | null>(null);
-  const modelAvailabilityChanged = useCallback((available: boolean, selection: ModelSelection | null) => {
-    setModelAvailable(available); setModelChoice(selection);
-  }, []);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -139,10 +133,17 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
       if (!activity?.getFocus()) activity?.restoreFocus(focus);
     }
   }, [activity, state.session]);
-  const { readCurrentPageContext, practiceLabel } = useAssistantContext();
+  const { readCurrentPageContext } = useAssistantContext();
   const [practice, setPractice] = useState<GeneratedExercise | null>(null);
-  const [draft, setDraft] = useState("");
-  const input = useRef<HTMLTextAreaElement>(null);
+  const composer = useRef<ComposerHandle>(null);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const imageDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (expandedImage) imageDialog.current?.showModal();
+    else imageDialog.current?.close();
+  }, [expandedImage]);
+  const historyHasImages = messages.some(message => message.parts.some(isMessageImage));
+
   const thread = useRef<HTMLDivElement>(null);
   const follow = useRef(true);
   const generation = useRef(0);
@@ -170,51 +171,6 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
   }, [visible, state, messages]);
 
   useLayoutEffect(() => {
-    const field = input.current;
-    const box = field?.parentElement;
-    if (!visible || !field || !box) return;
-    // 始终用单行布局的可用宽度判断换行，避免展开后变宽引起布局反复切换。
-    const resize = () => {
-      const style = getComputedStyle(box);
-      const controls = box.querySelector<HTMLElement>(".assistant-templates")!;
-      const actions = box.querySelector<HTMLElement>(
-        ".assistant-input-actions",
-      )!;
-      const width =
-        box.clientWidth -
-        parseFloat(style.paddingLeft) -
-        parseFloat(style.paddingRight) -
-        controls.offsetWidth -
-        actions.offsetWidth -
-        (box.querySelector<HTMLElement>(".assistant-model-control")?.offsetWidth ?? 0) -
-        3 * parseFloat(style.columnGap);
-      field.style.width = `${Math.max(width, 1)}px`;
-      field.style.height = "0px";
-      box.dataset.multiline = String(
-        field.scrollHeight > parseFloat(getComputedStyle(field).lineHeight) + 1,
-      );
-      field.style.width = "";
-      field.style.height = "0px";
-      field.style.height = `${Math.min(field.scrollHeight, 144)}px`;
-    };
-    resize();
-    let width = box.clientWidth;
-    let frame = 0;
-    const observer = new ResizeObserver(() => {
-      if (width !== box.clientWidth) {
-        width = box.clientWidth;
-        cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(resize);
-      }
-    });
-    observer.observe(box);
-    return () => {
-      observer.disconnect();
-      cancelAnimationFrame(frame);
-    };
-  }, [draft, visible, home, availability.ready, initializing, modelChoice?.model]);
-
-  useLayoutEffect(() => {
     const element = thread.current;
     if (visible && element)
       element.scrollTop = follow.current
@@ -222,42 +178,25 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
         : scrollPosition.current;
   }, [home, visible]);
 
-  function suggest(text: string) {
-    setDraft(text);
-    input.current?.focus();
-  }
-
-  async function send() {
+  async function send({ text, images }: { text: string; images: FileUIPart[] }, selection: ModelSelection): Promise<"accepted" | "rejected" | "unknown"> {
     const before = conversation.getSnapshot();
-    if (
-      !availability.ready || !modelAvailable || initializing ||
-      !draft.trim() ||
-      before.busy ||
-      before.needsSync ||
-      before.expired
-    )
-      return;
-    const originalDraft = draft;
-    const text = draft.trim(),
-      version = generation.current;
+    const version = generation.current;
     const previousEntryCount = before.session?.messages.length ?? 0;
     follow.current = true;
-    setDraft("");
     activity?.start();
     const page = readCurrentPageContext();
     const batch = activity?.prepare();
     const focus = activity?.getFocus();
     const context = batch || focus ? { ...(page ?? { page: "unknown", description: "当前页面未提供上下文", state: {} }),
       state: { ...page?.state, practice_activity: batch ?? null, practice_focus: focus ?? null } } : page;
-    await conversation.send(text, context, modelChoice ?? undefined);
-    if (version !== generation.current) return;
+    await conversation.send(text, context, selection, images);
+    if (version !== generation.current) return "unknown";
     const after = conversation.getSnapshot();
     // 仅在已确认本次输入没有写入会话时恢复。不能用文字相等判断：用户可能连续发送相同内容。
     const accepted = after.session?.messages
       .slice(previousEntryCount)
       .some((entry) => entry.role === "user");
-    if (!after.needsSync && !accepted)
-      setDraft((current) => current || originalDraft);
+    return after.needsSync ? "unknown" : accepted ? "accepted" : "rejected";
   }
   function newConversation() {
     generation.current++;
@@ -266,34 +205,31 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
     setHistoryOpen(false);
     setPractice(null);
     activity?.reset();
-    setDraft("");
+    composer.current?.clear();
     follow.current = true;
-    input.current?.focus();
+    composer.current?.focus();
   }
   function close() {
     playbackGroup.stop();
     closePanel();
   }
-  const blocked = state.selectingModel ||
-    !availability.ready || !modelAvailable || initializing || state.busy || state.needsSync || state.expired;
-
   const deleteConversation = (id: string) => {
     if (state.session?.id !== id) return;
-    conversation.reset(); activity?.reset(); setDraft(""); setPractice(null);
+    generation.current++; conversation.reset(); activity?.reset(); composer.current?.clear(); setPractice(null);
   };
   const openConversation = async (id: string) => {
     if (id === state.session?.id) {
       closeHistory(); setMobileHistoryOpen(false); return true;
     }
-    if (draft && !window.confirm("打开历史对话将清空当前输入草稿，是否继续？")) return false;
+    if (composer.current?.hasDraft() && !window.confirm("打开历史对话将清空当前输入草稿，是否继续？")) return false;
     generation.current++;
     const opened = await conversation.open(id);
     if (opened) {
       activity?.reset(); activity?.start();
       activity?.restoreFocus(conversation.getSnapshot().session?.messages.findLast(message => message.role === "user")?.metadata?.page_context?.state.practice_focus);
-      setDraft(""); setPractice(null); follow.current = true;
+      composer.current?.clear(); setPractice(null); follow.current = true;
       setHistoryOpen(false); setMobileHistoryOpen(false);
-      requestAnimationFrame(() => input.current?.focus());
+      requestAnimationFrame(() => composer.current?.focus());
     }
     return opened;
   };
@@ -317,7 +253,7 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
         aria-controls="assistant-panel"
         onClick={() => {
           open();
-          requestAnimationFrame(() => input.current?.focus());
+          requestAnimationFrame(() => composer.current?.focus());
         }}
       >
         <MessageCircle size={22} aria-hidden="true" />
@@ -424,8 +360,18 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                   <h3>从一个节奏问题开始</h3>
                 </div>
               ) : null}
-              {messages.map(message => <div className="assistant-turn" key={`${state.session?.id ?? "new"}:${message.id}`}>
-                {message.parts.map((part, index) => {
+              {messages.map(message => {
+                const attachments = message.parts.filter(isMessageImage);
+                const textParts = message.parts.filter(part => part.type === "text").filter(part => part.text.trim());
+                const text = textParts.map(part => part.text).join("\n\n");
+                return <div className="assistant-turn" key={`${state.session?.id ?? "new"}:${message.id}`}>
+                {message.role === "user" ? <article className="assistant-message user" aria-label="你的消息">
+                  {attachments.length > 0 && <div className="assistant-message-images">
+                    {attachments.map((part, index) => <button type="button" className="assistant-message-image" key={index} aria-label="查看图片" onClick={() => setExpandedImage(part.url)}><img src={part.url} alt="消息图片" loading="lazy" /></button>)}
+                  </div>}
+                  {textParts.map((part, index) => <p key={index} className="assistant-message-text">{part.text}</p>)}
+                  <MessageActions text={text} createdAt={message.metadata?.created_at} />
+                </article> : <>{message.parts.map((part, index) => {
                   if (isToolUIPart(part)) {
                     if (getToolName(part) !== "propose_rhythm_exercise") return null;
                     if (part.state === "output-available") {
@@ -438,30 +384,29 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                       return <p key={part.toolCallId} className="assistant-notice" role="status">正在生成练习…</p>;
                     return null;
                   }
+                  if (isMessageImage(part)) return <button type="button" className="assistant-message-image" key={index} aria-label="查看图片" onClick={() => setExpandedImage(part.url)}><img src={part.url} alt="消息图片" loading="lazy" /></button>;
                   if (part.type !== "text" || !part.text.trim()) return null;
                   return <article className={`assistant-message ${message.role}${part.state === "streaming" ? " assistant-pending" : ""}`} key={index}
-                    aria-label={message.role === "user" ? "你的消息" : "助手回答"}>
-                    {message.role === "assistant" ? <AssistantMarkdown text={part.text} />
-                      : <p className="assistant-message-text">{part.text}</p>}
-                    {message.metadata?.created_at && index === message.parts.findLastIndex(value => value.type === "text") && <div className="assistant-message-meta">
-                      <time dateTime={message.metadata.created_at}>
-                        {new Date(message.metadata.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </time>
-                    </div>}
+                    aria-label="助手回答">
+                    <AssistantMarkdown text={part.text} />
                   </article>;
                 })}
-              </div>)}
+                  <MessageActions text={text} createdAt={message.metadata?.created_at}
+                    pending={message === lastMessage && (status === "submitted" || status === "streaming")} />
+                </>}
+              </div>;
+              })}
               {waitingForContent && <p className="assistant-notice" role="status">正在思考…</p>}
 
             </div>
-            <form
-              className="assistant-composer"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void send();
-              }}
-            >
-              {(activityLabel || practiceLabel) && <p className="assistant-notice">{activityLabel || practiceLabel}</p>}
+
+            </>}
+          </>
+        )}
+        {/* 配置暂时不可用时只隐藏输入框，保留未发送草稿。 */}
+            <Composer ref={composer} conversation={conversation} ready={availability.ready} visible={visible && availability.ready && !initializing}
+              welcome={home && !started} streaming={status === "submitted" || status === "streaming"}
+              historyHasImages={historyHasImages} onPreview={setExpandedImage} onSend={send}>
               {state.restoring && <p className="assistant-notice" role="status">正在恢复对话…</p>}
               {state.error ? (
                 <p className="assistant-error" role="alert">
@@ -489,67 +434,11 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
                   开始新对话
                 </button>
               ) : null}
-              <div className="assistant-input-box">
-                <PracticeTemplates
-                  onSelect={suggest}
-                  disabled={!availability.ready}
-                />
-                <textarea
-                  ref={input}
-                  id="assistant-input"
-                  aria-label="向助手提问"
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  maxLength={4000}
-                  rows={1}
-                  disabled={!availability.ready}
-                  placeholder={
-                    state.busy ? "可以继续输入，回答结束后发送…" : home && !started
-                      ? "描述你想练的内容，或问一个问题…"
-                      : "继续提问或调整练习…"
-                  }
-                  onKeyDown={(event) => {
-                    if (
-                      event.key === "Enter" &&
-                      !state.busy &&
-                      !event.shiftKey &&
-                      !event.nativeEvent.isComposing &&
-                      event.keyCode !== 229
-                    ) {
-                      event.preventDefault();
-                      void send();
-                    }
-                  }}
-                />
-                <ModelSelector selection={state.session ? state.session.model_selection ?? null : undefined}
-                  disabled={initializing || state.selectingModel || state.restoring || (state.busy && !state.session) || state.needsSync || state.expired}
-                  onSelect={selection => conversation.selectModel(selection)} onAvailable={modelAvailabilityChanged} />
-                <div className="assistant-input-actions">
-                  {status === "submitted" || status === "streaming" ? (
-                    <button
-                      type="button"
-                      aria-label="停止生成"
-                      title="停止生成"
-                      onClick={() => conversation.stop()}
-                    >
-                      <Square size={15} aria-hidden="true" />
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      aria-label="发送"
-                      title="发送"
-                      disabled={blocked || !draft.trim()}
-                    >
-                      <ArrowUp size={19} aria-hidden="true" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </form>
-            </>}
-          </>
-        )}
+            </Composer>
+      </dialog>
+      <dialog ref={imageDialog} className="design-system assistant-image-viewer" aria-label="图片预览" onClose={() => setExpandedImage(null)} onClick={event => { if (event.target === event.currentTarget) setExpandedImage(null); }}>
+        <button type="button" aria-label="关闭图片预览" onClick={() => setExpandedImage(null)}><X size={20} /></button>
+        {expandedImage && <img src={expandedImage} alt="图片预览" />}
       </dialog>
       {practice && (
         <GeneratedPracticeOverlay
@@ -560,4 +449,25 @@ export function AssistantPanel({ home = false }: { home?: boolean }) {
       )}
     </div>
   );
+}
+
+
+/** 每条消息只提供一个复制入口；复制原始文字，不包含时间、附件或工具数据。 */
+function MessageActions({ text, createdAt, pending = false }: { text: string; createdAt?: string; pending?: boolean }) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  useEffect(() => {
+    if (copyState === "idle") return;
+    const timer = window.setTimeout(() => setCopyState("idle"), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copyState]);
+  if (!createdAt && (!text.trim() || pending)) return null;
+  const label = copyState === "copied" ? "已复制" : "复制消息";
+  return <div className="assistant-message-meta">
+    {text.trim() && !pending && <button type="button" className="assistant-message-copy" aria-label={label} title={label} onClick={async () => {
+      try { await navigator.clipboard.writeText(text); setCopyState("copied"); }
+      catch { setCopyState("failed"); }
+    }}>{copyState === "copied" ? <Check size={16} /> : <Copy size={16} />}</button>}
+    {createdAt && <time dateTime={createdAt}>{new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>}
+    {copyState === "failed" && <span role="status">复制失败，请重试</span>}
+  </div>;
 }

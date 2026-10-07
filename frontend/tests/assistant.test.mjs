@@ -136,7 +136,7 @@ test("SDK 消费分片中文，仅提交新消息与快照，结束后核对服�
   });
   const c = new AssistantConversation();
   await c.send("问题", snapshot);
-  assert.deepEqual(Object.keys(request).sort(), ["message_id", "page_context", "text"]);
+  assert.deepEqual(Object.keys(request).sort(), ["images", "message_id", "page_context", "text"]);
   assert.deepEqual(request.page_context, snapshot);
   assert.equal(request.text, "问题");
   assert.equal(c.chat.messages[1].parts[1].text, "完整回答");
@@ -445,4 +445,20 @@ test("默认选择保存失败不把已成功的会话切换报成失败，也�
   assert.equal(selectionEvents, 1);
   assert.equal(connectionEvents, 0);
   assert.equal(conversation.getSnapshot().notice, '');
+});
+
+
+test("纯图片消息随本轮发送，恢复后保留 SDK 文件消息", async t => {
+  const image = { type: "file", mediaType: "image/png", url: "data:image/png;base64,aGVsbG8=" };
+  let request;
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    if (url === "/api/assistant/sessions") return Response.json(empty());
+    if (options.method === "POST") { request = JSON.parse(options.body); return sse(); }
+    return Response.json({ ...final(), messages: [{ id: request.message_id, role: "user", parts: [image] }] });
+  });
+  const c = new AssistantConversation();
+  assert.equal(await c.send("", null, undefined, [image]), true);
+  assert.equal(request.text, "");
+  assert.deepEqual(request.images, [{ media_type: "image/png", data: "aGVsbG8=" }]);
+  assert.deepEqual(c.chat.messages[0].parts, [image]);
 });

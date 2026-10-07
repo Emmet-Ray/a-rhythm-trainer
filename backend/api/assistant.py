@@ -6,7 +6,8 @@ from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from assistant.messages import MessageImage, MAX_IMAGES
 
 from pydantic_ai.models import Model
 from assistant.sessions import ChatSession, SessionBusy, SessionStore, CardState
@@ -40,11 +41,18 @@ def require_assistant_origin(request: Request) -> None:
 
 class ChatInput(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    text: str = Field(min_length=1, max_length=4000)
+    text: str = Field(default="", max_length=4000)
+    images: list[MessageImage] = Field(default_factory=list, max_length=MAX_IMAGES)
     message_id: str = Field(min_length=1, max_length=100)
     page_context: PageContext | None = Field(
         default=None, description="本次页面快照；省略或 null 表示未知，不沿用上次快照。",
     )
+
+    @model_validator(mode="after")
+    def has_content(self):
+        if not self.text and not self.images:
+            raise ValueError("请输入消息或添加图片")
+        return self
 
 
 router = APIRouter(prefix="/api/assistant", tags=["assistant"], dependencies=[Depends(require_assistant_origin)])
@@ -158,7 +166,7 @@ async def get_run(
 ) -> AsyncIterator[StreamingResponse]:
     try:
         async with session.run(body.text, model, body.page_context, message_id=body.message_id,
-                               expected_selection=selection) as response:
+                               expected_selection=selection, images=body.images) as response:
             response.headers["Cache-Control"] = "no-store"
             response.headers["X-Accel-Buffering"] = "no"
             yield response

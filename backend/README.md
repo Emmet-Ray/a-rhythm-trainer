@@ -231,7 +231,8 @@ uv run --locked --no-env-file pytest
 
 ```text
 assistant/
-  sessions.py    服务端轮次、运行互斥、结果保留、UI 消息投影
+  sessions.py    会话运行互斥、结果保留与持久化协调
+  messages.py    对话轮次、图片内容校验及模型/UI 消息转换
   model.py       公共模型约定、流完整性检查、历史兼容与错误说明
   connections.py 凭证保存、刷新协调、目录缓存与客户端生命周期
   providers/     DeepSeek 与 ChatGPT 的服务接入实现
@@ -252,10 +253,18 @@ assistant/
 
 `assistant/tools/propose_rhythm_exercise.py` 中 `ExerciseProposal` 接收 `title`（去除首尾空白后 1–100 字符）、`description`（1–1000 字符）、`exercise`，拒绝额外字段。节奏复用 `domain.rhythm.parse_rhythm_exercise`：4/4、1–64 小节、每小节恰好四拍及现有音符规则。校验保证结构和时值合法，不评判教学效果。`GeneratedExercise(candidate)` 在校验成功后生成 ID、UTC 时间，`snapshot()` 返回独立副本。
 
-接口与循环测试使用模拟模型及 HTTP transport，不产生 API 费用；真实模型的生成效果还需本机试用。图片输入、对话历史的数据库存储、并行工具和执行 hooks 尚未实现，对话历史目前保存在本地 JSONL 文件中。
+接口与循环测试使用模拟模型及 HTTP transport，不产生 API 费用；真实模型的生成效果还需本机试用。对话历史的数据库存储、并行工具和执行 hooks 尚未实现，对话历史目前保存在本地 JSONL 文件中。
 
 生成工具支持 `mode: tapping | dictation`（默认 tapping）；听写题前端隐藏谱面，模型须避免在标题、说明和回复中提前泄露答案。该字段属于节奏助手业务协议，通用 Agent 循环不参与展示策略。
 
 助手的 `page_context.state.practice` 由前端练习工作区提供，包含当前或刚才练习的身份、本次多轮结果及自动读取的同题历史。历史从本地后端按题查询，助手只引用已加载的最近尝试摘要。模型默认综合本次、关注最新、参考历史；针对性出题沿用 `propose_rhythm_exercise`。新击拍有位置与早晚明细，旧记录标记为仅汇总；中断、不同速度或判定标准需要区分。听写未公开时，当前快照不发送标准答案，回复仍需遵守听写保密规则（生成工具的历史参数可能已含题目，不能只依赖快照裁剪）。
 
 `page_context.state.practice_activity` 随用户消息附带期间更新的尝试摘要；`practice_focus` 指向最近产生结果的题目，优先于底层页面对象用于默认分析和后续出题。活动记录按尝试 ID 更新，不应将听写多次验证或击拍迟到输入修正解释成新轮次。批次编号保存在原有用户快照中，前端通过会话同步确认接收；没有新增模型可调用的浏览器工具。未收到某题成绩不能据此断言未练习、未保存或需要先应用。
+
+图片随用户消息通过 `images: [{data, media_type}]` 提交，`data` 为 Base64，允许纯图片消息
+每条消息最多 3 张，每张不超过 2 MiB、1600 万像素，支持 PNG、JPEG 和静态 WebP
+图片经过内容校验后内联保存在该轮 JSONL 中，后续检查点不重复保存用户图片，旧日志缺少 `images` 时按空列表恢复
+界面使用 AI SDK 的 `file` 消息部分展示，模型请求使用 Pydantic AI `BinaryContent`
+模型目录的 `supports_images` 来自当前实测能力集合，新增模型需要验证后更新，含图历史不允许切换到未确认支持图片的模型
+
+模型输出预算沿用供应商默认行为，会话层不统一设置 `max_tokens`；运行超时和调用次数限制独立保留。供应商报告输出达到上限时会返回明确提示，不执行未完成的工具调用，也不自动重试。

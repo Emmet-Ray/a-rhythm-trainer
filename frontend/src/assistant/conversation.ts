@@ -1,5 +1,5 @@
 import { Chat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, type FileUIPart } from "ai";
 import { AssistantApiError, assistantFetch, createSession, getSession, type AssistantMessage, type ChatSession, saveCardState, selectSessionModel, type CardState } from "../api/assistant";
 import { selectionChanged, type ModelSelection } from "../api/modelConnections";
 import type { PageContext } from "./assistantContext";
@@ -98,6 +98,7 @@ export class AssistantConversation {
           const message = messages.at(-1)!;
           return { api: `/api/assistant/sessions/${encodeURIComponent(this.state.session!.id)}/messages`,
             body: { text: message.parts.filter(part => part.type === "text").map(part => part.text).join(""),
+              images: message.parts.filter(part => part.type === "file").map(part => ({ media_type: part.mediaType, data: part.url.split(",")[1] })),
               message_id: message.id, page_context: body?.page_context ?? null } };
         },
         fetch: (url, options) => assistantFetch(String(url), options ?? {},
@@ -165,8 +166,8 @@ export class AssistantConversation {
       if (active()) { this.modelWrite = null; this.update({ selectingModel: false }); }
     }
   }
-  async send(text: string, context: PageContext | null, selection?: ModelSelection): Promise<boolean> {
-    if (this.operation || this.modelWrite || this.state.needsSync || this.state.expired || !text.trim()) return false;
+  async send(text: string, context: PageContext | null, selection?: ModelSelection, images: FileUIPart[] = []): Promise<boolean> {
+    if (this.operation || this.modelWrite || this.state.needsSync || this.state.expired || (!text.trim() && !images.length)) return false;
     const op = { stream: new AbortController(), lifetime: new AbortController() };
     this.operation = op;
     const pageContext = structuredClone(context);
@@ -181,7 +182,7 @@ export class AssistantConversation {
       op.stream.signal.throwIfAborted();
       const chat = this.chat;
       chat.clearError();
-      await chat.sendMessage({ text, metadata: { created_at: new Date().toISOString(), page_context: pageContext } },
+      await chat.sendMessage({ text, files: images, metadata: { created_at: new Date().toISOString(), page_context: pageContext } },
         { body: { page_context: pageContext } });
       if (chat.error) throw chat.error;
     } catch (error) {

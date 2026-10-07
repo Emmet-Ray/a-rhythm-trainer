@@ -65,8 +65,8 @@ async (page) => {
   await input.fill('分析一下'); await input.press('Enter');
   await page.getByRole('button', { name: '停止生成' }).waitFor();
   check(await input.isEnabled(), '生成中输入框可用');
-  await page.getByLabel('练习模板', { exact: true }).click();
-  await page.getByRole('button', { name: '生成节奏听写', exact: true }).click();
+  await page.getByRole('button', { name: '添加内容', exact: true }).click();
+  await page.getByRole('option', { name: '生成节奏听写', exact: true }).click();
   check((await input.inputValue()).includes('听写'), '生成中可使用模板');
   await input.fill('下一条问题'); await input.press('End'); await input.press('Enter');
   check((await input.inputValue()).includes('\n'), '生成中 Enter 换行，不误触停止或发送');

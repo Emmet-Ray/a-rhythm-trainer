@@ -57,7 +57,8 @@ async (page) => {
     await overlay.getByRole('button', { name: '击拍练习', exact: true }).waitFor();
   }
   await overlay.getByRole('button', { name: '关闭练习', exact: true }).click();
-  await page.getByText('最近练习：八分音符入门', { exact: true }).waitFor();
+  await overlay.waitFor({ state: 'hidden' });
+  check(await page.locator('.assistant-composer').getByText(/^(最近|当前|刚才)练习：/).count() === 0, '输入框不显示练习上下文说明');
   await ask('练得怎么样');
   let practice = submissions.at(-1).page_context.state.practice;
   check(practice.scope === 'recent', '关闭后仍引用刚才练习');

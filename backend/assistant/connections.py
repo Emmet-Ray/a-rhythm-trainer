@@ -10,7 +10,7 @@ from contextlib import contextmanager, asynccontextmanager
 from uuid import uuid4
 from pathlib import Path
 
-from assistant.model import ConnectionError, AuthorizationRequired, ModelSelection
+from assistant.model import ConnectionError, AuthorizationRequired, ModelSelection, supports_images
 from assistant.providers import PROVIDERS, chatgpt, deepseek
 
 
@@ -50,7 +50,7 @@ class ModelConnections:
         with self.edit() as state:
             return {'provider': state['provider'], **{
                 name: {'configured': bool(config.get('key') if name == 'deepseek' else config.get('access_token')),
-                       'model': config.get('model', ''), 'models': config.get('models', []),
+                       'model': config.get('model', ''), 'models': [{**item, 'supports_images': supports_images(ModelSelection(provider=name, model=item['id']))} for item in config.get('models', [])],
                        'catalog_updated_at': config.get('catalog_updated_at', 0),
                        'needs_authorization': bool(config.get('needs_authorization')),
                        **({'account': config.get('email', '')} if name == 'chatgpt' else {})}

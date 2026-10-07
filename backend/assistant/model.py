@@ -19,6 +19,10 @@ class AuthorizationRequired(ConnectionError):
     """供应商明确拒绝凭证；网络故障不属于授权失效。"""
 
 
+class ModelOutputLimitReached(UnexpectedModelBehavior):
+    """供应商因输出预算耗尽而结束，不能执行本次未完成的工具调用。"""
+
+
 ProviderName = Literal['deepseek', 'chatgpt']
 
 
@@ -46,12 +50,17 @@ class CompleteResponsesModel(OpenAIResponsesModel):
             portable.append(message)
         async with super().request_stream(portable, model_settings, model_request_parameters, run_context) as stream:
             yield stream
-            if stream.get().state != "complete" or stream.get().finish_reason not in ("stop", "tool_call"):
+            response = stream.get()
+            if response.finish_reason == "length":
+                raise ModelOutputLimitReached("Model output limit reached")
+            if response.state != "complete" or response.finish_reason not in ("stop", "tool_call"):
                 raise UnexpectedModelBehavior("模型连接提前结束或回答未完成，请重试。")
 
 
 def public_model_error(error: Exception) -> str:
     """只展示固定说明，不把供应商响应、请求体和认证信息发送给浏览器。"""
+    if isinstance(error, ModelOutputLimitReached):
+        return "本次输出达到模型上限，未能完成。可以缩小谱面范围后重试"
     status = getattr(error, "status_code", None)
     if isinstance(error, (ModelHTTPError, OpenAIError)):
         return {401: "模型凭证无效，请在设置 → 模型服务中更新 API Key 或重新授权",
@@ -62,3 +71,11 @@ def public_model_error(error: Exception) -> str:
     if isinstance(error, UsageLimitExceeded):
         return "本次工具调用或模型请求次数已达上限，请调整要求后继续。"
     return "助手运行失败，请重试。"
+
+
+def supports_images(selection: ModelSelection | None) -> bool:
+    """当前接入实测支持的模型；未知模型不推断图片能力。"""
+    if selection is None:
+        return False
+    return selection.model in ({'deepseek-flash'} if selection.provider == 'deepseek' else
+                               {'gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna'})

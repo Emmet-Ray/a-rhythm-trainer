@@ -68,6 +68,7 @@ def test_responses_tool_round_trip(monkeypatch):
         assert request.url.host=='api.deepseek.com' and request.url.path=='/responses'
         body=json.loads(request.content); requests.append(body)
         assert body['model']=='test-model' and body['stream'] is True
+        assert 'max_output_tokens' not in body
         assert body['tools'][0]['name']=='propose_rhythm_exercise'
         assert body['tools'][0]['strict'] is False
         if len(requests)==1: return upstream([reasoning,call])
@@ -157,3 +158,27 @@ def test_cancelling_http_stream_closes_upstream(monkeypatch):
         assert closed.is_set()
         assert model.client.is_closed()
     asyncio.run(scenario())
+
+
+@pytest.mark.parametrize('complete_arguments', [False, True])
+def test_output_limit_does_not_execute_tool_or_retry(monkeypatch, complete_arguments):
+    args = {'title': '不应生成', 'description': '四拍', 'exercise': {
+        'timeSignature': {'beats': 4, 'beatType': 4},
+        'measures': [{'elements': [{'kind': 'note', 'noteValue': 'whole'}]}]}}
+    call = {'id': 'fc1', 'type': 'function_call', 'call_id': 'c1',
+            'name': 'propose_rhythm_exercise', 'status': 'incomplete',
+            'arguments': json.dumps(args) if complete_arguments else '{"title":'}
+    events = list(response_events([call]))
+    events[-1]['type'] = 'response.incomplete'
+    events[-1]['response'].update(status='incomplete', incomplete_details={'reason': 'max_output_tokens'})
+    calls = []
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, headers={'content-type': 'text/event-stream'},
+            content=b''.join(wire({**event, 'sequence_number': i}) for i, event in enumerate(events)))
+    session, stream = asyncio.run(consume(install(monkeypatch, handler)))
+    assert session.last_run_status == 'failed'
+    assert '本次输出达到模型上限' in stream
+    assert 'tool-output-available' not in stream
+    assert len(session.snapshot()['messages']) == 1
+    assert len(calls) == 1
