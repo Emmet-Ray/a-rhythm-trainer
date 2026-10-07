@@ -183,12 +183,26 @@ uv run --locked uvicorn main:app --reload --host 127.0.0.1 --port 8000
 | `POST /api/custom-exercises` | 创建实例题目，提交 name/mode/exercise |
 | `GET /api/custom-exercises?mode=tapping&limit=50&offset=0` | 分页题目摘要 |
 | `GET/PUT/DELETE /api/custom-exercises/{id}` | 读取、修改、删除题目 |
-| `GET/PUT /api/local-data/records` | 版本化读取和保存练习记录 |
+| `GET/POST/DELETE /api/local-data/records` | 分页查询、首次保存和清空练习记录 |
 | `GET/DELETE /api/local-data/exercises` | 题库统计和清空 |
 
 题目名称最多 100 字符，1–64 个完整 4/4 小节。创建不接受 user_id、id、created_at，更新保持原 ID、模式和创建时间。
 
-记录 PUT 携带 revision、records 和 operation_id；版本冲突返回 409，前端重新读取并重放本次行为，避免覆盖其他标签页的修改。独立的 record_operations 表记录 operation_id，保证同一批次响应丢失后重试不重复计数。失败不回退到浏览器存储。
+核心业务表只有 `custom_exercises`、`practice_records`、`practice_attempts`。档案保留题目快照，尝试按行保存；没有整份记录文档、去重日志、内容指纹列、保存版本或删除代数。
+
+记录接口：
+- `GET /api/local-data/records`：mode、page、page_size、after、before、zone 筛选分页及统计，不返回尝试详情
+- `GET /api/local-data/records/summary`：题目记录和尝试总数
+- `GET /api/local-data/records/{id}`：按 page/page_size 读取该题的尝试明细
+- `POST /api/local-data/records/lookup`、`/progress`：按来源、题目 ID、模式和规范化谱面查询当前题历史/目录完成状态
+- `POST /api/local-data/records`：首次保存档案与尝试，同谱面在写事务中归并
+- `POST /api/local-data/records/{id}/attempts`：创建新尝试，固定 ID 的重复创建不覆盖已有结果
+- `PUT /api/local-data/records/{id}/attempts/{attempt_id}`：更新已有尝试的完整累计值，不自动新建
+- `DELETE /api/local-data/records/{id}`、`DELETE /api/local-data/records`：删除档案并级联删除尝试
+
+同一次访问串行保存自己的尝试，重复请求不累加次数。不同访问通过独立尝试 ID 避免互相覆盖。已删除档案/尝试的更新返回 404，前端提示重新进入练习，不自动重新建档。接受的简化边界：迟到的首次创建请求可能在清空后建立档案；极端超时下不严格检测同一尝试的新旧更新顺序。
+
+0009 在事务中保留原档案/尝试 ID、谱面与成绩，逐项核对后移除旧文档表。升级前自动备份；升级后刷新前端页面，避免旧保存协议继续请求。
 
 题库与记录写请求要求有效 Origin，缺失或来源不允许返回 403。非法内容返回 422，数据库错误返回 503，响应设置 no-store。POST 创建题目响应丢失后先检查题库，避免手动重复新建。
 
@@ -230,6 +244,6 @@ assistant/
 
 生成工具支持 `mode: tapping | dictation`（默认 tapping）；听写题前端隐藏谱面，模型须避免在标题、说明和回复中提前泄露答案。该字段属于节奏助手业务协议，通用 Agent 循环不参与展示策略。
 
-助手的 `page_context.state.practice` 由前端练习工作区提供，包含当前或刚才练习的身份、本次多轮结果及自动读取的同题历史。记录仍在浏览器本地，不新增后端记录查询接口。模型默认综合本次、关注最新、参考历史；针对性出题沿用 `propose_rhythm_exercise`。新击拍有位置与早晚明细，旧记录标记为仅汇总；中断、不同速度或判定标准需要区分。听写未公开时，当前快照不发送标准答案，回复仍需遵守听写保密规则（生成工具的历史参数可能已含题目，不能只依赖快照裁剪）。
+助手的 `page_context.state.practice` 由前端练习工作区提供，包含当前或刚才练习的身份、本次多轮结果及自动读取的同题历史。历史从本地后端按题查询，助手只引用已加载的最近尝试摘要。模型默认综合本次、关注最新、参考历史；针对性出题沿用 `propose_rhythm_exercise`。新击拍有位置与早晚明细，旧记录标记为仅汇总；中断、不同速度或判定标准需要区分。听写未公开时，当前快照不发送标准答案，回复仍需遵守听写保密规则（生成工具的历史参数可能已含题目，不能只依赖快照裁剪）。
 
-`page_context.state.practice_activity` 随用户消息附带期间更新的尝试摘要；`practice_focus` 指向最近产生结果的题目，优先于底层页面对象用于默认分析和后续出题。活动记录按尝试 ID 更新，不应将听写多次验证或击拍迟到输入修正解释成新轮次。批次编号保存在原有用户快照中，前端通过会话同步确认接收；没有新增浏览器工具调用或服务端成绩存储。未收到某题成绩不能据此断言未练习、未保存或需要先应用。
+`page_context.state.practice_activity` 随用户消息附带期间更新的尝试摘要；`practice_focus` 指向最近产生结果的题目，优先于底层页面对象用于默认分析和后续出题。活动记录按尝试 ID 更新，不应将听写多次验证或击拍迟到输入修正解释成新轮次。批次编号保存在原有用户快照中，前端通过会话同步确认接收；没有新增模型可调用的浏览器工具。未收到某题成绩不能据此断言未练习、未保存或需要先应用。

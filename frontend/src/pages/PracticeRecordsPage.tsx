@@ -8,37 +8,20 @@ import {
 import { Eye, Trash2 } from "lucide-react";
 import { useBrowsingState } from "../navigation/usePageNavigation";
 import { SuccessToast } from "../navigation/SuccessToast";
-import type {
-  PracticeRecord,
-} from "../practice-records/PracticeRecord";
 import {
   deletePracticeRecord,
-  refreshPracticeRecords,
-  listPracticeRecords,
-  RECORDS_CHANGED,
+  queryPracticeRecords, recordListQuery, useRecordQuery, type RecordSummary,
 } from "../practice-records/practiceRecordStorage";
-import { RecordDetail } from "../practice-records/RecordDetail";
+import { StoredRecordDetail } from "../practice-records/RecordDetail";
 import { RecordPagination } from "../practice-records/RecordPagination";
-import { recordPage, recordOverview, type RecordFilter, type RecordPeriod } from "../practice-records/practiceRecords";
+import { type RecordFilter, type RecordPeriod } from "../practice-records/practiceRecords";
 
-
-function readRecords() {
-  try {
-    return { records: listPracticeRecords(), error: "" };
-  } catch (error) {
-    return {
-      records: [],
-      error: error instanceof Error ? error.message : "无法读取练习记录。",
-    };
-  }
-}
 
 export default function PracticeRecordsPage() {
   return <section className="design-system practice-records-page"><title>练习记录 · 节奏训练</title><LocalRecords /></section>;
 }
 
 function LocalRecords() {
-  const [data, setData] = useState(readRecords);
   const [filter, setFilter] = useBrowsingState<RecordFilter>(
     "record-filter",
     "all",
@@ -51,35 +34,29 @@ function LocalRecords() {
   const [deleteAttempt, setDeleteAttempt] = useState(0);
   const [deletedCount, setDeletedCount] = useState(0);
   useEffect(() => {
-    const refresh = () => { setData(readRecords()); setNow(new Date()); };
-    const tick = window.setInterval(() => setNow(new Date()), 60000);
+    const refresh = () => setNow(new Date());
+    const tick = window.setInterval(refresh, 60000);
     window.addEventListener("focus", refresh);
-    window.addEventListener("storage", refresh);
-    window.addEventListener(RECORDS_CHANGED, refresh);
-    return () => {
-      window.clearInterval(tick);
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener(RECORDS_CHANGED, refresh);
-    };
+    return () => { window.clearInterval(tick); window.removeEventListener("focus", refresh); };
   }, []);
-  const overview = recordOverview(data.records, filter, period, now);
-  const filtered = overview.records;
-  const selected = data.records.find((record) => record.id === selectedId);
-  const pagination = recordPage(filtered.length, page);
-  const metrics = { count: overview.count, days: overview.days, tappingCount: overview.tappingCount,
-    passedCount: overview.passedCount, passRate: overview.passRate, dictationCount: overview.dictationCount,
-    completedCount: overview.completedCount, independentCount: overview.independentCount };
+  const queryKey = recordListQuery(filter, period, page, now);
+  const query = useRecordQuery(queryKey, () => queryPracticeRecords(queryKey));
+  const data = { records: query.data?.records ?? [], error: query.error };
+  const overview = query.data?.overview ?? { count: 0, days: 0, tappingCount: 0, passedCount: 0, passRate: null, dictationCount: 0, completedCount: 0, independentCount: 0 };
+  const filtered = data.records;
+  const selected = data.records.find(record => record.id === selectedId);
+  const pagination = { page: query.data?.page ?? page, pages: query.data?.pages ?? 1 };
+  const metrics = overview;
   useAssistantPageContext({ page: "practice_records", description: "练习记录列表。统计仅覆盖当前时间和模式筛选；题目详情使用该题全部历史，不受列表时间筛选限制。",
-    state: { status: data.error ? "read-error" : "ready", filter: { mode: filter, period, asOf: now.toISOString() },
-      overview: data.error ? null : metrics, pagination: { page: pagination.page, pages: pagination.pages, totalRecords: filtered.length },
-      records: data.error ? [] : filtered.slice(pagination.start, pagination.end).map(record => ({ id: record.id, source: record.source,
-        exerciseId: record.exerciseId, title: record.title, mode: record.mode, allTimeAttempts: record.attempts.length })), selectedRecordId: selected?.id ?? null } });
+    state: { status: data.error ? "read-error" : !query.data ? "loading" : "ready", filter: { mode: filter, period, asOf: now.toISOString() },
+      overview: data.error ? null : metrics, pagination: { page: pagination.page, pages: pagination.pages, totalRecords: query.data?.total ?? 0 },
+      records: data.error ? [] : filtered.map(record => ({ id: record.id, source: record.source,
+        exerciseId: record.exerciseId, title: record.title, mode: record.mode, allTimeAttempts: record.attemptCount })), selectedRecordId: selected?.id ?? null } });
   if (page !== pagination.page) setPage(pagination.page);
-  async function remove(record: PracticeRecord) {
+  async function remove(record: RecordSummary) {
     if (
       !window.confirm(
-        `确定删除“${record.title}”的全部 ${record.attempts.length} 次尝试？此操作无法撤销。`,
+        `确定删除“${record.title}”的全部 ${record.attemptCount} 次尝试？此操作无法撤销。`,
       )
     )
       return;
@@ -101,7 +78,7 @@ function LocalRecords() {
         <p role="alert" className="practice-record-error">
           {data.error}
         </p>
-        <button type="button" onClick={() => { void refreshPracticeRecords().catch(() => {}); }}>
+        <button type="button" onClick={query.reload}>
           重新读取
         </button>
       </>
@@ -144,6 +121,7 @@ function LocalRecords() {
           </button>
         ))}
       </div>
+      {!query.data && <p role="status">正在读取练习记录…</p>}
       <section className="record-overview" aria-label="练习统计">
         <dl className="record-metrics">
           <div><dt>{filter === "dictation" ? "作答次数" : "练习次数"}</dt><dd>{overview.count}<span>次</span></dd></div>
@@ -158,14 +136,14 @@ function LocalRecords() {
           </>}
         </dl>
       </section>
-      {filtered.length === 0 ? (
+      {!query.data ? null : filtered.length === 0 ? (
         <p className="records-empty">
           {period === "all" ? "暂无" : "所选时间范围内暂无"}{filter === "all" ? "" : filter === "tapping" ? "击拍" : "听写"}
           练习记录。
         </p>
       ) : (
         <ul className="record-list navigation-list">
-          {filtered.slice(pagination.start, pagination.end).map((record) => (
+          {filtered.map((record) => (
             <RecordRow
               key={record.id}
               record={record}
@@ -180,7 +158,7 @@ function LocalRecords() {
         <SuccessToast key={deletedCount} message="练习记录已删除" />
       )}
       {selected && (
-        <RecordDetail
+        <StoredRecordDetail
           key={selected.id}
           record={selected}
           onClose={() => setSelectedId(null)}
@@ -195,7 +173,7 @@ function RecordRow({
   onOpen,
   onDelete,
 }: {
-  record: PracticeRecord;
+  record: RecordSummary;
   onOpen: () => void;
   onDelete: () => void;
 }) {

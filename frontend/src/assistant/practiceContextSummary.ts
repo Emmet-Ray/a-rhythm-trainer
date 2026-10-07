@@ -1,6 +1,6 @@
 import type { ExerciseContext, PracticeRecord, TappingAttempt } from "../practice-records/PracticeRecord";
 import { recordKey } from "../practice-records/practiceRecords";
-import { listPracticeRecords } from "../practice-records/practiceRecordStorage";
+import { readCachedHistory } from "../practice-records/practiceRecordStorage";
 import { createExerciseTimeline } from "../rhythm/RhythmTiming";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 
@@ -36,15 +36,24 @@ function tappingSummary(attempt: TappingAttempt, exercise: RhythmExercise, inclu
  * session 是调用方选定的轮次范围（本次访问或待发送活动），这些轮次不再重复计入历史。
  * 限定最近轮次和位置明细，避免反复练习使单条请求无限增长。
  */
-export function buildPracticeContextSummary(source: PracticeContextSource, readHistory = listPracticeRecords) {
+export function buildPracticeContextSummary(source: PracticeContextSource, readHistory?: () => PracticeRecord[]) {
   const { context, exercise, mode, session } = source;
   const sessionIds = new Set(session?.attempts.map(attempt => attempt.id));
   let history: PracticeRecord | undefined;
+  let historyTotal = 0;
+  let historyAttemptIds: string[] = [];
   let historyStatus = source.historyEnabled ? "available" : "unavailable";
   if (source.historyEnabled) {
     try {
       const key = recordKey(context, exercise, mode);
-      history = readHistory().find(record => recordKey(record, record.exercise, record.mode) === key);
+      if (readHistory) {
+        history = readHistory().find(record => recordKey(record, record.exercise, record.mode) === key);
+        historyTotal = history?.attempts.length ?? 0;
+        historyAttemptIds = history?.attempts.map(attempt => attempt.id) ?? [];
+      } else {
+        const cached = readCachedHistory(context, exercise, mode);
+        history = cached.record; historyTotal = cached.total; historyAttemptIds = cached.attemptIds;
+      }
     } catch { historyStatus = "read-error"; }
   }
   const prior = history?.attempts.filter(attempt => !sessionIds.has(attempt.id)) ?? [];
@@ -59,7 +68,7 @@ export function buildPracticeContextSummary(source: PracticeContextSource, readH
     answerExposed: source.answerExposed,
     ...(mode === "tapping" || source.answerExposed ? { exercise } : {}),
     session: { totalAttempts: session?.attempts.length ?? 0, recentAttempts: project(session?.attempts ?? []) },
-    history: { status: historyStatus, totalAttempts: prior.length, recentAttempts: project(prior) },
+    history: { status: historyStatus, totalAttempts: Math.max(0, historyTotal - historyAttemptIds.filter(id => sessionIds.has(id)).length), recentAttempts: project(prior) },
   };
   // 预留页面其余字段的空间；先减少历史，再减少本次较早轮次，保留最新结果。
   const bytes = () => new TextEncoder().encode(JSON.stringify(summary)).length;

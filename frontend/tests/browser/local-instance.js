@@ -55,6 +55,16 @@ async page => {
   await page.reload();
   await page.getByText(id,{exact:true}).waitFor();
  const read=path=>page.evaluate(async path=>(await fetch(path)).json(),path);
+ const readRecords=async()=>{
+   const list=await read('/api/local-data/records?page_size=100');
+   return {records: await Promise.all(list.records.map(async record=>{
+     const details=await read('/api/local-data/records/'+record.id+'?page_size=100');
+     return {...record,attempts:details.attempts};
+   }))};
+ };
+ const isRecordWrite=r=>['POST','PUT'].includes(r.request().method()) &&
+   (/\/records$/.test(new URL(r.request().url()).pathname)||r.request().url().includes('/attempts'));
+
  const tapping=(await read('/api/custom-exercises?mode=tapping')).items[0];
  const dictation=(await read('/api/custom-exercises?mode=dictation')).items[0];
  await page.route('**/api/custom-exercises?*',r=>r.fulfill({status:503,json:{detail:'读取失败'}}));
@@ -79,20 +89,66 @@ async page => {
  await page.goto(origin+'/custom/dictation');
  await page.locator('li').filter({hasText:dictation.name}).getByRole('link',{name:/开始练习/}).click();
  let failed=false;
- await page.route('**/api/local-data/records',async r=>{
-  if(r.request().method()==='PUT'&&!failed){failed=true;await r.fulfill({status:503,json:{detail:'测试记录保存失败'}})}else await r.continue();
+ await page.route('**/api/local-data/records**',async r=>{
+  if(isRecordWrite(r)&&!failed){failed=true;await r.fulfill({status:503,json:{detail:'测试记录保存失败'}})}else await r.continue();
  });
  await page.getByRole('button',{name:'播放题目',exact:true}).click();
  await page.getByRole('button',{name:'停止',exact:true}).click();
  await page.getByRole('button',{name:'重试保存'}).waitFor();
  await page.getByRole('button',{name:'重试保存'}).click();
  await page.getByRole('button',{name:'重试保存'}).waitFor({state:'detached'});
- await page.unroute('**/api/local-data/records');
- const saved=JSON.stringify(await read('/api/local-data/records'));
+ await page.unroute('**/api/local-data/records**');
+ // 后端已提交，但浏览器没有收到响应；重试必须按尝试 ID 覆盖累计值
+ const playCount=state=>state.records.filter(r=>r.exerciseId===dictation.id)
+   .flatMap(r=>r.attempts).reduce((sum,a)=>sum+a.measures[0].questionPlayCount,0);
+ const beforeLost=playCount(await readRecords());
+ let lost=false;
+ await page.route('**/api/local-data/records**',async r=>{
+   if(isRecordWrite(r)&&!lost){lost=true;await r.fetch();await r.abort('failed')}
+   else await r.continue();
+ });
+ await page.getByRole('button',{name:'播放题目',exact:true}).click();
+ await page.getByRole('button',{name:'停止',exact:true}).click();
+ await page.getByRole('button',{name:'重试保存'}).waitFor();
+ check(playCount(await readRecords())===beforeLost+1,'响应丢失前后端已保存');
+ await page.getByRole('button',{name:'重试保存'}).click();
+ await page.getByRole('button',{name:'重试保存'}).waitFor({state:'detached'});
+ await page.unroute('**/api/local-data/records**');
+ check(playCount(await readRecords())===beforeLost+1,'响应丢失重试不重复计数');
+ let saved=JSON.stringify(await readRecords());
  await page.getByRole('link',{name:'练习记录',exact:true}).click();
  await page.goBack();
  await page.getByRole('button',{name:'播放题目',exact:true}).waitFor();
- check(JSON.stringify(await read('/api/local-data/records'))===saved,'重返练习不可重复计数');
+ check(JSON.stringify(await readRecords())===saved,'重返练习不可重复计数');
+ // 两个独立页面同时保存，必须归入同一档案并保留双方的尝试
+ const beforeTabs=playCount(await readRecords());
+ const tabs=await Promise.all([page.context().newPage(),page.context().newPage()]);
+ let arrivals=0,releaseTabs;
+ const bothSaving=new Promise(resolve=>releaseTabs=resolve);
+ try {
+   await Promise.all(tabs.map(async tab=>{
+     let first=true;
+     await tab.route('**/api/local-data/records**',async r=>{
+       if(isRecordWrite(r)&&first){
+         first=false;arrivals++;if(arrivals===2)releaseTabs();await bothSaving;
+       }
+       await r.continue();
+     });
+     await tab.goto(origin+'/custom/dictation/'+dictation.id);
+     await tab.getByRole('button',{name:'播放题目',exact:true}).click();
+     await tab.getByRole('button',{name:'停止',exact:true}).click();
+   }));
+   await page.waitForFunction(async ({id,count})=>{
+     const list=await (await fetch('/api/local-data/records?page_size=100')).json();
+     const records=await Promise.all(list.records.filter(r=>r.exerciseId===id).map(async r=>
+       (await (await fetch('/api/local-data/records/'+r.id+'?page_size=100')).json()).attempts));
+     return records.flat().reduce((sum,a)=>sum+a.measures[0].questionPlayCount,0)===count;
+   },{id:dictation.id,count:beforeTabs+2});
+ } finally {
+   releaseTabs();
+   await Promise.all(tabs.map(tab=>tab.close()));
+ }
+ saved=JSON.stringify(await readRecords());
  await page.goto(origin+'/custom/tapping');
  const deleteRow=page.locator('li').filter({hasText:tapping.name});
  await page.evaluate(()=>{window.confirm=()=>false});
@@ -107,17 +163,17 @@ async page => {
  await page.getByRole('button',{name:'清空记录',exact:true}).waitFor();
  await page.evaluate(()=>{window.confirm=()=>false});
  await page.getByRole('button',{name:'清空记录',exact:true}).click();
- check(JSON.stringify(await read('/api/local-data/records'))===saved,'取消清空记录');
- await page.route('**/api/local-data/records',r=>r.request().method()==='PUT'?r.fulfill({status:503,json:{detail:'测试清空失败'}}):r.continue());
+ check(JSON.stringify(await readRecords())===saved,'取消清空记录');
+ await page.route('**/api/local-data/records**',r=>r.request().method()==='DELETE'?r.fulfill({status:503,json:{detail:'测试清空失败'}}):r.continue());
  await page.evaluate(()=>{window.confirm=()=>true});
  await page.getByRole('button',{name:'清空记录',exact:true}).click();
  await page.getByRole('alert').waitFor();
- check(JSON.stringify(await read('/api/local-data/records'))===saved,'清空失败保留记录');
- await page.unroute('**/api/local-data/records');
+ check(JSON.stringify(await readRecords())===saved,'清空失败保留记录');
+ await page.unroute('**/api/local-data/records**');
  await page.evaluate(()=>{window.confirm=()=>true});
  await page.getByRole('button',{name:'清空记录',exact:true}).click();
  await page.getByText('练习记录已清空，自定义题库未修改',{exact:true}).waitFor();
- check((await read('/api/local-data/records')).records.length===0,'清空记录');
+ check((await readRecords()).records.length===0,'清空记录');
  check((await read('/api/custom-exercises?mode=dictation')).items.length>0,'保留题库');
  await page.evaluate(()=>{window.confirm=()=>false});
  await page.getByRole('button',{name:'清空题库',exact:true}).click();

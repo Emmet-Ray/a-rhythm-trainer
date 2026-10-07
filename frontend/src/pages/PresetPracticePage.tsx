@@ -1,7 +1,7 @@
-import { listPracticeRecords, RECORDS_CHANGED } from "../practice-records/practiceRecordStorage";
-import { historicalStatus, recordKey } from "../practice-records/practiceRecords";
+import { queryPracticeProgress, useRecordQuery, summaryAchievement } from "../practice-records/practiceRecordStorage";
+import { recordKey } from "../practice-records/practiceRecords";
 import { useAssistantPageContext } from "../assistant/assistantContext";
-import { useCallback, useState, Suspense, useEffect, useSyncExternalStore, useLayoutEffect, useRef, type UIEvent } from "react";
+import { Suspense, useEffect, useSyncExternalStore, useLayoutEffect, useRef, type UIEvent } from "react";
 import { presetCatalogStore } from "../exercises/presetCatalogStore";
 import { workspaceModule } from "../practice/practiceModules";
 import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
@@ -56,24 +56,16 @@ function PresetLibrary({ presetTopics }: { presetTopics: PracticeTopic[] }) {
   const [topicId, setTopicId] = useBrowsingState("preset:topic", presetTopics[0].id);
   const topic = presetTopics.find(item => item.id === topicId) ?? presetTopics[0];
   const questions = topic.modes.find(group => group.mode === selectedMode)?.questions ?? [];
-  const readProgress = useCallback(() => {
-    try { return { status: "available", records: listPracticeRecords() }; }
-    catch { return { status: "read-error", records: [] }; }
-  }, []);
-  const [progress, setProgress] = useState(readProgress);
-  useEffect(() => {
-    const refresh = () => setProgress(readProgress());
-    refresh();
-    window.addEventListener("storage", refresh);
-    window.addEventListener(RECORDS_CHANGED, refresh);
-    return () => { window.removeEventListener("storage", refresh); window.removeEventListener(RECORDS_CHANGED, refresh); };
-  }, [readProgress]);
+  const targets = questions.slice(0, 50).map(question => ({ source: "preset" as const, exerciseId: question.id,
+    exercise: question.exercise, mode: selectedMode as "tapping" | "dictation" }));
+  const progressQuery = useRecordQuery(JSON.stringify(targets), () => queryPracticeProgress(targets));
+  const progress = { status: progressQuery.error ? "read-error" : progressQuery.data ? "available" : "loading", records: progressQuery.data ?? [] };
   useAssistantPageContext({ page: "preset_catalog", description: "预设练习目录，题目摘要不包含谱面；只提供当前分类的前50题；完成状态来自同题同谱面版本的本地历史。",
     state: { mode: selectedMode, topic: { id: topic.id, title: topic.title },
       topics: presetTopics.slice(0, 50).map(({ id, title }) => ({ id, title })), totalTopics: presetTopics.length,
       progressStatus: progress.status,
       questions: questions.slice(0, 50).map(question => ({ id: question.id, title: question.title,
-        achievement: progress.status !== "available" ? null : historicalStatus(progress.records.find(record => recordKey(record, record.exercise, record.mode) === recordKey({ source: "preset", exerciseId: question.id, title: question.title }, question.exercise, selectedMode as "tapping" | "dictation"))) })), totalQuestions: questions.length,
+        achievement: progress.status !== "available" ? null : summaryAchievement(progress.records.find(record => record && recordKey(record, record.exercise, record.mode) === recordKey({ source: "preset", exerciseId: question.id, title: question.title }, question.exercise, selectedMode as "tapping" | "dictation"))) })), totalQuestions: questions.length,
       truncated: questions.length > 50 || presetTopics.length > 50 } });
   const [topicScrollRef, onTopicScroll] = useListScroll("preset:topic-scroll", "topics");
   const [questionScrollRef, onQuestionScroll] = useListScroll("preset:question-scroll", `${topic.id}:${selectedMode}`);

@@ -1,3 +1,4 @@
+import { queryRecordAttempts, useRecordQuery, type RecordSummary } from "./practiceRecordStorage";
 import { useAssistantPageSection } from "../assistant/assistantContext";
 import { buildPracticeContextSummary } from "../assistant/practiceContextSummary";
 import { exerciseSources } from "./PracticeRecord";
@@ -69,22 +70,38 @@ function recordSummary(record: PracticeRecord) {
     : `共 ${record.attempts.length} 次，完成 ${record.attempts.filter((attempt) => attempt.completedAt !== null).length} 次`;
 }
 
+/** 归档详情按页读取尝试，题目快照与汇总不会随翻页变化。 */
+export function StoredRecordDetail({ record, onClose }: { record: RecordSummary; onClose: () => void }) {
+  const [page, setPage] = useState(1);
+  const query = useRecordQuery(`record:${record.id}:${page}`, () => queryRecordAttempts(record.id, page));
+  const data = query.data;
+  const summary = data?.record ?? record;
+  return <RecordDetail record={{ ...summary, attempts: data?.attempts ?? [] } as PracticeRecord} onClose={onClose}
+    loadState={{ loading: !data && !query.error, error: query.error, retry: query.reload }}
+    archive={{ page: data?.page ?? page, pages: data?.pages ?? Math.max(1, Math.ceil(record.attemptCount / 10)), total: data?.total ?? record.attemptCount,
+      passedCount: summary.passedCount, completedCount: summary.completedCount, onChange: setPage }} />;
+}
+
 export function RecordDetail({
   record,
   onClose,
+  archive,
+  loadState,
 }: {
   record: PracticeRecord;
+  loadState?: { loading: boolean; error: string; retry: () => void };
+  archive?: { page: number; pages: number; total: number; passedCount: number; completedCount: number; onChange: (page: number) => void };
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<"attempts" | "score">("attempts");
   const [page, setPage] = useState(1);
-  const pagination = recordPage(record.attempts.length, page);
-  const visibleRecord = { ...record, attempts: record.attempts.slice(record.attempts.length - pagination.end, record.attempts.length - pagination.start) } as PracticeRecord;
+  const pagination = archive ? { page: archive.page, pages: archive.pages, start: (archive.page - 1) * 10, end: Math.min(archive.page * 10, archive.total) } : recordPage(record.attempts.length, page);
+  const visibleRecord = archive ? record : { ...record, attempts: record.attempts.slice(record.attempts.length - pagination.end, record.attempts.length - pagination.start) } as PracticeRecord;
   useAssistantPageSection("recordDetail", { tab, period: "all", page: pagination.page, pages: pagination.pages,
-    totalAttempts: record.attempts.length, recordId: record.id,
+    totalAttempts: archive?.total ?? record.attempts.length, recordId: record.id,
     summary: buildPracticeContextSummary({ context: record, exercise: record.exercise, mode: record.mode,
       session: visibleRecord, historyEnabled: false, answerExposed: tab === "score" || (record.mode === "dictation" && record.attempts.some(attempt => attempt.viewedAnswer)) }) });
-  if (page !== pagination.page) setPage(pagination.page);
+  if (!archive && page !== pagination.page) setPage(pagination.page);
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -127,7 +144,7 @@ export function RecordDetail({
           <p>
             {exerciseSources[record.source]} ·{" "}
             {record.mode === "tapping" ? "击拍练习" : "节奏听写"} ·{" "}
-            全部历史 · {recordSummary(record)}
+            全部历史 · {archive ? `共 ${archive.total} 次，${record.mode === "tapping" ? `通过 ${archive.passedCount}` : `完成 ${archive.completedCount}`} 次` : recordSummary(record)}
           </p>
         </div>
         <div className="text-actions">
@@ -159,6 +176,11 @@ export function RecordDetail({
       <div className="record-detail">
         {tab === "score" ? (
           <RecordScorePreview record={record} />
+        ) : loadState?.loading || loadState?.error ? (
+          <div className="record-preview-status">
+            <p role={loadState.error ? "alert" : "status"}>{loadState.error || "正在读取练习记录…"}</p>
+            {loadState.error && <button type="button" onClick={loadState.retry}>重新读取</button>}
+          </div>
         ) : (
           <>
             {record.mode === "tapping" ? (
@@ -178,8 +200,8 @@ export function RecordDetail({
                     </tr>
                   </thead>
                   <tbody>
-                    {record.attempts
-                      .slice(record.attempts.length - pagination.end, record.attempts.length - pagination.start)
+                    {(archive ? [...record.attempts] : record.attempts
+                      .slice(record.attempts.length - pagination.end, record.attempts.length - pagination.start))
                       .reverse()
                       .map((attempt, index) => (
                         <tr key={attempt.id}>
@@ -219,9 +241,9 @@ export function RecordDetail({
                 </table>
               </div>
             ) : (
-              <DictationAttempts attempts={record.attempts} page={pagination.page} />
+              <DictationAttempts attempts={record.attempts} page={archive ? 1 : pagination.page} startIndex={archive ? pagination.start : 0} />
             )}
-            <RecordPagination {...pagination} onChange={setPage} label="练习明细分页" />
+            <RecordPagination {...pagination} onChange={archive?.onChange ?? setPage} label="练习明细分页" />
           </>
         )}
       </div>
@@ -232,9 +254,11 @@ export function RecordDetail({
 export function DictationAttempts({
   attempts,
   page = 1,
+  startIndex = 0,
 }: {
   attempts: readonly DictationAttempt[];
   page?: number;
+  startIndex?: number;
 }) {
   const pagination = recordPage(attempts.length, page);
   return (
@@ -259,7 +283,7 @@ export function DictationAttempts({
               <DictationAttemptRow
                 key={attempt.id}
                 attempt={attempt}
-                index={pagination.start + index}
+                index={startIndex + pagination.start + index}
               />
             ))}
         </tbody>

@@ -1,18 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Check, History } from "lucide-react";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import type { ExerciseContext, PracticeRecord } from "./PracticeRecord";
-import { refreshPracticeRecords, listPracticeRecords, RECORDS_CHANGED } from "./practiceRecordStorage";
-import { recordKey, historicalStatus } from "./practiceRecords";
-import { RecordDetail } from "./RecordDetail";
-
-function readHistory(key: string) {
-  try {
-    return { record: listPracticeRecords().find(item => recordKey(item, item.exercise, item.mode) === key), error: "" };
-  } catch (error) {
-    return { record: undefined, error: error instanceof Error ? error.message : "无法读取练习记录" };
-  }
-}
+import { queryExerciseHistory, useRecordQuery, summaryAchievement } from "./practiceRecordStorage";
+import { recordKey } from "./practiceRecords";
+import { StoredRecordDetail } from "./RecordDetail";
 
 export type ExerciseHistoryProps = {
   context: ExerciseContext;
@@ -28,27 +20,19 @@ export function ExerciseHistory(props: ExerciseHistoryProps) {
 
 function LocalHistory({ context, exercise, mode, children }: ExerciseHistoryProps) {
   const key = recordKey(context, exercise, mode);
-  const [data, setData] = useState(() => readHistory(key));
+  const query = useRecordQuery(key, () => queryExerciseHistory({ source: context.source, exerciseId: context.exerciseId, exercise, mode }));
+  const data = { record: query.data?.record, error: query.error };
   const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const refresh = () => setData(readHistory(key));
-    window.addEventListener("storage", refresh);
-    window.addEventListener(RECORDS_CHANGED, refresh);
-    return () => {
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener(RECORDS_CHANGED, refresh);
-    };
-  }, [key]);
-  const achievement = historicalStatus(data.record);
+  const achievement = summaryAchievement(data.record);
   const status = achievement ? <span className="practice-achievement"><Check className="ui-icon" aria-hidden="true" />{achievement}</span> : null;
   const action = <div className="exercise-history text-actions">
     {data.error && <span>历史读取失败</span>}
-    {data.error ? <button type="button" title={data.error} onClick={() => { void refreshPracticeRecords().catch(() => {}); }}>重试读取</button> :
+    {data.error ? <button type="button" title={data.error} onClick={query.reload}>重试读取</button> :
       <button type="button" disabled={!data.record} aria-haspopup="dialog" onClick={() => setOpen(true)}>
         <History className="ui-icon" aria-hidden="true" />练习历史
       </button>}
   </div>;
   return <>{children({ status, action })}
-    {open && data.record && <RecordDetail record={data.record} onClose={() => setOpen(false)} />}
+    {open && data.record && <StoredRecordDetail record={data.record} onClose={() => setOpen(false)} />}
   </>;
 }

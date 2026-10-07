@@ -5,7 +5,7 @@ from logging.config import fileConfig
 from alembic import context
 
 from db.database import Base, create_database_engine
-from db.practice_records import Document  # noqa: F401
+from db.practice_records import PracticeRecord, PracticeAttempt  # noqa: F401
 from db.custom_exercises import CustomExercise  # noqa: F401 -- 注册实例自定义练习表。
 
 

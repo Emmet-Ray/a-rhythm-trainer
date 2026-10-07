@@ -5,14 +5,14 @@ import type { RhythmExercise } from "../rhythm/RhythmModel";
 import type { PracticeResult, TimingWindows } from "../rhythm/RhythmTiming";
 import { recordDictationEvent, recordTappingAttempt } from "./practiceRecords";
 import type { PracticeRecord, DictationRecordEvent, ExerciseContext } from "./PracticeRecord";
-import { savePracticeActions, type RecordAction } from "./practiceRecordStorage";
+import { createPracticeRecordWriter } from "./practiceRecordStorage";
 
 export type AttemptRecorder = (conditions: { bpm: number; metronomeEnabled?: boolean; timingWindows: TimingWindows }) => ((result: PracticeResult) => void) | undefined;
-type PendingRecording = { actions: RecordAction[]; batch?: RecordAction[]; saving?: boolean; onChange?: (error: string) => void; recordId?: string; dictationAttemptId?: string; error: string; session?: PracticeRecord };
+type PendingRecording = { pending?: PracticeRecord; batch?: PracticeRecord; writer?: ReturnType<typeof createPracticeRecordWriter>; saving?: boolean; onChange?: (error: string) => void; dictationAttemptId?: string; error: string; session?: PracticeRecord };
 
 /** 题目归档独立于访问；听写尝试编号与草稿一起在站内返回时恢复。
  * 本次轮次始终在内存累计，enabled 只控制持久化；保存失败不影响本次分析。
- * 写入成功后丢弃行为队列；卸载后的音频回调不再创建新行为，已提交的批次继续完成。
+ * 写入成功后丢弃待存快照；卸载后的音频回调不再更新，已提交的批次继续完成。
  */
 export function usePracticeRecorder({ mode, context, exercise, enabled, scope, answerExposed = false }: {
   mode: "tapping" | "dictation";
@@ -23,8 +23,8 @@ export function usePracticeRecorder({ mode, context, exercise, enabled, scope, a
   answerExposed?: boolean;
 }) {
   const activity = useContext(PracticeActivityContext);
-  const [remembered, remember] = useVisitState<PendingRecording>(`record-pending:${scope}`, { actions: [], error: "" });
-  // 待提交队列按访问共享，离页后仍在写入的旧组件与返回后的组件使用同一批次
+  const [remembered, remember] = useVisitState<PendingRecording>(`record-pending:${scope}`, { error: "" });
+  // 待存快照按访问共享，离页后仍在写入的旧组件与返回后的组件使用同一批次
   const current = useRef<PendingRecording>(remembered);
   const active = useRef(true);
   const [error, setError] = useState(remembered.error);
@@ -39,16 +39,16 @@ export function usePracticeRecorder({ mode, context, exercise, enabled, scope, a
   }, []);
 
   async function persist() {
-    if (!enabled || current.current.saving || !context || !exercise || !current.current.actions.length) return;
+    if (!enabled || current.current.saving || !context || !exercise || !current.current.pending) return;
     current.current.saving = true;
     try {
-      while (current.current.actions.length) {
-        const actions = current.current.batch ?? [...current.current.actions];
-        current.current.batch = actions;
+      while (current.current.pending) {
+        const batch: PracticeRecord = current.current.batch ?? current.current.pending;
+        current.current.batch = batch;
+        current.current.writer ??= createPracticeRecordWriter();
         remember(current.current);
-        const id = await savePracticeActions(context, exercise, mode, actions, current.current.recordId);
-        current.current.recordId = id;
-        current.current.actions = current.current.actions.slice(actions.length);
+        await current.current.writer(batch);
+        if (current.current.pending === batch) current.current.pending = undefined;
         current.current.batch = undefined;
         current.current.error = "";
         remember(current.current);
@@ -63,7 +63,7 @@ export function usePracticeRecorder({ mode, context, exercise, enabled, scope, a
   }
 
   const startAttempt: AttemptRecorder = (conditions) => {
-    if (!context || !exercise || !active.current) return;
+    if (mode !== "tapping" || !context || !exercise || !active.current) return;
     const id = crypto.randomUUID();
     const timingWindows = { ...conditions.timingWindows };
     let completedAt: string | undefined;
@@ -74,14 +74,14 @@ export function usePracticeRecorder({ mode, context, exercise, enabled, scope, a
       current.current.session = recordTappingAttempt(current.current.session?.mode === "tapping" ? current.current.session : null, context, exercise, attempt);
       activity?.record(current.current.session, id, enabled);
       remember(current.current);
-      if (enabled) current.current.actions = [...current.current.actions, { mode: "tapping", attempt }];
+      if (enabled) current.current.pending = current.current.session;
       remember(current.current);
       void persist();
     };
   };
 
   function dictation(event: DictationRecordEvent) {
-    if (!context || !exercise || !active.current) return;
+    if (mode !== "dictation" || !context || !exercise || !active.current) return;
     if (!current.current.dictationAttemptId && event.type === "edit") return;
     current.current.dictationAttemptId ??= crypto.randomUUID();
     const at = new Date().toISOString();
@@ -91,11 +91,7 @@ export function usePracticeRecorder({ mode, context, exercise, enabled, scope, a
     if (current.current.session) activity?.record(current.current.session, current.current.dictationAttemptId, enabled);
     remember(current.current);
     if (!enabled) return;
-    if (answerExposed && event.type !== "view-answer") {
-      current.current.actions = [...current.current.actions, { mode: "dictation", attemptId: current.current.dictationAttemptId,
-        event: { type: "view-answer" }, at: new Date().toISOString() }];
-    }
-    current.current.actions = [...current.current.actions, { mode: "dictation", attemptId: current.current.dictationAttemptId, event, at: new Date().toISOString() }];
+    current.current.pending = current.current.session;
     remember(current.current);
     void persist();
   }

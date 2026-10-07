@@ -11,7 +11,7 @@ const server = await createServer({
   optimizeDeps: { noDiscovery: true, include: [] },
 });
 after(() => server.close());
-const { recordKey, exerciseVersion, applyPracticeActions } = await server.ssrLoadModule(
+const { recordKey, exerciseVersion, recordTappingAttempt, recordDictationEvent } = await server.ssrLoadModule(
   "/src/practice-records/practiceRecords.ts",
 );
 const { parsePracticeRecords, parsePracticeRecord } =
@@ -86,6 +86,19 @@ const verify = (
   attemptId = "answer-1",
   time = at,
 ) => hear({ type: "verify", measureIndex, correct }, time, attemptId);
+// 事件计算测试只在内存累计；持久化快照与并发行为由 instance-records.test.mjs 验证
+function applyPracticeActions(records, context, exercise, mode, actions) {
+  const key = recordKey(context, exercise, mode);
+  const index = records.findIndex(item => recordKey(item, item.exercise, item.mode) === key);
+  let record = records[index] ?? null;
+  for (const action of actions) {
+    record = action.mode === 'tapping'
+      ? recordTappingAttempt(record, context, exercise, action.attempt)
+      : recordDictationEvent(record, context, exercise, action.attemptId, action.event, action.at);
+  }
+  return { records: !record ? [...records] : index < 0 ? [...records, record]
+    : records.map((item, i) => i === index ? record : item), result: record?.id };
+}
 function save(storage, actions, options = {}) {
   const next = applyPracticeActions(
     storage.records,
@@ -93,7 +106,6 @@ function save(storage, actions, options = {}) {
     options.exercise ?? exercise,
     actions[0].mode,
     actions,
-    options.expectedId,
   );
   storage.records = parsePracticeRecords(next.records);
   return next.result;
@@ -267,7 +279,7 @@ test("作答临时状态只随站内草稿恢复，新草稿不继承判定", ()
   ]);
 });
 
-test("读取不建空记录，非法小节和模式不写入存储", () => {
+test("读取不建空记录，非法小节不写入存储", () => {
   const storage = memoryStorage();
   assert.deepEqual(listPracticeRecords(storage), []);
   assert.equal(storage.records.length, 0);
@@ -281,34 +293,18 @@ test("读取不建空记录，非法小节和模式不写入存储", () => {
     /小节/,
   );
   assert.throws(() => save(storage, [verify(-1)]), /小节/);
-  assert.throws(() => save(storage, [tap(), verify(0)]), /模式/);
   assert.deepEqual(listPracticeRecords(storage), []);
 });
 
 test("不同页面的尝试不覆盖，返回原尝试延续原明细", () => {
   const storage = memoryStorage();
-  const id = save(storage, [verify(0)]);
+  save(storage, [verify(0)]);
   save(storage, [verify(0, false, "answer-2")]);
-  save(storage, [hear({ type: "play", scope: 1 })], { expectedId: id });
+  save(storage, [hear({ type: "play", scope: 1 })]);
   const [record] = listPracticeRecords(storage);
   assert.equal(record.attempts.length, 2);
   assert.equal(record.attempts[0].measures[1].questionPlayCount, 1);
   assert.equal(record.attempts[1].measures[1].questionPlayCount, 0);
-});
-
-test("删除/清空后旧页面不能复活记录，新的访问允许重新记录", () => {
-  const storage = memoryStorage();
-  const id = save(storage, [tap()]);
-  storage.records = storage.records.filter((record) => record.id !== id);
-  assert.throws(() => save(storage, [tap()], { expectedId: id }), /已被删除/);
-  const nextId = save(storage, [tap()]);
-  assert.notEqual(nextId, id);
-  assert.throws(() => save(storage, [tap()], { expectedId: id }), /已被删除/);
-  storage.records = [];
-  assert.throws(
-    () => save(storage, [tap()], { expectedId: nextId }),
-    /已被删除/,
-  );
 });
 
 test("无效计数/完成状态拒绝解析，同一题目的重复记录拒绝读取", () => {
@@ -434,33 +430,13 @@ test("全部验证正确后尝试冻结，之后播放、编辑、查看答案�
   );
 });
 
-test("记录列表提供详情抽屉和独立删除入口，本地数据使用紧凑摘要", async () => {
-  const storage = memoryStorage();
-  save(storage, [tap(), tap({ id: "round-2" })]);
-  {
-    await preload(storage);
-    const render = (component) =>
-      renderToStaticMarkup(
-        createElement(MemoryRouter, null, createElement(component)),
-      );
-    const settings = render(LocalDataSettings);
-    assert.match(settings, /1 条题目记录/);
-    assert.match(settings, /2 次尝试/);
-    assert.doesNotMatch(settings, /local-records-clear-description|仅删除/);
-    const records = render(PracticeRecordsPage);
-    assert.match(records, /record-filters topic-modes/);
-    assert.doesNotMatch(records, /记录说明|记录仅保存在/);
-    assert.match(records, /aria-haspopup="dialog"/);
-    assert.match(records, /删除“两小节”的练习记录/);
-    assert.match(records, /record-entry-actions text-actions/);
-    assert.match(records, /查看详情：“两小节”的练习记录/);
-    assert.doesNotMatch(
-      records,
-      /最近练习|共 \d+ 次|通过 \d+ 次|完成 \d+ 次|record-link|record-summary/,
-    );
-    assert.doesNotMatch(records, /<details|href="\/records\//);
-    assert.doesNotMatch(records, /<table/);
-  }
+test("记录与本地数据按需读取，初始状态不把未加载当作空历史", () => {
+  const render = component => renderToStaticMarkup(createElement(MemoryRouter, null, createElement(component)));
+  assert.match(render(LocalDataSettings), /正在读取练习记录/);
+  const records = render(PracticeRecordsPage);
+  assert.match(records, /正在读取练习记录/);
+  assert.doesNotMatch(records, /暂无练习记录/);
+  assert.match(records, /记录时间范围/);
 });
 
 test("详情抽屉有关闭与预览切换但没有删除", () => {
@@ -510,43 +486,6 @@ test("听写每行一次尝试，最新优先，保留两个时间与独立的�
   assert.equal(JSON.stringify(record), before);
 });
 
-test("题目记录列表只展示最新十条并提供分页", async () => {
-  const storage = memoryStorage();
-  for (let index = 0; index < 23; index++) {
-    save(
-      storage,
-      [
-        tap({
-          completedAt: new Date(Date.parse(at) + index * 60000).toISOString(),
-        }),
-      ],
-      {
-        context: {
-          ...context,
-          exerciseId: `question-${index}`,
-          title: `分页题目-${index}`,
-        },
-      },
-    );
-  }
-  {
-    await preload(storage);
-    const html = renderToStaticMarkup(
-      createElement(MemoryRouter, null, createElement(PracticeRecordsPage)),
-    );
-    assert.equal((html.match(/class="record-entry"/g) ?? []).length, 10);
-    assert.match(html, /分页题目-22/);
-    assert.match(html, /分页题目-13/);
-    assert.doesNotMatch(html, /分页题目-12/);
-    assert.match(html, /题目记录分页/);
-    assert.match(html, /aria-label="记录时间范围"/);
-    assert.match(html, /aria-label="练习统计"/);
-    assert.doesNotMatch(html, /次练习，|次作答，/);
-    assert.match(html, /<dd>23<span>次<\/span><\/dd>/);
-    assert.doesNotMatch(html, /加载更多/);
-  }
-});
-
 test("AI 练习按生成 ID 累计，版本独立，来源与谱面可从存储恢复", () => {
   const storage = memoryStorage();
   const options = {
@@ -570,17 +509,3 @@ test("AI 练习按生成 ID 累计，版本独立，来源与谱面可从存储�
     recordKey({ ...options.context, source: "custom" }, exercise, "tapping"),
   );
 });
-
-async function preload(storage) {
-  const { refreshPracticeRecords } = await server.ssrLoadModule(
-    "/src/practice-records/practiceRecordStorage.ts",
-  );
-  const previous = globalThis.fetch;
-  globalThis.fetch = async () =>
-    Response.json({ revision: 0, records: listPracticeRecords(storage) });
-  try {
-    await refreshPracticeRecords();
-  } finally {
-    globalThis.fetch = previous;
-  }
-}

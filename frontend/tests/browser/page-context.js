@@ -75,12 +75,14 @@ async (page) => {
 
   await page.evaluate(async () => {
     const { saveExercise } = await import('/src/api/customExercises.ts');
-    const { savePracticeActions, clearPracticeRecords } = await import('/src/practice-records/practiceRecordStorage.ts');
+    const { createPracticeRecordWriter, clearPracticeRecords } = await import('/src/practice-records/practiceRecordStorage.ts');
     const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: 'note', noteValue: 'whole' }] }] };
     await clearPracticeRecords();
     await saveExercise({ mode: 'tapping', name: '上下文测试题', exercise });
     const actions = Array.from({ length: 12 }, (_, i) => ({ mode: 'tapping', attempt: { id: 'context-' + i, completedAt: new Date().toISOString(), bpm: 60, timingWindows: { perfectMs: 50, hitMs: 150 }, passed: true, targetCount: 1, hitCount: 1, missCount: 0, wrongTapCount: 0 } }));
-    await savePracticeActions({ source: 'custom', exerciseId: 'context', title: '上下文测试记录' }, exercise, 'tapping', actions);
+    const { recordTappingAttempt } = await import('/src/practice-records/practiceRecords.ts');
+    const record = actions.reduce((record, action) => recordTappingAttempt(record, { source: 'custom', exerciseId: 'context', title: '上下文测试记录' }, exercise, action.attempt), null);
+    await createPracticeRecordWriter()(record);
   });
   await visit('/custom'); check((await ask()).page === 'custom_library', '自定义直接进入题库');
   await visit('/custom/tapping'); c = await ask();

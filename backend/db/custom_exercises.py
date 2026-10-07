@@ -15,7 +15,7 @@ MAX_NAME_LENGTH = 100
 
 
 class CustomExercise(Base):
-    __tablename__ = "instance_exercises"
+    __tablename__ = "custom_exercises"
     __table_args__ = (
         CheckConstraint("length(trim(name)) BETWEEN 1 AND 100", name="ck_custom_exercises_name"),
         CheckConstraint("mode IN ('tapping', 'dictation')", name="ck_custom_exercises_mode"),
@@ -24,14 +24,14 @@ class CustomExercise(Base):
             "CASE WHEN json_valid(exercise) THEN json_type(exercise) = 'object' ELSE 0 END",
             name="ck_custom_exercises_json_object",
         ),
-        Index("ix_instance_exercises_mode_created_id", "mode", "created_at", "id"),
+        Index("ix_custom_exercises_mode_created_id", "mode", "created_at", "id"),
     )
 
     id: Mapped[str] = mapped_column(String(43), primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     mode: Mapped[str] = mapped_column(String(10), nullable=False)
     exercise: Mapped[dict] = mapped_column(JSON(none_as_null=True), nullable=False)
-    # 和 users 表保持一致：无 tzinfo 的 UTC；输出 API 时须显式标注时区。
+    # 无 tzinfo 的 UTC；输出 API 时须显式标注时区。
     created_at: Mapped[datetime] = mapped_column(DateTime(), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
 
 

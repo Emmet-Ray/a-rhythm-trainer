@@ -19,7 +19,9 @@ def _validate_records(records):
 
     def date(value):
         require(isinstance(value, str))
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        require(parsed.tzinfo is not None)
+        return parsed
 
     require(isinstance(records, list))
     ids = set()

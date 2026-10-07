@@ -138,13 +138,8 @@ test("快捷键避开弹窗、输入控件、组合输入、长按与系统修�
   } finally { globalThis.document = previousDocument; globalThis.HTMLElement = previousElement; }
 });
 
-test("服务读取失败显示重试，不回退浏览器历史或显示为空", async () => {
-  const { refreshPracticeRecords } = await server.ssrLoadModule("/src/practice-records/practiceRecordStorage.ts");
-  const previous = globalThis.fetch;
-  globalThis.fetch = async () => { throw Error("服务不可用"); };
-  try { await assert.rejects(refreshPracticeRecords()); } finally { globalThis.fetch = previous; }
+test("历史尚未加载时入口禁用，不伪装成无历史", () => {
   const html = renderToStaticMarkup(createElement(ExerciseHistory, { context: { source: "preset", exerciseId: "a", title: "题目" }, exercise, mode: "tapping", children: ({ action }) => action }));
-  assert.match(html, /历史读取失败/);
-  assert.match(html, /重试读取/);
+  assert.match(html, /disabled/);
   assert.doesNotMatch(html, /暂无记录/);
 });

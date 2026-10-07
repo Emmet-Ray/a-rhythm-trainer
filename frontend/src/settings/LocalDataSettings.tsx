@@ -5,9 +5,8 @@ import { SuccessToast } from "../navigation/SuccessToast";
 import { useAssistantPageSection } from "../assistant/assistantContext";
 import {
   clearPracticeRecords,
-  refreshPracticeRecords,
-  listPracticeRecords,
-  RECORDS_CHANGED,
+  queryRecordTotals,
+  useRecordQuery,
 } from "../practice-records/practiceRecordStorage";
 
 async function request(method: "GET" | "DELETE" = "GET") {
@@ -107,28 +106,9 @@ export default function LocalDataSettings() {
   );
 }
 
-function readSummary() {
-  try {
-    const records = listPracticeRecords();
-    return {
-      count: records.length,
-      attempts: records.reduce(
-        (sum, record) => sum + record.attempts.length,
-        0,
-      ),
-      error: "",
-    };
-  } catch (error) {
-    return {
-      count: null,
-      attempts: 0,
-      error: error instanceof Error ? error.message : "无法读取练习记录。",
-    };
-  }
-}
-
 function RecordData() {
-  const [data, setData] = useState(readSummary);
+  const query = useRecordQuery("record-totals", queryRecordTotals);
+  const data = { count: query.data?.recordCount ?? null, attempts: query.data?.attemptCount ?? 0, error: query.error };
   const [notice, setNotice] = useState(0);
   useAssistantPageSection("localRecords", {
     status: data.error ? "read-error" : "ready",
@@ -139,15 +119,6 @@ function RecordData() {
   const [clearing, setClearing] = useState(false);
   const clearingRef = useRef(false);
   const [clearAttempt, setClearAttempt] = useState(0);
-  useEffect(() => {
-    const refresh = () => setData(readSummary());
-    window.addEventListener("storage", refresh);
-    window.addEventListener(RECORDS_CHANGED, refresh);
-    return () => {
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener(RECORDS_CHANGED, refresh);
-    };
-  }, []);
   async function clear() {
     if (clearingRef.current) return;
     if (!window.confirm("将删除当前实例的全部练习记录，无法恢复，确定清空吗？"))
@@ -158,7 +129,6 @@ function RecordData() {
     setClearAttempt((value) => value + 1);
     try {
       await clearPracticeRecords();
-      setData(readSummary());
       setNotice((value) => value + 1);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "清空失败，请重试");
@@ -175,7 +145,7 @@ function RecordData() {
       <div className="local-data-copy">
         <h3 id="local-records-heading">练习记录</h3>
         {data.count === null ? (
-          <p role="alert">{data.error}</p>
+          <p role={data.error ? "alert" : "status"}>{data.error || "正在读取练习记录…"}</p>
         ) : (
           <p className="local-data-totals">
             {data.count} 条题目记录 <span aria-hidden="true">·</span>{" "}
@@ -196,9 +166,7 @@ function RecordData() {
         {data.error && (
           <button
             type="button"
-            onClick={() => {
-              void refreshPracticeRecords().catch(() => {});
-            }}
+            onClick={query.reload}
           >
             重新读取记录
           </button>

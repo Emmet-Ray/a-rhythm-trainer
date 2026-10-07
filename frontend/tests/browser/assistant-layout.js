@@ -219,9 +219,9 @@ async (page) => {
   await dictation.getByRole('button', { name: '关闭练习', exact: true }).click();
   check(await background.getByRole('button', { name: '试听', exact: true }).isVisible(), '关闭覆盖层不自动恢复后台');
   const attemptCount = () => page.evaluate(async () => {
-    const data = await (await fetch("/api/local-data/records")).json();
+    const data = await (await fetch("/api/local-data/records?page_size=100")).json();
     return data.records.filter(record => record.exerciseId === 'basic-values-01' && record.mode === 'tapping')
-      .reduce((sum, record) => sum + record.attempts.length, 0);
+      .reduce((sum, record) => sum + record.attemptCount, 0);
   });
   const beforeAttempts = await attemptCount();
   // 预备拍中断不写入训练记录。
@@ -239,9 +239,10 @@ async (page) => {
   await background.getByRole('button', { name: '击拍练习', exact: true }).waitFor();
   check(await attemptCount() === beforeAttempts + 1, '正式训练中断只记录一次');
   check(await page.evaluate(async () => {
-    const data = await (await fetch("/api/local-data/records")).json();
-    return data.records.find(record => record.exerciseId === 'basic-values-01' && record.mode === 'tapping')
-      .attempts.at(-1).passed === false;
+    const data = await (await fetch("/api/local-data/records?page_size=100")).json();
+    const record = data.records.find(record => record.exerciseId === 'basic-values-01' && record.mode === 'tapping');
+    const details = await (await fetch('/api/local-data/records/'+record.id)).json();
+    return details.attempts.at(-1).passed === false;
   }), '中断轮次不能被记录为通过');
   await panel.getByRole('button', { name: '停止试听', exact: true }).click();
   check(errors.length === 0, `浏览器异常：${errors.join('; ')}`);
