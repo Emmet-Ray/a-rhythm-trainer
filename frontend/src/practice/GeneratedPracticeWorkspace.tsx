@@ -1,19 +1,17 @@
-import { Suspense, useContext, useSyncExternalStore } from "react";
+import { useCallback, useContext, useSyncExternalStore, type ReactNode } from "react";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
 import { GeneratedExercisesContext } from "../exercises/GeneratedExerciseStore";
-import { workspaceModule } from "./practiceModules";
-import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
+import { ExerciseWorkbench, type WorkbenchView } from "./ExerciseWorkbench";
 
-const PracticeWorkspace = workspaceModule.Component;
-
-/** 页面和覆盖面板共用生成练习的记录身份、听写曝光状态与恢复范围。 */
-export function GeneratedPracticeWorkspace({ generated }: { generated: GeneratedExercise }) {
+/** AI 页面与面板共享题目身份和答案曝光，保存的编辑副本由工作区维护。 */
+export function GeneratedPracticeWorkspace({ generated, children }: {
+  generated: GeneratedExercise;
+  children: (view: WorkbenchView) => ReactNode;
+}) {
   const store = useContext(GeneratedExercisesContext)!;
   const viewed = useSyncExternalStore(store.subscribe, () => store.hasViewedAnswer(generated.id));
-  return <Suspense fallback={<LoadingPlaceholder workspace label="正在加载练习…" />}>
-    <PracticeWorkspace exercise={generated.exercise} exerciseKey={generated.id} mode={generated.mode}
-      recoveryScope={`ai:${generated.mode}:${generated.id}`}
-      recordContext={{ source: "ai", exerciseId: generated.id, title: generated.title }} answerExposed={viewed}
-      onAnswerViewed={() => store.markAnswerViewed(generated.id)} />
-  </Suspense>;
+  const markViewed = useCallback(() => store.markAnswerViewed(generated.id), [store, generated.id]);
+  return <ExerciseWorkbench initial={{ name: generated.title, mode: generated.mode, exercise: generated.exercise }}
+    origin={{ source: "ai", exerciseId: generated.id, title: generated.title }}
+    answerExposed={viewed} onAnswerViewed={markViewed}>{children}</ExerciseWorkbench>;
 }

@@ -1,8 +1,7 @@
+import { ExerciseWorkbench } from "../practice/ExerciseWorkbench";
 import { ActionError } from "../navigation/ActionError";
 import { useAssistantPageContext } from "../assistant/assistantContext";
 import { lazy, memo, Suspense, useEffect, useId, useRef, useState } from "react";
-import { workspaceModule } from "../practice/practiceModules";
-import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
 import { RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import { PracticeHeading } from "../practice/PracticeHeading";
 import { practiceShortcuts, usePracticeShortcuts } from "../practice/usePracticeShortcuts";
@@ -13,7 +12,6 @@ import { generateRandomExercise, randomMaterials, defaultRandomMaterials, random
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 
 // 进入对应模式后加载完整工作区。
-const PracticeWorkspace = workspaceModule.Component;
 const RhythmSymbol = lazy(() => import("../rhythm/notation/RhythmSymbol").then(module => ({ default: module.RhythmSymbol })));
 const materialGroups = ["音符", "休止符", "节奏型"] as const;
 
@@ -60,11 +58,12 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
   }));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
   const restoreSettingsFocus = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const rangeError = config.materials.length === 0 ? "至少选择一个练习范围" : null;
 
-  useAssistantPageContext({ page: "random_practice", description: "随机练习；生成设置是下一次换题的条件，不一定是当前题目的生成条件。",
+  useAssistantPageContext(editing ? null : { page: "random_practice", description: "随机练习；生成设置是下一次换题的条件，不一定是当前题目的生成条件。",
     state: { mode, settingsOpen, generationSettings: { measureCount: config.measureCount,
       materials: randomMaterials.filter(item => config.materials.includes(item.id)).map(({ id, label, group }) => ({ id, label, group })) },
       exerciseAvailable: generated.exercise !== null, configurationError: rangeError ?? error } });
@@ -109,7 +108,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
     }
   }
 
-  usePracticeShortcuts({ next: !busy && config.materials.length > 0 ? generate : undefined });
+  usePracticeShortcuts({ next: !editing && !busy && config.materials.length > 0 ? generate : undefined });
 
   return (
     <>
@@ -171,24 +170,31 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
       </section>
         {settingsOpen && error && <ActionError message={error} />}
       </dialog>
-        <div className="design-system practice-page">
-          <PracticeHeading title="随机练习"
-            history={generated.exercise ? { context: { source: "random", exerciseId: String(generated.id), title: "随机练习" }, exercise: generated.exercise, mode } : undefined}>
-            <div className="topic-modes workspace-mode-switch" role="group" aria-label="训练方式">
-              {randomModes.map(item => <button key={item.id} type="button" aria-pressed={mode === item.id}
-                disabled={busy} onClick={() => { if (mode !== item.id) navigate(`/random/${item.id}`); }}>{item.label}</button>)}
+        {generated.exercise && <ExerciseWorkbench key={generated.id}
+          initial={{ name: "随机练习", mode, exercise: generated.exercise }}
+          origin={{ source: "random", exerciseId: generated.id, title: "随机练习" }} onBusyChange={setBusy} onEditingChange={setEditing}>
+          {view => <>
+            <div className="design-system practice-page">
+              <PracticeHeading title={view.title} history={view.editing ? undefined : view.history}>
+                {!view.editing && <>
+                  <div className="topic-modes workspace-mode-switch" role="group" aria-label="训练方式">
+                    {randomModes.map(item => <button key={item.id} type="button" aria-pressed={mode === item.id}
+                      disabled={busy} onClick={() => { if (mode !== item.id) navigate(`/random/${item.id}`); }}>{item.label}</button>)}
+                  </div>
+                  <div className="practice-question-actions text-actions">
+                    <button type="button" title={`换一题（${practiceShortcuts.next.key}）`} aria-keyshortcuts={practiceShortcuts.next.key} disabled={busy || config.materials.length === 0} onClick={generate}><RefreshCw className="ui-icon" aria-hidden="true" focusable="false" />换一题</button>
+                    <button ref={settingsButtonRef} type="button" disabled={busy} aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}><SlidersHorizontal className="ui-icon" aria-hidden="true" focusable="false" />生成设置</button>
+                  </div>
+                </>}
+                {view.editAction}
+              </PracticeHeading>
             </div>
-            <div className="practice-question-actions text-actions">
-              <button type="button" title={`换一题（${practiceShortcuts.next.key}）`} aria-keyshortcuts={practiceShortcuts.next.key} disabled={busy || config.materials.length === 0} onClick={generate}><RefreshCw className="ui-icon" aria-hidden="true" focusable="false" />换一题</button>
-              <button ref={settingsButtonRef} type="button" disabled={busy} aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}><SlidersHorizontal className="ui-icon" aria-hidden="true" focusable="false" />生成设置</button>
-            </div>
-          </PracticeHeading>
-        </div>
-        <Suspense fallback={<LoadingPlaceholder workspace label="正在加载练习…" />}>
-          <PracticeWorkspace exerciseKey={generated.id} exercise={generated.exercise} mode={mode}
-            recordContext={{ source: "random", exerciseId: String(generated.id), title: "随机练习" }}
-            onBusyChange={setBusy} />
-        </Suspense>
+            <div className="design-system">{view.content}</div>
+          </>}
+        </ExerciseWorkbench>}
+        {!generated.exercise && <div className="design-system practice-page"><PracticeHeading title="随机练习" />
+          <button type="button" onClick={() => setSettingsOpen(true)}>生成设置</button></div>}
+
     </>
   );
 }

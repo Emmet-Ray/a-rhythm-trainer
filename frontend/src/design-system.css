@@ -354,7 +354,7 @@
 .practice-titlebar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: 49px; gap: 12px 24px; margin: 0 0 var(--site-heading-gap); }
 .practice-titlebar .practice-return { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; min-height: 44px; font-size: 18px; font-weight: 650; color: var(--ds-muted); flex: 0 0 auto; }
 .practice-titlebar h1 { flex: 0 1 auto; min-width: 0; max-width: 100%; margin: 0; overflow-wrap: anywhere; }
-.practice-heading-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
+.practice-heading-identity { min-height: 52px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
 .practice-achievement { display: inline-flex; align-items: center; gap: 6px; color: var(--ds-success); font-size: var(--ds-text-sm); white-space: nowrap; }
 .practice-heading-actions { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
 .practice-question-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
@@ -439,7 +439,7 @@
 
 /* 工作区用白色底面区分页面背景；听写与编辑保留各自的内部排列。 */
 .practice-layout--stacked { min-width: 0; padding: var(--ds-space-8); border: 1px solid var(--ds-line); border-radius: var(--ds-radius-lg); background: var(--ds-surface); }
-.custom-exercise-editor .practice-layout--stacked { padding: 0; border: 0; border-radius: 0; }
+.exercise-editor .practice-layout--stacked { padding: 0; border: 0; border-radius: 0; }
 .practice-layout--stacked > .practice-settings { border-top: 0; padding-top: 0; }
 .settings-options label { background: var(--ds-surface); }
 .rhythm-trainer:has(.practice-layout--training) { padding-top: 0; text-align: left; }
@@ -455,7 +455,7 @@
 .practice-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 18px 28px; border-bottom: 1px solid var(--ds-line); }
 .practice-controls .practice-toolbar { display: flex; align-items: center; flex-wrap: wrap; flex: 1 1 380px; gap: 12px; min-width: 0; }
 .practice-controls .trainer-actions { justify-content: flex-start; flex-wrap: wrap; }
-.practice-controls > .practice-settings { flex: 0 0 auto; display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; padding: 0; border: 0; min-width: 0; }
+.practice-controls .practice-settings { flex: 0 0 auto; display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; padding: 0; border: 0; min-width: 0; }
 .practice-controls .mechanical-metronome { width: 44px; min-height: 48px; padding: 0; }
 .practice-controls .mechanical-metronome svg { width: 36px; height: 42px; }
 .practice-controls .tempo-settings { flex: 1; width: auto; grid-template-columns: auto; align-items: center; gap: 8px; }
@@ -473,21 +473,21 @@
 /* 助手会压缩工作区；按容器宽度让播放区与设置区整组换行。 */
 @container (max-width: 1050px) {
   .practice-controls .practice-toolbar { flex-basis: 100%; }
-  .practice-controls > .practice-settings { margin-left: 0; }
+  .practice-controls .practice-settings { margin-left: 0; }
   .practice-controls .practice-utilities { margin-left: auto; }
 }
 @container (max-width: 600px) {
   .practice-controls { padding: 16px; gap: 12px 8px; }
   .practice-controls .tempo-value input[type="number"] { width: 48px; }
   .practice-controls .tempo-step { width: 36px; min-height: 44px; }
-  .practice-controls > .practice-settings { margin-left: 0; }
+  .practice-controls .practice-settings { margin-left: 0; }
   .practice-controls .practice-utilities { margin-left: auto; }
 }
 @media (max-width: 600px) {
   .practice-controls { padding: 16px; gap: 16px 8px; }
   .practice-controls .tempo-value input[type="number"] { width: 48px; }
   .practice-controls .tempo-step { width: 36px; min-height: 44px; }
-  .practice-controls > .practice-settings { flex: 0 0 auto; }
+  .practice-controls .practice-settings { flex: 0 0 auto; }
   .practice-controls .practice-toolbar { flex-basis: 100%; }
   .practice-controls .trainer-actions { width: 100%; }
 }
@@ -613,9 +613,9 @@
 /* 按编辑区可用宽度排布，不把侧栏占位隐含在屏幕断点里。按钮尺寸保持不变。 */
 .rhythm-editor-input-groups { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
 .rhythm-editor-basic-input { flex: 0 1 444px; min-width: 0; }
-.rhythm-editor-pattern-input { flex: 1 1 316px; min-width: 0; }
+.rhythm-editor-pattern-input { flex: 1 1 316px; max-width: 532px; min-width: 0; }
 .rhythm-editor-basic-input .rhythm-editor-symbol-row:first-of-type { margin-top: 0; }
-.rhythm-editor-pattern-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px 8px; }
+.rhythm-editor-pattern-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 100px), 1fr)); gap: 12px 8px; }
 .rhythm-editor .rhythm-editor-pattern-buttons button { display: flex; align-items: center; justify-content: center; height: 52px; padding: 2px; min-width: 0; }
 .rhythm-editor-pattern-buttons .rhythm-symbol { width: 94px; max-width: 100%; }
 .rhythm-editor .rhythm-editor-symbol-buttons { display: flex; flex-wrap: wrap; gap: var(--ds-space-2); }
@@ -721,44 +721,32 @@
   .settings-options { flex-direction: column; }
   .settings-options label { flex-basis: auto; width: 100%; }
 }
-/* 新建页只负责外层表单；谱面、设置和播放仍由共享组件负责。 */
-.custom-create .custom-name { flex: 0 1 396px; flex-wrap: nowrap; gap: var(--ds-space-3); font-weight: 650; }
-.custom-create .custom-name > span { flex-shrink: 0; }
-.custom-create .custom-name input { flex: 1 1 320px; width: 320px; min-height: 48px; padding: 10px 12px; border: 2px solid var(--ds-field-border); border-radius: var(--ds-radius-sm); background: var(--ds-surface); color: var(--ds-ink); }
-.custom-create .custom-measure-count { flex-direction: column; align-items: center; gap: var(--ds-space-3); font-weight: 650; border-top: 1px solid var(--ds-line); padding-top: var(--ds-space-4); width: 100%; }
-.custom-measure-stepper { display: flex; align-items: center; gap: var(--ds-space-3); }
-.custom-create .custom-measure-count button { display: grid; place-items: center; width: 48px; padding: 8px; }
+/* 通用编辑视图独立于所在页面，谱面、设置和播放沿用共享组件。 */
 /* 横向设置区保持紧凑；谱面前只放必要的速度与小节控制。 */
 @media (max-width: 1199px) {
   .practice-body > .practice-settings { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px 16px; align-items: center; }
   .practice-body > .practice-settings .mechanical-metronome { width: 52px; padding: 4px; }
   .practice-body > .practice-settings .mechanical-metronome svg { width: 40px; height: 46px; }
   .practice-body > .practice-settings .tempo-settings { width: 100%; max-width: 420px; }
-  .custom-create .custom-measure-count { grid-column: 1 / -1; flex-direction: row; justify-content: flex-start; flex-wrap: wrap; gap: 12px; width: auto; padding-top: 0; border-top: 0; }
 }
 @media (max-width: 480px) {
   .practice-body > .practice-settings .tempo-settings { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .practice-body > .practice-settings .tempo-value { justify-content: flex-end; }
   .practice-body > .practice-settings .tempo-value input[type="number"] { width: 64px; }
 }
-.custom-create .custom-save-button:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: var(--ds-on-primary); box-shadow: 0 4px 0 var(--ds-primary-base); }
-.custom-create .custom-save-button:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
-.custom-create .custom-save-button:active:not(:disabled) { box-shadow: none; }
-.custom-create .custom-save-error { flex-basis: 100%; margin: 0; color: var(--ds-error); font-size: var(--ds-text-sm); }
+.custom-editor-actions .custom-save-button:not(:disabled) { background: var(--ds-primary); border-color: var(--ds-primary); color: var(--ds-on-primary); box-shadow: 0 4px 0 var(--ds-primary-base); }
+.custom-editor-actions .custom-save-button:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
+.custom-editor-actions .custom-save-button:active:not(:disabled) { box-shadow: none; }
+.exercise-editor .custom-save-error { flex-basis: 100%; margin: 0; color: var(--ds-error); font-size: var(--ds-text-sm); }
 .success-toast-region { position: fixed; z-index: 1000; top: max(20px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); pointer-events: none; }
 .success-toast { display: flex; align-items: center; gap: 8px; padding: 12px 20px; border: 1px solid var(--ds-success); border-radius: var(--ds-radius-sm); background: var(--ds-surface); color: var(--ds-success); box-shadow: 0 6px 24px #0002; font-size: var(--ds-text-sm); overflow-wrap: anywhere; }
 .design-system .success-toast-close { pointer-events: auto; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; min-height: 32px; padding: 0; margin: -4px -8px -4px 4px; border: 0; border-radius: 6px; background: transparent; color: var(--ds-muted); box-shadow: none; }
 .design-system .success-toast-close:hover:not(:disabled), .design-system .success-toast-close:active:not(:disabled) { background: var(--ds-tint); color: var(--ds-ink); box-shadow: none; transform: none; }
-.custom-editor-actions { display: flex; align-items: flex-start; gap: var(--ds-space-3); margin-left: auto; min-width: 0; max-width: 100%; }
+.custom-editor-actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--ds-space-3); margin-left: auto; min-width: 0; max-width: 100%; }
 .custom-editor-actions > .rhythm-playback { min-width: 0; }
 .custom-editor-actions > .custom-save-button { flex-shrink: 0; }
-.custom-create .custom-editor-toolbar { justify-content: flex-start; }
-.custom-editor-toolbar .rhythm-playback-status:empty { display: none; }
-.custom-editor-toolbar .rhythm-playback-buttons button { min-width: 112px; }
 .rhythm-playback.design-system [role="alert"] { color: var(--ds-error); font-size: var(--ds-text-sm); }
 @media (max-width: 600px) {
-  .custom-create .custom-name { flex-basis: 100%; align-items: stretch; flex-direction: column; }
-  .custom-create .custom-name input { flex: auto; width: 100%; }
   .custom-editor-actions { width: 100%; justify-content: flex-end; }
 }
 .custom-library .custom-list-heading { justify-content: flex-start; }
@@ -970,7 +958,7 @@
 
 
 /* 临时训练工作区保留来源页面；原生模态框隔离背景输入。 */
-.generated-practice-overlay { width: min(1280px, calc(100vw - 64px)); max-width: none; max-height: calc(100dvh - 64px); margin: auto; padding: 0; border: 1px solid var(--ds-line); border-radius: 20px; background: var(--ds-subtle); color: var(--ds-ink); box-shadow: 0 24px 80px #21193633; overflow: auto; overscroll-behavior: contain; }
+.generated-practice-overlay { width: min(1280px, calc(100vw - 64px)); max-width: none; height: min(780px, calc(100dvh - 64px)); max-height: calc(100dvh - 64px); margin: auto; padding: 0; border: 1px solid var(--ds-line); border-radius: 20px; background: var(--ds-subtle); color: var(--ds-ink); box-shadow: 0 24px 80px #21193633; overflow: auto; overscroll-behavior: contain; }
 .generated-practice-overlay::backdrop { background: #21193666; }
 .generated-practice-heading { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 28px; border-bottom: 1px solid var(--ds-line); background: var(--ds-surface); }
 .generated-practice-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; min-width: 0; }
@@ -980,6 +968,7 @@
 .design-system .generated-practice-close { display: grid; place-items: center; width: 40px; height: 40px; min-height: 40px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; }
 .design-system .generated-practice-close:hover:not(:disabled) { background: var(--ds-subtle); color: var(--ds-ink); }
 .generated-practice-content { padding: 0; background: var(--ds-surface); }
+.generated-practice-content .exercise-editor { border: 0; border-radius: 0; }
 .generated-practice-content .practice-layout--training { --practice-gutter: 28px; border: 0; border-radius: 0; }
 .generated-practice-overlay:focus { outline: none; }
 .generated-practice-overlay button:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 3px; }
@@ -1077,17 +1066,11 @@
 .about-content { max-width: none; }
 
 /* 名称校验预留一行；保存和播放失败浮出显示，不推动谱面。 */
-.custom-create .custom-name { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; row-gap: 4px; }
-.custom-create .custom-name input { width: 100%; min-width: 0; }
-.custom-create .custom-name input[aria-invalid="true"] { border-color: var(--ds-error); }
-.custom-create .custom-name .custom-name-error { grid-column: 2; min-height: 20px; font-size: 13px; line-height: 20px; font-weight: 400; color: var(--ds-error); }
 .action-error-region { pointer-events: none; }
 .action-error { border-color: var(--ds-error); color: var(--ds-error); }
 .action-error > .ui-icon { flex-shrink: 0; }
 .action-error .action-error-retry { pointer-events: auto; flex-shrink: 0; min-height: 32px; padding: 4px 8px; box-shadow: none; transform: none; }
 @media (max-width: 600px) {
-  .custom-create .custom-name { grid-template-columns: minmax(0, 1fr); }
-  .custom-create .custom-name .custom-name-error { grid-column: 1; }
 }
 
 .random-generation .random-range-error { min-height: 24px; margin: 8px 0 0; color: var(--ds-error); font-size: 16px; line-height: 24px; }
@@ -1265,3 +1248,38 @@
   *, *::before, *::after { animation: none !important; }
   .assistant-loading-placeholder { opacity: 1; }
 }
+
+/* 编辑与练习共享题头、控制栏和谱面容器。 */
+.exercise-name-field { display: block; min-width: 0; }
+.design-system .exercise-name-field input { width: 100%; max-width: 640px; min-width: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; line-height: inherit; }
+.exercise-name-field .custom-name-error { display: block; color: var(--ds-error); font-size: 13px; font-weight: 400; }
+.exercise-editor .practice-content { padding-top: 28px; }
+.generated-practice-title { flex: 1; }
+.generated-practice-title h2 { width: 100%; }
+
+.generated-practice-overlay[data-view-switch], .generated-practice-overlay[data-view-switch]::backdrop { animation: none; transition: none; }
+
+.generated-practice-overlay { background: var(--ds-surface); }
+.generated-practice-heading { min-height: 92px; box-sizing: border-box; }
+@media (max-width: 700px) {
+  .generated-practice-heading { flex-wrap: wrap; }
+  .generated-practice-title { flex-basis: 100%; }
+  .generated-practice-actions { width: 100%; justify-content: flex-end; }
+}
+
+.rhythm-trainer .practice-content { padding-top: 28px; }
+.measure-actions { display: flex; flex-shrink: 0; gap: 8px; }
+.design-system .measure-actions button { width: 36px; min-height: 36px; padding: 6px; border: 0; box-shadow: none; background: transparent; }
+.exercise-editor .rhythm-playback-buttons { grid-template-columns: minmax(0, 1fr); }
+@container (max-width: 600px) {
+  .practice-controls .trainer-actions button { min-width: 0; flex: 1; }
+}
+
+.design-system .exercise-name-field input:hover:not(:disabled) { background: var(--ds-subtle); }
+.design-system .exercise-name-field input:focus { outline: 2px solid var(--ds-primary); outline-offset: 4px; background: var(--ds-surface); }
+.design-system .exercise-name-field input[aria-invalid="true"] { outline: 2px solid var(--ds-error); outline-offset: 4px; }
+.exercise-editor .practice-controls .practice-toolbar { flex: 1 1 220px; }
+.editor-measures { display: flex; align-items: center; gap: 12px; min-width: 0; max-width: 100%; }
+.editor-measures .draft-measure-navigation { margin: 0; min-width: 0; }
+.editor-playback { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-left: auto; }
+.exercise-editor .editor-playback .rhythm-playback-buttons button { min-width: 88px; min-height: 44px; }

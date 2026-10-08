@@ -15,13 +15,15 @@ async page => {
   check(await page.getByRole('textbox',{name:'练习名称'}).inputValue()===name,'失败保留草稿');
   await page.unroute('**/api/custom-exercises');
   await page.getByRole('button', {name:'保存练习',exact:true}).click();
+  await page.locator('.custom-create .exercise-edit').waitFor();
+  await page.getByRole('link',{name:'题目列表',exact:true}).click();
   await page.waitForURL(`${origin}/custom/tapping`);
   await page.reload();
   const row=page.locator('li').filter({hasText:name});
   await row.getByRole('link',{name:/编辑/}).click();
   await page.getByRole('textbox',{name:'练习名称'}).fill(`${name}-修改`);
-  await page.getByRole('button',{name:'保存修改',exact:true}).click();
-  await page.getByText('修改已保存',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'保存练习',exact:true}).click();
+  await page.locator('.custom-detail .exercise-edit').waitFor();
   await page.reload();
   check(await page.getByRole('textbox',{name:'练习名称'}).inputValue()===`${name}-修改`,'编辑持久化');
   await page.getByRole('link',{name:'题目列表',exact:true}).click();
@@ -44,6 +46,8 @@ async page => {
   await page.getByRole('button',{name:'跳到小节 2',exact:true}).click();
   await page.getByRole('button',{name:'全音符',exact:true}).click();
   await page.getByRole('button',{name:'保存练习',exact:true}).click();
+  await page.locator('.custom-create .exercise-edit').waitFor();
+  await page.getByRole('link',{name:'题目列表',exact:true}).click();
   await page.waitForURL(`${origin}/custom/dictation`);
   await page.locator('li').filter({hasText:id}).getByRole('link',{name:/开始练习/}).click();
   await page.getByRole('button',{name:'播放题目',exact:true}).click();

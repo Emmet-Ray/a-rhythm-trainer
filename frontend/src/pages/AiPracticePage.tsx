@@ -24,12 +24,12 @@ export default function AiPracticePage({ mode }: { mode: "tapping" | "dictation"
 function GeneratedPractice({ generated, mode }: { generated: GeneratedExercise; mode: "tapping" | "dictation" }) {
   const label = mode === "dictation" ? "听写练习" : "击拍练习";
   const origin = readPracticeOrigin(useLocation().state);
-  const context = { source: "ai" as const, exerciseId: generated.id, title: generated.title };
-  return <div className="design-system practice-page">
-    <title>{`${generated.title} · ${label}`}</title>
-    <p className="ai-practice-source">AI 练习</p>
-    <PracticeHeading backTo={origin.path} backLabel={origin.label} title={generated.title}
-      history={{ context, exercise: generated.exercise, mode }} />
-    <GeneratedPracticeWorkspace generated={generated} />
-  </div>;
+  return <GeneratedPracticeWorkspace generated={generated}>
+    {view => <div className="design-system practice-page">
+      <title>{`${view.name} · ${label}`}</title>
+      <PracticeHeading backTo={origin.path} backLabel={origin.label} title={view.title}
+        history={view.editing ? undefined : view.history}>{view.editAction}</PracticeHeading>
+      {view.content}
+    </div>}
+  </GeneratedPracticeWorkspace>;
 }

@@ -7,7 +7,7 @@ import { ExerciseHistory, type ExerciseHistoryProps } from "../practice-records/
 export function PracticeHeading({ backTo, backLabel, title, children, history }: {
   backTo?: string;
   backLabel?: string;
-  title?: string;
+  title?: ReactNode;
   children?: ReactNode;
   history?: Omit<ExerciseHistoryProps, "children">;
 }) {

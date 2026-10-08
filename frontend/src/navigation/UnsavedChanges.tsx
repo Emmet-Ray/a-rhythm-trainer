@@ -1,8 +1,32 @@
-import { useContext, useEffect } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import { UNSAFE_DataRouterContext, useBlocker } from "react-router";
 
-/** Protect edits on in-app navigation and reload; server/static renders need no router blocker. */
+type RegisterDraft = (owner: symbol, dirty: boolean) => void;
+const DraftsContext = createContext<RegisterDraft | null>(null);
+
+/** 页面与覆盖面板可能同时有草稿；路由只挂一个拦截器，任一草稿未保存都需确认。 */
+export function UnsavedChangesScope({ children }: { children: ReactNode }) {
+  const [drafts, setDrafts] = useState<ReadonlySet<symbol>>(() => new Set());
+  const register = useCallback<RegisterDraft>((owner, dirty) => {
+    setDrafts(previous => {
+      if (previous.has(owner) === dirty) return previous;
+      const next = new Set(previous);
+      if (dirty) next.add(owner); else next.delete(owner);
+      return next;
+    });
+  }, []);
+  return <DraftsContext value={register}><Protection dirty={drafts.size > 0} />{children}</DraftsContext>;
+}
+
 export function UnsavedChanges({ dirty }: { dirty: boolean }) {
+  const register = useContext(DraftsContext);
+  const [owner] = useState(() => Symbol("draft"));
+  useLayoutEffect(() => { register?.(owner, dirty); }, [register, owner, dirty]);
+  useLayoutEffect(() => () => register?.(owner, false), [register, owner]);
+  return register ? null : <Protection dirty={dirty} />;
+}
+
+function Protection({ dirty }: { dirty: boolean }) {
   const router = useContext(UNSAFE_DataRouterContext);
   useEffect(() => {
     if (!dirty) return;

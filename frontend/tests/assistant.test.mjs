@@ -112,6 +112,20 @@ test("应用能力随编辑目标注册与注销，旧编辑器不能注销新�
 
 
 
+test("覆盖面板的编辑目标优先，背景更新不抢占，关闭后恢复背景目标", () => {
+  const scope = new AssistantContext();
+  const background = Symbol(), overlay = Symbol();
+  const first = () => true, updated = () => false, top = () => true;
+  scope.registerApply(background, first);
+  scope.registerApply(overlay, top);
+  scope.registerApply(background, updated);
+  assert.equal(scope.getApplySnapshot(), top);
+  scope.registerApply(overlay, null);
+  assert.equal(scope.getApplySnapshot(), null);
+  scope.removeApply(overlay);
+  assert.equal(scope.getApplySnapshot(), updated);
+});
+
 test("配置状态区分可用、未配置与配置错误，不创建会话", async t => {
   for (const status of ["ready", "unconfigured", "invalid"]) {
     const mock = t.mock.method(globalThis, "fetch", async () => Response.json({ status, message: "提示" }));

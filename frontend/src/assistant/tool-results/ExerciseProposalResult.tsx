@@ -34,8 +34,6 @@ export function ExerciseProposalResult({ value, playbackGroup, onPracticeStart, 
     lastState.current = serialized;
     onStateChange?.(proposal.id, next);
   }, [proposal, bpm, viewed, savedState?.answer_viewed, onStateChange]);
-  const [feedback, setFeedback] = useState<{ target: typeof apply; text: string } | null>(null);
-  const notice = feedback?.target === apply ? feedback.text : "";
   if (!proposal) return <p className="assistant-notice" role="status">这份练习的数据无法显示，请让助手重新生成。</p>;
   return <div className="assistant-exercise-result">
     <ExerciseCard title={proposal.title} exercise={proposal.exercise}
@@ -59,12 +57,9 @@ export function ExerciseProposalResult({ value, playbackGroup, onPracticeStart, 
       }}>{proposal.mode === "dictation" ? <Ear size={16} aria-hidden="true" /> : <Hand size={16} aria-hidden="true" />}
         {proposal.mode === "dictation" ? "开始听写" : "开始击拍"}
       </button>}
-      {apply ? <>
-      {notice && <span className="exercise-apply-feedback" role="status">{notice}</span>}
-      <button className="exercise-start" type="button" onClick={() => { const applied = apply(proposal); if (applied) { store?.markAnswerViewed(proposal.id); playbackGroup.stop(); } setFeedback({ target: apply, text: applied ? "" : "暂时无法放入编辑器，请稍后重试" }); }}>
+      {apply && <button className="exercise-start" type="button" onClick={() => { const applied = apply(proposal); if (applied) { store?.markAnswerViewed(proposal.id); playbackGroup.stop(); } }}>
         <PanelLeft size={16} aria-hidden="true" />放入编辑器
-      </button>
-    </> : null}
+      </button>}
     </>} />
   </div>;
 }

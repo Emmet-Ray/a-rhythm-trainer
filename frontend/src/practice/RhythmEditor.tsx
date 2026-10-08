@@ -65,6 +65,8 @@ type RhythmEditorProps = {
   /** 完成后的答案可浏览小节，但编辑工具不再修改该次作答。 */
   readOnly?: boolean;
   scoreOverlay?: ReactNode;
+  showNavigation?: boolean;
+  scoreLayout?: "draft" | "practice";
   measureFeedback?: readonly MeasureFeedback[];
   measures: readonly (readonly RhythmElement[])[];
   timeSignature: RhythmExercise["timeSignature"];
@@ -91,6 +93,8 @@ export function RhythmEditor({
   preview,
   readOnly = false,
   scoreOverlay,
+  showNavigation,
+  scoreLayout,
   measureFeedback,
   measures,
   timeSignature,
@@ -175,6 +179,8 @@ export function RhythmEditor({
       ) : (
         <RhythmDraftScore
           overlay={scoreOverlay}
+          showNavigation={showNavigation}
+          layoutMode={scoreLayout}
           measureFeedback={measureFeedback}
           measures={measures}
           timeSignature={timeSignature}
@@ -282,6 +288,19 @@ export function RhythmEditor({
           </div>
         </div>
 
+        </div>
+        <div role="group" aria-label="常见节奏型" className="rhythm-editor-pattern-input">
+          <p className="rhythm-editor-group-label">常用组合</p>
+          <div className="rhythm-editor-pattern-buttons">
+            {rhythmInputPatterns.map(pattern => (
+              <button key={pattern.id} type="button" aria-label={pattern.label} title={pattern.label}
+                disabled={!hasSelectedMeasure} onClick={() => addElements(pattern.events)}>
+                <RhythmSymbol kind="pattern" events={pattern.events} />
+              </button>
+            ))}
+          </div>
+        </div>
+        </div>
         <div
           role="group"
           aria-label="编辑当前小节"
@@ -307,19 +326,6 @@ export function RhythmEditor({
           >
             <Eraser className="ui-icon" aria-hidden="true" focusable="false" />清空小节
           </button>
-        </div>
-        </div>
-        <div role="group" aria-label="常见节奏型" className="rhythm-editor-pattern-input">
-          <p className="rhythm-editor-group-label">常用组合</p>
-          <div className="rhythm-editor-pattern-buttons">
-            {rhythmInputPatterns.map(pattern => (
-              <button key={pattern.id} type="button" aria-label={pattern.label} title={pattern.label}
-                disabled={!hasSelectedMeasure} onClick={() => addElements(pattern.events)}>
-                <RhythmSymbol kind="pattern" events={pattern.events} />
-              </button>
-            ))}
-          </div>
-        </div>
         </div>
       </fieldset>
     </div>

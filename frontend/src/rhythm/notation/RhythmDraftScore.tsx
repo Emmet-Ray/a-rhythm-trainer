@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, X } from "lucide-react";
-import { BarlineType, Beam, Formatter, Renderer, Tuplet } from "vexflow";
-import { expandRhythmElements, type RhythmElement, type RhythmExercise } from "../RhythmModel";
-import { createRhythmStave, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
-import { createDraftScoreLayout, getBeatBeamGroups, getDraftMeasureScrollLeft } from "./RhythmScoreLayout";
+import { BarlineType, Formatter, Renderer } from "vexflow";
+import { type RhythmElement, type RhythmExercise } from "../RhythmModel";
+import { createRhythmStave, prepareRhythmMeasure } from "./RhythmNotation";
+import { createDraftScoreLayout, createPracticeScoreLayout, getDraftMeasureScrollLeft } from "./RhythmScoreLayout";
 
 export type MeasureFeedback = "unchecked" | "correct" | "incorrect";
 const feedbackLabels = { correct: "正确", incorrect: "有错误" };
@@ -17,6 +17,7 @@ type RhythmDraftScoreProps = {
   overlay?: ReactNode;
   navigationLabel?: string;
   showNavigation?: boolean;
+  layoutMode?: "draft" | "practice";
   /** 窄预览容器中缩放至一整小节可见，其他小节仍可横向浏览。 */
   fitMeasure?: boolean;
   /** 显示练习片段时保留原小节编号。 */
@@ -33,13 +34,14 @@ export function RhythmDraftScore({
   overlay,
   navigationLabel = "小节",
   showNavigation = true,
+  layoutMode = "draft",
   fitMeasure = false,
   measureNumberStart = 1,
 }: RhythmDraftScoreProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState(0);
-  const initialPositioned = useRef(false);
+  const positionedMeasure = useRef<number | undefined>(undefined);
   const [browsingMeasure, setBrowsingMeasure] = useState(0);
   const activeMeasure = selectedMeasureIndex ?? Math.min(browsingMeasure, measures.length - 1);
   useEffect(() => {
@@ -49,46 +51,39 @@ export function RhythmDraftScore({
     observer.observe(viewport);
     return () => observer.disconnect();
   }, []);
+  const prepared = useMemo(() => measures.map(prepareRhythmMeasure), [measures]);
   const layout = useMemo(() => {
-    const layout = createDraftScoreLayout(measures.length, viewportWidth, timeSignature.beats * 4 / timeSignature.beatType);
+    const layout = layoutMode === "practice"
+      ? createPracticeScoreLayout(measures.length, viewportWidth, Math.max(320, ...prepared.map(measure => measure.minimumWidth)))
+      : createDraftScoreLayout(measures.length, viewportWidth, timeSignature.beats * 4 / timeSignature.beatType);
     if (fitMeasure && viewportWidth > 0 && layout.measures.length) {
       layout.height = 108;
       layout.measures = layout.measures.map(measure => ({ ...measure, y: 10 }));
       layout.scale = Math.min(layout.scale, viewportWidth / (layout.measures[0].width + 20));
     }
     return layout;
-  }, [measures.length, viewportWidth, timeSignature.beats, timeSignature.beatType, fitMeasure]);
+  }, [measures.length, viewportWidth, timeSignature.beats, timeSignature.beatType, fitMeasure, layoutMode, prepared]);
   // 历史恢复可能从第 3、4 小节继续：等待真实宽度后只定位一次。
-  // 后续编辑、尺寸变化及手动滚动不接管视野；显式跳转仍由 selectMeasure 处理。
+  // 仅选择变化时定位，支持外部导航与校验跳转；修改音符和手动滚动不接管视野。
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
-    if (!viewport || viewportWidth <= 0 || initialPositioned.current) return;
-    initialPositioned.current = true;
+    if (!viewport || viewportWidth <= 0 || selectedMeasureIndex === positionedMeasure.current) return;
+    positionedMeasure.current = selectedMeasureIndex;
     if (selectedMeasureIndex !== undefined) {
       viewport.scrollLeft = getDraftMeasureScrollLeft(layout, selectedMeasureIndex, viewport.scrollLeft, viewport.clientWidth);
+      if (layoutMode === "practice" && layout.measures[selectedMeasureIndex])
+        viewport.scrollTop = (layout.measures[selectedMeasureIndex].y - 40) * layout.scale;
     }
-  }, [layout, viewportWidth, selectedMeasureIndex]);
+  }, [layout, viewportWidth, selectedMeasureIndex, layoutMode]);
   // 测量结果同时供绘谱和选择区域使用；切换选中小节不重新排版。
   const score = useMemo(() => {
     const preparedMeasures = [];
-    for (const [index, elements] of measures.entries()) {
-      const { x, y, width } = layout.measures[index];
-      const expanded = expandRhythmElements(elements);
-      const notes = expanded.events.map(({ event }) =>
-        rhythmEventToVexFlowStaveNote(event),
-      );
-      // 三连音比例会改变排版时值，必须在测量之前关联，草稿仍保留组结构。
-      const tuplets = expanded.tripletGroups.map(
-        (indexes) =>
-          new Tuplet(
-            indexes.map((noteIndex) => notes[noteIndex]),
-            { numNotes: 3, notesOccupied: 2, bracketed: false },
-          ),
-      );
-      const beams = getBeatBeamGroups(elements).map(
-        (indexes) => new Beam(indexes.map((noteIndex) => notes[noteIndex])),
-      );
-      const stave = createRhythmStave(x, y, width, index === 0);
+    for (const index of measures.keys()) {
+      const placement = layout.measures[index];
+      if (!placement) continue;
+      const { x, y, width, isRowStart } = placement;
+      const { notes, beams, tuplets } = prepared[index];
+      const stave = createRhythmStave(x, y, width, isRowStart);
       stave.setMeasure(measureNumberStart + index);
       if (index === 0)
         stave.addTimeSignature(
@@ -99,11 +94,11 @@ export function RhythmDraftScore({
       // 修改谱号/小节号等修饰后重新固定宽度，避免记谱库重新测量为空小节文本宽度。
       stave.setWidth(width);
 
-      const measure = { x, width, stave, notes, beams, tuplets };
+      const measure = { x, y, width, stave, notes, beams, tuplets };
       preparedMeasures.push(measure);
     }
     return { ...layout, measures: preparedMeasures };
-  }, [measures, layout, timeSignature.beats, timeSignature.beatType, measureNumberStart]);
+  }, [measures, prepared, layout, timeSignature.beats, timeSignature.beatType, measureNumberStart]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -134,7 +129,11 @@ export function RhythmDraftScore({
     if (onSelectMeasure) onSelectMeasure(index);
     else setBrowsingMeasure(index);
     const viewport = viewportRef.current;
-    if (viewport) viewport.scrollLeft = getDraftMeasureScrollLeft(layout, index, viewport.scrollLeft, viewport.clientWidth);
+    if (viewport) {
+      viewport.scrollLeft = getDraftMeasureScrollLeft(layout, index, viewport.scrollLeft, viewport.clientWidth);
+      const row = layout.measures[index];
+      if (layoutMode === "practice" && row) viewport.scrollTop = (row.y - 40) * layout.scale;
+    }
   }
 
   return (
@@ -152,8 +151,8 @@ export function RhythmDraftScore({
         })}
       </div>}
     <div style={{ position: "relative", minWidth: 0 }}>
-    <div ref={viewportRef} className="rhythm-draft-viewport" role="region" aria-label="节奏谱面，可左右滚动" tabIndex={0}
-      style={{ width: "100%", minWidth: 0, overflowX: "auto" }}>
+    <div ref={viewportRef} className="rhythm-draft-viewport" role="region" aria-label={layoutMode === "practice" ? "节奏谱面，可上下滚动" : "节奏谱面，可左右滚动"} tabIndex={0}
+      style={{ width: "100%", minWidth: 0, overflowX: "auto", scrollbarGutter: layoutMode === "practice" ? "stable" : undefined, maxHeight: layoutMode === "practice" ? 300 * score.scale : undefined }}>
       <div
         style={{
           position: "relative",
@@ -163,7 +162,7 @@ export function RhythmDraftScore({
       >
         {onSelectMeasure && (
           <div role="group" aria-label="选择小节">
-            {score.measures.map(({ x, width }, index) => (
+            {score.measures.map(({ x, y, width }, index) => (
               <button
                 key={index}
                 type="button"
@@ -174,9 +173,9 @@ export function RhythmDraftScore({
                 style={{
                   position: "absolute",
                   left: x * score.scale,
-                  top: 10 * score.scale,
+                  top: (layoutMode === "practice" ? y - 30 : 10) * score.scale,
                   width: width * score.scale,
-                  height: (score.height - 20) * score.scale,
+                  height: (layoutMode === "practice" ? 130 : score.height - 20) * score.scale,
                   padding: 0,
                   border: 0,
                   borderRadius: 0,

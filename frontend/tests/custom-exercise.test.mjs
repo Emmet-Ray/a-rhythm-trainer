@@ -397,12 +397,13 @@ test("原访问恢复草稿内容和生效设置，模式不同不载入，清�
     selectedMeasureIndex: 2,
     settings: { bpm: 93, metronomeEnabled: false },
   };
-  const field = "custom:tapping:new:draft";
+  const field = "editor:new:tapping:exercise:draft";
+  visits.write("test-visit", "practice:new:tapping:exercise:settings", draft.settings);
   visits.write("test-visit", field, draft);
   const auth = { state: { status: "authenticated", user: { id: 1 } }, busy: false };
   const html = await renderPage("/custom/tapping/new", "/custom/:mode/new", auth, visits);
   assert.match(html, /value="本地草稿"/);
-  assert.match(html, /aria-label="当前小节数量">3/);
+  assert.match(html, /aria-label="跳到小节 3"/);
   assert.match(html, /aria-label="跳到小节 3" aria-pressed="true"/);
   assert.match(html, /aria-label="节拍器" aria-pressed="false"/);
   assert.match(html, /value="93"/);
@@ -412,7 +413,8 @@ test("原访问恢复草稿内容和生效设置，模式不同不载入，清�
   visits.forget("test-visit", field, draft);
   const cleared = await renderPage("/custom/tapping/new", "/custom/:mode/new", auth, visits);
   assert.doesNotMatch(cleared, /本地草稿/);
-  assert.match(cleared, /aria-label="当前小节数量">2/);
+  assert.match(cleared, /aria-label="跳到小节 2"/);
+  assert.doesNotMatch(cleared, /aria-label="跳到小节 3"/);
 });
 
 function mockSavedExercises(t, raw) {
@@ -485,7 +487,7 @@ test("听写与自定义新建页共用编辑器自身样式", async () => {
   const custom = await renderPage("/custom/tapping/new", "/custom/:mode/new");
   for (const html of [dictation, custom]) {
     assert.match(html, /class="rhythm-editor design-system"/);
-    assert.match(html, /class="rhythm-measure-selection"/);
+    assert.match(html, /aria-label="小节导航"/);
   }
 });
 
@@ -493,14 +495,16 @@ test("新建草稿默认两节、空名称、4/4，提供公共设置但全空�
   const html = await renderPage("/custom/tapping/new", "/custom/:mode/new");
   assert.match(html, /class="design-system practice-page custom-create"/);
   assert.match(html, /class="rhythm-playback design-system"/);
-  assert.match(html, /aria-label="当前小节数量">2/);
-  assert.match(html, /aria-label="小节 1"/);
-  assert.match(html, /aria-label="小节 2"/);
+  assert.match(html, /aria-label="跳到小节 2"/);
+  assert.match(html, /aria-label="跳到小节 1"/);
+  assert.match(html, /aria-label="跳到小节 2"/);
   assert.match(html, /value=""/);
   assert.doesNotMatch(html, /custom-time-signature|class="eyebrow"/);
   assert.ok(html.indexOf('class="custom-save-button"') < html.indexOf('class="practice-body"'));
-  assert.ok(html.indexOf('aria-label="练习设置"') < html.indexOf('aria-label="小节数量"'));
-  assert.match(html, /practice-layout--sidebar/);
+  assert.ok(html.indexOf('aria-label="小节数量"') < html.indexOf('aria-label="练习设置"'));
+  assert.match(html, /practice-layout--training/);
+  assert.doesNotMatch(html, /practice-layout--sidebar/);
+  assert.match(html, /<header[^]*?aria-label="练习名称"[^]*?保存练习[^]*?<\/header>/);
   assert.doesNotMatch(html, /class="custom-draft-notice"/);
   assert.match(html, /添加休止符/);
   assert.match(html, /保存练习/);

@@ -1,5 +1,6 @@
-import { Dot, Stave, StaveNote, Stem } from "vexflow";
-import type { RhythmEvent } from "../RhythmModel";
+import { Beam, Formatter, Tuplet, Voice, Dot, Stave, StaveNote, Stem } from "vexflow";
+import { getBeatBeamGroups } from "./RhythmScoreLayout";
+import { expandRhythmElements, type RhythmElement, type RhythmEvent } from "../RhythmModel";
 
 /** 只显示中线，保留五线坐标供谱号、拍号和休止符定位；隐藏线不代表音高。 */
 export function createRhythmStave(x: number, y: number, width: number, showClef: boolean): Stave {
@@ -48,4 +49,17 @@ export function rhythmEventToVexFlowStaveNote(event: RhythmEvent): StaveNote {
   // dots 决定 VexFlow 内部时值；Dot modifier 才负责画出可见的点。
   if (event.dots === 1) Dot.buildAndAttach([note]);
   return note;
+}
+
+/** 连梁与三连音先参与测量，练习和编辑据此采用相同的小节宽度。 */
+export function prepareRhythmMeasure(elements: readonly RhythmElement[]) {
+  const expanded = expandRhythmElements(elements);
+  const notes = expanded.events.map(({ event }) => rhythmEventToVexFlowStaveNote(event));
+  const tuplets = expanded.tripletGroups.map(indexes => new Tuplet(
+    indexes.map(index => notes[index]), { numNotes: 3, notesOccupied: 2, bracketed: false },
+  ));
+  const beams = getBeatBeamGroups(elements).map(indexes => new Beam(indexes.map(index => notes[index])));
+  const voice = new Voice().setStrict(false).addTickables(notes);
+  const noteWidth = notes.length ? new Formatter().joinVoices([voice]).preCalculateMinTotalWidth([voice]) : 0;
+  return { notes, beams, tuplets, minimumWidth: Math.max(noteWidth + 120, 100 + notes.length * 24) };
 }

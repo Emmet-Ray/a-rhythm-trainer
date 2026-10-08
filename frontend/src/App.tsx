@@ -1,3 +1,4 @@
+import { UnsavedChangesScope } from "./navigation/UnsavedChanges";
 import { refreshPracticeRecords } from "./practice-records/practiceRecordStorage";
 import { PracticeActivity, PracticeActivityContext } from "./assistant/practiceActivity";
 import { PlaybackContext, PlaybackGroup } from "./practice/PlaybackGroup";
@@ -26,7 +27,7 @@ const AboutPage = routeModules.about.Component;
 
 function App() {
   const [playback] = useState(() => new PlaybackGroup());
-  return <PlaybackContext value={playback}><PageNavigation><AppShell /></PageNavigation></PlaybackContext>;
+  return <PlaybackContext value={playback}><PageNavigation><UnsavedChangesScope><AppShell /></UnsavedChangesScope></PageNavigation></PlaybackContext>;
 }
 
 function AppShell() {

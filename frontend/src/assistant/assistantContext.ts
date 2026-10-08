@@ -9,17 +9,22 @@ export type PageContext = { page: string; description: string; state: { [key: st
 
 /** 每个访问及身份范围一个实例。快照独立于编辑器，旧提供者不能清除新提供者。 */
 export class AssistantContext {
-  private applyOwner: symbol | null = null;
+  private editors = new Map<symbol, ApplyExercise | null>();
   private applyExercise: ApplyExercise | null = null;
+  /** 面板内编辑器优先；背景编辑器更新不能抢占，面板卸载后恢复背景入口。 */
   registerApply(owner: symbol, apply: ApplyExercise | null) {
-    if (this.applyOwner === owner && this.applyExercise === apply) return;
-    this.applyOwner = owner;
-    this.applyExercise = apply;
-    this.notify();
+    this.editors.set(owner, apply);
+    this.updateApply();
   }
   removeApply(owner: symbol) {
-    if (this.applyOwner !== owner) return;
-    this.applyOwner = null; this.applyExercise = null; this.notify();
+    this.editors.delete(owner);
+    this.updateApply();
+  }
+  private updateApply() {
+    const next = [...this.editors.values()].at(-1) ?? null;
+    if (next === this.applyExercise) return;
+    this.applyExercise = next;
+    this.notify();
   }
   getApplySnapshot = () => this.applyExercise;
 

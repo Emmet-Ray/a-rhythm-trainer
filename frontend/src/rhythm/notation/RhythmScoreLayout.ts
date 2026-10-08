@@ -212,3 +212,8 @@ export function timingOffsetToScorePosition(
     y: measure.markerY,
   };
 }
+
+/** 常规谱面的阅读比例，编辑同一题目时保持音符大小与换行一致。 */
+export function createPracticeScoreLayout(measureCount: number, containerWidth: number, minimumWidth: number): ScoreLayout {
+  return createScoreLayout(measureCount, containerWidth, minimumWidth, Math.min(1.6, Math.max(1, containerWidth / 760)));
+}

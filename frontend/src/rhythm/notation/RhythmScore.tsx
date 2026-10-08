@@ -1,23 +1,19 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import {
   BarlineType,
-  Beam,
   Formatter,
   Renderer,
   StaveNote,
-  Voice,
-  Tuplet,
   type RenderContext,
 } from "vexflow";
 
-import { expandRhythmElements, type RhythmExercise } from "../RhythmModel";
-import { createRhythmStave, getRhythmLineY, rhythmEventToVexFlowStaveNote } from "./RhythmNotation";
+import type { RhythmExercise } from "../RhythmModel";
+import { createRhythmStave, getRhythmLineY, prepareRhythmMeasure } from "./RhythmNotation";
 import type { ExerciseTimeline, TimingEvent } from "../RhythmTiming";
 import { drawTimingMarker } from "./RhythmTimingMarker";
 import {
-  createScoreLayout,
+  createPracticeScoreLayout,
   createTimingFeedbackLayout,
-  getBeatBeamGroups,
   getScoreViewportHeight,
   getScoreFollowTop,
   timingOffsetToScorePosition,
@@ -93,28 +89,9 @@ function RhythmScore({
     if (!container) return;
     container.replaceChildren();
     if (containerWidth === 0) return;
-    // 先关联连梁，再测量无独立符尾时的最小排版宽度。
-    const preparedMeasures = measures.map((measure) => {
-      const expanded = expandRhythmElements(measure.elements);
-      const notes = expanded.events.map(({ event }) => rhythmEventToVexFlowStaveNote(event));
-      // Tuplet 同时设置 3:2 的记谱时值比例和可见数字；必须在测量/排版前关联。
-      const tuplets = expanded.tripletGroups.map(indexes => new Tuplet(
-        indexes.map(index => notes[index]), { numNotes: 3, notesOccupied: 2, bracketed: false },
-      ));
-      const beams = getBeatBeamGroups(measure.elements).map((indexes) =>
-        new Beam(indexes.map((index) => notes[index])),
-      );
-      const voice = new Voice().setStrict(false).addTickables(notes);
-      const noteWidth = notes.length > 0
-        ? new Formatter().joinVoices([voice]).preCalculateMinTotalWidth([voice])
-        : 0;
-      // 为行首谱号/拍号和音符间的阅读间距留余量，不能只保证符号不重叠。
-      return { notes, beams, tuplets, minimumWidth: Math.max(noteWidth + 120, 100 + notes.length * 24) };
-    });
-    const minimumWidth = Math.max(320, ...preparedMeasures.map((measure) => measure.minimumWidth));
-    // 保留常规两小节的阅读宽度，额外空间优先放大符号，最多 1.6 倍。
-    const notationScale = Math.min(1.6, Math.max(1, containerWidth / 760));
-    const scoreLayout = createScoreLayout(measures.length, containerWidth, minimumWidth, notationScale);
+    const preparedMeasures = measures.map(measure => prepareRhythmMeasure(measure.elements));
+    const minimumWidth = Math.max(320, ...preparedMeasures.map(measure => measure.minimumWidth));
+    const scoreLayout = createPracticeScoreLayout(measures.length, containerWidth, minimumWidth);
     if (scoreLayout.measures.length === 0) return;
     const renderer = new Renderer(container, Renderer.Backends.SVG);
     renderer.resize(containerWidth, scoreLayout.height * scoreLayout.scale);
