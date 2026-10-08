@@ -1,32 +1,33 @@
 # 节奏训练
 
+一个面向音乐自学者的节奏训练工具，支持自由编写、调整练习题目，可借助 AI 讲解节奏、辅助出题，按自己的需要开展击拍与听写训练。
+
+![AI 助手根据乐谱图片生成节奏练习，支持试听并打开练习面板](docs/media/overview.png)
+
 ## 核心功能
 
-### 总览
+- **两种练习模式**：击拍练习与节奏听写练习
+- **四类题目来源**：预设题目、随机生成、自定义编写，以及 AI 助手根据文字或乐谱图片生成题目
+  - 自由编辑：支持修改 AI、随机和自定义题目，并保存到自定义题库
+- **AI 助手**：
+  - 支持 DeepSeek API Key 和 ChatGPT 订阅授权
+  - 支持多轮问答、节奏讲解和练习生成
+  - 可结合当前页面、题目和练习表现回答问题
+- **练习记录**：自动保存击拍与听写记录，支持按时间、练习模式筛选，查看每道题的历史结果
 
-一个节奏训练工具，目前支持击拍练习、节奏听写两种模式，支持预设练习、随机练习、自定义练习，以及 AI 对话出题与节奏讲解。
-
-![首页总览：预设练习、随机练习与自定义练习入口](docs/media/overview.png)
+## 功能演示
 
 ### 击拍练习
 
-跟随谱面按空格键击拍，查看每次击拍的准确度与整轮结果。
+试听节奏，按空格键击拍，查看每次击拍的准确度与整轮结果。
 
-![击拍练习：预备拍、空格击拍与判定反馈](docs/media/tapping.gif)
+![击拍练习：试听、空格击拍与判定反馈](docs/media/tapping.gif)
 
 ### 节奏听写
 
-聆听题目，输入音符与休止符，逐小节验证答案。
+聆听题目，填写节奏，逐小节验证答案，完成整段节奏听写。
 
 ![节奏听写：播放题目、输入节奏与验证答案](docs/media/dictation.gif)
-
-_动图仅演示操作，不含声音。_
-
-## 技术栈
-
-- **前端**：React、TypeScript、Vite；React Router（路由）、Lucide（图标）、react-markdown（Markdown 渲染）、VexFlow（谱面渲染）、Web Audio API（音频与节拍调度）；AI SDK UI（助手流式消息）
-- **后端**：Python、FastAPI；SQLite、SQLAlchemy、Alembic（数据存储与迁移）；Pydantic AI（模型接入与工具调用）、OpenAI Python SDK（DeepSeek 与 ChatGPT 订阅 Responses）
-- **部署**：Docker、Nginx
 
 ## 快速启动（Docker）
 
@@ -38,15 +39,19 @@ _动图仅演示操作，不含声音。_
    cp .env.example .env
    ```
 
-2. 默认配置即可启动；模型服务可以启动后在网页中配置
-
-3. 启动：
+2. 启动：
 
    ```sh
    docker compose up -d --build
    ```
 
-打开 <http://localhost:8080> 即可使用
+打开 <http://localhost:8080> 即可使用。使用 AI 助手前，在「设置 → 模型服务」中配置模型。
+
+## 技术栈
+
+- **前端**：React、TypeScript、Vite；React Router（路由）、Lucide（图标）、react-markdown（Markdown 渲染）、VexFlow（谱面渲染）、Web Audio API（音频与节拍调度）；AI SDK UI（助手流式消息）
+- **后端**：Python、FastAPI；SQLite、SQLAlchemy、Alembic（数据存储与迁移）；Pydantic AI（模型接入与工具调用）、OpenAI Python SDK（DeepSeek 与 ChatGPT 订阅 Responses）
+- **部署**：Docker、Nginx
 
 ## TODO
 
@@ -82,11 +87,8 @@ _动图仅演示操作，不含声音。_
 ### 界面与交互
 
 - [ ] 检查UI/UX一致性
-- [ ] 为预设题目提供不同的展示方式/视图（目前都是文字）
+- [ ] 为预设题目提供不同视图（目前都是文字）
 
 ### 文档维护
 
-- [ ] 更新 README 中的界面截图与操作演示 GIF
-- [ ] 更新功能介绍与使用说明，使其与当前实现一致
-- [ ] 补充 AI 助手出题、练习与编辑保存的操作演示
 - [ ] 更新前后端README
