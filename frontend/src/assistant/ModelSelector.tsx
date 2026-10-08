@@ -29,7 +29,7 @@ export function ModelSelector({ selection, disabled, requiresImages = false, onS
   const config = selected && data?.[selected.provider];
   const model = config && config.models.find(item => item.id === selected?.model);
   const available = !!(config?.configured && !config.needs_authorization && model);
-  const supportsImages = !!model?.supports_images;
+  const supportsImages = model?.supports_images !== false;
   const selectedProvider = selected?.provider, selectedModel = selected?.model;
   useEffect(() => {
     onAvailable(available, selectedProvider && selectedModel ? { provider: selectedProvider, model: selectedModel } : null, supportsImages);
@@ -64,8 +64,8 @@ export function ModelSelector({ selection, disabled, requiresImages = false, onS
             <Command.Empty>{refreshing ? "正在获取模型列表…" : "没有匹配的模型"}</Command.Empty>
             {providers.map(name => data?.[name].configured && <Command.Group key={name} heading={providerNames[name]}>
               {data[name].models.map(item => <Command.Item key={item.id} value={`${name}/${item.id}`} keywords={[item.name, providerNames[name]]}
-                disabled={disabled || data[name].needs_authorization || (requiresImages && !item.supports_images)} onSelect={() => { void choose(name, item.id); }}>
-                <span>{item.name}{requiresImages && !item.supports_images && <small className="assistant-model-unavailable">不支持图片</small>}</span>{selected?.provider === name && selected.model === item.id && <Check size={16} aria-label="当前模型" />}
+                disabled={disabled || data[name].needs_authorization || (requiresImages && item.supports_images === false)} onSelect={() => { void choose(name, item.id); }}>
+                <span>{item.name}{requiresImages && item.supports_images === false && <small className="assistant-model-unavailable">不支持图片</small>}</span>{selected?.provider === name && selected.model === item.id && <Check size={16} aria-label="当前模型" />}
               </Command.Item>)}
             </Command.Group>)}
           </Command.List>

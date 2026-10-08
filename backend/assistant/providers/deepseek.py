@@ -3,7 +3,7 @@ import httpx
 from openai import AsyncOpenAI
 from pydantic_ai.providers.deepseek import DeepSeekProvider
 
-from assistant.model import CompleteResponsesModel, ConnectionError, AuthorizationRequired
+from assistant.model import CompleteResponsesModel, ConnectionError, AuthorizationRequired, image_input_support
 
 API_URL = 'https://api.deepseek.com'
 
@@ -14,7 +14,7 @@ def create_model(name: str, credential: str) -> CompleteResponsesModel:
     return CompleteResponsesModel(name, provider=DeepSeekProvider(openai_client=client))
 
 
-def list_models(credential: str) -> list[dict[str, str]]:
+def list_models(credential: str) -> list[dict]:
     """将服务目录转换为公共的 id/name 列表，不回传远端错误详情。"""
     if not credential:
         raise ConnectionError('请先填写 API Key')
@@ -23,7 +23,7 @@ def list_models(credential: str) -> list[dict[str, str]]:
         if response.status_code == 401:
             raise AuthorizationRequired('DeepSeek 凭证已失效，请更新 API Key')
         response.raise_for_status()
-        models = [{'id': item['id'], 'name': item['id']} for item in response.json()['data']]
+        models = [{'id': item['id'], 'name': item['id'], 'supports_images': image_input_support(item.get('input_modalities'))} for item in response.json()['data']]
         if not models:
             raise ConnectionError('当前连接没有可用模型')
         return models

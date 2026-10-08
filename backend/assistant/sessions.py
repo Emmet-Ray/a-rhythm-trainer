@@ -16,11 +16,12 @@ from pydantic_ai.messages import ModelRequest, ModelResponse, UserPromptPart
 from pydantic_ai.models import Model
 from pydantic_ai.ui.vercel_ai import VercelAIAdapter
 from pydantic_ai.ui.vercel_ai.request_types import SubmitMessage
+from pydantic_ai.ui.vercel_ai.response_types import DataChunk
 from pydantic_ai.usage import UsageLimits
 
 from assistant.context import PageContext, assistant_instructions, build_agent_messages
 from assistant.model import public_model_error
-from assistant.model import ModelSelection, supports_images, ConnectionError
+from assistant.model import ModelSelection, ConnectionError
 from assistant.messages import MessageImage, Turn, SavedTurn
 from assistant.tools import create_tools
 
@@ -68,10 +69,10 @@ class ChatSession:
                 self.journal.append(self.owner, self.id, {**record, "timestamp": timestamp})
             self.updated_at = timestamp
 
-    def select_model(self, selection: ModelSelection):
+    def select_model(self, selection: ModelSelection, *, image_input: bool | None = None):
         """持久化后续请求的模型；运行中的回答持有自己的模型实例。"""
         with self._save_lock:
-            if (self._pending_images or any(turn.images for turn in self.turns)) and not supports_images(selection):
+            if (self._pending_images or any(turn.images for turn in self.turns)) and image_input is False:
                 raise ConnectionError("此对话包含图片，请选择支持图片的模型")
             if self.model_selection != selection:
                 self.save({"type": "model_selection", "selection": selection.model_dump()})
@@ -103,12 +104,12 @@ class ChatSession:
             return value
 
     @asynccontextmanager
-    async def run(self, text: str, model: Model, page_context: PageContext | None = None, *, message_id: str, expected_selection: ModelSelection | None = None, images: list[MessageImage] | None = None):
+    async def run(self, text: str, model: Model, page_context: PageContext | None = None, *, message_id: str, expected_selection: ModelSelection | None = None, images: list[MessageImage] | None = None, image_input: bool | None = None):
         if self.is_running:
             raise SessionBusy("当前会话正在运行，请等待完成或停止后再发送。")
         if any(turn.user_id == message_id for turn in self.turns):
             raise SessionBusy("这条消息已被接受，请同步会话，不要重复发送。")
-        if (images or any(previous.images for previous in self.turns)) and not supports_images(expected_selection or self.model_selection):
+        if (images or any(previous.images for previous in self.turns)) and image_input is False:
             raise ConnectionError("请选择支持图片的模型")
         turn = Turn(message_id, text, page_context.model_copy(deep=True) if page_context else None, images=list(images or []))
         history = [message for previous in self.turns for message in [previous.user_message(), *previous.messages]]
@@ -204,22 +205,44 @@ class ChatSession:
             if missing:
                 turn.messages.append(ModelRequest(parts=deepcopy(missing), run_id=turn.assistant_id))
 
+        released = False
         try:
             async with aclosing(adapter.transform_stream(native())) as stream:
                 # 推理仅在模型历史中回传；浏览器只消费文字和业务工具结果。
                 async def visible():
+                    nonlocal released
+                    yield DataChunk(type="data-turn-accepted", transient=True, data={
+                        "user_id": turn.user_id, "created_at": turn.created_at,
+                        "title": self.title, "updated_at": self.updated_at,
+                    })
+                    finish = None
                     async for chunk in stream:
-                        if not chunk.type.startswith("reasoning-"):
+                        if chunk.type == "start":
+                            chunk.message_metadata = {"created_at": turn.created_at}
+                        if chunk.type == "finish":
+                            finish = chunk
+                        elif not chunk.type.startswith("reasoning-"):
                             yield chunk
+                    # 流正常耗尽意味着最终 checkpoint 已完成。先释放本轮占用，再确认；
+                    # 外层清理不能在下一轮已经开始时清掉它的运行状态。
+                    if self.last_run_status == "completed":
+                        self.is_running = False
+                        released = True
+                        yield DataChunk(type="data-turn-completed", transient=True, data={
+                            "user_id": turn.user_id, "assistant_id": turn.assistant_id,
+                            "title": self.title, "updated_at": self.updated_at,
+                        })
+                    if finish is not None:
+                        yield finish
                 yield adapter.streaming_response(visible())
         finally:
-            if self.last_run_status == "running":
-                self.last_run_status = "cancelled"
+            if not released:
                 try:
-                    await self.checkpoint(turn)
+                    if self.last_run_status == "running":
+                        self.last_run_status = "cancelled"
+                        await self.checkpoint(turn)
                 finally:
                     self.is_running = False
-            self.is_running = False
 
 
 class SessionStore:

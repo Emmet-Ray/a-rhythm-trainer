@@ -73,9 +73,8 @@ def public_model_error(error: Exception) -> str:
     return "助手运行失败，请重试。"
 
 
-def supports_images(selection: ModelSelection | None) -> bool:
-    """当前接入实测支持的模型；未知模型不推断图片能力。"""
-    if selection is None:
-        return False
-    return selection.model in ({'deepseek-flash'} if selection.provider == 'deepseek' else
-                               {'gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna'})
+def image_input_support(modalities) -> bool | None:
+    """解析供应商声明的完整输入类型；缺失或异常是未知，不等于不支持。"""
+    if not isinstance(modalities, list) or not modalities or not all(isinstance(item, str) for item in modalities):
+        return None
+    return 'image' in modalities

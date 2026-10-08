@@ -1,14 +1,15 @@
 import { Chat } from "@ai-sdk/react";
-import { DefaultChatTransport, type FileUIPart } from "ai";
+import { DefaultChatTransport, generateId, type FileUIPart } from "ai";
 import { AssistantApiError, assistantFetch, createSession, getSession, type AssistantMessage, type ChatSession, saveCardState, selectSessionModel, type CardState } from "../api/assistant";
 import { selectionChanged, type ModelSelection } from "../api/modelConnections";
 import type { PageContext } from "./assistantContext";
 
-type State = { initialized: boolean; session: ChatSession | null;
+type State = { initialized: boolean; session: Omit<ChatSession, "messages"> | null; acceptedInput?: AssistantMessage;
   restoring: boolean; busy: boolean; selectingModel: boolean; needsSync: boolean; expired: boolean; error: string; notice: string };
 const initial = (): State => ({ initialized: true, session: null, restoring: false, busy: false, selectingModel: false,
   needsSync: false, expired: false, error: "", notice: "" });
-type Operation = { stream: AbortController; lifetime: AbortController };
+type Operation = { stream: AbortController; lifetime: AbortController; userId?: string; accepted?: boolean; completed?: boolean };
+export type SendResult = "accepted" | "rejected" | "unknown";
 
 /** SDK 管理消息与流；这里仅协调服务端会话、运行互斥及中断后的核对。 */
 export class AssistantConversation {
@@ -93,6 +94,26 @@ export class AssistantConversation {
   chat = this.createChat();
   private createChat() {
     return new Chat<AssistantMessage>({
+      onData: part => {
+        const op = this.operation;
+        if (!op?.userId || !this.current(op) || !this.state.session) return;
+        if (part.type !== "data-turn-accepted" && part.type !== "data-turn-completed") return;
+        const data = part.data as Record<string, unknown>;
+        if (!data || data.user_id !== op.userId || typeof data.title !== "string" || typeof data.updated_at !== "string")
+          throw new Error("会话确认信息异常，请同步状态。");
+        if (part.type === "data-turn-accepted") {
+          if (typeof data.created_at !== "string") throw new Error("输入确认时间异常。");
+          op.accepted = true;
+          const input = this.chat.messages.find(message => message.id === op.userId);
+          this.update({ acceptedInput: input && { ...input, metadata: { ...input.metadata, created_at: data.created_at } },
+            session: { ...this.state.session, title: data.title, updated_at: data.updated_at, is_running: true, last_run_status: "running" } });
+        } else {
+          if (!op.accepted || typeof data.assistant_id !== "string" || this.chat.messages.at(-1)?.id !== data.assistant_id)
+            throw new Error("回复确认信息异常，请同步状态。");
+          op.completed = true;
+          this.update({ session: { ...this.state.session, title: data.title, updated_at: data.updated_at, is_running: false, last_run_status: "completed" } });
+        }
+      },
       transport: new DefaultChatTransport({
         prepareSendMessagesRequest: ({ messages, body }) => {
           const message = messages.at(-1)!;
@@ -110,6 +131,11 @@ export class AssistantConversation {
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private update(patch: Partial<State>) {
+    // 快照只在恢复时提供消息；运行状态不再持有第二份消息列表。
+    if (patch.session && "messages" in patch.session) {
+      const { messages, ...session } = patch.session as ChatSession;
+      patch = { ...patch, session, acceptedInput: messages.findLast(message => message.role === "user") };
+    }
     this.state = { ...this.state, ...patch };
     this.listeners.forEach(listener => listener());
   }
@@ -166,23 +192,23 @@ export class AssistantConversation {
       if (active()) { this.modelWrite = null; this.update({ selectingModel: false }); }
     }
   }
-  async send(text: string, context: PageContext | null, selection?: ModelSelection, images: FileUIPart[] = []): Promise<boolean> {
-    if (this.operation || this.modelWrite || this.state.needsSync || this.state.expired || (!text.trim() && !images.length)) return false;
-    const op = { stream: new AbortController(), lifetime: new AbortController() };
+  async send(text: string, context: PageContext | null, selection?: ModelSelection, images: FileUIPart[] = []): Promise<SendResult> {
+    if (this.operation || this.modelWrite || this.state.needsSync || this.state.expired || (!text.trim() && !images.length)) return "rejected";
+    const op: Operation = { stream: new AbortController(), lifetime: new AbortController(), userId: generateId() };
     this.operation = op;
     const pageContext = structuredClone(context);
     this.update({ busy: true, error: "", notice: "" });
     try {
       if (!this.state.session) {
         const session = await createSession(op.lifetime.signal, selection);
-        if (!this.current(op)) return false;
+        if (!this.current(op)) return "unknown";
         this.remember(session.id);
         this.update({ session });
       }
       op.stream.signal.throwIfAborted();
       const chat = this.chat;
       chat.clearError();
-      await chat.sendMessage({ text, files: images, metadata: { created_at: new Date().toISOString(), page_context: pageContext } },
+      await chat.sendMessage({ id: op.userId, role: "user", parts: [...(text ? [{ type: "text" as const, text }] : []), ...images], metadata: { created_at: new Date().toISOString(), page_context: pageContext } },
         { body: { page_context: pageContext } });
       if (chat.error) throw chat.error;
     } catch (error) {
@@ -193,7 +219,13 @@ export class AssistantConversation {
       }
     } finally {
       if (this.current(op)) {
-        try { await this.reconcile(op); }
+        try {
+          if (!op.completed) await this.reconcile(op);
+          else if (this.state.acceptedInput) {
+            const input = this.state.acceptedInput;
+            this.chat.messages = this.chat.messages.map(message => message.id === input.id ? input : message);
+          }
+        }
         catch (error) {
           if (this.current(op)) this.update({ needsSync: true,
             expired: error instanceof AssistantApiError && error.status === 404,
@@ -205,7 +237,8 @@ export class AssistantConversation {
         }
       }
     }
-    return true;
+    if (op.lifetime.signal.aborted || this.state.needsSync) return "unknown";
+    return op.accepted || this.chat.messages.some(message => message.id === op.userId && message.role === "user") ? "accepted" : "rejected";
   }
   stop() { this.operation?.stream.abort(); void this.chat.stop(); }
   async sync() {

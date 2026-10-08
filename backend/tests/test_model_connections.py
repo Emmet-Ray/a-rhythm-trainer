@@ -225,7 +225,7 @@ def test_session_model_is_independent_persistent_and_removed_service_does_not_fa
         connections.configure_deepseek('secret-key')
         with connections.edit() as state:
             state['chatgpt'].update(access_token='test', expires_at=time.time() + 3600,
-                                   models=[{'id': 'gpt-test', 'name': 'GPT Test'}])
+                                   models=[{'id': 'gpt-test', 'name': 'GPT Test', 'supports_images': None}])
         deep = {'provider': 'deepseek', 'model': 'deepseek-flash'}
         chat = {'provider': 'chatgpt', 'model': 'gpt-test'}
         first = client.post('/api/assistant/sessions').json()['id']
@@ -303,7 +303,7 @@ def test_new_conversation_can_pin_the_displayed_default(monkeypatch):
         connections.configure_deepseek('secret-key')
         with connections.edit() as state:
             state['provider'] = 'chatgpt'
-            state['chatgpt'].update(model='gpt-test', access_token='test', models=[{'id': 'gpt-test', 'name': 'GPT Test'}])
+            state['chatgpt'].update(model='gpt-test', access_token='test', models=[{'id': 'gpt-test', 'name': 'GPT Test', 'supports_images': None}])
         # Another tab changed the default after this tab displayed DeepSeek.
         choice = {'provider': 'deepseek', 'model': 'deepseek-flash'}
         assert client.post('/api/assistant/sessions', json=choice).json()['model_selection'] == choice
@@ -498,11 +498,11 @@ def test_default_storage_open_failure_is_nonfatal(connections, monkeypatch):
 
 @pytest.mark.parametrize('provider,url,payload,expected', [
     ('deepseek', 'https://api.deepseek.com/models', {'data': [{'id': 'deep-test'}]},
-     [{'id': 'deep-test', 'name': 'deep-test'}]),
+     [{'id': 'deep-test', 'name': 'deep-test', 'supports_images': None}]),
     ('chatgpt', 'https://api.openai.com/v1/models', {'models': [
         {'slug': 'gpt-test', 'display_name': 'GPT Test', 'visibility': 'list'},
         {'slug': 'internal', 'display_name': 'Internal', 'visibility': 'hidden'},
-    ]}, [{'id': 'gpt-test', 'name': 'GPT Test'}]),
+    ]}, [{'id': 'gpt-test', 'name': 'GPT Test', 'supports_images': None}]),
 ])
 def test_provider_catalogs_expose_the_same_public_contract(monkeypatch, provider, url, payload, expected):
     from assistant.providers import PROVIDERS
@@ -544,3 +544,31 @@ def test_connection_opens_and_closes_each_provider_model(connections, provider, 
             assert not model.client.is_closed()
         assert model.client.is_closed()
     asyncio.run(run())
+
+
+@pytest.mark.parametrize('provider', ['chatgpt', 'deepseek'])
+@pytest.mark.parametrize('modalities,expected', [(['text', 'image'], True), (['text'], False), (None, None), ([], None), ('image', None)])
+def test_catalog_image_capability_refreshes_without_model_allowlist(tmp_path, monkeypatch, provider, modalities, expected):
+    import time
+    connections = ModelConnections(tmp_path / 'connections.json')
+    selection = ModelSelection(provider=provider, model='gpt-6.1-sol' if provider == 'chatgpt' else 'new-model')
+    with connections.edit() as state:
+        state[provider].update(key='test', access_token='test', catalog_updated_at=time.time(),
+                               models=[{'id': selection.model, 'name': 'Old cache'}])
+    monkeypatch.setattr(connections, 'refreshed_chatgpt', lambda: connections.credentials('chatgpt'))
+    calls = []
+    def get(url, **kwargs):
+        calls.append(url)
+        item = {'id': selection.model, 'slug': selection.model, 'display_name': 'New', 'visibility': 'list', 'input_modalities': modalities}
+        return httpx.Response(200, json={'data': [item], 'models': [item]}, request=httpx.Request('GET', url))
+    monkeypatch.setattr(httpx, 'get', get)
+    assert connections.image_input_support(selection) is None
+    view = connections.refresh_catalog(provider, force=False)
+    assert len(calls) == 1
+    assert view[provider]['models'][0]['supports_images'] is expected
+    assert connections.image_input_support(selection) is expected
+    connections.refresh_catalog(provider, force=False)
+    assert len(calls) == 1
+    modalities = ['text'] if expected is True else ['text', 'image']
+    connections.refresh_catalog(provider, force=True)
+    assert connections.image_input_support(selection) is (expected is not True)

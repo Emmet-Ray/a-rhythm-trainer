@@ -128,9 +128,9 @@ async def read_session(session: Annotated[ChatSession, Depends(get_session)]):
 @router.put("/sessions/{session_id}/model")
 def select_model(body: ModelSelection, request: Request, session: Annotated[ChatSession, Depends(get_session)]):
     connections = request.app.state.model_connections
-    connections.validate_selection(body)
+    model = connections.validate_selection(body)
     try:
-        session.select_model(body)
+        session.select_model(body, image_input=model.get("supports_images"))
     except SessionBusy as error:
         raise HTTPException(409, str(error)) from error
     remembered = connections.remember_selection(body)
@@ -159,6 +159,7 @@ async def save_card(exercise_id: str, state: CardState, session: Annotated[ChatS
 
 
 async def get_run(
+    request: Request,
     body: ChatInput,
     session: Annotated[ChatSession, Depends(get_session)],
     model: Annotated[Model, Depends(get_model)],
@@ -166,7 +167,8 @@ async def get_run(
 ) -> AsyncIterator[StreamingResponse]:
     try:
         async with session.run(body.text, model, body.page_context, message_id=body.message_id,
-                               expected_selection=selection, images=body.images) as response:
+                               expected_selection=selection, images=body.images,
+                               image_input=await run_in_threadpool(request.app.state.model_connections.image_input_support, selection)) as response:
             response.headers["Cache-Control"] = "no-store"
             response.headers["X-Accel-Buffering"] = "no"
             yield response

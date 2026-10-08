@@ -130,3 +130,25 @@ def test_cancel_before_consumption_preserves_accepted_input_and_copy():
         assert s.snapshot()['messages'][0]['metadata']['page_context']['state']['count']==2
         assert not s.is_running
     asyncio.run(scenario())
+
+
+def test_completion_confirmation_is_persisted_and_old_cleanup_cannot_unlock_next_run():
+    async def scenario():
+        session = ChatSession()
+        model = SDKTestModel(call_tools=[], custom_output_text="回答")
+        first = session.run("第一条", model, message_id="u1")
+        response = await first.__aenter__()
+        chunks = [chunk async for chunk in response.body_iterator]
+        stream = "".join(chunks)
+        assert stream.index('data-turn-accepted') < stream.index('text-delta')
+        assert stream.index('data-turn-completed') < stream.index('"type":"finish"')
+        assert session.last_run_status == "completed"
+        assert not session.is_running
+        assert session.snapshot()["messages"][1]["parts"][-1]["text"] == "回答"
+        async with session.run("第二条", model, message_id="u2") as second:
+            assert session.is_running
+            await first.__aexit__(None, None, None)
+            assert session.is_running
+            _ = [chunk async for chunk in second.body_iterator]
+        assert not session.is_running
+    asyncio.run(scenario())

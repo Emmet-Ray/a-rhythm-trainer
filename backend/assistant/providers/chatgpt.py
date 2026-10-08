@@ -10,7 +10,7 @@ import httpx
 import jwt
 from openai import AsyncOpenAI
 from pydantic_ai.providers.openai import OpenAIProvider
-from assistant.model import CompleteResponsesModel, ConnectionError, AuthorizationRequired
+from assistant.model import CompleteResponsesModel, ConnectionError, AuthorizationRequired, image_input_support
 
 ISSUER = 'https://auth.openai.com'
 RESOURCE = 'https://api.openai.com/v1'
@@ -144,7 +144,7 @@ def create_model(name: str, credential: str) -> CompleteResponsesModel:
     return CompleteResponsesModel(name, provider=OpenAIProvider(openai_client=client))
 
 
-def list_models(credential: str) -> list[dict[str, str]]:
+def list_models(credential: str) -> list[dict]:
     """返回订阅账号可展示的模型，不将远端响应或凭证暴露给调用方。"""
     if not credential:
         raise ConnectionError('请先授权 ChatGPT')
@@ -153,7 +153,7 @@ def list_models(credential: str) -> list[dict[str, str]]:
         if response.status_code == 401:
             raise AuthorizationRequired('ChatGPT 授权已失效，请重新授权')
         response.raise_for_status()
-        models = [{'id': item['slug'], 'name': item['display_name']}
+        models = [{'id': item['slug'], 'name': item['display_name'], 'supports_images': image_input_support(item.get('input_modalities'))}
                   for item in response.json()['models'] if item.get('visibility') == 'list']
         if not models:
             raise ConnectionError('当前连接没有可用模型')

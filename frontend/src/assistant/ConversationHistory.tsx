@@ -1,10 +1,10 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref, type RefObject } from "react";
 import { X, Trash2, Plus, PanelLeftClose } from "lucide-react";
-import { deleteSession, listSessions, type SessionSummary } from "../api/assistant";
+import { deleteSession, listSessions, type ChatSession, type SessionSummary } from "../api/assistant";
 
 /** 按需读取历史摘要；打开和删除都由后端检查归属。 */
-export function ConversationHistory({ panelRef, anchor, currentId, onOpen, onDeleted, onClose, placement = "popover", onNew, refreshKey }: {
-  panelRef?: Ref<HTMLElement>; anchor?: RefObject<HTMLButtonElement | null>; placement?: "popover" | "sidebar"; onNew?: () => void; refreshKey?: string; currentId?: string; onOpen: (id: string) => Promise<boolean>; onDeleted: (id: string) => void; onClose: () => void;
+export function ConversationHistory({ panelRef, anchor, currentId, onOpen, onDeleted, onClose, placement = "popover", onNew, currentSession }: {
+  panelRef?: Ref<HTMLElement>; anchor?: RefObject<HTMLButtonElement | null>; placement?: "popover" | "sidebar"; onNew?: () => void; currentSession?: Omit<ChatSession, "messages"> | null; currentId?: string; onOpen: (id: string) => Promise<boolean>; onDeleted: (id: string) => void; onClose: () => void;
 }) {
   const [items, setItems] = useState<SessionSummary[]>([]);
   const [total, setTotal] = useState(0);
@@ -45,7 +45,19 @@ export function ConversationHistory({ panelRef, anchor, currentId, onOpen, onDel
     }).catch(error => { if (!controller.signal.aborted) setError(error.message); })
       .finally(() => { if (!controller.signal.aborted) setBusy(false); });
     return () => controller.abort();
-  }, [revision, refreshKey, placement]);
+  }, [revision, placement]);
+  // 将当前会话的服务端确认合入列表，切换会话后仍保留已更新的条目。
+  const [previousSession, setPreviousSession] = useState(currentSession);
+  if (currentSession !== previousSession) {
+    setPreviousSession(currentSession);
+    if (currentSession?.updated_at && currentSession.last_run_status) {
+      const summary: SessionSummary = { id: currentSession.id, title: currentSession.title ?? "新对话",
+        updated_at: currentSession.updated_at, is_running: currentSession.is_running, unreadable: false };
+      setItems(previous => [summary, ...previous.filter(item => item.id !== summary.id)]
+        .sort((a, b) => b.updated_at.localeCompare(a.updated_at)));
+      if (!items.some(item => item.id === summary.id)) setTotal(value => Math.max(value, items.length + 1));
+    }
+  }
   async function remove(item: SessionSummary) {
     if (!window.confirm("删除这段对话？")) return;
     setBusy(true); setError("");

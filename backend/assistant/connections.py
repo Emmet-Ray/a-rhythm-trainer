@@ -10,7 +10,7 @@ from contextlib import contextmanager, asynccontextmanager
 from uuid import uuid4
 from pathlib import Path
 
-from assistant.model import ConnectionError, AuthorizationRequired, ModelSelection, supports_images
+from assistant.model import ConnectionError, AuthorizationRequired, ModelSelection
 from assistant.providers import PROVIDERS, chatgpt, deepseek
 
 
@@ -50,7 +50,7 @@ class ModelConnections:
         with self.edit() as state:
             return {'provider': state['provider'], **{
                 name: {'configured': bool(config.get('key') if name == 'deepseek' else config.get('access_token')),
-                       'model': config.get('model', ''), 'models': [{**item, 'supports_images': supports_images(ModelSelection(provider=name, model=item['id']))} for item in config.get('models', [])],
+                       'model': config.get('model', ''), 'models': [{**item, 'supports_images': item.get('supports_images')} for item in config.get('models', [])],
                        'catalog_updated_at': config.get('catalog_updated_at', 0),
                        'needs_authorization': bool(config.get('needs_authorization')),
                        **({'account': config.get('email', '')} if name == 'chatgpt' else {})}
@@ -113,7 +113,7 @@ class ModelConnections:
     def refresh_catalog(self, provider, *, force=True):
         with self.remote_operation(provider):
             config = self.credentials(provider)
-            if force or not config.get('models') or time.time() - config.get('catalog_updated_at', 0) >= 300:
+            if force or not config.get('models') or any('supports_images' not in item for item in config['models']) or time.time() - config.get('catalog_updated_at', 0) >= 300:
                 if provider == 'chatgpt':
                     config = self.refreshed_chatgpt()
                 try:
@@ -126,6 +126,15 @@ class ModelConnections:
                                                            'needs_authorization': False})
         return self.public()
 
+    def image_input_support(self, selection: ModelSelection | None) -> bool | None:
+        """与公开目录使用同一份能力缓存；未知能力允许交由供应商判断。"""
+        if selection is None:
+            return None
+        config = self.credentials(selection.provider)
+        item = next((item for item in config.get('models', []) if item['id'] == selection.model), {})
+        value = item.get('supports_images')
+        return value if isinstance(value, bool) else None
+
     def validate_selection(self, selection):
         """选模型只检查已获取的目录；网络刷新失败不丢弃可用缓存。"""
         view = self.public()[selection.provider]
@@ -133,8 +142,10 @@ class ModelConnections:
             raise AuthorizationRequired('凭证已失效，请更新 API Key 或重新授权')
         if not view['configured']:
             raise ConnectionError('该模型服务已移除，请重新连接或选择其他模型')
-        if selection.model not in {item['id'] for item in view['models']}:
+        item = next((item for item in view['models'] if item['id'] == selection.model), None)
+        if item is None:
             raise ConnectionError('该模型不在可用列表中，请刷新列表并重新选择')
+        return item
 
     def remember_selection(self, selection):
         """尽力保存新对话的默认值，失败不影响已经保存的会话选择。"""

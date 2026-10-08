@@ -39,11 +39,11 @@ test("双击不重复提交，同步失败时阻止下一次发送", async t => 
   });
   const conversation = new AssistantConversation();
   const running = conversation.send("问题", snapshot);
-  assert.equal(await conversation.send("重复", snapshot), false);
+  assert.equal(await conversation.send("重复", snapshot), "rejected");
   release(); await running;
   assert.equal(conversation.getSnapshot().needsSync, true);
   const before = fetch.mock.calls.length;
-  assert.equal(await conversation.send("下一条", snapshot), false);
+  assert.equal(await conversation.send("下一条", snapshot), "rejected");
   assert.equal(fetch.mock.calls.length, before);
 });
 
@@ -141,7 +141,8 @@ test("SDK 消费分片中文，仅提交新消息与快照，结束后核对服�
   assert.equal(request.text, "问题");
   assert.equal(c.chat.messages[1].parts[1].text, "完整回答");
   assert.equal(c.getSnapshot().busy, false);
-  assert.deepEqual(c.chat.messages, c.getSnapshot().session.messages);
+  assert.equal("messages" in c.getSnapshot().session, false);
+  assert.equal(c.getSnapshot().acceptedInput.id, request.message_id);
   c.dispose();
 });
 
@@ -194,7 +195,7 @@ test("SDK 错误与过期会话不自动重发，未确认同步时阻止继续�
   await c.send("问题", snapshot);
   assert.equal(c.getSnapshot().expired, true);
   assert.equal(posts, 1);
-  assert.equal(await c.send("问题", snapshot), false);
+  assert.equal(await c.send("问题", snapshot), "rejected");
   c.dispose();
 });
 
@@ -224,7 +225,7 @@ test("刷新恢复服务端消息，恢复失败阻止发送且不遗忘会话",
   const conversation = new AssistantConversation("test");
   await conversation.restore();
   assert.equal(conversation.getSnapshot().expired, true);
-  assert.equal(await conversation.send("不能另开一轮", null), false);
+  assert.equal(await conversation.send("不能另开一轮", null), "rejected");
   assert.equal(values.get("rhythm:assistant:v1:test"), "session1");
   fail = false;
   await conversation.restore();
@@ -256,7 +257,7 @@ test("恢复仍在运行的会话时禁止重发，后续同步恢复最终回�
   const conversation = new AssistantConversation();
   assert.equal(await conversation.open("session1"), true);
   assert.equal(conversation.getSnapshot().needsSync, true);
-  assert.equal(await conversation.send("不要重复调用", null), false);
+  assert.equal(await conversation.send("不要重复调用", null), "rejected");
   await conversation.sync();
   assert.equal(conversation.getSnapshot().needsSync, false);
   assert.equal(conversation.chat.messages.at(-1).parts.at(-1).text, "完整回答");
@@ -313,7 +314,7 @@ for (const fail of [false, true]) test(`生成中切换历史：${fail ? "失败
   assert.equal(c.getSnapshot().needsSync, fail);
   assert.equal(c.getSnapshot().busy, false);
   if (fail) {
-    assert.equal(await c.send("不能重复发送", null), false);
+    assert.equal(await c.send("不能重复发送", null), "rejected");
     await c.sync();
     assert.equal(c.getSnapshot().needsSync, false);
   } else assert.equal(c.chat.messages.at(-1).parts.at(-1).text, "完整回答");
@@ -338,7 +339,7 @@ test("按对话保存模型，保存期间不发送消息，切换失败保留�
   const conversation = new AssistantConversation();
   await conversation.open("session1");
   const selecting = conversation.selectModel(chat);
-  assert.equal(await conversation.send("不应发送", null), false);
+  assert.equal(await conversation.send("不应发送", null), "rejected");
   release();
   assert.equal(await selecting, true);
   assert.deepEqual(conversation.getSnapshot().session.model_selection, chat);
@@ -457,8 +458,44 @@ test("纯图片消息随本轮发送，恢复后保留 SDK 文件消息", async 
     return Response.json({ ...final(), messages: [{ id: request.message_id, role: "user", parts: [image] }] });
   });
   const c = new AssistantConversation();
-  assert.equal(await c.send("", null, undefined, [image]), true);
+  assert.equal(await c.send("", null, undefined, [image]), "accepted");
   assert.equal(request.text, "");
   assert.deepEqual(request.images, [{ media_type: "image/png", data: "aGVsbG8=" }]);
   assert.deepEqual(c.chat.messages[0].parts, [image]);
+});
+
+for (const withImage of [false, true]) test(`完成确认后不读取快照，可连续发送${withImage ? "图片" : "文字"}`, async t => {
+  let posts = 0;
+  const requests = [];
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    requests.push([url, options.method]);
+    if (url === "/api/assistant/sessions") return Response.json(empty());
+    assert.equal(options.method, "POST", "正常完成不能读取会话快照");
+    const body = JSON.parse(options.body);
+    const assistantId = `a${++posts}`;
+    return sse([
+      { type: "data-turn-accepted", transient: true, data: { user_id: body.message_id, created_at: stamp, title: "问题", updated_at: stamp } },
+      { type: "start", messageId: assistantId, messageMetadata: { created_at: stamp } },
+      { type: "start-step" },
+      { type: "tool-input-available", toolCallId: `tool-${posts}`, toolName: "propose_rhythm_exercise", input: {} },
+      { type: "tool-output-available", toolCallId: `tool-${posts}`, output: { generated_exercise: { id: `exercise-${posts}` } } },
+      { type: "finish-step" },
+      ...events.slice(1, -1),
+      { type: "data-turn-completed", transient: true, data: { user_id: body.message_id, assistant_id: assistantId, title: "问题", updated_at: stamp } },
+      { type: "finish" },
+    ]);
+  });
+  const c = new AssistantConversation();
+  const images = withImage ? [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,aGVsbG8=" }] : [];
+  for (let i = 0; i < 2; i++) assert.equal(await c.send("问题", snapshot, undefined, images), "accepted");
+  assert.equal(requests.length, 3);
+  assert.equal(c.chat.messages.length, 4);
+  assert.equal(c.chat.messages[1].parts.find(part => part.type === "tool-propose_rhythm_exercise").output.generated_exercise.id, "exercise-1");
+  assert.equal(c.getSnapshot().needsSync, false);
+  assert.equal(c.getSnapshot().session.last_run_status, "completed");
+  assert.equal(c.getSnapshot().session.title, "问题");
+  assert.equal(c.getSnapshot().acceptedInput.metadata.created_at, stamp);
+  assert.ok(c.chat.messages.every(message => message.metadata.created_at === stamp));
+  assert.ok(c.chat.messages.every(message => message.parts.every(part => !part.type.startsWith("data-"))));
+  if (withImage) assert.equal(c.chat.messages[0].parts.filter(part => part.type === "file").length, 1);
 });

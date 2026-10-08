@@ -129,7 +129,12 @@ GET 和实时流使用相同消息 ID 与工具调用 ID，前端同步后能保
 流使用 [AI SDK UI Message Stream](https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol)，
 由 Pydantic AI 的 Vercel UI adapter 编码，响应带 `x-vercel-ai-ui-message-stream: v1`。
 文字通过 `text-start` / `text-delta` / `text-end` 传输，工具结果通过 `tool-output-available` 提供，
-整轮以 `finish` 和 `[DONE]` 结束，流内错误使用 `error`。不再维护自定义 SSE 事件或前端解析器。
+整轮以 `finish` 和 `[DONE]` 结束，流内错误使用 `error`。不另写 SSE 编码或前端解析器。
+
+通过 SDK 的 transient 数据块传递应用确认：`data-turn-accepted` 在用户输入落盘后发出，
+携带用户消息 ID、接受时间和会话摘要；`data-turn-completed` 在最终 checkpoint 成功并释放运行占用后发出，
+携带本轮用户／助手消息 ID、标题与更新时间。确认不包含历史消息或图片，也不写入消息 parts。
+正常完成不再 GET 完整会话；缺少完成确认、停止、异常断流时仍查询服务端记录恢复。
 
 上游必须确认完整响应才可执行工具；异常断流不能作为成功。单轮最多 120 秒，单次网络等待 30 秒，
 OpenAI 客户端关闭自动重试。取消或断连会关闭上游连接，不保证供应商立即停止计费。
@@ -268,3 +273,7 @@ assistant/
 模型目录的 `supports_images` 来自当前实测能力集合，新增模型需要验证后更新，含图历史不允许切换到未确认支持图片的模型
 
 模型输出预算沿用供应商默认行为，会话层不统一设置 `max_tokens`；运行超时和调用次数限制独立保留。供应商报告输出达到上限时会返回明确提示，不执行未完成的工具调用，也不自动重试。
+
+模型图片输入能力由各供应商 `/models` 返回的 `input_modalities` 解析，缓存为 `supports_images: true/false/null`。
+有效非空输入类型列表包含 image 时为支持，不包含时为不支持；缺失或异常字段为未知，允许请求。
+前端展示与后端发送、含图历史切换使用同一份目录能力。目录按需刷新，缓存有效期 300 秒；旧缓存缺少能力字段时直接重新获取。

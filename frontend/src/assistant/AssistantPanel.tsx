@@ -115,12 +115,9 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
     conversation.getSnapshot,
   );
   useEffect(() => {
-    for (const entry of state.session?.messages ?? []) {
-      if (entry.role !== "user") continue;
-      const batch = entry.metadata?.page_context?.state.practice_activity;
-      if (batch && typeof batch === "object" && !Array.isArray(batch) && typeof batch.batchId === "string") activity?.acknowledge(batch.batchId);
-    }
-  }, [activity, state.session]);
+    const batch = state.acceptedInput?.metadata?.page_context?.state.practice_activity;
+    if (batch && typeof batch === "object" && !Array.isArray(batch) && typeof batch.batchId === "string") activity?.acknowledge(batch.batchId);
+  }, [activity, state.acceptedInput]);
   useEffect(() => {
     if (!state.needsSync || state.busy || state.expired) return;
     const timer = setTimeout(() => void conversation.sync(), 1500);
@@ -132,10 +129,10 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
     activitySession.current = state.session?.id ?? null;
     if (state.session) {
       activity?.start();
-      const focus = state.session.messages.findLast(message => message.role === "user")?.metadata?.page_context?.state.practice_focus;
+      const focus = conversation.chat.messages.findLast(message => message.role === "user")?.metadata?.page_context?.state.practice_focus;
       if (!activity?.getFocus()) activity?.restoreFocus(focus);
     }
-  }, [activity, state.session]);
+  }, [activity, conversation, state.session]);
   const { readCurrentPageContext } = useAssistantContext();
   const [practice, setPractice] = useState<GeneratedExercise | null>(null);
   const composer = useRef<ComposerHandle>(null);
@@ -183,9 +180,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
   }, [home, visible]);
 
   async function send({ text, images }: { text: string; images: FileUIPart[] }, selection: ModelSelection): Promise<"accepted" | "rejected" | "unknown"> {
-    const before = conversation.getSnapshot();
     const version = generation.current;
-    const previousEntryCount = before.session?.messages.length ?? 0;
     follow.current = true;
     activity?.start();
     const page = readCurrentPageContext();
@@ -193,14 +188,8 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
     const focus = activity?.getFocus();
     const context = batch || focus ? { ...(page ?? { page: "unknown", description: "当前页面未提供上下文", state: {} }),
       state: { ...page?.state, practice_activity: batch ?? null, practice_focus: focus ?? null } } : page;
-    await conversation.send(text, context, selection, images);
-    if (version !== generation.current) return "unknown";
-    const after = conversation.getSnapshot();
-    // 仅在已确认本次输入没有写入会话时恢复。不能用文字相等判断：用户可能连续发送相同内容。
-    const accepted = after.session?.messages
-      .slice(previousEntryCount)
-      .some((entry) => entry.role === "user");
-    return after.needsSync ? "unknown" : accepted ? "accepted" : "rejected";
+    const result = await conversation.send(text, context, selection, images);
+    return version !== generation.current ? "unknown" : result;
   }
   function newConversation() {
     generation.current++;
@@ -230,7 +219,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
     const opened = await conversation.open(id);
     if (opened) {
       activity?.reset(); activity?.start();
-      activity?.restoreFocus(conversation.getSnapshot().session?.messages.findLast(message => message.role === "user")?.metadata?.page_context?.state.practice_focus);
+      activity?.restoreFocus(conversation.chat.messages.findLast(message => message.role === "user")?.metadata?.page_context?.state.practice_focus);
       composer.current?.clear(); setPractice(null); follow.current = true;
       setHistoryOpen(false); setMobileHistoryOpen(false);
       requestAnimationFrame(() => composer.current?.focus());
@@ -242,7 +231,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
       {home && availability.ready && !initializing && <>
         {mobileHistoryOpen && <button className="assistant-history-backdrop" aria-label="关闭会话列表" onClick={() => setMobileHistoryOpen(false)} />}
         <aside ref={sessionSidebar} role={mobileHistoryOpen ? "dialog" : undefined} aria-modal={mobileHistoryOpen ? true : undefined} aria-label="会话列表" className="assistant-session-sidebar" onKeyDown={event => { if (event.key === "Escape" && !mobileHistoryOpen) { setSidebarExpanded(false); requestAnimationFrame(() => sessionToggle.current?.focus()); } }}>
-          <ConversationHistory placement="sidebar" currentId={state.session?.id} refreshKey={`${state.session?.id ?? ""}:${state.busy}`}
+          <ConversationHistory placement="sidebar" currentId={state.session?.id} currentSession={state.session}
             onNew={() => { newConversation(); setMobileHistoryOpen(false); }} onOpen={openConversation} onDeleted={deleteConversation}
             onClose={() => { setSidebarExpanded(false); setMobileHistoryOpen(false); }} />
         </aside>
@@ -365,6 +354,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
                 </div>
               ) : null}
               {messages.map(message => {
+                if (message.role === "assistant" && message === lastMessage && waitingForContent) return null;
                 const attachments = message.parts.filter(isMessageImage);
                 const textParts = message.parts.filter(part => part.type === "text").filter(part => part.text.trim());
                 const text = textParts.map(part => part.text).join("\n\n");
@@ -464,10 +454,10 @@ function MessageActions({ text, createdAt, pending = false }: { text: string; cr
     const timer = window.setTimeout(() => setCopyState("idle"), 2000);
     return () => window.clearTimeout(timer);
   }, [copyState]);
-  if (!createdAt && (!text.trim() || pending)) return null;
+  if (pending || (!createdAt && !text.trim())) return null;
   const label = copyState === "copied" ? "已复制" : "复制消息";
   return <div className="assistant-message-meta">
-    {text.trim() && !pending && <button type="button" className="assistant-message-copy" aria-label={label} title={label} onClick={async () => {
+    {text.trim() && <button type="button" className="assistant-message-copy" aria-label={label} title={label} onClick={async () => {
       try { await navigator.clipboard.writeText(text); setCopyState("copied"); }
       catch { setCopyState("failed"); }
     }}>{copyState === "copied" ? <Check size={16} /> : <Copy size={16} />}</button>}

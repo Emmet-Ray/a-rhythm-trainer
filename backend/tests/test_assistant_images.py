@@ -66,7 +66,7 @@ def test_images_survive_restart_and_are_not_repeated_in_checkpoints(tmp_path):
         assert session.turns[0].images == [image]
         assert session.snapshot()['messages'][0]['parts'] == [image.ui_part()]
         with pytest.raises(ConnectionError, match='包含图片'):
-            session.select_model(ModelSelection(provider='deepseek', model='deepseek-v4-pro'))
+            session.select_model(ModelSelection(provider='deepseek', model='deepseek-v4-pro'), image_input=False)
         session.select_model(ModelSelection(provider='chatgpt', model='gpt-5.6-sol'))
         asyncio.run(send(session, '继续', 'u2'))
         records = restored.journal.read(INSTANCE_OWNER, sid)
@@ -96,7 +96,7 @@ def test_first_image_write_already_blocks_incompatible_model(monkeypatch):
         try:
             assert await asyncio.to_thread(started.wait, 3)
             with pytest.raises(ConnectionError, match='包含图片'):
-                session.select_model(ModelSelection(provider='deepseek', model='deepseek-v4-pro'))
+                session.select_model(ModelSelection(provider='deepseek', model='deepseek-v4-pro'), image_input=False)
         finally:
             release.set()
             await task
