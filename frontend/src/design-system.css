@@ -845,6 +845,7 @@
 .assistant-input-actions button:hover:not(:disabled) { background: var(--ds-primary-hover); }
 .assistant-input-actions button:disabled { background: var(--ds-subtle); color: var(--ds-muted); opacity: 1; }
 
+.assistant-switch-status { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: right; font-size: 12px; }
 .assistant-notice, .assistant-error { font-size: 12px; line-height: 1.5; margin: 0 0 10px; }
 .assistant-notice { color: var(--ds-muted); }
 .assistant-error { color: var(--ds-error); }
