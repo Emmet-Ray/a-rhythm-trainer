@@ -1,4 +1,3 @@
-import { AsyncStatus } from "../ui/AsyncStatus";
 import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
 import { useChat } from "@ai-sdk/react";
 import { isToolUIPart, getToolName, type FileUIPart } from "ai";
@@ -149,7 +148,6 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
   const follow = useRef(true);
   const generation = useRef(0);
   const scrollPosition = useRef(0);
-  const positionedSession = useRef(state.session?.id);
   const initializing = availability.loading || (availability.ready &&
     !state.initialized);
   const started = Boolean(messages.length || state.busy || state.expired);
@@ -167,17 +165,18 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
   useEffect(() => {
     if (!visible) playbackGroup.stop();
   }, [visible, playbackGroup]);
-  // 会话身份与消息一起提交；在浏览器绘制前定位，避免先显示旧位置再跳到底部。
+  useEffect(() => {
+    if (visible && follow.current && thread.current)
+      thread.current.scrollTop = thread.current.scrollHeight;
+  }, [visible, state, messages]);
+
   useLayoutEffect(() => {
-    if (positionedSession.current !== state.session?.id) {
-      positionedSession.current = state.session?.id;
-      follow.current = true;
-      scrollPosition.current = 0;
-    }
     const element = thread.current;
     if (visible && element)
-      element.scrollTop = follow.current ? element.scrollHeight : scrollPosition.current;
-  }, [home, visible, state.session?.id, messages]);
+      element.scrollTop = follow.current
+        ? element.scrollHeight
+        : scrollPosition.current;
+  }, [home, visible]);
 
   async function send({ text, images }: { text: string; images: FileUIPart[] }, selection: ModelSelection): Promise<"accepted" | "rejected" | "unknown"> {
     const version = generation.current;
@@ -220,7 +219,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
     if (opened) {
       activity?.reset(); activity?.start();
       activity?.restoreFocus(conversation.chat.messages.findLast(message => message.role === "user")?.metadata?.page_context?.state.practice_focus);
-      composer.current?.clear(); setPractice(null);
+      composer.current?.clear(); setPractice(null); follow.current = true;
       setHistoryOpen(false); setMobileHistoryOpen(false);
       requestAnimationFrame(() => composer.current?.focus());
     }
@@ -298,7 +297,6 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
             <header className="assistant-heading">
               {home && <button ref={sessionToggle} type="button" aria-expanded={mobileHistoryOpen} aria-controls="assistant-history" className="assistant-session-toggle" aria-label="展开会话列表" onClick={() => { setSidebarExpanded(true); setMobileHistoryOpen(window.matchMedia("(max-width: 1000px)").matches); }}><PanelLeftOpen size={20} aria-hidden="true" /></button>}
               {!home && <h2 id="assistant-title">节奏助手</h2>}
-              <AsyncStatus className="assistant-switch-status" pending={state.restoring} label="正在读取对话…" />
               <div className="assistant-actions" hidden={home}>
                 <div className="assistant-history-anchor" ref={historyAnchor}>
                 <button ref={historyButton} type="button" className="assistant-new" aria-label="历史对话" aria-haspopup="dialog" aria-controls="assistant-history" aria-expanded={historyOpen}
@@ -336,7 +334,6 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
               ref={thread}
               className="assistant-messages"
               role="log"
-              aria-busy={state.restoring}
               aria-label="对话记录"
               aria-live="polite"
               onScroll={() => {
@@ -403,6 +400,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
             <Composer ref={composer} conversation={conversation} ready={availability.ready} visible={visible && availability.ready && !initializing}
               welcome={home && !started} streaming={status === "submitted" || status === "streaming"}
               historyHasImages={historyHasImages} onPreview={setExpandedImage} onSend={send}>
+              {state.restoring && <p className="assistant-notice" role="status">正在恢复对话…</p>}
               {state.error ? (
                 <p className="assistant-error" role="alert">
                   {state.error}
