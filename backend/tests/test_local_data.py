@@ -228,3 +228,32 @@ def test_time_window_inclusive_local_boundary_excludes_future_and_uses_dictation
     assert result['overview']['count']==2
     assert result['overview']['days']==2
     assert result['records'][0]['attemptCount']==4
+
+
+def test_activity_uses_local_dates_and_ignores_pagination(client):
+    for index, start in enumerate(['2026-10-01T15:59:59Z', '2026-10-01T16:00:00Z', '2026-10-01T16:01:00Z']):
+        item = record()
+        item.update(id=f'activity-{index}', exerciseId=f'activity-{index}')
+        item['attempts'][0].update(id=f'activity-attempt-{index}', startedAt=start)
+        create(client, item)
+    params = {'after': '2026-10-01T00:00:00+08:00', 'before': '2026-10-03T23:00:00+08:00', 'zone': 'Asia/Shanghai', 'page_size': 1}
+    expected = {'unit': 'day', 'points': [{'date': '2026-10-01', 'count': 1}, {'date': '2026-10-02', 'count': 2}, {'date': '2026-10-03', 'count': 0}]}
+    for page in [1, 2, 3]:
+        result = client.get('/api/local-data/records', params={**params, 'page': page}).json()
+        assert len(result['records']) == 1
+        assert result['activity'] == expected
+        assert sum(point['count'] for point in result['activity']['points']) == result['overview']['count']
+    empty = client.get('/api/local-data/records', params={**params, 'mode': 'tapping'}).json()
+    assert all(point['count'] == 0 for point in empty['activity']['points'])
+    assert len(empty['activity']['points']) == 3
+
+
+def test_activity_months_fill_gaps_and_local_days_handle_dst(client):
+    item = record()
+    item['attempts'] = [{**record()['attempts'][0], 'id': f'dst-{i}', 'startedAt': start}
+        for i, start in enumerate(['2026-03-08T06:59:59Z', '2026-03-08T07:00:00Z', '2026-05-01T12:00:00Z'])]
+    create(client, item)
+    result = client.get('/api/local-data/records', params={'after': '2026-03-07T00:00:00-05:00', 'before': '2026-03-09T23:00:00-04:00', 'zone': 'America/New_York'}).json()
+    assert result['activity']['points'] == [{'date': '2026-03-07', 'count': 0}, {'date': '2026-03-08', 'count': 2}, {'date': '2026-03-09', 'count': 0}]
+    result = client.get('/api/local-data/records', params={'before': '2026-06-30T23:00:00Z', 'zone': 'UTC'}).json()
+    assert result['activity'] == {'unit': 'month', 'points': [{'date': '2026-03-01', 'count': 2}, {'date': '2026-04-01', 'count': 0}, {'date': '2026-05-01', 'count': 1}, {'date': '2026-06-01', 'count': 0}]}

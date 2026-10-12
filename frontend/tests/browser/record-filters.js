@@ -29,6 +29,7 @@ async page => {
     const days = after ? (new Date(url.searchParams.get('before')) - new Date(after)) / 86400000 : 100;
     const count = after ? days < 10 ? 7 : 30 : mode === 'all' ? 123 : mode === 'tapping' ? 103 : 20;
     return { records: mode === 'all' ? [record('tapping', p), record('dictation', p)] : [record(mode, p)], page: p, pages: 2, total: 3, pageSize: 2,
+      activity: { unit: 'day', points: [{date: '2026-10-11', count}, {date: '2026-10-12', count: 0}] },
       overview: { count, days: 12, tappingCount: 103, passedCount: 80, passRate: 78, dictationCount: 20, completedCount: 15, independentCount: 10 } };
   };
   await page.route('**/api/local-data/records**', route => {
@@ -47,11 +48,20 @@ async page => {
   const results = page.locator('.record-results');
   const rows = page.locator('.record-entry');
   const count = page.locator('.record-metrics dd').first();
-  const modeButtons = page.getByRole('group', { name: '记录模式', exact: true });
-  const periods = page.getByRole('group', { name: '记录时间范围', exact: true });
+  const modeButtons = page.getByRole('combobox', { name: '练习模式', exact: true });
+  const periods = page.getByRole('combobox', { name: '时间范围', exact: true });
   await rows.first().waitFor();
   await page.waitForFunction(() => document.querySelector('.record-results')?.getAttribute('aria-busy') === 'false');
   check((await count.textContent()).includes('123'), '初始统计错误');
+  check((await page.locator('.record-activity .recharts-surface').getAttribute('aria-label')).includes('123 次'), '图表统计不一致');
+  await page.locator('.record-activity .recharts-surface').waitFor();
+  check(await page.getByText('查看次数明细', {exact: true}).count() === 0, '仍有明细入口');
+  check((await page.locator('.recharts-surface title').allTextContents()).every(text => !text.trim()), '图表仍有重复原生悬浮提示');
+  async function choose(trigger, value) {
+    const labels = {tapping: '击拍练习', dictation: '节奏听写', week: '近 7 天', month: '近 30 天', all: trigger === modeButtons ? '全部模式' : '全部时间'};
+    await trigger.click();
+    await page.getByRole('option', {name: labels[value], exact: true}).click();
+  }
   controlled = true;
   async function change(action) {
     const arriving = new Promise(resolve => { receive = resolve; });
@@ -63,15 +73,15 @@ async page => {
     await page.waitForFunction(() => document.querySelector('.record-results')?.getAttribute('aria-busy') === 'false');
   }
   async function stable(action) {
-    const oldText = await results.textContent(), bounds = await results.boundingBox();
+    const oldText = await results.textContent(), bounds = await results.evaluate(el => ({ y: el.getBoundingClientRect().y + scrollY, height: el.getBoundingClientRect().height }));
     const item = await change(action);
     check(await results.textContent() === oldText, '等待新结果时清空列表或改变统计口径');
-    const nextBounds = await results.boundingBox();
+    const nextBounds = await results.evaluate(el => ({ y: el.getBoundingClientRect().y + scrollY, height: el.getBoundingClientRect().height }));
     check(Math.abs(nextBounds.y - bounds.y) < 1 && Math.abs(nextBounds.height - bounds.height) < 1, '等待期间布局跳动');
     check(await rows.first().getByRole('button', { name: /查看详情/ }).isDisabled(), '旧结果操作仍可用');
     return item;
   }
-  const tapping = await stable(() => modeButtons.getByRole('button', { name: '击拍练习', exact: true }).click());
+  const tapping = await stable(() => choose(modeButtons, 'tapping'));
   await page.getByRole('button', { name: '打开 AI 助手', exact: true }).click();
   await page.getByRole('textbox', { name: '向助手提问' }).fill('当前统计是什么');
   await Promise.all([page.waitForResponse(r => r.url().endsWith('/messages')), page.getByRole('button', { name: '发送', exact: true }).click()]);
@@ -79,22 +89,23 @@ async page => {
   check(context.status === 'loading' && context.filter.mode === 'all' && context.requestedFilter.mode === 'tapping' && context.overview.count === 123, '助手把旧统计标成新筛选');
   await tapping.finish(); await settled();
   check(await rows.count() === 1 && (await count.textContent()).includes('103'), '击拍统计与列表未同步更新');
+  check((await page.locator('.record-activity .recharts-surface').getAttribute('aria-label')).includes('103 次'), '图表没有随模式同步更新');
   await page.getByRole('button', { name: '收起助手', exact: true }).click();
-  const dictation = await stable(() => modeButtons.getByRole('button', { name: '节奏听写', exact: true }).click());
-  const all = await stable(() => modeButtons.getByRole('button', { name: '全部', exact: true }).click());
+  const dictation = await stable(() => choose(modeButtons, 'dictation'));
+  const all = await stable(() => choose(modeButtons, 'all'));
   await all.finish(); await settled();
   await dictation.finish();
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   check(await rows.count() === 2 && (await count.textContent()).includes('123'), '迟到响应覆盖新筛选');
-  for (const [label, expected] of [['近 7 天', '7'], ['近 30 天', '30'], ['全部', '123']]) {
-    const item = await stable(() => periods.getByRole('button', { name: label, exact: true }).click());
+  for (const [label, expected] of [['week', '7'], ['month', '30'], ['all', '123']]) {
+    const item = await stable(() => choose(periods, label));
     await item.finish(); await settled();
     check((await count.textContent()).replace('次', '').trim() === expected, '时间范围统计未更新');
   }
   const paging = await stable(() => page.getByRole('button', { name: '下一页', exact: true }).click());
   await paging.finish(); await settled();
   check(await rows.first().getByRole('heading').textContent() === '击拍记录2', '分页未生效');
-  const failed = await stable(() => modeButtons.getByRole('button', { name: '节奏听写', exact: true }).click());
+  const failed = await stable(() => choose(modeButtons, 'dictation'));
   const retained = await results.textContent(); await failed.finish(true); await settled();
   await page.getByRole('alert').waitFor();
   check(await results.textContent() === retained && await modeButtons.isVisible(), '失败丢失旧结果或筛选');
@@ -102,12 +113,12 @@ async page => {
   await retry.finish(); await settled();
   check(await page.getByRole('alert').count() === 0 && (await count.textContent()).includes('20'), '重试未恢复');
   const before = requestCount;
-  await modeButtons.getByRole('button', { name: '节奏听写', exact: true }).click();
-  await periods.getByRole('button', { name: '全部', exact: true }).click();
+  await choose(modeButtons, 'dictation');
+  await choose(periods, 'all');
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
   check(requestCount === before, '重复点击当前筛选仍发请求');
   await page.setViewportSize({ width: 390, height: 844 });
-  const mobile = await stable(() => periods.getByRole('button', { name: '近 7 天', exact: true }).click());
+  const mobile = await stable(() => choose(periods, 'week'));
   await page.waitForFunction(() => {
     const status = document.querySelector('.record-query-status span');
     return status && getComputedStyle(status).opacity === '1';
@@ -116,11 +127,21 @@ async page => {
   await mobile.finish(); await settled();
   check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '窄屏横向溢出');
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  const reduced = await stable(() => periods.getByRole('button', { name: '近 30 天', exact: true }).click());
+  const reduced = await stable(() => choose(periods, 'month'));
   await page.locator('.record-query-status span').waitFor();
   check(await page.locator('.record-query-status span').evaluate(el => getComputedStyle(el).opacity) === '1', '减少动态效果时加载提示不可见');
   await reduced.finish(); await settled();
   await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await modeButtons.focus(); await modeButtons.press('ArrowDown');
+  await page.getByRole('listbox').waitFor();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '练习模式');
+  const chart = page.locator('.record-activity .recharts-surface');
+  await chart.click({position: {x: 60, y: 60}});
+  check(await chart.evaluate(el => getComputedStyle(el).outlineStyle) === 'none', '鼠标点击图表出现外围框');
+  await periods.focus(); await page.keyboard.press('Tab'); await page.keyboard.press('ArrowRight');
+  check(await chart.evaluate(el => el === document.activeElement && getComputedStyle(el).outlineStyle !== 'none'), '键盘图表焦点不可见');
+  await page.locator('.recharts-tooltip-wrapper').waitFor({state: 'visible'});
   check(errors.length === 0, errors.join('\n'));
   return '模式／时间筛选与分页不清空旧结果，统计同步替换，乱序响应、助手口径、失败重试和窄屏布局通过';
 }

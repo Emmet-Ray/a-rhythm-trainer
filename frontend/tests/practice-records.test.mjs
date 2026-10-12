@@ -438,7 +438,8 @@ test("记录与本地数据按需读取，初始状态不把未加载当作空�
   assert.match(records, /data-navigation-pending/);
   assert.doesNotMatch(records, /正在读取练习记录/);
   assert.doesNotMatch(records, /暂无练习记录/);
-  assert.match(records, /记录时间范围/);
+  assert.match(records, /aria-label="时间范围"/);
+  assert.match(records, /aria-label="练习模式"/);
 });
 
 test("详情抽屉有关闭与预览切换但没有删除", () => {

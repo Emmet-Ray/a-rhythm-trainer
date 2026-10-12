@@ -99,7 +99,8 @@ async (page) => {
 
   await visit('/records'); c = await ask();
   check(c.page === 'practice_records' && c.state.overview.count >= 12, '记录统计');
-  await page.getByRole('button', { name: '近 7 天', exact: true }).click();
+  await page.getByRole('combobox', { name: '时间范围', exact: true }).click();
+  await page.getByRole('option', { name: '近 7 天', exact: true }).click();
   await page.getByRole('button', { name: '击拍练习', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('.record-results')?.getAttribute('aria-busy') === 'false');
   c = await ask(); check(c.state.filter.period === 'week' && c.state.filter.mode === 'tapping', '筛选完成后上下文同步');

@@ -9,7 +9,9 @@ export type RecordSummary = Omit<PracticeRecord, "attempts"> & {
   attemptCount: number; passedCount: number; completedCount: number; independentCount: number; viewedAnswerCount: number;
 };
 export type AttemptPage = { attemptIds?: string[]; record: RecordSummary; attempts: PracticeRecord["attempts"]; page: number; pages: number; total: number; pageSize: number };
+export type RecordActivity = { unit: "day" | "month"; points: { date: string; count: number }[] };
 export type RecordList = { records: RecordSummary[]; page: number; pages: number; total: number; pageSize: number;
+  activity: RecordActivity;
   overview: { count: number; days: number; tappingCount: number; passedCount: number; passRate: number | null;
     dictationCount: number; completedCount: number; independentCount: number } };
 

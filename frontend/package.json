@@ -15,6 +15,7 @@
   "dependencies": {
     "@ai-sdk/react": "^4.0.131",
     "@radix-ui/react-popover": "^1.2.0",
+    "@radix-ui/react-select": "^2.4.0",
     "@tanstack/react-query": "^5.104.2",
     "ai": "^7.0.128",
     "cmdk": "^1.1.1",
@@ -24,6 +25,7 @@
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^4.14.2",
     "react-router": "^8.3.1",
+    "recharts": "^3.10.1",
     "vexflow": "^5.0.0"
   },
   "devDependencies": {

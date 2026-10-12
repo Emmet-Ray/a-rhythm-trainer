@@ -16,6 +16,8 @@ import {
   recordListOptions, recordTotalsOptions, type RecordSummary,
 } from "../practice-records/practiceRecordStorage";
 import { StoredRecordDetail } from "../practice-records/RecordDetail";
+import { RecordFilters } from "../practice-records/RecordFilters";
+import { PracticeActivityChart } from "../practice-records/PracticeActivityChart";
 import { RecordPagination } from "../practice-records/RecordPagination";
 import { type RecordFilter, type RecordPeriod } from "../practice-records/practiceRecords";
 
@@ -85,42 +87,11 @@ function LocalRecords() {
     <>
       <header className="page-heading record-page-heading">
         <h1>练习记录</h1>
-        <div className="topic-modes record-period" role="group" aria-label="记录时间范围">
-          {([['week', '近 7 天'], ['month', '近 30 天'], ['all', '全部']] as const).map(([value, label]) => (
-            <button type="button" key={value} aria-pressed={period === value} onClick={() => {
-              if (period === value) return;
-              setPeriod(value); setPage(1); setNow(new Date());
-            }}>{label}</button>
-          ))}
-        </div>
+        <RecordFilters mode={filter} period={period}
+          onModeChange={value => { if (value !== filter) { setFilter(value); setPage(1); } }}
+          onPeriodChange={value => { if (value !== period) { setPeriod(value); setPage(1); setNow(new Date()); } }} />
       </header>
       {actionError && <ActionError key={deleteAttempt} message={actionError} />}
-      <div
-        className="record-filters topic-modes"
-        role="group"
-        aria-label="记录模式"
-      >
-        {(
-          [
-            ["all", "全部"],
-            ["tapping", "击拍练习"],
-            ["dictation", "节奏听写"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={filter === value}
-            onClick={() => {
-              if (filter === value) return;
-              setFilter(value);
-              setPage(1);
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
       <AsyncStatus className="record-query-status" pending={updating} initial={!displayed || !totals.data}
         label={displayed ? "正在更新…（暂显示上次结果）" : "正在读取练习记录…"} />
       {data.error && <p role="alert" className="practice-record-error">
@@ -141,6 +112,7 @@ function LocalRecords() {
             <div><dt title="全部验证正确，且完成前未查看答案">独立完成</dt><dd>{overview.independentCount}<span>次</span></dd></div>
           </>}
         </dl>
+        {displayed.activity && <PracticeActivityChart activity={displayed.activity} />}
       </section>}
       {!displayed || !totals.data ? null : filtered.length === 0 ? (
         <p className="library-empty-state">

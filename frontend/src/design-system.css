@@ -506,9 +506,28 @@
 .practice-record-error { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--ds-error); margin: 0 0 16px; }
 .rhythm-editor fieldset.rhythm-editor-controls { border: 0; padding: 0; margin: 0; min-width: 0; }
 .practice-records-page { max-width: 960px; }
-.practice-records-page .page-heading { margin-bottom: 24px; }
+.practice-records-page .page-heading { margin-bottom: 8px; }
 .records-description { color: var(--ds-muted); font-size: var(--ds-text-sm); line-height: 1.7; }
-.record-filters { width: fit-content; max-width: 100%; margin: 20px 0; }
+.record-page-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
+.record-filters { display: flex; gap: 8px; }
+.design-system .record-filter-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 40px; min-width: 132px; padding: 8px 12px; font-size: 13px; font-weight: 500; color: var(--ds-ink); background: var(--ds-surface); border: 1px solid var(--ds-line); border-radius: 8px; box-shadow: none; transform: none; }
+.design-system .record-filter-trigger:hover, .design-system .record-filter-trigger[data-state="open"] { background: var(--ds-subtle); border-color: var(--ds-line); }
+.design-system .record-filter-trigger:focus-visible { outline: none; border-color: var(--ds-field-border); }
+.record-filter-trigger svg { color: var(--ds-muted); }
+.record-filter-menu { z-index: 60; min-width: var(--radix-select-trigger-width); max-height: var(--radix-select-content-available-height); overflow-y: auto; padding: 5px; background: var(--ds-surface); color: var(--ds-ink); border: 1px solid var(--ds-line); border-radius: 10px; box-shadow: 0 6px 24px #00000014; font-size: 13px; }
+.record-filter-option { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 38px; padding: 8px 10px; border-radius: 6px; cursor: pointer; outline: none; user-select: none; }
+.record-filter-option[data-highlighted] { background: var(--ds-hover); }
+.record-filter-option[data-state="checked"] { color: var(--ds-primary); }
+.record-activity { margin-top: 24px; }
+.record-activity-heading { margin-bottom: 12px; }
+.record-activity-heading h2 { margin: 0; font-size: 13px; font-weight: 500; color: var(--ds-muted); }
+.record-activity-chart { height: 220px; min-width: 0; }
+.record-activity-chart .recharts-surface:focus:not(:focus-visible) { outline: none; }
+.record-activity-chart .recharts-surface:focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 4px; border-radius: 4px; }
+@media (max-width: 600px) {
+  .record-filters { width: 100%; }
+  .design-system .record-filter-trigger { flex: 1; min-width: 0; min-height: 44px; }
+}
 .record-list { list-style: none; padding: 0; margin: 0; }
 .design-system .record-list > .record-entry { display: flex; align-items: center; gap: 24px; padding: 24px 0; }
 .record-entry-content { flex: 1; min-width: 0; }
@@ -532,15 +551,12 @@
 .record-detail .dictation-measure-row > td { padding: 12px 16px; background: var(--ds-subtle); }
 .record-detail .dictation-measure-row table tr:last-child > * { border-bottom: 0; }
 .record-table-scroll { overflow-x: auto; }
-.record-page-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
-.record-page-heading .record-period { margin: 0; }
-.record-overview { padding: 8px 12px 28px; border-bottom: 1px solid var(--ds-line); }
-.record-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin: 0; }
+.record-overview { padding: 8px 0 24px; border-bottom: 1px solid var(--ds-line); }
+.record-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 160px)); gap: 24px; margin: 0; }
 .record-metrics dt { color: var(--ds-muted); font-size: var(--ds-text-sm); margin-bottom: 10px; }
 .record-metrics dd { margin: 0; font-size: 30px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .record-metrics dd span { margin-left: 8px; font-size: var(--ds-text-sm); font-weight: 400; color: var(--ds-muted); }
 @media (max-width: 640px) {
-  .record-page-heading { gap: 16px; }
   .record-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; }
 }
 .record-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 24px; }

@@ -1,6 +1,7 @@
 """练习档案的分页、筛选和统计；隐藏表结构、排序及历史查询约定。"""
 
-from datetime import datetime
+from collections import Counter
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from sqlalchemy import select, func, case
 from sqlalchemy.orm import Session
@@ -61,12 +62,36 @@ def list_record_archives(session: Session, *, mode: str, page: int, page_size: i
     ).select_from(A).join(R).where(*conditions)).one()
     # 只读时间列计算本地日历日，正确处理历史夏令时，不读取尝试 JSON
     dates = session.scalars(select(attempt_time).select_from(A).join(R).where(*conditions))
-    days = len({datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(tz).date() for value in dates})
+    daily = Counter(datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(tz).date() for value in dates)
+    activity = _activity(daily, after.astimezone(tz).date() if after else None, before.astimezone(tz).date())
+    days = len(daily)
     return {"records": [_summary(session, row) for row in rows], "page": page, "pages": pages,
-            "total": total, "pageSize": page_size,
+            "total": total, "pageSize": page_size, "activity": activity,
             "overview": {"count": count, "days": days, "tappingCount": tapping or 0,
                 "passedCount": passed or 0, "passRate": int((passed or 0) / tapping * 100 + .5) if tapping else None,
                 "dictationCount": dictation or 0, "completedCount": completed or 0, "independentCount": independent or 0}}
+
+
+def _activity(daily, start, end):
+    """与概览共用本地日期口径；补零，超过 90 天按月汇总，避免长历史挤成不可读的日柱。"""
+    start = start or min(daily, default=end)
+    monthly = (end - start).days >= 90
+    counts = Counter()
+    for day, count in daily.items():
+        counts[day.replace(day=1) if monthly else day] += count
+    cursor = start.replace(day=1) if monthly else start
+    points = []
+    while cursor <= end:
+        points.append({"date": cursor.isoformat(), "count": counts[cursor]})
+        if monthly:
+            if cursor.year == 9999 and cursor.month == 12:
+                break
+            cursor = cursor.replace(year=cursor.year + cursor.month // 12, month=cursor.month % 12 + 1)
+        else:
+            if cursor == end:
+                break
+            cursor += timedelta(days=1)
+    return {"unit": "month" if monthly else "day", "points": points}
 
 
 def lookup_record_history(session: Session, target: dict) -> dict | None:
