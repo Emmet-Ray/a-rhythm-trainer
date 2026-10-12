@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, X } from "lucide-react";
 import { BarlineType, Formatter, Renderer } from "vexflow";
 import { type RhythmElement, type RhythmExercise } from "../RhythmModel";
@@ -44,9 +44,11 @@ export function RhythmDraftScore({
   const positionedMeasure = useRef<number | undefined>(undefined);
   const [browsingMeasure, setBrowsingMeasure] = useState(0);
   const activeMeasure = selectedMeasureIndex ?? Math.min(browsingMeasure, measures.length - 1);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
+    // 首次绘制前测量，避免先按零宽度排版再改变谱面高度。
+    setViewportWidth(viewport.clientWidth);
     const observer = new ResizeObserver(([entry]) => setViewportWidth(entry.contentRect.width));
     observer.observe(viewport);
     return () => observer.disconnect();
@@ -100,7 +102,7 @@ export function RhythmDraftScore({
     return { ...layout, measures: preparedMeasures };
   }, [measures, prepared, layout, timeSignature.beats, timeSignature.beatType, measureNumberStart]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 

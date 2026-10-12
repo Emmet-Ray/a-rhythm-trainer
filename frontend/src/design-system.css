@@ -1041,8 +1041,9 @@
 .assistant-history-caption { margin: 0 10px 12px; font-size: 12px; font-weight: 500; color: var(--ds-muted); }
 .assistant-history--sidebar .assistant-history-open { font-size: 14px; font-weight: 400; color: var(--ds-ink); }
 .assistant-history-empty { margin: 0 10px; font-size: 14px; font-weight: 400; line-height: 1.5; color: var(--ds-muted); }
-.assistant-history--sidebar .assistant-history-delete { opacity: 0; }
-.assistant-history--sidebar li:is(:hover, :focus-within) .assistant-history-delete { opacity: 1; }
+/* 显隐独立于禁用态的透明度，避免切换会话时所有删除按钮显现。 */
+.assistant-history--sidebar .assistant-history-delete { visibility: hidden; }
+.assistant-history--sidebar li:is(:hover, :focus-within) .assistant-history-delete { visibility: visible; }
 .assistant-heading .assistant-actions[hidden] { display: none; }
 .assistant-shell[data-layout="home"] .assistant-heading { justify-content: flex-start; gap: 12px; padding: 20px 18px; min-height: 80px; }
 .assistant-session-toggle, .assistant-history--sidebar .assistant-history-heading button { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; min-height: 40px; padding: 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ds-muted); }
@@ -1055,7 +1056,7 @@
   .assistant-shell[data-mobile-history="true"] .assistant-session-sidebar { display: flex; }
   .assistant-history-backdrop { display: block; position: absolute; inset: 0; z-index: 64; border: 0; border-radius: 0; background: rgb(20 25 35 / 25%); }
 }
-@media (hover: none) { .assistant-history--sidebar .assistant-history-delete { opacity: 1; } }
+@media (hover: none) { .assistant-history--sidebar .assistant-history-delete { visibility: visible; } }
 
 /* 浏览页和工作区共用左侧基准，仅按内容类型限制宽度。 */
 .site-shell main:has(> :is(.preset-library, .settings-page, .practice-records-page, .custom-library)) { max-width: calc(1040px + 2 * var(--site-gutter)); }

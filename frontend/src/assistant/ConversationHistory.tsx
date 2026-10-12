@@ -54,8 +54,9 @@ export function ConversationHistory({ panelRef, anchor, currentId, onOpen, onDel
     if (currentSession?.updated_at && currentSession.last_run_status) {
       const summary: SessionSummary = { id: currentSession.id, title: currentSession.title ?? "新对话",
         updated_at: currentSession.updated_at, is_running: currentSession.is_running, unreadable: false };
-      setItems(previous => [summary, ...previous.filter(item => item.id !== summary.id)]
-        .sort((a, b) => b.updated_at.localeCompare(a.updated_at)));
+      setItems(previous => (previous.some(item => item.id === summary.id)
+        ? previous.map(item => item.id === summary.id ? summary : item)
+        : [summary, ...previous]).sort((a, b) => b.updated_at.localeCompare(a.updated_at)));
       if (!items.some(item => item.id === summary.id)) setTotal(value => Math.max(value, items.length + 1));
     }
   }
@@ -86,12 +87,12 @@ export function ConversationHistory({ panelRef, anchor, currentId, onOpen, onDel
     {error && <p className="assistant-error" role="alert">{error} <button type="button" disabled={busy} onClick={() => { setError(""); setBusy(true); setRevision(value => value + 1); }}>重试</button></p>}
     {!busy && !error && !items.length && <p className="assistant-history-empty">暂无对话</p>}
     <ul>{items.map(item => <li key={item.id} data-current={item.id === currentId}>
-      <button type="button" className="assistant-history-open" title={`${item.title}${item.updated_at ? ` · ${new Date(item.updated_at).toLocaleString()}` : ""}`} disabled={busy || item.unreadable} aria-current={item.id === currentId ? "true" : undefined}
-        onClick={async () => { setBusy(true); if (!await onOpen(item.id)) setError("无法打开对话，请重试。"); setBusy(false); }}>
+      <button type="button" className="assistant-history-open" title={`${item.title}${item.updated_at ? ` · ${new Date(item.updated_at).toLocaleString()}` : ""}`} disabled={item.unreadable} aria-disabled={busy || item.unreadable} aria-current={item.id === currentId ? "true" : undefined}
+        onClick={async () => { if (busy) return; setBusy(true); setError(""); if (!await onOpen(item.id)) setError("无法打开对话，请重试。"); setBusy(false); }}>
         <span className="assistant-history-title">{item.title}</span>
         {item.unreadable && <small>无法读取</small>}
       </button>
-      <button type="button" className="assistant-history-delete" aria-label={`删除对话：${item.title}`} disabled={busy || item.is_running} onClick={() => void remove(item)}><Trash2 size={16} aria-hidden="true" /></button>
+      <button type="button" className="assistant-history-delete" aria-label={`删除对话：${item.title}`} disabled={item.is_running} aria-disabled={busy || item.is_running} onClick={() => { if (!busy) void remove(item); }}><Trash2 size={16} aria-hidden="true" /></button>
     </li>)}</ul>
     <AsyncStatus pending={busy} label="正在读取…" />
     {items.length < total && <button type="button" disabled={busy} onClick={() => void more()}>加载更多</button>}

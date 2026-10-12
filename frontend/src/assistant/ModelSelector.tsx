@@ -1,39 +1,26 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { Command } from "cmdk";
 import { Check, ChevronDown, X } from "lucide-react";
-import { providers, requestConnections, type Connections, providerNames, type ModelSelection, type Provider } from "../api/modelConnections";
-
-
+import { providers, providerNames, type ModelSelection, type Provider } from "../api/modelConnections";
+import type { useModelCatalog } from "./useModelCatalog";
 
 type Props = {
-  selection: ModelSelection | null | undefined;
+  catalog: ReturnType<typeof useModelCatalog>;
   disabled: boolean;
   requiresImages?: boolean;
   onSelect: (selection: ModelSelection) => Promise<boolean>;
-  onAvailable: (available: boolean, selection: ModelSelection | null, supportsImages: boolean) => void;
 };
 
 /** 会话选择由服务端保存；目录读取与刷新独立，失败时仍可使用已有目录 */
-export function ModelSelector({ selection, disabled, requiresImages = false, onSelect, onAvailable }: Props) {
-  const { data, error, refreshing, reload } = useModelCatalog();
+export function ModelSelector({ catalog, disabled, requiresImages = false, onSelect }: Props) {
+  const { data, error, refreshing, reload, selected, model, available } = catalog;
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [keyboardNavigation, setKeyboardNavigation] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [portalContainer, setPortalContainer] = useState<HTMLElement>();
-  // undefined denotes a new conversation; null is an older conversation without a saved choice.
-  const selected = selection === undefined && data
-    ? (data[data.provider]?.model ? { provider: data.provider, model: data[data.provider].model } : null) : selection;
-  const config = selected && data?.[selected.provider];
-  const model = config && config.models.find(item => item.id === selected?.model);
-  const available = !!(config?.configured && !config.needs_authorization && model);
-  const supportsImages = model?.supports_images !== false;
-  const selectedProvider = selected?.provider, selectedModel = selected?.model;
-  useEffect(() => {
-    onAvailable(available, selectedProvider && selectedModel ? { provider: selectedProvider, model: selectedModel } : null, supportsImages);
-  }, [available, selectedProvider, selectedModel, supportsImages, onAvailable]);
   function close() { setOpen(false); setSearch(""); setKeyboardNavigation(false); }
   async function choose(provider: Provider, model: string) {
     if (disabled) return;
@@ -77,64 +64,4 @@ export function ModelSelector({ selection, disabled, requiresImages = false, onS
     </Popover.Portal>
     </Popover.Root>
   </div>;
-}
-
-/** 管理公开连接和目录的加载；缓存时效由服务端决定，选模不刷新连接 */
-function useModelCatalog() {
-  const [data, setData] = useState<Connections | null>(null);
-  const [error, setError] = useState("");
-  const [refreshing, setRefreshing] = useState(false);
-  const [revision, setRevision] = useState(0);
-  const generation = useRef(0);
-  const recentSelection = useRef<{ revision: number; choice: ModelSelection | null }>({ revision: 0, choice: null });
-  const load = useCallback((signal: AbortSignal) => {
-    const current = ++generation.current;
-    const selectionRevision = recentSelection.current.revision;
-    // A directory response started before a model change must not restore the old default
-    const preserveSelection = (value: Connections) => {
-      const { revision, choice } = recentSelection.current;
-      return revision !== selectionRevision && choice ? { ...value, provider: choice.provider,
-        [choice.provider]: { ...value[choice.provider], model: choice.model } } : value;
-    };
-    const active = () => !signal.aborted && generation.current === current;
-    return requestConnections("", "GET", undefined, signal).then(async value => {
-      if (!active()) return;
-      setError("");
-      setData(preserveSelection(value));
-      const configured = providers.filter(name => value[name].configured);
-      setRefreshing(configured.length > 0);
-      const results = await Promise.allSettled(configured.map(async name => {
-        const updated = await requestConnections(`/${name}/models?force=false`, "POST", undefined, signal);
-        if (active()) setData(previous => previous ? { ...previous, [name]: { ...updated[name], model: previous[name].model } } : updated);
-      }));
-      if (active() && results.some(result => result.status === "rejected")) {
-        // Refresh may have discovered revoked credentials; re-read public status
-        // without discarding cached models or treating a network failure as logout.
-        const latest = await requestConnections("", "GET", undefined, signal);
-        if (active()) {
-          setData(preserveSelection(latest));
-          setError(providers.some(name => latest[name].needs_authorization)
-            ? "部分服务的凭证已失效，请在设置中更新连接"
-            : "部分模型列表未能更新，已保留上次的列表");
-        }
-      }
-    }).catch(() => { if (active()) setError("无法读取模型服务，请重试"); })
-      .finally(() => { if (active()) setRefreshing(false); });
-  }, []);
-  useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    const changed = () => { void load(controller.signal); };
-    const selected = (event: Event) => {
-      const choice = (event as CustomEvent<ModelSelection>).detail;
-      recentSelection.current = { revision: recentSelection.current.revision + 1, choice };
-      setData(previous => previous ? { ...previous, provider: choice.provider,
-        [choice.provider]: { ...previous[choice.provider], model: choice.model } } : previous);
-    };
-    window.addEventListener("model-connections-changed", changed);
-    window.addEventListener("model-selection-changed", selected);
-    return () => { controller.abort(); window.removeEventListener("model-connections-changed", changed); window.removeEventListener("model-selection-changed", selected); };
-  }, [load, revision]);
-  const reload = useCallback(() => setRevision(value => value + 1), []);
-  return { data, error, refreshing, reload };
 }

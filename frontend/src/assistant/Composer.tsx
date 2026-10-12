@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, useSyncExternalStore, type Ref, type RefObject, type ReactNode } from "react";
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, useSyncExternalStore, type Ref, type RefObject, type ReactNode } from "react";
 import type { FileUIPart } from "ai";
 import * as Popover from "@radix-ui/react-popover";
 import { Command } from "cmdk";
 import { Plus, ImagePlus, Hand, Ear, X, ArrowUp, Square } from "lucide-react";
+import { useModelCatalog } from "./useModelCatalog";
 import { ModelSelector } from "./ModelSelector";
 import type { ModelSelection } from "../api/modelConnections";
 import type { AssistantConversation } from "./conversation";
@@ -38,19 +39,15 @@ export function Composer({ ref, conversation, ready, visible, welcome, streaming
   const inputBox = useRef<HTMLDivElement>(null);
   const generation = useRef(0);
   const sending = useRef(false);
-  const [modelAvailable, setModelAvailable] = useState(false);
-  const [modelSupportsImages, setModelSupportsImages] = useState(false);
-  const [modelChoice, setModelChoice] = useState<ModelSelection | null>(null);
-  const modelAvailabilityChanged = useCallback((available: boolean, selection: ModelSelection | null, supportsImages: boolean) => {
-    setModelAvailable(available); setModelChoice(selection); setModelSupportsImages(supportsImages);
-  }, []);
+  const catalog = useModelCatalog(state.session ? state.session.model_selection ?? null : undefined);
+  const { available: modelAvailable, supportsImages: modelSupportsImages, selected: modelChoice } = catalog;
   const requiresImages = images.length > 0 || historyHasImages;
   const limitError = images.length > MAX_IMAGES ? "恢复的草稿超过 3 张图片，请移除部分图片后发送" : draft.length > 4000 ? "恢复的草稿超过 4000 字，请缩短后发送" : "";
   const blocked = readingImages || !!limitError || (requiresImages && !modelSupportsImages) || state.selectingModel ||
     !ready || !modelAvailable || initializing || state.busy || state.restoring || state.needsSync || state.expired;
   useImperativeHandle(ref, () => ({
     clear() { generation.current++; setDraft(""); setImages([]); setImageError(""); },
-    focus() { input.current?.focus(); },
+    focus() { input.current?.focus({ preventScroll: true }); },
     hasDraft() { return !!(draft || images.length || readingImages); },
   }));
   useEffect(() => () => { generation.current++; }, []);
@@ -132,7 +129,7 @@ export function Composer({ ref, conversation, ready, visible, welcome, streaming
         rows={1}
         disabled={!ready}
         placeholder={
-          state.busy ? "可以继续输入，回答结束后发送…" : welcome
+          streaming ? "可以继续输入，回答结束后发送…" : welcome
             ? "描述你想练的内容，或问一个问题…"
             : "继续提问或调整练习…"
         }
@@ -153,9 +150,9 @@ export function Composer({ ref, conversation, ready, visible, welcome, streaming
         <ComposerMenu anchor={inputBox} onSelect={suggest} disabled={!ready}
           onAddImages={() => imageInput.current?.click()}
           imagesDisabled={readingImages || images.length >= MAX_IMAGES} />
-        <ModelSelector requiresImages={requiresImages} selection={state.session ? state.session.model_selection ?? null : undefined}
+        <ModelSelector requiresImages={requiresImages} catalog={catalog}
           disabled={initializing || state.selectingModel || state.restoring || (state.busy && !state.session) || state.needsSync || state.expired}
-          onSelect={selection => conversation.selectModel(selection)} onAvailable={modelAvailabilityChanged} />
+          onSelect={selection => conversation.selectModel(selection)} />
         <div className="assistant-input-actions">
           {streaming ? (
             <button

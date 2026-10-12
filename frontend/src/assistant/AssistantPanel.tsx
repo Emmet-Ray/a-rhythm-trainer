@@ -148,6 +148,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
   const follow = useRef(true);
   const generation = useRef(0);
   const scrollPosition = useRef(0);
+  const positionedSession = useRef(state.session?.id);
   const initializing = availability.loading || (availability.ready &&
     !state.initialized);
   const started = Boolean(messages.length || state.busy || state.expired);
@@ -165,18 +166,17 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
   useEffect(() => {
     if (!visible) playbackGroup.stop();
   }, [visible, playbackGroup]);
-  useEffect(() => {
-    if (visible && follow.current && thread.current)
-      thread.current.scrollTop = thread.current.scrollHeight;
-  }, [visible, state, messages]);
-
+  // 消息与会话身份一起提交，首帧就使用新会话的位置；旧会话等待期间不改变滚动。
   useLayoutEffect(() => {
+    if (positionedSession.current !== state.session?.id) {
+      positionedSession.current = state.session?.id;
+      follow.current = true;
+      scrollPosition.current = 0;
+    }
     const element = thread.current;
     if (visible && element)
-      element.scrollTop = follow.current
-        ? element.scrollHeight
-        : scrollPosition.current;
-  }, [home, visible]);
+      element.scrollTop = follow.current ? element.scrollHeight : scrollPosition.current;
+  }, [home, visible, state.session?.id, messages]);
 
   async function send({ text, images }: { text: string; images: FileUIPart[] }, selection: ModelSelection): Promise<"accepted" | "rejected" | "unknown"> {
     const version = generation.current;
@@ -219,9 +219,10 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
     if (opened) {
       activity?.reset(); activity?.start();
       activity?.restoreFocus(conversation.chat.messages.findLast(message => message.role === "user")?.metadata?.page_context?.state.practice_focus);
-      composer.current?.clear(); setPractice(null); follow.current = true;
+      composer.current?.clear(); setPractice(null);
       setHistoryOpen(false); setMobileHistoryOpen(false);
-      requestAnimationFrame(() => composer.current?.focus());
+      // 切换用于浏览历史；首页保留列表焦点，弹出列表关闭后回到触发按钮。
+      if (!home) requestAnimationFrame(() => historyButton.current?.focus({ preventScroll: true }));
     }
     return opened;
   };
@@ -334,6 +335,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
               ref={thread}
               className="assistant-messages"
               role="log"
+              aria-busy={state.restoring}
               aria-label="对话记录"
               aria-live="polite"
               onScroll={() => {
@@ -400,7 +402,6 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
             <Composer ref={composer} conversation={conversation} ready={availability.ready} visible={visible && availability.ready && !initializing}
               welcome={home && !started} streaming={status === "submitted" || status === "streaming"}
               historyHasImages={historyHasImages} onPreview={setExpandedImage} onSend={send}>
-              {state.restoring && <p className="assistant-notice" role="status">正在恢复对话…</p>}
               {state.error ? (
                 <p className="assistant-error" role="alert">
                   {state.error}
