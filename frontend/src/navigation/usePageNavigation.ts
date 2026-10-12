@@ -9,20 +9,29 @@ export const VisitsContext = createContext<PageVisits | null>(null);
 export function useBrowsingState<T>(field: string, initial: T | (() => T)): [T, Dispatch<SetStateAction<T>>] {
   const visits = useContext(VisitsContext);
   const { key } = useLocation();
-  const [value, setValue] = useState(() => {
+  const read = () => {
     const create = () => typeof initial === "function" ? (initial as () => T)() : initial;
     return visits ? visits.readBrowsing(key, field, create) : create();
-  });
+  };
+  const [snapshot, setSnapshot] = useState(() => ({ key, field, value: read() }));
+  const changed = snapshot.key !== key || snapshot.field !== field;
+  const value = changed ? read() : snapshot.value;
+  if (changed) setSnapshot({ key, field, value });
   const current = useRef(value);
-  useLayoutEffect(() => { visits?.rememberBrowsing(field, value); }, [visits, field, value]);
+  useLayoutEffect(() => { current.current = value; visits?.rememberBrowsing(field, value); }, [visits, field, value]);
   const update = useCallback((next: SetStateAction<T>) => {
     const resolved = typeof next === "function" ? (next as (value: T) => T)(current.current) : next;
     current.current = resolved;
     visits?.write(key, field, resolved);
     visits?.rememberBrowsing(field, resolved);
-    setValue(resolved);
+    setSnapshot({ key, field, value: resolved });
   }, [visits, key, field]);
   return [value, update];
+}
+
+/** 题库模式属于同一浏览页面；训练和编辑仍按访问重建以隔离音频、作答及草稿。 */
+export function pageMountKey(pathname: string, visitKey: string): string {
+  return /^\/custom(?:\/(?:tapping|dictation))?$/.test(pathname) ? "custom-library" : visitKey;
 }
 
 /** 只给浏览列表延续滚动；练习、编辑页的新访问仍从顶部开始。 */
@@ -68,7 +77,7 @@ export function useNavigationPresentation() {
   const previousPath = useRef(location.pathname);
   useLayoutEffect(() => {
     if (!visits) return;
-    const entering = previousPath.current !== location.pathname && location.pathname !== "/";
+    const entering = pageMountKey(previousPath.current, previousPath.current) !== pageMountKey(location.pathname, location.pathname) && location.pathname !== "/";
     previousPath.current = location.pathname;
     const path = location.pathname + location.search + location.hash;
     visits.enter({ key: location.key, path }, action);

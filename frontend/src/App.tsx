@@ -12,7 +12,7 @@ import SiteNavigation from "./navigation/SiteNavigation";
 import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { PageNavigation } from "./navigation/PageNavigation";
-import { useNavigationPresentation } from "./navigation/usePageNavigation";
+import { pageMountKey, useNavigationPresentation } from "./navigation/usePageNavigation";
 import "./App.css";
 import "./design-system.css";
 import { GeneratedExerciseStore, GeneratedExercisesContext } from "./exercises/GeneratedExerciseStore";
@@ -59,8 +59,8 @@ function AppShell() {
       <SiteNavigation />
       <AssistantWorkspace home={pathname === "/"}>
       <main id="main-content" hidden={pathname === "/"} ref={mainRef} tabIndex={-1} className={pathname === "/" ? "assistant-home-main" : undefined}>
-        {/* 按历史记录重挂载以恢复访问快照；预加载缓存不随此 key 重置。 */}
-        <Suspense key={key}
+        {/* 题库模式共用列表；训练与编辑按访问重建，预加载缓存不随 key 重置。 */}
+        <Suspense key={pageMountKey(pathname, key)}
           fallback={
             <LoadingPlaceholder />
           }

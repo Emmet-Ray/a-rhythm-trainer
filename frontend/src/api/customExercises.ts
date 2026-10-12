@@ -16,7 +16,7 @@ export function customExerciseListOptions(mode: CustomMode, offset: number) {
       currentOffset = Math.max(0, currentOffset - 50);
       page = await listExercises(mode, { offset: currentOffset, signal });
     }
-    return page;
+    return { ...page, mode };
   } });
 }
 

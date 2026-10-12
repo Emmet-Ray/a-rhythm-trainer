@@ -64,7 +64,6 @@ export default function CustomPracticePage() {
   if (selectedMode)
     return (
       <CustomExerciseList
-        key={`${selectedMode.id}`}
         mode={selectedMode.id}
         label={selectedMode.label}
       />
@@ -98,13 +97,18 @@ function CustomExerciseList({
   const [mutationMessage, setMutationMessage] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   useAssistantPageContext({ page: "custom_library", description: "自定义题目列表，仅有题目摘要，不代表已读取每道题的谱面。列表仅表示已加载的一页。",
-    state: { mode, source: "instance", status: result.loading ? "loading" : result.error ? "read-error" : "ready",
+    state: { mode: displayed?.mode ?? mode, requestedMode: mode, source: "instance", status: result.loading ? "loading" : result.error ? "read-error" : "ready",
       offset: displayedOffset, requestedOffset: offset, loadedCount: result.items.length, totalCount: null,
       items: result.items.slice(0, 50).map(item => ({ id: item.id, name: item.name, mode: item.mode,
         measureCount: null })), truncated: result.items.length > 50 } });
   const mutationActive = useRef(false);
   const lifetime = useRef(0);
-  useEffect(() => () => { lifetime.current += 1; }, []);
+  // 列表跨模式保留，但删除操作及其反馈仍属于发起操作的模式。
+  const [mutationMode, setMutationMode] = useState(mode);
+  if (mutationMode !== mode) {
+    setMutationMode(mode); setDeleting(null); setMutationMessage(null); setMutationError(null);
+  }
+  useEffect(() => () => { lifetime.current += 1; mutationActive.current = false; }, [mode]);
   async function remove(item: ExerciseSummary) {
     if (mutationActive.current || !window.confirm(`确定删除「${item.name}」吗？删除后无法恢复。`)) return;
     mutationActive.current = true;
@@ -155,10 +159,10 @@ function CustomExerciseList({
           </button>
         </div>
       ) : null}
-      <div aria-busy={result.loading}>
+      <div aria-busy={result.loading} data-navigation-pending={result.loading ? true : undefined}>
       {!displayed ? (result.loading ? <LoadingPlaceholder label="正在读取练习…" /> : null) : result.items.length === 0 ? (
         <p className="library-empty-state">
-          {mode === "tapping" ? "暂无击拍练习" : "暂无听写练习"}
+          {(displayed?.mode ?? mode) === "tapping" ? "暂无击拍练习" : "暂无听写练习"}
         </p>
       ) : (
         <ul className="question-list navigation-list" aria-label="已保存的自定义练习">
@@ -171,10 +175,10 @@ function CustomExerciseList({
                   <h2>{item.name}</h2>
                 </div>
               <div className="custom-question-actions" aria-label={`${item.name}的管理操作`}>
-                <Link className="custom-start-action" to={`/custom/${mode}/${encodeURIComponent(item.id)}`}>
+                <Link className="custom-start-action" to={`/custom/${item.mode}/${encodeURIComponent(item.id)}`}>
                   <Play className="ui-icon" aria-hidden="true" focusable="false" />开始练习
                 </Link>
-                <Link to={`/custom/${mode}/${encodeURIComponent(item.id)}/edit`}>
+                <Link to={`/custom/${item.mode}/${encodeURIComponent(item.id)}/edit`}>
                   <Pencil className="ui-icon" aria-hidden="true" />编辑
                 </Link>
                 <button type="button" disabled={deleting !== null || result.loading || !!result.error} onClick={() => void remove(item)}>
