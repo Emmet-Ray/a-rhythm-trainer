@@ -3,13 +3,19 @@ async (page) => {
   const check = (ok, message) => { if (!ok) throw new Error(message); };
   const origin = new URL(page.url()).origin;
   await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await page.evaluate(() => localStorage.removeItem('rhythm:assistant:v1:instance'));
+  await page.route('**/api/model-connections**', route => route.fulfill({ json: {
+    provider: 'deepseek', deepseek: { configured: true, model: 'test-model', models: [{ id: 'test-model', name: '测试模型', supports_images: true }] },
+    chatgpt: { configured: false, model: '', models: [] },
+  } }));
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   let messages = [];
   const requests = [];
-  const session = () => ({ id: 'pages', messages, is_running: false, last_run_status: messages.length ? 'completed' : null });
+  const session = () => ({ id: 'pages', messages, is_running: false, model_selection: { provider: 'deepseek', model: 'test-model' }, last_run_status: messages.length ? 'completed' : null });
   await page.route('**/api/assistant/status', route => route.fulfill({ json: { status: 'ready', message: '' } }));
   await page.route('**/api/assistant/sessions', route => { messages = []; return route.fulfill({ json: session() }); });
   await page.route('**/api/assistant/sessions/*', route => route.fulfill({ json: session() }));
+  await page.route('**/api/assistant/sessions/*/cards/*', route => route.fulfill({ json: route.request().postDataJSON() }));
   await page.route('**/api/assistant/sessions/*/messages', route => {
     const body = route.request().postDataJSON(); requests.push(body);
     const exerciseResult = null;
@@ -39,15 +45,17 @@ async (page) => {
   }
   async function ask() {
     const input = page.getByRole('textbox', { name: '向助手提问' });
+    await page.waitForFunction(() => document.querySelector("#assistant-input")?.placeholder !== "可以继续输入，回答结束后发送…");
     await input.fill('解释当前页面');
+    await page.waitForFunction(() => !document.querySelector('button[aria-label="发送"]')?.disabled);
     await Promise.all([page.waitForResponse(r => r.url().includes('/messages')), input.press('Enter')]);
-    await page.getByRole('button', { name: '发送', exact: true }).waitFor();
+    await page.waitForFunction(() => document.querySelector("#assistant-input")?.placeholder !== "可以继续输入，回答结束后发送…");
     return requests.at(-1).page_context;
   }
   // 原生模态打开后助手位于 inert 背景；预填草稿后触发既有 submit handler，验证快照而不改变焦点规则。
   async function askUnderDialog() {
     await Promise.all([page.waitForResponse(r => r.url().includes('/messages')), page.locator('#assistant-input').evaluate(el => el.closest('form').requestSubmit())]);
-    await page.getByRole('button', { name: '发送', exact: true }).waitFor();
+    await page.waitForFunction(() => document.querySelector("#assistant-input")?.placeholder !== "可以继续输入，回答结束后发送…");
     return requests.at(-1).page_context;
   }
   await visit('/random');
@@ -96,10 +104,12 @@ async (page) => {
   c = await ask(); check(c.state.filter.period === 'week' && c.state.filter.mode === 'tapping', '筛选同步');
   await page.getByRole('textbox', { name: '向助手提问' }).fill('解释详情');
   await page.getByRole('button', { name: '查看详情：“上下文测试记录”的练习记录' }).click();
+  await page.getByRole('table', { name: '击拍练习明细' }).waitFor();
   c = await askUnderDialog();
   check(c.state.filter.period === 'week' && c.state.recordDetail.period === 'all' && c.state.recordDetail.totalAttempts === 12, '详情与筛选并存');
   check(c.state.recordDetail.summary.session.recentAttempts.length === 10, '详情按当前页');
   await page.getByRole('button', { name: '关闭记录详情' }).click();
+  await page.locator('.record-detail').waitFor({ state: 'hidden' });
   c = await ask(); check(!Object.hasOwn(c.state, 'recordDetail'), '详情关闭移除');
 
   await visit('/settings?category=tapping-precision');
@@ -110,9 +120,10 @@ async (page) => {
   c = await ask(); check(c.state.category === 'appearance' && c.state.appearance.theme === 'blue' && !Object.hasOwn(c.state, 'tappingPrecision'), '子设置切换无残留');
   await page.getByRole('button', { name: '本地数据', exact: true }).click();
   await page.getByRole('heading', { name: '自定义题库', exact: true }).waitFor();
-  c = await ask(); check(c.state.localExercises.summary.total >= 1 && c.state.localRecords.attemptCount >= 12, '本地数据摘要');
-  await page.getByRole('button', { name: '账号', exact: true }).click();
-  await page.getByRole('heading', { name: '账号', exact: true }).waitFor();
+  await page.locator('.local-data-totals').nth(1).waitFor();
+  c = await ask(); check(c.state.localRecords.attemptCount >= 12, '本地数据摘要');
+  await page.getByRole('button', { name: '模型服务', exact: true }).click();
+  await page.getByRole('heading', { name: '模型服务', exact: true }).waitFor();
   c = await ask(); check(!Object.hasOwn(c.state, 'localRecords') && !Object.hasOwn(c.state, 'localExercises'), '离开分类移除数据');
   check(!JSON.stringify(c).includes('password') && !JSON.stringify(c).includes('api_key'), '不提供凭证字段');
   await visit('/about'); check((await ask()).page === 'about', '关于');

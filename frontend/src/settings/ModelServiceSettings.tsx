@@ -1,8 +1,8 @@
-import { useAnimatedDismiss } from "../navigation/useAnimatedDismiss";
+import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { ActionError } from "../navigation/ActionError";
-import { SuccessToast } from "../navigation/SuccessToast";
+import { ActionError } from "../ui/ActionError";
+import { SuccessToast } from "../ui/SuccessToast";
 import { requestConnections, connectionsChanged, type Connections } from "../api/modelConnections";
 
 export default function ModelServiceSettings() {

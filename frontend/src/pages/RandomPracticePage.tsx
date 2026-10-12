@@ -1,9 +1,9 @@
-import { ExerciseWorkbench } from "../practice/ExerciseWorkbench";
-import { ActionError } from "../navigation/ActionError";
+import { ExerciseWorkbench } from "../exercise-workspace/ExerciseWorkbench";
+import { ActionError } from "../ui/ActionError";
 import { useAssistantPageContext } from "../assistant/assistantContext";
 import { lazy, memo, Suspense, useEffect, useId, useRef, useState } from "react";
 import { RefreshCw, SlidersHorizontal, X } from "lucide-react";
-import { PracticeHeading } from "../practice/PracticeHeading";
+import { PracticeHeading } from "../exercise-workspace/PracticeHeading";
 import { practiceShortcuts, usePracticeShortcuts } from "../practice/usePracticeShortcuts";
 import { useBrowsingState, useVisitState } from "../navigation/usePageNavigation";
 import { Navigate, useNavigate, useParams } from "react-router";
@@ -170,7 +170,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
       </section>
         {settingsOpen && error && <ActionError message={error} />}
       </dialog>
-        {generated.exercise && <ExerciseWorkbench key={generated.id}
+        {generated.exercise && <ExerciseWorkbench key={generated.id} settingsScope={`random:${mode}`}
           initial={{ name: "随机练习", mode, exercise: generated.exercise }}
           origin={{ source: "random", exerciseId: generated.id, title: "随机练习" }} onBusyChange={setBusy} onEditingChange={setEditing}>
           {view => <>

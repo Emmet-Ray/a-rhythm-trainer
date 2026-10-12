@@ -1,12 +1,15 @@
+import { RecordDetailContext, type RecordDetailSnapshot } from "./practice-records/recordDetailContext";
+import { RecordDetailAssistantContext } from "./assistant/RecordDetailAssistantContext";
 import { UnsavedChangesScope } from "./navigation/UnsavedChanges";
-import { refreshPracticeRecords } from "./practice-records/practiceRecordStorage";
+import { refreshPracticeRecords, readExerciseHistory } from "./practice-records/practiceRecordStorage";
 import { PracticeActivity, PracticeActivityContext } from "./assistant/practiceActivity";
 import { PlaybackContext, PlaybackGroup } from "./practice/PlaybackGroup";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { routeModules, preloadDestination, preloadLinkIntent } from "./navigation/routeModules";
-import { LoadingPlaceholder } from "./navigation/LoadingPlaceholder";
+import { LoadingPlaceholder } from "./ui/LoadingPlaceholder";
 import { Route, Routes, useLocation } from "react-router";
 import SiteNavigation from "./navigation/SiteNavigation";
+import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { PageNavigation } from "./navigation/PageNavigation";
 import { useNavigationPresentation } from "./navigation/usePageNavigation";
@@ -24,6 +27,10 @@ const SettingsPage = routeModules.settings.Component;
 const PracticeRecordsPage = routeModules.records.Component;
 const AiPracticePage = routeModules.ai.Component;
 const AboutPage = routeModules.about.Component;
+
+function renderRecordDetailContext(snapshot: RecordDetailSnapshot) {
+  return <RecordDetailAssistantContext {...snapshot} />;
+}
 
 function App() {
   const [playback] = useState(() => new PlaybackGroup());
@@ -43,12 +50,13 @@ function AppShell() {
   // 路由访问隔离上下文快照，助手本身保持挂载
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const assistantContext = useMemo(() => new AssistantContext(), [key]);
-  const [practiceActivity] = useState(() => new PracticeActivity());
+  const [practiceActivity] = useState(() => new PracticeActivity(record => readExerciseHistory(record, record.exercise, record.mode)));
   useNavigationPresentation();
 
   return (
     <PracticeActivityContext value={practiceActivity}><GeneratedExercisesContext value={generatedExercises}>
     <AssistantContextScope.Provider value={assistantContext}>
+    <RecordDetailContext value={renderRecordDetailContext}>
     <div className="site-shell" onPointerOver={preloadLinkIntent} onFocusCapture={preloadLinkIntent} onPointerDownCapture={preloadLinkIntent}>
       <a className="skip-link" href={pathname === "/" ? "#assistant" : "#main-content"}>
         跳到主要内容
@@ -66,8 +74,8 @@ function AppShell() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/records" element={<PracticeRecordsPage />} />
             <Route path="/about" element={<AboutPage />} />
-            {/* 首页内容由下方持续挂载的助手呈现，避免路由切换重建对话。 */}
-            <Route path="/" element={null} />
+            {/* 首页仅发布页面上下文；对话与欢迎内容由路由外持续挂载的助手呈现。 */}
+            <Route path="/" element={<HomePage />} />
             <Route path="/preset" element={<PresetPracticePage />} />
             <Route
               path="/preset/:questionId"
@@ -103,6 +111,7 @@ function AppShell() {
       </main>
       </AssistantWorkspace>
     </div>
+    </RecordDetailContext>
     </AssistantContextScope.Provider>
     </GeneratedExercisesContext></PracticeActivityContext>
   );

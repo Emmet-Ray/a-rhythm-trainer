@@ -1,5 +1,6 @@
 import { createContext } from "react";
 import type { PracticeRecord } from "../practice-records/PracticeRecord";
+import type { PracticeHistory } from "../practice-records/PracticeHistory";
 import { recordKey } from "../practice-records/practiceRecords";
 import { buildPracticeContextSummary } from "./practiceContextSummary";
 
@@ -7,6 +8,9 @@ import { buildPracticeContextSummary } from "./practiceContextSummary";
  * 同一次尝试覆盖旧版本；确认已接收的批次只清除当时版本，发送期间的新结果继续待发。
  */
 export class PracticeActivity {
+  private readHistory: (record: PracticeRecord) => PracticeHistory;
+  constructor(readHistory: (record: PracticeRecord) => PracticeHistory) { this.readHistory = readHistory; }
+
   private enabled = false;
   private revision = 0;
   private acknowledged = 0;
@@ -64,7 +68,7 @@ export class PracticeActivity {
     const practices = [...groups.values()].slice(-5).map(({ record, historyEnabled }) => ({
       ...buildPracticeContextSummary({ context: record, exercise: record.exercise, mode: record.mode,
         answerExposed: record.mode === "dictation" && (record.attempts.at(-1)?.viewedAnswer ?? false),
-        session: record, historyEnabled }),
+        session: record }, historyEnabled ? this.readHistory(record) : { status: "unavailable" }),
       practiceRef: this.reference(record),
     }));
     const batchId = crypto.randomUUID();

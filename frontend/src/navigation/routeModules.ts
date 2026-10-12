@@ -1,6 +1,6 @@
 import type { SyntheticEvent } from "react";
 import { preloadable } from "./preloadable";
-import { editorModule, workspaceModule } from "../practice/practiceModules";
+import { editorModule, workspaceModule } from "../exercise-workspace/workspaceModules";
 import { presetCatalogStore } from "../exercises/presetCatalogStore";
 
 export const routeModules = {

@@ -75,3 +75,14 @@ def parse_rhythm_elements(elements):
     if total > 96:
         raise ValueError("小节必须恰好四拍")
     return copied, total
+
+
+def score_identity(exercise):
+    """比较合法的规范化谱面；无附点的两种写法视为相同，不另存指纹。"""
+    score = parse_rhythm_exercise(exercise)
+    for measure in score["measures"]:
+        for element in measure["elements"]:
+            for event in element["notes"] if element["kind"] == "triplet" else [element]:
+                if event.get("dots") == 0:
+                    event.pop("dots")
+    return score

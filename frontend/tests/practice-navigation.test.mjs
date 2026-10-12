@@ -9,7 +9,7 @@ const server = await createServer({ configFile: false, server: { middlewareMode:
 after(() => server.close());
 const { historicalStatus, recordKey } = await server.ssrLoadModule("/src/practice-records/practiceRecords.ts");
 const { ExerciseHistory } = await server.ssrLoadModule("/src/practice-records/ExerciseHistory.tsx");
-const { PresetQuestionNavigation } = await server.ssrLoadModule("/src/practice/PresetQuestionNavigation.tsx");
+const { PresetQuestionNavigation } = await server.ssrLoadModule("/src/exercise-workspace/PresetQuestionNavigation.tsx");
 const { canUsePracticeShortcut, practiceShortcutAction } = await server.ssrLoadModule("/src/practice/usePracticeShortcuts.ts");
 const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [{ kind: "note", noteValue: "whole" }] }] };
 
@@ -36,7 +36,7 @@ test("听写播放与验证按钮显示共享键位，通用编辑播放器默�
 });
 
 test("快捷键说明只展示当前工作区支持的操作", async () => {
-  const { default: Help } = await server.ssrLoadModule("/src/practice/PracticeShortcutHelp.tsx");
+  const { default: Help } = await server.ssrLoadModule("/src/exercise-workspace/PracticeShortcutHelp.tsx");
   const render = (mode, source) => renderToStaticMarkup(createElement(Help, { mode, source }));
   const tapping = render("tapping", "preset");
   for (const key of ["H", "L", "S", "P", "N", "空格"]) assert.ok(tapping.includes(">" + key + "<"));
@@ -62,7 +62,7 @@ test("历史成就保留已通过，与最后一次结果无关；听写优先�
 test("两种练习通过工具栏插槽组合说明，不提供时不出现快捷键入口", async () => {
   const { default: Trainer } = await server.ssrLoadModule("/src/practice/RhythmTrainer.tsx");
   const { RhythmDictation } = await server.ssrLoadModule("/src/practice/RhythmDictation.tsx");
-  const { default: Help } = await server.ssrLoadModule("/src/practice/PracticeShortcutHelp.tsx");
+  const { default: Help } = await server.ssrLoadModule("/src/exercise-workspace/PracticeShortcutHelp.tsx");
   for (const [Component, mode] of [[Trainer, "tapping"], [RhythmDictation, "dictation"]]) {
     const props = { exercise: null, bpm: 60 };
     assert.doesNotMatch(renderToStaticMarkup(createElement(Component, props)), /查看快捷键/);
@@ -76,7 +76,7 @@ test("两种练习通过工具栏插槽组合说明，不提供时不出现快�
 });
 
 test("历史尚未加载时，历史插槽仍保留题名与题头操作", async () => {
-  const { PracticeHeading } = await server.ssrLoadModule("/src/practice/PracticeHeading.tsx");
+  const { PracticeHeading } = await server.ssrLoadModule("/src/exercise-workspace/PracticeHeading.tsx");
   const html = renderToStaticMarkup(createElement(MemoryRouter, null,
       createElement(PracticeHeading, {
         backTo: "/preset", backLabel: "预设练习", title: "四分音符",

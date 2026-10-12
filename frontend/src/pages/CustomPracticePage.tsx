@@ -1,12 +1,12 @@
-import { ActionError } from "../navigation/ActionError";
+import { ActionError } from "../ui/ActionError";
 import { Plus, Pencil, Trash2, Play } from "lucide-react";
-import { SuccessToast } from "../navigation/SuccessToast";
+import { SuccessToast } from "../ui/SuccessToast";
 import { useAssistantPageContext } from "../assistant/assistantContext";
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigationType, useMatch, useNavigate, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
-import { PracticeHeading } from "../practice/PracticeHeading";
-import { ExerciseWorkbench } from "../practice/ExerciseWorkbench";
+import { PracticeHeading } from "../exercise-workspace/PracticeHeading";
+import { ExerciseWorkbench } from "../exercise-workspace/ExerciseWorkbench";
 import { useBrowsingState } from "../navigation/usePageNavigation";
 import { getExercise, listExercises, deleteExercise, type ExerciseSummary } from "../api/customExercises";
 import type { CustomExercise, CustomMode } from "../exercises/customExercises";

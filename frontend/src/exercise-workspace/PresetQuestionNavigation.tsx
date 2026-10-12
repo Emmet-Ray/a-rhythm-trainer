@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router";
 import type { PresetQuestion } from "../exercises/presetCatalog";
-import { practiceShortcuts, usePracticeShortcuts } from "./usePracticeShortcuts";
+import { practiceShortcuts, usePracticeShortcuts } from "../practice/usePracticeShortcuts";
 
 /** Caller supplies only this topic and mode; navigation unmounts the keyed audio workspace. */
 export function PresetQuestionNavigation({ questions, questionId }: { questions: PresetQuestion[]; questionId: string }) {

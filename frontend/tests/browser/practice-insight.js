@@ -4,6 +4,11 @@ async (page) => {
   function check(value, message) { if (!value) throw new Error(message); }
   const origin = new URL(page.url()).origin;
   await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await page.evaluate(() => localStorage.removeItem('rhythm:assistant:v1:instance'));
+  await page.route('**/api/model-connections**', route => route.fulfill({ json: {
+    provider: 'deepseek', deepseek: { configured: true, model: 'test-model', models: [{ id: 'test-model', name: '测试模型', supports_images: true }] },
+    chatgpt: { configured: false, model: '', models: [] },
+  } }));
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   const exercise = { id: 'layout-exercise', title: '八分音符入门', mode: 'tapping', description: '测试练习',
@@ -13,10 +18,11 @@ async (page) => {
   const runId = Date.now();
   const submissions = [];
   let messages = [];
-  const session = () => ({ id: 'layout-session', messages, is_running: false, last_run_status: messages.length ? 'completed' : null });
+  const session = () => ({ id: 'layout-session', messages, is_running: false, model_selection: { provider: 'deepseek', model: 'test-model' }, last_run_status: messages.length ? 'completed' : null });
   await page.route('**/api/assistant/status', route => route.fulfill({ json: { status: 'ready', message: '' } }));
   await page.route('**/api/assistant/sessions', route => route.fulfill({ json: session() }));
   await page.route('**/api/assistant/sessions/*', route => route.fulfill({ json: session() }));
+  await page.route('**/api/assistant/sessions/*/cards/*', route => route.fulfill({ json: route.request().postDataJSON() }));
   await page.route('**/api/assistant/sessions/*/messages', async route => {
     const body = route.request().postDataJSON();
     submissions.push(body);
@@ -43,8 +49,11 @@ async (page) => {
   await page.getByRole('heading', { name: '今天想练什么节奏？' }).waitFor();
   const input = page.getByRole('textbox', { name: '向助手提问' });
   async function ask(text) {
-    await input.fill(text); await input.press('Enter');
-    await page.getByRole('button', { name: '发送', exact: true }).waitFor();
+    await page.waitForFunction(() => document.querySelector("#assistant-input")?.placeholder !== "可以继续输入，回答结束后发送…");
+    await input.fill(text);
+    await page.waitForFunction(() => document.querySelector('button[aria-label="发送"]')?.disabled === false);
+    await Promise.all([page.waitForResponse(r => r.url().includes('/messages')), input.press('Enter')]);
+    await page.waitForFunction(() => document.querySelector("#assistant-input")?.placeholder !== "可以继续输入，回答结束后发送…");
   }
   await ask('给我一道击拍题');
   await page.getByRole('button', { name: '开始击拍', exact: true }).click();

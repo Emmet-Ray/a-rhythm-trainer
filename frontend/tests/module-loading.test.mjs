@@ -8,8 +8,8 @@ const server = await createServer({ configFile: false, server: { middlewareMode:
 after(() => server.close());
 const { preloadable } = await server.ssrLoadModule("/src/navigation/preloadable.ts");
 const { destinationModules, routeModules } = await server.ssrLoadModule("/src/navigation/routeModules.ts");
-const { workspaceModule, editorModule } = await server.ssrLoadModule("/src/practice/practiceModules.ts");
-const { LoadingPlaceholder } = await server.ssrLoadModule("/src/navigation/LoadingPlaceholder.tsx");
+const { workspaceModule, editorModule } = await server.ssrLoadModule("/src/exercise-workspace/workspaceModules.ts");
+const { LoadingPlaceholder } = await server.ssrLoadModule("/src/ui/LoadingPlaceholder.tsx");
 
 test("预加载按意图获取模块一次、不挂载；完成后首次渲染无需 fallback", async () => {
   let imports = 0;

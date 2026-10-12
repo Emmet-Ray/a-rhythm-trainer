@@ -22,7 +22,7 @@ import PracticeFrame from "./PracticeFrame";
 import PracticeCue from "./PracticeCue";
 import PracticeResult from "./PracticeResult";
 import { practiceShortcuts, usePracticeShortcuts } from "./usePracticeShortcuts";
-import type { DictationRecordEvent } from "../practice-records/PracticeRecord";
+import type { DictationEvent } from "./PracticeEvents";
 
 {
   /*
@@ -76,7 +76,7 @@ type RhythmDictationProps = {
   onBusyChange?: (busy: boolean) => void;
   settingsPanel?: ReactNode;
   toolbarEnd?: ReactNode;
-  onRecord?: (event: DictationRecordEvent) => void;
+  onRecord?: (event: DictationEvent) => void;
   /** 可选受控作答；工作区负责历史恢复，听写组件不依赖路由或存储。 */
   session?: {
     state: DictationState;

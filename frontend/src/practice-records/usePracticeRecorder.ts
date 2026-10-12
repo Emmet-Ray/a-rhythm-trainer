@@ -1,28 +1,29 @@
-import { PracticeActivityContext } from "../assistant/practiceActivity";
-import { useContext, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
+import { useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import { useVisitState } from "../navigation/usePageNavigation";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
-import type { PracticeResult, TimingWindows } from "../rhythm/RhythmTiming";
+import type { TappingAttemptRecorder, DictationEvent } from "../practice/PracticeEvents";
 import { recordDictationEvent, recordTappingAttempt } from "./practiceRecords";
-import type { PracticeRecord, DictationRecordEvent, ExerciseContext } from "./PracticeRecord";
+import type { PracticeRecord, ExerciseContext } from "./PracticeRecord";
 import { createPracticeRecordWriter } from "./practiceRecordStorage";
 
-export type AttemptRecorder = (conditions: { bpm: number; metronomeEnabled?: boolean; timingWindows: TimingWindows }) => ((result: PracticeResult) => void) | undefined;
 type PendingRecording = { pending?: PracticeRecord; batch?: PracticeRecord; writer?: ReturnType<typeof createPracticeRecordWriter>; saving?: boolean; onChange?: (error: string) => void; dictationAttemptId?: string; error: string; session?: PracticeRecord };
 
 /** 题目归档独立于访问；听写尝试编号与草稿一起在站内返回时恢复。
  * 本次轮次始终在内存累计，enabled 只控制持久化；保存失败不影响本次分析。
  * 写入成功后丢弃待存快照；卸载后的音频回调不再更新，已提交的批次继续完成。
  */
-export function usePracticeRecorder({ mode, context, exercise, enabled, scope, answerExposed = false }: {
+export function usePracticeRecorder({ mode, context, exercise, enabled, scope, onAttemptChanged, answerExposed = false }: {
   mode: "tapping" | "dictation";
   context?: ExerciseContext;
   exercise: RhythmExercise | null;
   enabled: boolean;
   scope: string;
   answerExposed?: boolean;
+  /** 每次尝试新增或修正时通知调用方；独立于持久化是否成功。 */
+  onAttemptChanged?: (record: PracticeRecord, attemptId: string) => void;
 }) {
-  const activity = useContext(PracticeActivityContext);
+  const notify = useRef(onAttemptChanged);
+  useLayoutEffect(() => { notify.current = onAttemptChanged; });
   const [remembered, remember] = useVisitState<PendingRecording>(`record-pending:${scope}`, { error: "" });
   // 待存快照按访问共享，离页后仍在写入的旧组件与返回后的组件使用同一批次
   const current = useRef<PendingRecording>(remembered);
@@ -62,7 +63,7 @@ export function usePracticeRecorder({ mode, context, exercise, enabled, scope, a
     }
   }
 
-  const startAttempt: AttemptRecorder = (conditions) => {
+  const startAttempt: TappingAttemptRecorder = (conditions) => {
     if (mode !== "tapping" || !context || !exercise || !active.current) return;
     const id = crypto.randomUUID();
     const timingWindows = { ...conditions.timingWindows };
@@ -72,7 +73,7 @@ export function usePracticeRecorder({ mode, context, exercise, enabled, scope, a
       completedAt ??= new Date().toISOString();
       const attempt = { ...result, id, completedAt, bpm: conditions.bpm, ...(conditions.metronomeEnabled !== undefined ? { metronomeEnabled: conditions.metronomeEnabled } : {}), timingWindows };
       current.current.session = recordTappingAttempt(current.current.session?.mode === "tapping" ? current.current.session : null, context, exercise, attempt);
-      activity?.record(current.current.session, id, enabled);
+      notify.current?.(current.current.session, id);
       remember(current.current);
       if (enabled) current.current.pending = current.current.session;
       remember(current.current);
@@ -80,7 +81,7 @@ export function usePracticeRecorder({ mode, context, exercise, enabled, scope, a
     };
   };
 
-  function dictation(event: DictationRecordEvent) {
+  function dictation(event: DictationEvent) {
     if (mode !== "dictation" || !context || !exercise || !active.current) return;
     if (!current.current.dictationAttemptId && event.type === "edit") return;
     current.current.dictationAttemptId ??= crypto.randomUUID();
@@ -88,7 +89,7 @@ export function usePracticeRecorder({ mode, context, exercise, enabled, scope, a
     let session = current.current.session?.mode === "dictation" ? current.current.session : null;
     if (answerExposed) session = recordDictationEvent(session, context, exercise, current.current.dictationAttemptId, { type: "view-answer" }, at);
     current.current.session = recordDictationEvent(session, context, exercise, current.current.dictationAttemptId, event, at) ?? undefined;
-    if (current.current.session) activity?.record(current.current.session, current.current.dictationAttemptId, enabled);
+    if (current.current.session) notify.current?.(current.current.session, current.current.dictationAttemptId);
     remember(current.current);
     if (!enabled) return;
     current.current.pending = current.current.session;

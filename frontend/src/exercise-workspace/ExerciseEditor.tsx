@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { LoaderCircle, Minus, Plus, Save } from "lucide-react";
-import { ActionError } from "../navigation/ActionError";
-import { SuccessToast } from "../navigation/SuccessToast";
+import { ActionError } from "../ui/ActionError";
+import { SuccessToast } from "../ui/SuccessToast";
 import { UnsavedChanges } from "../navigation/UnsavedChanges";
 import { useVisitState } from "../navigation/usePageNavigation";
 import { useAssistantExerciseTarget, useAssistantPageSection } from "../assistant/assistantContext";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
 import type { CustomExercise, ExerciseDraft } from "../exercises/customExercises";
 import { parseRhythmExercise, expandRhythmElements, TICKS_PER_QUARTER, type RhythmElement, type RhythmExercise } from "../rhythm/RhythmModel";
-import { editorModule } from "./practiceModules";
-import type { RhythmEditorHandle } from "./RhythmEditor";
-import PracticeSettings, { type PracticeSettingsValue } from "./PracticeSettings";
-import RhythmPlayback from "./RhythmPlayback";
-import PracticeFrame from "./PracticeFrame";
-import PracticeCue from "./PracticeCue";
+import { editorModule } from "./workspaceModules";
+import type { RhythmEditorHandle } from "../practice/RhythmEditor";
+import PracticeSettings, { type PracticeSettingsValue } from "../practice/PracticeSettings";
+import RhythmPlayback from "../practice/RhythmPlayback";
+import PracticeFrame from "../practice/PracticeFrame";
+import PracticeCue from "../practice/PracticeCue";
 const RhythmEditor = editorModule.Component;
 
 const timeSignature: RhythmExercise["timeSignature"] = {
@@ -27,10 +27,11 @@ const timeSignature: RhythmExercise["timeSignature"] = {
  * 小节只从末尾增减，删除有内容的小节需确认；至少保留一节，选择始终在有效范围内。
  * 返回原记录时恢复草稿，新建访问不复用；保存成功只清除提交版本，失败时保留。
  */
-export default function ExerciseEditor({ initial, scope, onSave, onSaved, onCancel, registerGuard, children }: {
+export default function ExerciseEditor({ initial, scope, settingsScope = scope, onSave, onSaved, onCancel, registerGuard, children }: {
   children: (view: { title: ReactNode; actions: ReactNode; content: ReactNode }) => ReactNode;
   initial: ExerciseDraft;
   scope: string;
+  settingsScope?: string;
   onSave: (draft: ExerciseDraft) => Promise<CustomExercise>;
   onSaved: (item: CustomExercise) => void;
   onCancel: () => void;
@@ -51,7 +52,7 @@ export default function ExerciseEditor({ initial, scope, onSave, onSaved, onCanc
     measures: structuredClone(initial.exercise.measures.map(measure => measure.elements)),
     selectedMeasureIndex: 0,
   });
-  const [settings, rememberSettings] = useVisitState<PracticeSettingsValue>(`practice:${scope}:settings`, { bpm: 60, metronomeEnabled: true });
+  const [settings, rememberSettings] = useVisitState<PracticeSettingsValue>(`practice:${settingsScope}:settings`, { bpm: 60, metronomeEnabled: true });
   const { name, measures, selectedMeasureIndex } = draft;
   useAssistantPageSection("editor", {
     page: "exercise_editor",

@@ -1,14 +1,16 @@
-import { ActionError } from "../navigation/ActionError";
-import { useCallback, useMemo, useState, type SetStateAction } from "react";
+import { ActionError } from "../ui/ActionError";
+import { useCallback, useContext, useMemo, useState, type SetStateAction } from "react";
 import { useAssistantPractice } from "../assistant/assistantContext";
+import { PracticeActivityContext } from "../assistant/practiceActivity";
+import { readExerciseHistory } from "../practice-records/practiceRecordStorage";
 import { buildPracticeContextSummary } from "../assistant/practiceContextSummary";
 import PracticeShortcutHelp from "./PracticeShortcutHelp";
-import PracticeSettings, { type PracticeSettingsValue } from "./PracticeSettings";
+import PracticeSettings, { type PracticeSettingsValue } from "../practice/PracticeSettings";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
-import RhythmTrainer from "./RhythmTrainer";
-import { RhythmDictation } from "./RhythmDictation";
+import RhythmTrainer from "../practice/RhythmTrainer";
+import { RhythmDictation } from "../practice/RhythmDictation";
 import { useVisitState } from "../navigation/usePageNavigation";
-import { createDictationState, dictationBinding, restoreDictation, type DictationSnapshot, type DictationState } from "./DictationState";
+import { createDictationState, dictationBinding, restoreDictation, type DictationSnapshot, type DictationState } from "../practice/DictationState";
 import type { ExerciseContext } from "../practice-records/PracticeRecord";
 import { usePracticeRecorder } from "../practice-records/usePracticeRecorder";
 
@@ -17,6 +19,7 @@ type WorkspaceProps = {
   exerciseKey?: string | number;
   mode: "tapping" | "dictation";
   recoveryScope?: string;
+  settingsScope?: string;
   recordContext?: ExerciseContext;
   answerExposed?: boolean;
   onAnswerViewed?: () => void;
@@ -30,7 +33,7 @@ export default function PracticeWorkspace(props: WorkspaceProps) {
 
 /** 设置始终存在；exercise 为 null 时显示不可操作的训练区。
  * exerciseKey 标识本轮题目；恢复时核对题目内容与编号，不恢复音频、轮次及遮罩。
- * recoveryScope 隔离题目来源与访问；设置独立于换题，仍由 PracticeSettings 管理输入过程。
+ * recoveryScope 隔离题目来源与访问；settingsScope 可跨题共享设置，输入过程由 PracticeSettings 管理。
  */
 function WorkspaceSession({
   exercise,
@@ -38,6 +41,7 @@ function WorkspaceSession({
   exerciseKey = 0,
   onBusyChange,
   recoveryScope = mode,
+  settingsScope = recoveryScope,
   recordContext,
   answerExposed = false,
   onAnswerViewed,
@@ -45,9 +49,11 @@ function WorkspaceSession({
 }: WorkspaceProps & { binding: string }) {
   const [audioBusy, setAudioBusy] = useState(false);
   const reportBusy = useCallback((busy: boolean) => { setAudioBusy(busy); onBusyChange?.(busy); }, [onBusyChange]);
-  const [settings, rememberSettings] = useVisitState<PracticeSettingsValue>(`practice:${recoveryScope}:settings`, { bpm: 60, metronomeEnabled: true });
+  const [settings, rememberSettings] = useVisitState<PracticeSettingsValue>(`practice:${settingsScope}:settings`, { bpm: 60, metronomeEnabled: true });
   const [snapshot, setSnapshot] = useVisitState<DictationSnapshot | null>(`practice:${recoveryScope}:dictation`, null);
+  const activity = useContext(PracticeActivityContext);
   const recorder = usePracticeRecorder({ mode, context: recordContext, exercise, enabled: true,
+    onAttemptChanged: (record, attemptId) => activity?.record(record, attemptId, true),
     answerExposed, scope: `${recoveryScope}:${binding}` });
   const empty = useMemo(() => createDictationState(exercise), [exercise]);
   const state = restoreDictation(snapshot, binding, empty);
@@ -63,7 +69,7 @@ function WorkspaceSession({
     const viewed = answerExposed || (session?.mode === "dictation" && session.attempts.some(attempt => attempt.viewedAnswer));
     return {
       ...buildPracticeContextSummary({ context: recordContext, exercise, mode,
-        answerExposed: viewed, session, historyEnabled: true }),
+        answerExposed: viewed, session }, readExerciseHistory(recordContext, exercise, mode)),
       bpm: settings.bpm,
       metronomeEnabled: settings.metronomeEnabled,
       audioBusy,

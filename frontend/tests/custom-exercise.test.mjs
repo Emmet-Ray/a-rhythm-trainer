@@ -13,7 +13,7 @@ const server = await createServer({
 });
 after(() => server.close());
 const { default: CustomPracticePage } = await server.ssrLoadModule("/src/pages/CustomPracticePage.tsx");
-const { SuccessToast } = await server.ssrLoadModule("/src/navigation/SuccessToast.tsx");
+const { SuccessToast } = await server.ssrLoadModule("/src/ui/SuccessToast.tsx");
 
 const { default: PracticeSettings } = await server.ssrLoadModule("/src/practice/PracticeSettings.tsx");
 const { default: RhythmPlayback } = await server.ssrLoadModule("/src/practice/RhythmPlayback.tsx");
@@ -25,11 +25,11 @@ const { default: SiteNavigation } = await server.ssrLoadModule("/src/navigation/
 const { default: SettingsPage } = await server.ssrLoadModule("/src/pages/SettingsPage.tsx");
 const { VisitsContext } = await server.ssrLoadModule("/src/navigation/usePageNavigation.ts");
 const { PageVisits } = await server.ssrLoadModule("/src/navigation/PageVisits.ts");
-const { default: PracticeWorkspace } = await server.ssrLoadModule("/src/practice/PracticeWorkspace.tsx");
+const { default: PracticeWorkspace } = await server.ssrLoadModule("/src/exercise-workspace/PracticeWorkspace.tsx");
 const { dictationBinding } = await server.ssrLoadModule("/src/practice/DictationState.ts");
 const { default: RhythmScore } = await server.ssrLoadModule("/src/rhythm/notation/RhythmScore.tsx");
 const { createExerciseTimeline } = await server.ssrLoadModule("/src/rhythm/RhythmTiming.ts");
-const { PracticeHeading } = await server.ssrLoadModule("/src/practice/PracticeHeading.tsx");
+const { PracticeHeading } = await server.ssrLoadModule("/src/exercise-workspace/PracticeHeading.tsx");
 // SSR 不运行 effect；先通过真实读取入口准备题库，再验证就绪页的标记。
 const { presetCatalogStore } = await server.ssrLoadModule("/src/exercises/presetCatalogStore.ts");
 const originalFetch = globalThis.fetch;

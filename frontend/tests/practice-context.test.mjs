@@ -14,7 +14,9 @@ const context = { source: 'preset', exerciseId: 'one', title: '测试练习' };
 const at = '2026-10-05T00:00:00Z';
 const attempt = { id: 'a', completedAt: at, bpm: 60, timingWindows: { perfectMs: 50, hitMs: 150 }, passed: false, targetCount: 2, hitCount: 1, missCount: 1, wrongTapCount: 0,
   details: { stopped: false, timingEvents: [{ kind: 'hit', grade: 'late', targetIndex: 0, eventIndex: 0, tapOffsetMs: 80, errorMs: 80 }, { kind: 'miss', targetIndex: 1, eventIndex: 1 }] } };
-const source = { context, exercise, mode: 'tapping', answerExposed: false, session: null, historyEnabled: true };
+const source = { context, exercise, mode: 'tapping', answerExposed: false, session: null };
+const emptyHistory = { status: 'available', total: 0, attemptIds: [] };
+const history = record => ({ status: 'available', record, total: record.attempts.length, attemptIds: record.attempts.map(attempt => attempt.id) });
 const record = (...attempts) => attempts.reduce((r, a) => recordTappingAttempt(r, context, exercise, a), null);
 
 test('本次多轮和同题历史分离，迟到修正不增加轮数，保留实际速度与判定标准', () => {
@@ -22,7 +24,7 @@ test('本次多轮和同题历史分离，迟到修正不增加轮数，保留�
   const corrected = { ...second, wrongTapCount: 1, details: { ...second.details, timingEvents: [...second.details.timingEvents, { kind: 'wrongTap', tapOffsetMs: 900 }] } };
   const session = record(attempt, second, corrected);
   const old = { ...attempt, id: 'old', details: undefined };
-  const result = buildPracticeContextSummary({ ...source, session }, () => [record(old, attempt, corrected)]);
+  const result = buildPracticeContextSummary({ ...source, session }, history(record(old, attempt, corrected)));
   assert.equal(result.session.totalAttempts, 2);
   assert.equal(result.session.recentAttempts[1].wrongTapCount, 1);
   assert.equal(result.session.recentAttempts[1].bpm, 80);
@@ -37,31 +39,31 @@ test('历史严格匹配题目来源、编号、模式和内容版本', () => {
   const base = record(attempt);
   const changed = structuredClone(exercise); changed.measures[0].elements[0].kind = 'rest';
   for (const mismatch of [{ ...base, exercise: changed }, { ...base, exerciseId: 'other' }, { ...base, source: 'random' }, { ...base, mode: 'dictation', attempts: [] }]) {
-    assert.equal(buildPracticeContextSummary(source, () => [mismatch]).history.totalAttempts, 0);
+    assert.equal(buildPracticeContextSummary(source, history(mismatch)).history.totalAttempts, 0);
   }
 });
 
 test('历史读取失败或无权限不影响本次分析，也不能伪装成没有历史', () => {
   const session = record(attempt);
-  const failed = buildPracticeContextSummary({ ...source, session }, () => { throw new Error('storage'); });
+  const failed = buildPracticeContextSummary({ ...source, session }, { status: 'read-error' });
   assert.equal(failed.history.status, 'read-error');
   assert.equal(failed.session.totalAttempts, 1);
-  const unavailable = buildPracticeContextSummary({ ...source, session, historyEnabled: false }, () => { throw new Error('must not read'); });
+  const unavailable = buildPracticeContextSummary({ ...source, session }, { status: 'unavailable' });
   assert.equal(unavailable.history.status, 'unavailable');
 });
 
 test('听写未公开不发送标准谱面，公开后可讲解；只包含用户作答和验证事实', () => {
-  const hidden = buildPracticeContextSummary({ ...source, mode: 'dictation' }, () => []);
+  const hidden = buildPracticeContextSummary({ ...source, mode: 'dictation' }, emptyHistory);
   assert.equal(Object.hasOwn(hidden, 'exercise'), false);
   for (const field of ['currentAnswer', 'verdicts', 'selectedMeasure', 'bpm', 'audioBusy']) {
     assert.equal(Object.hasOwn(hidden, field), false, `记录摘要不推断页面字段 ${field}`);
   }
-  assert.deepEqual(buildPracticeContextSummary({ ...source, mode: 'dictation', answerExposed: true }, () => []).exercise, exercise);
+  assert.deepEqual(buildPracticeContextSummary({ ...source, mode: 'dictation', answerExposed: true }, emptyHistory).exercise, exercise);
 });
 
 test('多轮快照有界，保留最新轮次和截断信息', () => {
   const session = record(...Array.from({ length: 50 }, (_, i) => ({ ...attempt, id: String(i) })));
-  const result = buildPracticeContextSummary({ ...source, session }, () => []);
+  const result = buildPracticeContextSummary({ ...source, session }, emptyHistory);
   assert.equal(result.session.totalAttempts, 50);
   assert.equal(result.session.recentAttempts.length, 20);
   assert.equal(result.session.recentAttempts.at(-1).id, '49');
@@ -102,12 +104,12 @@ test('新判定明细持久化并校验，旧汇总仍可读取，中断不算�
     { ...attempt.details, timingEvents: [{ ...attempt.details.timingEvents[0], errorMs: Infinity }, attempt.details.timingEvents[1]] },
     { ...attempt.details, timingEvents: [attempt.details.timingEvents[0]] },
   ]) assert.throws(() => parsePracticeRecord(record({ ...attempt, details })));
-  assert.equal(buildPracticeContextSummary({ ...source, session: record({ ...attempt, details: { ...attempt.details, stopped: true } }) }, () => []).session.recentAttempts[0].stopped, true);
+  assert.equal(buildPracticeContextSummary({ ...source, session: record({ ...attempt, details: { ...attempt.details, stopped: true } }) }, emptyHistory).session.recentAttempts[0].stopped, true);
 });
 
 
 test('会话活动仅记录有效结果；多轮合并，收到确认才清除，发送期间的更新留给下一批', () => {
-  const activity = new PracticeActivity();
+  const activity = new PracticeActivity(() => ({ status: 'not-loaded' }));
   activity.record(record(attempt), attempt.id, false);
   assert.equal(activity.prepare(), null);
   activity.start();
@@ -128,7 +130,7 @@ test('会话活动仅记录有效结果；多轮合并，收到确认才清除�
 });
 
 test('同一轮修正替换旧结果；跨题更新保留两题；重置丢弃旧会话批次', () => {
-  const activity = new PracticeActivity(); activity.start();
+  const activity = new PracticeActivity(() => ({ status: 'not-loaded' })); activity.start();
   activity.record(record(attempt), attempt.id, false);
   const old = activity.prepare();
   const corrected = { ...attempt, bpm: 80 };
@@ -153,7 +155,7 @@ test('听写累计设置、验证与最终作答，同次编辑使判定失效�
   update({ type: 'play', scope: 0, bpm: 50, metronomeEnabled: false });
   update({ type: 'play', scope: 'all', bpm: 60, metronomeEnabled: true });
   update({ type: 'verify', measureIndex: 0, correct: true, answerMeasures: [[{ kind: 'note', noteValue: 'whole' }], []] });
-  const activity = new PracticeActivity(); activity.start();
+  const activity = new PracticeActivity(() => ({ status: 'not-loaded' })); activity.start();
   activity.record(dictation, 'd', false);
   update({ type: 'edit', measureIndex: 0, answerMeasures: [[], []] });
   activity.record(dictation, 'd', false);
@@ -176,7 +178,7 @@ test('听写累计设置、验证与最终作答，同次编辑使判定失效�
 test('记录对象可作为题目引用，摘要只投影身份字段，未公开听写不透传原始记录', () => {
   const dictation = recordDictationEvent(null, context, exercise, 'd', { type: 'play', scope: 'all' }, at);
   const summary = buildPracticeContextSummary({ context: dictation, exercise, mode: 'dictation',
-    answerExposed: false, session: dictation, historyEnabled: false });
+    answerExposed: false, session: dictation }, { status: 'unavailable' });
   assert.equal(summary.exerciseId, context.exerciseId);
   for (const field of ['exercise', 'attempts', 'id', 'createdAt', 'updatedAt']) {
     assert.equal(Object.hasOwn(summary, field), false, `不能透传记录字段 ${field}`);
@@ -188,7 +190,7 @@ test('记录对象可作为题目引用，摘要只投影身份字段，未公�
 });
 
 test('活动轮次数保持完整，摘要只保留最近轮次，无需调用方再次过滤', () => {
-  const activity = new PracticeActivity(); activity.start();
+  const activity = new PracticeActivity(() => ({ status: 'not-loaded' })); activity.start();
   for (let i = 0; i < 25; i++) {
     const next = { ...attempt, id: String(i), details: undefined };
     activity.record(record(next), next.id, false);
@@ -221,4 +223,30 @@ test('子面板资料与基础页面和练习并存，更新不覆盖其他区�
   assert.equal(Object.hasOwn(scope.readCurrentPageContext().state, 'recordDetail'), false);
   assert.equal(scope.readCurrentPageContext().state.settings.selected, 'strict');
   assert.equal(new AssistantContext().readCurrentPageContext(), null);
+});
+
+
+test('历史未加载、读取失败、已确认空记录分别保留状态', () => {
+  for (const state of [{ status: 'not-loaded' }, { status: 'read-error' }, emptyHistory]) {
+    const summary = buildPracticeContextSummary(source, state);
+    assert.equal(summary.history.status, state.status);
+    assert.equal(summary.history.totalAttempts, 0);
+  }
+});
+
+test('活动发送时读取最新历史；停用历史时不调用读取入口', () => {
+  let state = { status: 'not-loaded' };
+  let reads = 0;
+  const activity = new PracticeActivity(() => { reads++; return state; });
+  activity.start(); activity.record(record(attempt), attempt.id, true);
+  assert.equal(activity.prepare().practices[0].history.status, 'not-loaded');
+  state = history(record({ ...attempt, id: 'older' }, attempt));
+  const ready = activity.prepare();
+  assert.equal(ready.practices[0].history.totalAttempts, 1);
+  assert.equal(ready.practices[0].history.recentAttempts[0].id, 'older');
+  activity.acknowledge(ready.batchId);
+  activity.record(record({ ...attempt, id: 'offline' }), 'offline', false);
+  const previousReads = reads;
+  assert.equal(activity.prepare().practices[0].history.status, 'unavailable');
+  assert.equal(reads, previousReads);
 });

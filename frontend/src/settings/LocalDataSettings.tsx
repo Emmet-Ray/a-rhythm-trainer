@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
-import { ActionError } from "../navigation/ActionError";
-import { SuccessToast } from "../navigation/SuccessToast";
+import { ActionError } from "../ui/ActionError";
+import { SuccessToast } from "../ui/SuccessToast";
 import { useAssistantPageSection } from "../assistant/assistantContext";
 import {
   clearPracticeRecords,

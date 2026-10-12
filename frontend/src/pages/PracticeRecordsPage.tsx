@@ -1,4 +1,4 @@
-import { ActionError } from "../navigation/ActionError";
+import { ActionError } from "../ui/ActionError";
 import { useAssistantPageContext } from "../assistant/assistantContext";
 import { exerciseSources } from "../practice-records/PracticeRecord";
 import {
@@ -7,7 +7,7 @@ import {
 } from "react";
 import { Eye, Trash2 } from "lucide-react";
 import { useBrowsingState } from "../navigation/usePageNavigation";
-import { SuccessToast } from "../navigation/SuccessToast";
+import { SuccessToast } from "../ui/SuccessToast";
 import {
   deletePracticeRecord,
   queryPracticeRecords, queryRecordTotals, recordListQuery, useRecordQuery, type RecordSummary,

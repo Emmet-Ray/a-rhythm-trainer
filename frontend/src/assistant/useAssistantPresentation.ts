@@ -1,4 +1,4 @@
-import { useAnimatedDismiss } from "../navigation/useAnimatedDismiss";
+import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 const narrowQuery = "(max-width: 1099px)";

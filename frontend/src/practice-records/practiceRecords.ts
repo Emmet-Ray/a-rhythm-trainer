@@ -1,5 +1,6 @@
+import type { DictationEvent } from "../practice/PracticeEvents";
 import type { RhythmElement, RhythmExercise } from "../rhythm/RhythmModel";
-import type { DictationAttempt, DictationRecord, DictationRecordEvent, ExerciseContext, PracticeRecord, TappingAttempt, TappingRecord } from "./PracticeRecord";
+import type { DictationAttempt, DictationRecord, ExerciseContext, PracticeRecord, TappingAttempt, TappingRecord } from "./PracticeRecord";
 
 /** Historical achievement is separate from the current attempt's result. */
 export function historicalStatus(record: PracticeRecord | undefined): string {
@@ -37,7 +38,7 @@ export function recordTappingAttempt(record: TappingRecord | null, context: Exer
 
 /** 一份空白作答对应一个稳定 ID。完成后冻结；编辑只清除判定，既不创建尝试也不更新时间。 */
 export function recordDictationEvent(record: DictationRecord | null, context: ExerciseContext, exercise: RhythmExercise,
-  attemptId: string, event: DictationRecordEvent, at = new Date().toISOString()): DictationRecord | null {
+  attemptId: string, event: DictationEvent, at = new Date().toISOString()): DictationRecord | null {
   const previous = record?.attempts.find(item => item.id === attemptId);
   if (previous?.completedAt) return record;
   if (!previous && event.type === "edit") return record;

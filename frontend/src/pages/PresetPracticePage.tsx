@@ -3,10 +3,10 @@ import { recordKey } from "../practice-records/practiceRecords";
 import { useAssistantPageContext } from "../assistant/assistantContext";
 import { Suspense, useEffect, useSyncExternalStore, useLayoutEffect, useRef, type UIEvent } from "react";
 import { presetCatalogStore } from "../exercises/presetCatalogStore";
-import { workspaceModule } from "../practice/practiceModules";
-import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
+import { workspaceModule } from "../exercise-workspace/workspaceModules";
+import { LoadingPlaceholder } from "../ui/LoadingPlaceholder";
 import { ArrowRight } from "lucide-react";
-import { PracticeHeading } from "../practice/PracticeHeading";
+import { PracticeHeading } from "../exercise-workspace/PracticeHeading";
 import { useBrowsingState } from "../navigation/usePageNavigation";
 import { Link, useParams } from "react-router";
 import {
@@ -16,7 +16,7 @@ import {
   type PracticeMode,
 } from "../exercises/presetCatalog";
 import NotFoundPage from "./NotFoundPage";
-import { PresetQuestionNavigation } from "../practice/PresetQuestionNavigation";
+import { PresetQuestionNavigation } from "../exercise-workspace/PresetQuestionNavigation";
 
 // 预设列表不加载训练组件及 VexFlow，进入具体题目后才加载。
 const PracticeWorkspace = workspaceModule.Component;

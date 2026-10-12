@@ -1,4 +1,4 @@
-import { ActionError } from "../navigation/ActionError";
+import { ActionError } from "../ui/ActionError";
 import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LoaderCircle, Play, Square } from "lucide-react";
 import { PlaybackContext, type PlaybackGroup } from "./PlaybackGroup";

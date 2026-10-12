@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useState } from "react";
 import type { PracticeRecord, ExerciseContext } from "./PracticeRecord";
+import type { PracticeHistory } from "./PracticeHistory";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import { parsePracticeRecord } from "./practiceRecordValidation";
 import { recordKey, type RecordFilter, type RecordPeriod } from "./practiceRecords";
@@ -62,24 +63,22 @@ function parseAttemptPage(value: AttemptPage): AttemptPage {
   return { ...value, attempts: record.attempts };
 }
 type HistoryTarget = { source: ExerciseContext["source"]; exerciseId: string; mode: PracticeRecord["mode"]; exercise: RhythmExercise };
-const histories = new Map<string, { record?: PracticeRecord; total: number; attemptIds: string[]; error?: string }>();
+const histories = new Map<string, PracticeHistory>();
 export async function queryExerciseHistory(target: HistoryTarget) {
   const key = recordKey({ ...target, title: "" }, target.exercise, target.mode);
   try {
     const value = await request<AttemptPage | null>("/lookup", "POST", target);
     const page = value ? parseAttemptPage(value) : null;
-    histories.set(key, { record: page ? { ...page.record, attempts: page.attempts } as PracticeRecord : undefined, total: page?.total ?? 0, attemptIds: page?.attemptIds ?? [] });
+    histories.set(key, { status: "available", record: page ? { ...page.record, attempts: page.attempts } as PracticeRecord : undefined, total: page?.total ?? 0, attemptIds: page?.attemptIds ?? [] });
     return page;
   } catch (error) {
-    histories.set(key, { total: 0, attemptIds: [], error: "历史读取失败" });
+    histories.set(key, { status: "read-error" });
     throw error;
   }
 }
-/** 助手只使用当前题已按需读取的最近尝试；未加载不伪装成无历史。 */
-export function readCachedHistory(context: ExerciseContext, exercise: RhythmExercise, mode: PracticeRecord["mode"]) {
-  const history = histories.get(recordKey(context, exercise, mode));
-  if (!history || history.error) throw Error(history?.error ?? "历史尚未读取");
-  return history;
+/** 只读取当前题已按需加载的历史；不发请求，不把未加载或失败当成没有记录。 */
+export function readExerciseHistory(context: ExerciseContext, exercise: RhythmExercise, mode: PracticeRecord["mode"]): PracticeHistory {
+  return histories.get(recordKey(context, exercise, mode)) ?? { status: "not-loaded" };
 }
 export function queryPracticeProgress(targets: HistoryTarget[]) { return request<(RecordSummary | null)[]>("/progress", "POST", { targets }); }
 export function summaryAchievement(record?: RecordSummary | null) {

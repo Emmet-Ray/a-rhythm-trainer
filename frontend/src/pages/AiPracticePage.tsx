@@ -3,8 +3,8 @@ import { readPracticeOrigin } from "../exercises/aiPracticeNavigation";
 import { Navigate, useLocation, useParams } from "react-router";
 import { GeneratedExercisesContext } from "../exercises/GeneratedExerciseStore";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
-import { GeneratedPracticeWorkspace } from "../practice/GeneratedPracticeWorkspace";
-import { PracticeHeading } from "../practice/PracticeHeading";
+import { GeneratedPracticeWorkspace } from "../exercise-workspace/GeneratedPracticeWorkspace";
+import { PracticeHeading } from "../exercise-workspace/PracticeHeading";
 
 export default function AiPracticePage({ mode }: { mode: "tapping" | "dictation" }) {
   const location = useLocation();

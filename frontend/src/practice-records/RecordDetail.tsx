@@ -1,9 +1,8 @@
-import { useAnimatedDismiss } from "../navigation/useAnimatedDismiss";
+import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
 import { queryRecordAttempts, useRecordQuery, type RecordSummary } from "./practiceRecordStorage";
-import { useAssistantPageSection } from "../assistant/assistantContext";
-import { buildPracticeContextSummary } from "../assistant/practiceContextSummary";
+import { RecordDetailContext } from "./recordDetailContext";
 import { exerciseSources } from "./PracticeRecord";
-import { useEffect, useId, useRef, useState } from "react";
+import { useContext, useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import type { DictationAttempt, PracticeRecord } from "./PracticeRecord";
 import { tappingPrecisions } from "../settings/tappingPrecision";
@@ -98,10 +97,7 @@ export function RecordDetail({
   const [page, setPage] = useState(1);
   const pagination = archive ? { page: archive.page, pages: archive.pages, start: (archive.page - 1) * 10, end: Math.min(archive.page * 10, archive.total) } : recordPage(record.attempts.length, page);
   const visibleRecord = archive ? record : { ...record, attempts: record.attempts.slice(record.attempts.length - pagination.end, record.attempts.length - pagination.start) } as PracticeRecord;
-  useAssistantPageSection("recordDetail", { tab, period: "all", page: pagination.page, pages: pagination.pages,
-    totalAttempts: archive?.total ?? record.attempts.length, recordId: record.id,
-    summary: buildPracticeContextSummary({ context: record, exercise: record.exercise, mode: record.mode,
-      session: visibleRecord, historyEnabled: false, answerExposed: tab === "score" || (record.mode === "dictation" && record.attempts.some(attempt => attempt.viewedAnswer)) }) });
+  const renderContext = useContext(RecordDetailContext);
   if (!archive && page !== pagination.page) setPage(pagination.page);
   const dialog = useRef<HTMLDialogElement>(null);
   const dismiss = useAnimatedDismiss(dialog, onClose);
@@ -140,6 +136,8 @@ export function RecordDetail({
           dismiss();
       }}
     >
+      {renderContext?.({ record, visibleRecord, tab, page: pagination.page, pages: pagination.pages,
+        totalAttempts: archive?.total ?? record.attempts.length })}
       <header className="record-detail-heading">
         <div>
           <h2 id={titleId}>{record.title}</h2>

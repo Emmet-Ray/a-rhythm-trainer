@@ -2,11 +2,11 @@
 
 from datetime import datetime
 from copy import deepcopy
-from sqlalchemy import JSON, String, Boolean, ForeignKey, Index, CheckConstraint, select, update
+from sqlalchemy import JSON, String, Boolean, ForeignKey, Index, CheckConstraint, select, update, delete
 from sqlalchemy.orm import Mapped, mapped_column
 from .database import Base
 from domain.practice_records import validate_records
-from domain.rhythm import parse_rhythm_exercise
+from domain.rhythm import score_identity
 
 
 class PracticeRecord(Base):
@@ -40,17 +40,6 @@ class PracticeAttempt(Base):
     passed: Mapped[bool | None] = mapped_column(Boolean)
     viewed_answer: Mapped[bool | None] = mapped_column(Boolean)
     details: Mapped[dict] = mapped_column(JSON, nullable=False)
-
-
-def score_identity(exercise):
-    """比较合法的规范化谱面；无附点的两种写法视为相同，不另存指纹。"""
-    score = parse_rhythm_exercise(exercise)
-    for measure in score["measures"]:
-        for element in measure["elements"]:
-            for event in element["notes"] if element["kind"] == "triplet" else [element]:
-                if event.get("dots") == 0:
-                    event.pop("dots")
-    return score
 
 
 def find_record(session, context, exercise, mode):
@@ -130,3 +119,20 @@ def save_attempt(session, row, attempt, updated_at, title, *, create):
         row.updated_at = updated_at
     session.flush()
     return existing
+
+
+def write_record_attempt(session, record_id, attempt, updated_at, title, *, create):
+    """写锁覆盖档案读取与尝试写入；删除后的旧访问不能重新创建档案。"""
+    lock_records(session)
+    row = session.get(PracticeRecord, record_id)
+    if row is None:
+        raise LookupError("这条练习记录已被删除，请重新进入练习")
+    return save_attempt(session, row, attempt, updated_at, title, create=create)
+
+
+def delete_record_archive(session, record_id):
+    session.execute(delete(PracticeRecord).where(PracticeRecord.id == record_id))
+
+
+def clear_record_archives(session):
+    session.execute(delete(PracticeRecord))

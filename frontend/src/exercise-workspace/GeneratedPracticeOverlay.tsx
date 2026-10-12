@@ -1,11 +1,11 @@
-import { useAnimatedDismiss } from "../navigation/useAnimatedDismiss";
-import { PlaybackContext } from "./PlaybackGroup";
+import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
+import { PlaybackContext } from "../practice/PlaybackGroup";
 import { useCallback, useContext, useLayoutEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
 import { GeneratedPracticeWorkspace } from "./GeneratedPracticeWorkspace";
-import { PracticeKeyboardScope } from "./usePracticeShortcuts";
+import { PracticeKeyboardScope } from "../practice/usePracticeShortcuts";
 import { ExerciseHistory } from "../practice-records/ExerciseHistory";
 
 /** 在来源页面上方临时练习；卸载停止训练，关闭恢复原触发点，在原面板内切换编辑视图。 */

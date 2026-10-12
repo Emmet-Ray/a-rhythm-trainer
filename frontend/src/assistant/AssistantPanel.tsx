@@ -1,4 +1,4 @@
-import { useAnimatedDismiss } from "../navigation/useAnimatedDismiss";
+import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
 import { useChat } from "@ai-sdk/react";
 import { isToolUIPart, getToolName, type FileUIPart } from "ai";
 import { isMessageImage } from "../api/assistant";
@@ -25,7 +25,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { ExerciseProposalResult } from "./tool-results/ExerciseProposalResult";
-import { GeneratedPracticeOverlay } from "../practice/GeneratedPracticeOverlay";
+import { GeneratedPracticeOverlay } from "../exercise-workspace/GeneratedPracticeOverlay";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
 import { Composer, type ComposerHandle } from "./Composer";
 import { PlaybackGroup } from "../practice/PlaybackGroup";
@@ -36,7 +36,6 @@ import { useAssistantAvailability } from "./useAssistantAvailability";
 import { ConversationHistory } from "./ConversationHistory";
 import type { ModelSelection } from "../api/modelConnections";
 import type { CardState } from "../api/assistant";
-import HomePage from "../pages/HomePage";
 
 export function AssistantPanel({ home = false, onDockChange }: { home?: boolean; onDockChange?: (docked: boolean) => void }) {
   const activity = useContext(PracticeActivityContext);
@@ -346,7 +345,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
                 }
               }}
             >
-              {home && <HomePage started={started} />}
+              {home && !started && <div className="assistant-home-welcome"><h1>今天想练什么节奏？</h1></div>}
               {!home && !started ? (
                 <div className="assistant-empty">
                   <MessageCircle size={30} aria-hidden="true" />

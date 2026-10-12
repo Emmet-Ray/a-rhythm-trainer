@@ -4,9 +4,9 @@ import type { ExerciseDraft, CustomExercise } from "../exercises/customExercises
 import type { ExerciseContext } from "../practice-records/PracticeRecord";
 import { saveExercise, updateExercise } from "../api/customExercises";
 import { useVisitState } from "../navigation/usePageNavigation";
-import { LoadingPlaceholder } from "../navigation/LoadingPlaceholder";
-import { PlaybackContext } from "./PlaybackGroup";
-import { workspaceModule } from "./practiceModules";
+import { LoadingPlaceholder } from "../ui/LoadingPlaceholder";
+import { PlaybackContext } from "../practice/PlaybackGroup";
+import { workspaceModule } from "./workspaceModules";
 
 const ExerciseEditor = lazy(() => import("./ExerciseEditor"));
 const PracticeWorkspace = workspaceModule.Component;
@@ -25,9 +25,11 @@ export type WorkbenchView = {
 /** 同一道题的练习／编辑生命周期。来源决定首次保存的身份，之后始终更新保存的副本。
  * 外层只安排题头和容器，不持有草稿，也不因切换视图改变导航位置。
  */
-export function ExerciseWorkbench({ initial, origin, initialEditing = false, answerExposed = false, onAnswerViewed, onBusyChange, onEditingChange, onCancelNew, children }: {
+export function ExerciseWorkbench({ initial, origin, settingsScope, initialEditing = false, answerExposed = false, onAnswerViewed, onBusyChange, onEditingChange, onCancelNew, children }: {
   initial: ExerciseDraft;
   origin: ExerciseContext | null;
+  /** 同一次访问中跨题共享训练设置；不共享题目、编辑草稿或尝试。默认跟随题目身份。 */
+  settingsScope?: string;
   initialEditing?: boolean;
   answerExposed?: boolean;
   onAnswerViewed?: () => void;
@@ -62,7 +64,7 @@ export function ExerciseWorkbench({ initial, origin, initialEditing = false, ans
   }}><Pencil className="ui-icon" aria-hidden="true" />编辑</button></div>;
   const view = { name: current.name, title: current.name, editing, editAction, history: { context, exercise: current.exercise, mode: current.mode }, canLeave };
   return <Suspense fallback={children({ ...view, content: <LoadingPlaceholder workspace label="正在加载练习…" /> })}>
-    {editing ? <ExerciseEditor initial={current} scope={scope} registerGuard={registerGuard}
+    {editing ? <ExerciseEditor initial={current} scope={scope} settingsScope={settingsScope} registerGuard={registerGuard}
       onSave={draft => {
         const id = saved?.id ?? (origin?.source === "custom" ? origin.exerciseId : undefined);
         return id ? updateExercise(id, draft) : saveExercise(draft);
@@ -74,7 +76,7 @@ export function ExerciseWorkbench({ initial, origin, initialEditing = false, ans
         else setEditing(false);
       }}>{editor => children({ ...view, title: editor.title, editAction: editor.actions, content: editor.content })}</ExerciseEditor>
       : children({ ...view, content: <PracticeWorkspace exercise={current.exercise} mode={current.mode} exerciseKey={`${context.exerciseId}:${version}`}
-        recoveryScope={scope} recordContext={context} answerExposed={answerExposed || viewed || initialEditing}
+        recoveryScope={scope} settingsScope={settingsScope} recordContext={context} answerExposed={answerExposed || viewed || initialEditing}
         onAnswerViewed={onAnswerViewed} onBusyChange={onBusyChange} /> })}
   </Suspense>;
 }

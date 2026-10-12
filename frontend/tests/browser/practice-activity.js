@@ -3,14 +3,20 @@ async (page) => {
   const check = (value, message) => { if (!value) throw new Error(message); };
   const origin = new URL(page.url()).origin;
   await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await page.evaluate(() => localStorage.removeItem('rhythm:assistant:v1:instance'));
+  await page.route('**/api/model-connections**', route => route.fulfill({ json: {
+    provider: 'deepseek', deepseek: { configured: true, model: 'test-model', models: [{ id: 'test-model', name: '测试模型', supports_images: true }] },
+    chatgpt: { configured: false, model: '', models: [] },
+  } }));
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   const runId = Date.now();
   let messages = [], rejectNext = false;
   const submissions = [];
-  const session = () => ({ id: 'activity-session', messages, is_running: false, last_run_status: messages.length ? 'completed' : null });
+  const session = () => ({ id: 'activity-session', messages, is_running: false, model_selection: { provider: 'deepseek', model: 'test-model' }, last_run_status: messages.length ? 'completed' : null });
   await page.route('**/api/assistant/status', route => route.fulfill({ json: { status: 'ready', message: '' } }));
   await page.route('**/api/assistant/sessions', route => route.fulfill({ json: session() }));
   await page.route('**/api/assistant/sessions/*', route => route.fulfill({ json: session() }));
+  await page.route('**/api/assistant/sessions/*/cards/*', route => route.fulfill({ json: route.request().postDataJSON() }));
   await page.route('**/api/assistant/sessions/*/messages', async route => {
     const body = route.request().postDataJSON(); submissions.push(body);
     if (rejectNext) { rejectNext = false; return route.fulfill({ status: 503, json: { detail: '模拟未接收' } }); }
@@ -39,10 +45,16 @@ async (page) => {
   await page.getByRole('button', { name: '打开 AI 助手', exact: true }).click();
   const input = page.getByRole('textbox', { name: '向助手提问' });
   async function ask(text) {
+    const waitFor = async (predicate, stage) => {
+      try { await page.waitForFunction(predicate, null, { timeout: 10000 }); }
+      catch { throw new Error(`${text}: ${stage}; input=${await input.inputValue()}`); }
+    };
     const count = submissions.length;
+    await waitFor(() => document.querySelector("#assistant-input")?.placeholder !== "可以继续输入，回答结束后发送…", "等待会话空闲");
     await input.fill(text);
+    await waitFor(() => document.querySelector('button[aria-label="发送"]')?.disabled === false, "等待发送可用");
     await Promise.all([page.waitForResponse(response => response.url().includes('/messages')), input.press('Enter')]);
-    await page.getByRole('button', { name: '发送', exact: true }).waitFor();
+    await waitFor(() => document.querySelector("#assistant-input")?.placeholder !== "可以继续输入，回答结束后发送…", "等待会话空闲");
     check(submissions.length === count + 1, '只发送一次消息');
     return submissions.at(-1).page_context.state;
   }
@@ -58,6 +70,7 @@ async (page) => {
   }
   await round(); await round();
   await overlay.getByRole('button', { name: '关闭练习', exact: true }).click();
+  await overlay.waitFor({ state: 'hidden' });
   let state = await ask('练得怎么样');
   check(state.practice.snapshot.source === 'preset', '页面仍是预设 A');
   check(state.practice_focus.title === '活动击拍 B', '讨论对象来自刚产生的结果 B');
@@ -65,14 +78,13 @@ async (page) => {
   state = await ask('再讲一下');
   check(state.practice_activity === null && state.practice_focus.title === '活动击拍 B', '确认后不重发成绩，仍保留讨论对象');
   await page.getByRole('button', { name: '开始击拍', exact: true }).click();
-  await page.evaluate(() => {
-    window.originalSetItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = function(key, value) { if (key === 'rhythm-trainer.practice-records') throw new Error('模拟存储失败'); return window.originalSetItem.call(this, key, value); };
-  });
+  await page.route('**/api/local-data/records**', route => route.request().method() === 'POST' && /\/records(?:\/[^/]+\/attempts)?$/.test(new URL(route.request().url()).pathname)
+    ? route.fulfill({ status: 503, json: { detail: '模拟记录服务失败' } }) : route.continue());
   await round();
-  await overlay.getByText(/练习记录保存失败/).waitFor();
-  await page.evaluate(() => { Storage.prototype.setItem = window.originalSetItem; });
+  await overlay.getByText('无法访问本地记录服务，请确认后端正在运行').waitFor();
+  await page.unroute('**/api/local-data/records**');
   await overlay.getByRole('button', { name: '关闭练习', exact: true }).click();
+  await overlay.waitFor({ state: 'hidden' });
   rejectNext = true;
   state = await ask('第三轮怎么样');
   const thirdId = state.practice_activity.practices[0].session.recentAttempts[0].id;
@@ -89,6 +101,7 @@ async (page) => {
   await overlay.getByRole('button', { name: '验证当前小节', exact: true }).click();
   await overlay.getByRole('button', { name: '清空当前小节', exact: true }).click();
   await overlay.getByRole('button', { name: '关闭练习', exact: true }).click();
+  await overlay.waitFor({ state: 'hidden' });
   state = await ask('我写得怎么样');
   const hearing = state.practice_activity.practices[0];
   check(hearing.title === '活动听写 B' && !('exercise' in hearing), '听写活动不泄露标准答案');

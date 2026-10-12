@@ -69,3 +69,22 @@ test('列表查询包含服务端分页与时间筛选，不要求加载全量�
   assert.equal(params.get('mode'),'dictation');assert.equal(params.get('page'),'2');
   assert.equal(params.get('before'),now.toISOString());assert.ok(params.get('after'));assert.ok(params.get('zone'));
 });
+
+
+test('历史缓存区分未加载、空记录、读取失败与删除后的失效', async t => {
+  const target = { ...context, exercise, mode: 'dictation' };
+  assert.equal(api.readExerciseHistory(context, exercise, 'dictation').status, 'not-loaded');
+  let fail = false;
+  t.mock.method(globalThis, 'fetch', async () => {
+    if (fail) throw Error('offline');
+    return Response.json(null);
+  });
+  await api.queryExerciseHistory(target);
+  assert.deepEqual(api.readExerciseHistory(context, exercise, 'dictation'), { status: 'available', record: undefined, total: 0, attemptIds: [] });
+  fail = true;
+  await assert.rejects(api.queryExerciseHistory(target), /offline/);
+  assert.equal(api.readExerciseHistory(context, exercise, 'dictation').status, 'read-error');
+  fail = false;
+  await api.clearPracticeRecords();
+  assert.equal(api.readExerciseHistory(context, exercise, 'dictation').status, 'not-loaded');
+});

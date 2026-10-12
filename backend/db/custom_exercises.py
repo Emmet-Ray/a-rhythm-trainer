@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import JSON, CheckConstraint, DateTime, Index, String, select, text
+from sqlalchemy import JSON, CheckConstraint, DateTime, Index, String, select, text, func, delete
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from domain.rhythm import parse_rhythm_exercise
@@ -113,3 +113,12 @@ def delete_custom_exercise(session: Session, exercise_id: str) -> bool:
 def _require_mode(mode):
     if mode not in ("tapping", "dictation"):
         raise ValueError("练习模式仅支持 tapping 或 dictation。")
+
+
+def custom_exercise_totals(session: Session) -> dict:
+    counts = dict(session.execute(select(CustomExercise.mode, func.count()).group_by(CustomExercise.mode)).all())
+    return {"total": sum(counts.values()), "tapping": counts.get("tapping", 0), "dictation": counts.get("dictation", 0)}
+
+
+def clear_custom_exercises(session: Session) -> None:
+    session.execute(delete(CustomExercise))

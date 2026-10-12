@@ -1,4 +1,4 @@
-import { ActionError } from "../navigation/ActionError";
+import { ActionError } from "../ui/ActionError";
 import { PlaybackContext } from "./PlaybackGroup";
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PracticeKeyboardScope, canReceivePracticeKey, practiceShortcuts, usePracticeShortcuts } from "./usePracticeShortcuts";
@@ -7,7 +7,7 @@ import { MetronomePlaybackContext } from "./MetronomePlayback";
 import PracticeFrame from "./PracticeFrame";
 import PracticeCue from "./PracticeCue";
 import PracticeResult from "./PracticeResult";
-import type { AttemptRecorder } from "../practice-records/usePracticeRecorder";
+import type { TappingAttemptRecorder } from "./PracticeEvents";
 
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import { DEFAULT_TAPPING_PRECISION, getTappingTimingWindows } from "../settings/tappingPrecision";
@@ -60,7 +60,7 @@ export type RhythmTrainerProps = {
   toolbarEnd?: ReactNode;
   onBusyChange?: (busy: boolean) => void;
   /** 成功启动时固定本轮记录目标；自然结束、主动停止及迟到输入修正共用回调。 */
-  onAttemptStart?: AttemptRecorder;
+  onAttemptStart?: TappingAttemptRecorder;
 };
 
 /**
@@ -130,7 +130,7 @@ function RhythmTrainer({
 
   const clockRef = useRef<PracticeClock | null>(null);
   const finishedRef = useRef(false);
-  const recordResultRef = useRef<ReturnType<AttemptRecorder>>(undefined);
+  const recordResultRef = useRef<ReturnType<TappingAttemptRecorder>>(undefined);
   // 不捕获某一轮的时钟；状态变化只使当前轮的输入映射换段。
   const resetInputTime = useCallback(() => clockRef.current?.resetInputTime(), []);
   const metronomeRef = useRef<Metronome | null>(null);

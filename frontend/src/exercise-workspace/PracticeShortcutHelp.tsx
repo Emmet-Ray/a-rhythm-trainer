@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { Keyboard, X } from "lucide-react";
-import { practiceShortcuts } from "./usePracticeShortcuts";
+import { practiceShortcuts } from "../practice/usePracticeShortcuts";
 import type { ExerciseContext, PracticeRecord } from "../practice-records/PracticeRecord";
 
 export default function PracticeShortcutHelp({ mode, source }: {

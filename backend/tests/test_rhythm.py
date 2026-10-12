@@ -66,3 +66,21 @@ def test_measure_limit_and_none():
     parse_rhythm_exercise({**exercise(), "measures": exercise()["measures"] * 64})
     with pytest.raises(ValueError):
         parse_rhythm_exercise(None)
+
+
+def test_score_identity_normalizes_optional_dots_without_mutating_input():
+    from domain.rhythm import score_identity
+    original = exercise(note("quarter"), note("quarter", dots=0), triplet(), note())
+    explicit = deepcopy(original)
+    explicit["measures"][0]["elements"][0]["dots"] = 0
+    for event in explicit["measures"][0]["elements"][2]["notes"]:
+        event["dots"] = 0
+    before = deepcopy(explicit)
+    assert score_identity(original) == score_identity(explicit)
+    assert explicit == before
+    normalized = score_identity(explicit)
+    normalized["measures"][0]["elements"][0]["kind"] = "rest"
+    assert explicit == before
+    changed = deepcopy(original)
+    changed["measures"][0]["elements"][0]["kind"] = "rest"
+    assert score_identity(changed) != score_identity(original)

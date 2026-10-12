@@ -55,10 +55,3 @@ export type DictationRecord = RecordBase & {
 };
 
 export type PracticeRecord = TappingRecord | DictationRecord;
-
-/** 组件报告事实，记录模块决定如何累计；不接收每次编辑的答案日志。 */
-export type DictationRecordEvent =
-  | { type: "play"; scope: "all" | number; bpm?: number; metronomeEnabled?: boolean }
-  | { type: "verify"; measureIndex: number; correct: boolean; answerMeasures?: RhythmElement[][] }
-  | { type: "edit"; measureIndex: number; answerMeasures?: RhythmElement[][] }
-  | { type: "view-answer" };
