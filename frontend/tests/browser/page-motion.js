@@ -1,4 +1,4 @@
-// playwright-cli run-code --filename; record actual animations, mock assistant traffic.
+// playwright-cli run-code --filename; mock assistant traffic, delay module loading.
 async page => {
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -25,8 +25,10 @@ async page => {
   const frames = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const count = () => page.evaluate(() => window.pageEntrances.length);
   const entered = async path => {
-    await page.waitForFunction(path => window.pageEntrances.at(-1)?.path === path, path);
-    await page.evaluate(async () => { await window.pageEntrances.at(-1).animation.finished.catch(() => {}); });
+    await page.waitForFunction(path => location.pathname === path && !document.querySelector('#main-content [data-navigation-pending]'), path);
+    await frames();
+    if (await count()) throw new Error('navigation animated whole page');
+    if (await page.locator('#main-content').evaluate(e => getComputedStyle(e).opacity) !== '1') throw new Error('page dimmed');
   };
   await frames();
   if (await count()) throw new Error('initial load should not animate');
@@ -34,12 +36,19 @@ async page => {
   const gate = new Promise(resolve => { release = resolve; });
   await page.route('**/src/pages/AboutPage.tsx*', async route => { await gate; await route.continue(); });
   await page.getByRole('link', { name: '关于', exact: true }).click();
-  await page.locator('[data-navigation-pending]').waitFor();
+  await page.waitForTimeout(400);
+  if (!await page.getByRole('heading', { name: '设置', exact: true }).isVisible()) throw new Error('slow module hid previous page');
+  if (await page.locator('#main-content [data-navigation-pending]').count()) throw new Error('slow module flashed placeholder');
   await frames();
   if (await count()) throw new Error('loading placeholder animated');
+  // A newer navigation must win even when an earlier module finishes later.
+  await page.getByRole('link', { name: '设置', exact: true }).click();
   release();
+  await entered('/settings');
+  if (!await page.getByRole('heading', { name: '设置', exact: true }).isVisible()) throw new Error('stale navigation replaced current page');
+  await page.getByRole('link', { name: '关于', exact: true }).click();
   await entered('/about');
-  if (await count() !== 1 || await page.evaluate(() => window.pageEntrances[0].pending)) throw new Error('ready page must animate once');
+  await page.locator('.about-page').waitFor();
   await page.getByRole('link', { name: '设置', exact: true }).click();
   await entered('/settings');
   const beforeCategory = await count();
@@ -58,8 +67,14 @@ async page => {
   await entered('/about');
   await page.goBack();
   await entered('/random/dictation');
-  const restored = await page.evaluate(() => window.pageEntrances.at(-1).scroll);
-  if (Math.abs(restored - scroll) > 2) throw new Error('entrance began before scroll restoration');
+  const restored = await page.evaluate(() => scrollY);
+  if (Math.abs(restored - scroll) > 2) throw new Error('history scroll was not restored');
+  await page.goForward();
+  await entered('/about');
+  if (await page.evaluate(() => scrollY) !== 0) throw new Error('forward did not restore top');
+  if (await page.evaluate(() => document.activeElement?.id) !== 'main-content') throw new Error('page focus was not restored');
+  await page.goBack();
+  await entered('/random/dictation');
   await page.getByRole('button', { name: '打开 AI 助手' }).click();
   const input = page.getByRole('textbox', { name: '向助手提问' });
   await input.fill('转场保留草稿');
@@ -68,11 +83,9 @@ async page => {
   await page.locator('.assistant-workspace[data-home="true"]').waitFor();
   if (!await input.evaluate(e => e === window.composerNode) || await input.inputValue() !== '转场保留草稿') throw new Error('route animation remounted assistant');
   await page.getByRole('link', { name: '关于', exact: true }).click();
-  await page.waitForFunction(() => window.pageEntrances.at(-1)?.path === '/about');
-  await page.evaluate(() => { window.interruptedEntrance = window.pageEntrances.at(-1).animation; window.interruptedEntrance.pause(); });
+  await entered('/about');
   await page.getByRole('link', { name: '设置', exact: true }).click();
   await entered('/settings');
-  if (await page.evaluate(() => window.interruptedEntrance.playState) !== 'idle') throw new Error('old entrance survived navigation');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const beforeReduced = await count();
   await page.getByRole('link', { name: '关于', exact: true }).click();
@@ -82,5 +95,5 @@ async page => {
   if (await page.locator('#main-content').evaluate(e => getComputedStyle(e).opacity) !== '1') throw new Error('page left transparent');
   if (errors.length) throw new Error(errors.join('\n'));
   await page.unrouteAll({ behavior: 'ignoreErrors' });
-  return 'ready-only entrance, local update exclusion, history scroll, assistant continuity and reduced motion passed';
+  return 'stable cold/warm navigation, history scroll, assistant continuity and reduced motion passed';
 }

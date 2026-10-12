@@ -232,8 +232,11 @@ test("侧栏直接展示所有栏目，移动菜单默认关闭，题目页标�
     assert.doesNotMatch(sidebar, /aria-label="收起导航"/);
     assert.doesNotMatch(html, /practice-navigation|<dialog[^>]*\bopen/);
     assert.match(html, /aria-label="打开导航菜单" aria-expanded="false" aria-controls="site-menu"/);
-    for (const target of ["/", "/preset", "/random", "/custom", "/settings"]) assert.ok(sidebar.includes(`href="${target}"`));
-    assert.match(sidebar, new RegExp(`<a(?=[^>]*href="${active}")(?=[^>]*aria-current="${current}")[^>]*>`));
+    for (const target of ["/", "/preset", "/random", "/custom", "/settings"]) {
+      const destination = (target === "/random" || target === "/custom") && path.startsWith(target + "/") ? path : target;
+      assert.ok(sidebar.includes(`href="${destination}"`));
+    }
+    assert.match(sidebar, new RegExp(`<a(?=[^>]*href="${active === "/random" || active === "/custom" ? path : active}")(?=[^>]*aria-current="${current}")[^>]*>`));
   }
 });
 

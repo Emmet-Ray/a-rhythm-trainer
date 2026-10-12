@@ -19,11 +19,22 @@ function NavigationLinks({ onNavigate, compact = false }: { onNavigate?: () => v
   const visits = useContext(VisitsContext);
   const settingsDestination = pathname === "/settings" ? pathname + search : visits?.destination("/settings") ?? "/settings";
   return <nav className="site-navigation" aria-label="主导航">
-    {destinations.map(({ path, label, shortLabel, icon: Icon }) => <Link key={path} to={path === "/settings" ? settingsDestination : path}
+    {destinations.map(({ path, label, shortLabel, icon: Icon }) => {
+      // 模式首页已是栏目入口，避免先跳根地址再重定向；详情、编辑仍返回列表。
+      const isModeHome = (path === "/random" || path === "/custom")
+        && (pathname === path + "/tapping" || pathname === path + "/dictation");
+      const destination = path === "/settings" ? settingsDestination : isModeHome ? pathname : path;
+      return <Link key={path} to={destination}
       className={path === "/settings" ? "site-settings-link" : undefined}
       aria-current={pathname === path ? "page" : path !== "/" && pathname.startsWith(`${path}/`) ? "location" : undefined}
       title={compact ? label : undefined} aria-label={compact ? label : undefined}
-      onClick={onNavigate}><Icon className="ui-icon" aria-hidden="true" focusable="false" /><span>{compact ? shortLabel : label}</span></Link>)}
+      onClick={event => {
+        if (destination === pathname + search && event.button === 0
+          && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+          event.preventDefault();
+        }
+        onNavigate?.();
+      }}><Icon className="ui-icon" aria-hidden="true" focusable="false" /><span>{compact ? shortLabel : label}</span></Link>; })}
   </nav>;
 }
 

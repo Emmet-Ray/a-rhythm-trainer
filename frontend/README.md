@@ -44,7 +44,7 @@ npm run preview
 | 助手跨路由挂载和响应式布局 | `assistant-resize.js`、`responsive-feedback.js`、`conversation-switch.js` |
 | 编辑保存与生成题目 | `editor-feedback.js`、`edit-generated-exercise.js`、`random-settings.js` |
 | 图片、流与发送确认 | `assistant-images.js`、`assistant-stream.js`、`assistant-confirmation.js` |
-| 导航和浮层动效 | `page-motion.js`、`surface-motion.js` |
+| 导航和浮层动效 | `page-motion.js`、`navigation-repeat.js`、`surface-motion.js` |
 
 部分脚本会清空或新增数据，必须使用临时后端。可从 `backend/` 在独立终端启动：
 

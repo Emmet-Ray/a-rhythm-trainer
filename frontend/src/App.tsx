@@ -59,13 +59,13 @@ function AppShell() {
       <SiteNavigation />
       <AssistantWorkspace home={pathname === "/"}>
       <main id="main-content" hidden={pathname === "/"} ref={mainRef} tabIndex={-1} className={pathname === "/" ? "assistant-home-main" : undefined}>
-        {/* 题库模式共用列表；训练与编辑按访问重建，预加载缓存不随 key 重置。 */}
-        <Suspense key={pageMountKey(pathname, key)}
+        {/* 稳定的加载边界让路由过渡保留正文；只重建页面以隔离训练、编辑状态。 */}
+        <Suspense
           fallback={
             <LoadingPlaceholder />
           }
         >
-          <Routes>
+          <Routes key={pageMountKey(pathname, key)}>
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/records" element={<PracticeRecordsPage />} />
             <Route path="/about" element={<AboutPage />} />
