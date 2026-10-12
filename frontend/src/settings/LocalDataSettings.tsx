@@ -1,63 +1,35 @@
-import { useEffect, useRef, useState } from "react";
+import { clearCustomExercises, customExerciseTotalsOptions } from "../api/customExercises";
+import { useQuery } from "@tanstack/react-query";
+import { useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { ActionError } from "../ui/ActionError";
 import { SuccessToast } from "../ui/SuccessToast";
+import { AsyncStatus } from "../ui/AsyncStatus";
 import { useAssistantPageSection } from "../assistant/assistantContext";
 import {
   clearPracticeRecords,
-  queryRecordTotals,
-  useRecordQuery,
+  recordTotalsOptions,
 } from "../practice-records/practiceRecordStorage";
 
-async function request(method: "GET" | "DELETE" = "GET") {
-  const response = await fetch("/api/local-data/exercises", {
-    method,
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw Error(error.detail || "本地数据服务不可用");
-  }
-  return response.json();
-}
 export default function LocalDataSettings() {
-  const [summary, setSummary] = useState<{
-    total: number;
-    tapping: number;
-    dictation: number;
-  } | null>(null);
-  const [loadingError, setLoadingError] = useState("");
+  const query = useQuery(customExerciseTotalsOptions());
+  const summary = query.data;
+  const loadingError = query.error?.message;
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const running = useRef(false);
   const [busy, setBusy] = useState(false);
-  const [revision, setRevision] = useState(0);
-  useEffect(() => {
-    let active = true;
-    request()
-      .then((summary) => {
-        if (active) {
-          setSummary(summary);
-          setLoadingError("");
-        }
-      })
-      .catch((cause) => {
-        if (active) setLoadingError(cause.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, [revision]);
-  async function run(action: () => Promise<unknown>, message: string) {
+  const [noticeCount, setNoticeCount] = useState(0);
+  async function clearLibrary() {
     if (running.current) return;
     running.current = true;
     setBusy(true);
     setError("");
     setNotice("");
     try {
-      await action();
-      setNotice(message);
-      setRevision((x) => x + 1);
+      await clearCustomExercises();
+      setNotice("题库已清空");
+      setNoticeCount(x => x + 1);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "操作失败");
     } finally {
@@ -71,7 +43,7 @@ export default function LocalDataSettings() {
       {loadingError && (
         <p role="alert">
           {loadingError}{" "}
-          <button onClick={() => setRevision((x) => x + 1)}>重新读取</button>
+          <button onClick={() => void query.refetch()}>重新读取</button>
         </p>
       )}
       <section className="local-data-group">
@@ -88,10 +60,10 @@ export default function LocalDataSettings() {
           <button
             type="button"
             className="local-data-clear"
-            disabled={busy || !summary?.total}
+            disabled={busy || query.isFetching || query.isError || !summary?.total}
             onClick={() => {
               if (confirm("清空当前实例的自定义题库？此操作无法撤销"))
-                void run(() => request("DELETE"), "题库已清空");
+                void clearLibrary();
             }}
           >
             <Trash2 className="ui-icon" aria-hidden="true" />
@@ -101,19 +73,19 @@ export default function LocalDataSettings() {
       </section>
       <RecordData />
       {error && <ActionError message={error} />}
-      {notice && <SuccessToast key={revision} message={notice} />}
+      {notice && <SuccessToast key={noticeCount} message={notice} />}
     </section>
   );
 }
 
 function RecordData() {
-  const query = useRecordQuery("record-totals", queryRecordTotals);
-  const data = { count: query.data?.recordCount ?? null, attempts: query.data?.attemptCount ?? 0, error: query.error };
+  const query = useQuery(recordTotalsOptions());
+  const data = { count: query.data?.recordCount ?? null, attempts: query.data?.attemptCount ?? 0, error: query.error?.message ?? "" };
   const [notice, setNotice] = useState(0);
   useAssistantPageSection("localRecords", {
-    status: data.error ? "read-error" : "ready",
+    status: data.error ? "read-error" : query.isFetching ? "loading" : "ready",
     recordCount: data.count,
-    attemptCount: data.error ? null : data.attempts,
+    attemptCount: data.error || !query.data ? null : data.attempts,
   });
   const [error, setError] = useState("");
   const [clearing, setClearing] = useState(false);
@@ -144,9 +116,9 @@ function RecordData() {
     >
       <div className="local-data-copy">
         <h3 id="local-records-heading">练习记录</h3>
-        {data.count === null ? (
-          <p role={data.error ? "alert" : "status"}>{data.error || "正在读取练习记录…"}</p>
-        ) : (
+        <AsyncStatus pending={query.isFetching} label={query.data ? "正在更新记录统计…" : "正在读取练习记录…"} />
+        {data.error && <p role="alert">{data.error}</p>}
+        {data.count !== null && (
           <p className="local-data-totals">
             {data.count} 条题目记录 <span aria-hidden="true">·</span>{" "}
             {data.attempts} 次尝试
@@ -157,7 +129,7 @@ function RecordData() {
         <button
           type="button"
           className="local-data-clear"
-          disabled={clearing || data.count === null || data.count === 0}
+          disabled={clearing || query.isFetching || !!data.error || data.count === null || data.count === 0}
           onClick={clear}
         >
           <Trash2 className="ui-icon" aria-hidden="true" />
@@ -166,7 +138,7 @@ function RecordData() {
         {data.error && (
           <button
             type="button"
-            onClick={query.reload}
+            onClick={() => void query.refetch()}
           >
             重新读取记录
           </button>

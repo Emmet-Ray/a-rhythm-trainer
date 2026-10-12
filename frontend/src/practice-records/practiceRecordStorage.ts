@@ -1,10 +1,10 @@
-import { useEffect, useEffectEvent, useState } from "react";
+import { queryOptions } from "@tanstack/react-query";
+import { queryClient } from "../query/queryClient";
 import type { PracticeRecord, ExerciseContext } from "./PracticeRecord";
 import type { PracticeHistory } from "./PracticeHistory";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import { parsePracticeRecord } from "./practiceRecordValidation";
 import { recordKey, type RecordFilter, type RecordPeriod } from "./practiceRecords";
-export const RECORDS_CHANGED = "rhythm-trainer:records-changed";
 export type RecordSummary = Omit<PracticeRecord, "attempts"> & {
   attemptCount: number; passedCount: number; completedCount: number; independentCount: number; viewedAnswerCount: number;
 };
@@ -13,8 +13,8 @@ export type RecordList = { records: RecordSummary[]; page: number; pages: number
   overview: { count: number; days: number; tappingCount: number; passedCount: number; passRate: number | null;
     dictationCount: number; completedCount: number; independentCount: number } };
 
-async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(`/api/local-data/records${path}`, { method, cache: "no-store",
+async function request<T>(path: string, method = "GET", body?: unknown, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(`/api/local-data/records${path}`, { method, signal, cache: "no-store",
     ...(body === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }) });
   if (!response.ok) throw Error(response.status === 404
     ? "这条练习记录已被删除，请重新进入练习"
@@ -22,30 +22,27 @@ async function request<T>(path: string, method = "GET", body?: unknown): Promise
   return response.json();
 }
 
-/** 页面按需订阅自己的查询；筛选改变或离页时丢弃迟到响应，不缓存全部历史。 */
-export function useRecordQuery<T>(key: string, load: () => Promise<T>) {
-  const [state, setState] = useState<{ key: string; data?: T; error: string }>({ key, error: "" });
-  const [revision, setRevision] = useState(0);
-  const read = useEffectEvent(load);
-  useEffect(() => {
-    let active = true;
-    void read().then(data => { if (active) setState({ key, data, error: "" }); }, error => {
-      if (active) setState({ key, error: error instanceof Error ? error.message : "无法读取练习记录" });
-    });
-    return () => { active = false; };
-  }, [key, revision]);
-  useEffect(() => {
-    const refresh = () => setRevision(value => value + 1);
-    window.addEventListener(RECORDS_CHANGED, refresh);
-    return () => window.removeEventListener(RECORDS_CHANGED, refresh);
-  }, []);
-  return { ...(state.key === key ? state : { data: undefined, error: "" }), reload: () => setRevision(value => value + 1) };
+/** 所有记录读取共享失效边界；写入完成后刷新活跃视图，离页缓存标为过期。 */
+function refreshPracticeRecords() {
+  // 后台读取不能阻塞下一次练习事实的串行写入。
+  void queryClient.invalidateQueries({ queryKey: ["records"] });
 }
-
-export async function refreshPracticeRecords() {
-  if (typeof window !== "undefined") window.dispatchEvent(new Event(RECORDS_CHANGED));
+export const recordTotalsOptions = () => queryOptions({
+  queryKey: ["records", "totals"], queryFn: ({ signal }) => request<{ recordCount: number; attemptCount: number }>("/summary", "GET", undefined, signal),
+});
+export function recordListOptions(mode: RecordFilter, period: RecordPeriod, page: number, now: Date) {
+  const search = recordListQuery(mode, period, page, now);
+  return queryOptions({ queryKey: ["records", "list", search],
+    queryFn: async ({ signal }) => ({ ...await request<RecordList>(search, "GET", undefined, signal), filter: mode, period, asOf: now.toISOString() }),
+  });
 }
-export function recordListQuery(mode: RecordFilter, period: RecordPeriod, page: number, now: Date) {
+export const recordAttemptsOptions = (id: string, page: number) => queryOptions({
+  queryKey: ["records", "attempts", id, page], queryFn: ({ signal }) => queryRecordAttempts(id, page, signal),
+});
+export const practiceProgressOptions = (targets: HistoryTarget[]) => queryOptions({
+  queryKey: ["records", "progress", targets], queryFn: ({ signal }) => request<(RecordSummary | null)[]>("/progress", "POST", { targets }, signal),
+});
+function recordListQuery(mode: RecordFilter, period: RecordPeriod, page: number, now: Date) {
   const query = new URLSearchParams({ mode, page: String(page), before: now.toISOString(), zone: Intl.DateTimeFormat().resolvedOptions().timeZone });
   if (period !== "all") {
     const after = new Date(now); after.setHours(0, 0, 0, 0); after.setDate(after.getDate() - (period === "week" ? 6 : 29));
@@ -53,34 +50,32 @@ export function recordListQuery(mode: RecordFilter, period: RecordPeriod, page: 
   }
   return `?${query}`;
 }
-export function queryPracticeRecords(query: string) { return request<RecordList>(query); }
-export function queryRecordTotals() { return request<{ recordCount: number; attemptCount: number }>("/summary"); }
-export async function queryRecordAttempts(id: string, page: number) {
-  return parseAttemptPage(await request<AttemptPage>(`/${encodeURIComponent(id)}?page=${page}`));
+async function queryRecordAttempts(id: string, page: number, signal?: AbortSignal) {
+  return parseAttemptPage(await request<AttemptPage>(`/${encodeURIComponent(id)}?page=${page}`, "GET", undefined, signal));
 }
 function parseAttemptPage(value: AttemptPage): AttemptPage {
   const record = parsePracticeRecord({ ...value.record, attempts: value.attempts });
   return { ...value, attempts: record.attempts };
 }
 type HistoryTarget = { source: ExerciseContext["source"]; exerciseId: string; mode: PracticeRecord["mode"]; exercise: RhythmExercise };
-const histories = new Map<string, PracticeHistory>();
-export async function queryExerciseHistory(target: HistoryTarget) {
-  const key = recordKey({ ...target, title: "" }, target.exercise, target.mode);
-  try {
-    const value = await request<AttemptPage | null>("/lookup", "POST", target);
-    const page = value ? parseAttemptPage(value) : null;
-    histories.set(key, { status: "available", record: page ? { ...page.record, attempts: page.attempts } as PracticeRecord : undefined, total: page?.total ?? 0, attemptIds: page?.attemptIds ?? [] });
-    return page;
-  } catch (error) {
-    histories.set(key, { status: "read-error" });
-    throw error;
-  }
+export function exerciseHistoryOptions(target: HistoryTarget) {
+  return queryOptions({
+    queryKey: ["records", "history", recordKey({ ...target, title: "" }, target.exercise, target.mode)],
+    queryFn: async ({ signal }) => {
+      const value = await request<AttemptPage | null>("/lookup", "POST", target, signal);
+      return value ? parseAttemptPage(value) : null;
+    },
+  });
 }
-/** 只读取当前题已按需加载的历史；不发请求，不把未加载或失败当成没有记录。 */
+/** 只读取查询缓存；不发请求，不把未加载或失败当成没有记录。 */
 export function readExerciseHistory(context: ExerciseContext, exercise: RhythmExercise, mode: PracticeRecord["mode"]): PracticeHistory {
-  return histories.get(recordKey(context, exercise, mode)) ?? { status: "not-loaded" };
+  const state = queryClient.getQueryState<AttemptPage | null>(exerciseHistoryOptions({ ...context, exercise, mode }).queryKey);
+  if (state?.status === "error") return { status: "read-error" };
+  if (state?.data === undefined) return { status: "not-loaded" };
+  const page = state.data;
+  return { status: "available", record: page ? { ...page.record, attempts: page.attempts } as PracticeRecord : undefined,
+    total: page?.total ?? 0, attemptIds: page?.attemptIds ?? [] };
 }
-export function queryPracticeProgress(targets: HistoryTarget[]) { return request<(RecordSummary | null)[]>("/progress", "POST", { targets }); }
 export function summaryAchievement(record?: RecordSummary | null) {
   if (!record) return "";
   return record.mode === "tapping" ? record.passedCount > 0 ? "已通过" : ""
@@ -117,15 +112,15 @@ export function createPracticeRecordWriter() {
           saved.set(attempt.id, value);
         }
       }
-      await refreshPracticeRecords();
+      refreshPracticeRecords();
     });
     queue = task;
     return task;
   };
 }
 export async function deletePracticeRecord(id: string) {
-  await request(`/${encodeURIComponent(id)}`, "DELETE"); histories.clear(); await refreshPracticeRecords();
+  await request(`/${encodeURIComponent(id)}`, "DELETE"); queryClient.removeQueries({ queryKey: ["records", "history"], type: "inactive" }); refreshPracticeRecords();
 }
 export async function clearPracticeRecords() {
-  await request("", "DELETE"); histories.clear(); await refreshPracticeRecords();
+  await request("", "DELETE"); queryClient.removeQueries({ queryKey: ["records", "history"], type: "inactive" }); refreshPracticeRecords();
 }

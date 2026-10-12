@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL('../src/', import.meta.url));
 const dependencies = {
   rhythm: new Set(['rhythm']),
   practice: new Set(['practice', 'rhythm', 'ui', 'settings']),
-  'practice-records': new Set(['practice-records', 'practice', 'rhythm', 'ui', 'settings', 'navigation']),
+  'practice-records': new Set(['practice-records', 'practice', 'rhythm', 'ui', 'settings', 'navigation', 'query']),
   exercises: new Set(['exercises', 'rhythm']),
   ui: new Set(['ui']),
 };

@@ -1,8 +1,9 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { createServer } from "vite";
 import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup as renderStatic } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 
 const server = await createServer({
@@ -432,9 +433,10 @@ test("全部验证正确后尝试冻结，之后播放、编辑、查看答案�
 
 test("记录与本地数据按需读取，初始状态不把未加载当作空历史", () => {
   const render = component => renderToStaticMarkup(createElement(MemoryRouter, null, createElement(component)));
-  assert.match(render(LocalDataSettings), /正在读取练习记录/);
+  assert.match(render(LocalDataSettings), /data-pending="true"/);
   const records = render(PracticeRecordsPage);
-  assert.match(records, /正在读取练习记录/);
+  assert.match(records, /data-navigation-pending/);
+  assert.doesNotMatch(records, /正在读取练习记录/);
   assert.doesNotMatch(records, /暂无练习记录/);
   assert.match(records, /记录时间范围/);
 });
@@ -509,3 +511,6 @@ test("AI 练习按生成 ID 累计，版本独立，来源与谱面可从存储�
     recordKey({ ...options.context, source: "custom" }, exercise, "tapping"),
   );
 });
+
+function withQueryClient(element) { return createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, element); }
+function renderToStaticMarkup(element) { return renderStatic(withQueryClient(element)); }

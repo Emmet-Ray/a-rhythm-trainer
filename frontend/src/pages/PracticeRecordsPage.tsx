@@ -1,4 +1,7 @@
+import { useRetainedData } from "../ui/useRetainedData";
+import { useQuery } from "@tanstack/react-query";
 import { ActionError } from "../ui/ActionError";
+import { AsyncStatus } from "../ui/AsyncStatus";
 import { useAssistantPageContext } from "../assistant/assistantContext";
 import { exerciseSources } from "../practice-records/PracticeRecord";
 import {
@@ -10,7 +13,7 @@ import { useBrowsingState } from "../navigation/usePageNavigation";
 import { SuccessToast } from "../ui/SuccessToast";
 import {
   deletePracticeRecord,
-  queryPracticeRecords, queryRecordTotals, recordListQuery, useRecordQuery, type RecordSummary,
+  recordListOptions, recordTotalsOptions, type RecordSummary,
 } from "../practice-records/practiceRecordStorage";
 import { StoredRecordDetail } from "../practice-records/RecordDetail";
 import { RecordPagination } from "../practice-records/RecordPagination";
@@ -39,22 +42,27 @@ function LocalRecords() {
     window.addEventListener("focus", refresh);
     return () => { window.clearInterval(tick); window.removeEventListener("focus", refresh); };
   }, []);
-  const queryKey = recordListQuery(filter, period, page, now);
-  const query = useRecordQuery(queryKey, () => queryPracticeRecords(queryKey));
-  const totals = useRecordQuery("record-totals", queryRecordTotals);
+  const query = useQuery(recordListOptions(filter, period, page, now));
+  const totals = useQuery(recordTotalsOptions());
+  const displayed = useRetainedData(query.data, query.isFetching || query.isError);
   const hasRecords = (totals.data?.recordCount ?? 0) > 0;
-  const data = { records: query.data?.records ?? [], error: query.error || totals.error };
-  const overview = query.data?.overview ?? { count: 0, days: 0, tappingCount: 0, passedCount: 0, passRate: null, dictationCount: 0, completedCount: 0, independentCount: 0 };
+  const data = { records: displayed?.records ?? [], error: query.error?.message || totals.error?.message };
+  const overview = displayed?.overview ?? { count: 0, days: 0, tappingCount: 0, passedCount: 0, passRate: null, dictationCount: 0, completedCount: 0, independentCount: 0 };
   const filtered = data.records;
   const selected = data.records.find(record => record.id === selectedId);
-  const pagination = { page: query.data?.page ?? page, pages: query.data?.pages ?? 1 };
+  const pagination = { page: displayed?.page ?? page, pages: displayed?.pages ?? 1 };
   const metrics = overview;
+  const displayedFilter = displayed?.filter ?? filter;
+  const updating = query.isFetching || totals.isFetching;
+  const actionsDisabled = updating || Boolean(data.error);
   useAssistantPageContext({ page: "practice_records", description: "练习记录列表。统计仅覆盖当前时间和模式筛选；题目详情使用该题全部历史，不受列表时间筛选限制。",
-    state: { status: data.error ? "read-error" : !query.data ? "loading" : "ready", filter: { mode: filter, period, asOf: now.toISOString() },
-      overview: data.error ? null : metrics, pagination: { page: pagination.page, pages: pagination.pages, totalRecords: query.data?.total ?? 0 },
+    state: { status: data.error ? "read-error" : updating ? "loading" : "ready",
+      filter: { mode: displayedFilter, period: displayed?.period ?? period, asOf: displayed?.asOf ?? now.toISOString() },
+      ...(updating || data.error ? { requestedFilter: { mode: filter, period } } : {}),
+      overview: data.error ? null : metrics, pagination: { page: pagination.page, pages: pagination.pages, totalRecords: displayed?.total ?? 0 },
       records: data.error ? [] : filtered.map(record => ({ id: record.id, source: record.source,
         exerciseId: record.exerciseId, title: record.title, mode: record.mode, allTimeAttempts: record.attemptCount })), selectedRecordId: selected?.id ?? null } });
-  if (page !== pagination.page) setPage(pagination.page);
+  if (!query.isFetching && !query.error && page !== pagination.page) setPage(pagination.page);
   async function remove(record: RecordSummary) {
     if (
       !window.confirm(
@@ -73,18 +81,6 @@ function LocalRecords() {
       );
     }
   }
-  if (data.error)
-    return (
-      <>
-        <header className="page-heading"><h1>练习记录</h1></header>
-        <p role="alert" className="practice-record-error">
-          {data.error}
-        </p>
-        <button type="button" onClick={() => { query.reload(); totals.reload(); }}>
-          重新读取
-        </button>
-      </>
-    );
   return (
     <>
       <header className="page-heading record-page-heading">
@@ -92,6 +88,7 @@ function LocalRecords() {
         <div className="topic-modes record-period" role="group" aria-label="记录时间范围">
           {([['week', '近 7 天'], ['month', '近 30 天'], ['all', '全部']] as const).map(([value, label]) => (
             <button type="button" key={value} aria-pressed={period === value} onClick={() => {
+              if (period === value) return;
               setPeriod(value); setPage(1); setNow(new Date());
             }}>{label}</button>
           ))}
@@ -115,6 +112,7 @@ function LocalRecords() {
             type="button"
             aria-pressed={filter === value}
             onClick={() => {
+              if (filter === value) return;
               setFilter(value);
               setPage(1);
             }}
@@ -123,22 +121,28 @@ function LocalRecords() {
           </button>
         ))}
       </div>
-      {(!query.data || !totals.data) && <p role="status">正在读取练习记录…</p>}
-      {hasRecords && <section className="record-overview" aria-label="练习统计">
+      <AsyncStatus className="record-query-status" pending={updating} initial={!displayed || !totals.data}
+        label={displayed ? "正在更新…（暂显示上次结果）" : "正在读取练习记录…"} />
+      {data.error && <p role="alert" className="practice-record-error">
+        {data.error}{displayed && "；下方保留上次结果。"}
+        <button type="button" onClick={() => { query.refetch(); totals.refetch(); }}>重新读取</button>
+      </p>}
+      <div className="record-results" aria-busy={updating}>
+      {hasRecords && displayed && <section className="record-overview" aria-label="练习统计">
         <dl className="record-metrics">
-          <div><dt>{filter === "dictation" ? "作答次数" : "练习次数"}</dt><dd>{overview.count}<span>次</span></dd></div>
+          <div><dt>{displayedFilter === "dictation" ? "作答次数" : "练习次数"}</dt><dd>{overview.count}<span>次</span></dd></div>
           <div><dt>练习天数</dt><dd>{overview.days}<span>天</span></dd></div>
-          {filter === "tapping" && <>
+          {displayedFilter === "tapping" && <>
             <div><dt>通过次数</dt><dd>{overview.passedCount}<span>次</span></dd></div>
             <div><dt>通过率</dt><dd>{overview.passRate === null ? "—" : `${overview.passRate}%`}</dd></div>
           </>}
-          {filter === "dictation" && <>
+          {displayedFilter === "dictation" && <>
             <div><dt>完成次数</dt><dd>{overview.completedCount}<span>次</span></dd></div>
             <div><dt title="全部验证正确，且完成前未查看答案">独立完成</dt><dd>{overview.independentCount}<span>次</span></dd></div>
           </>}
         </dl>
       </section>}
-      {!query.data || !totals.data ? null : filtered.length === 0 ? (
+      {!displayed || !totals.data ? null : filtered.length === 0 ? (
         <p className="library-empty-state">
           {hasRecords ? "当前条件下暂无记录" : "暂无练习记录"}
         </p>
@@ -148,13 +152,15 @@ function LocalRecords() {
             <RecordRow
               key={record.id}
               record={record}
+              disabled={actionsDisabled}
               onOpen={() => setSelectedId(record.id)}
               onDelete={() => remove(record)}
             />
           ))}
         </ul>
       )}
-      <RecordPagination {...pagination} onChange={setPage} label="题目记录分页" />
+      <RecordPagination {...pagination} onChange={setPage} label="题目记录分页" disabled={actionsDisabled} />
+      </div>
       {deletedCount > 0 && (
         <SuccessToast key={deletedCount} message="练习记录已删除" />
       )}
@@ -173,10 +179,12 @@ function RecordRow({
   record,
   onOpen,
   onDelete,
+  disabled,
 }: {
   record: RecordSummary;
   onOpen: () => void;
   onDelete: () => void;
+  disabled: boolean;
 }) {
   return (
     <li className="record-entry">
@@ -193,6 +201,7 @@ function RecordRow({
           aria-haspopup="dialog"
           aria-label={`查看详情：“${record.title}”的练习记录`}
           onClick={onOpen}
+          disabled={disabled}
         >
           <Eye className="ui-icon" aria-hidden="true" />
           查看详情
@@ -202,6 +211,7 @@ function RecordRow({
           className="local-data-clear"
           aria-label={`删除“${record.title}”的练习记录`}
           onClick={onDelete}
+          disabled={disabled}
         >
           <Trash2 className="ui-icon" aria-hidden="true" />
           删除

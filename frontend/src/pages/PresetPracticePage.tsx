@@ -1,4 +1,5 @@
-import { queryPracticeProgress, useRecordQuery, summaryAchievement } from "../practice-records/practiceRecordStorage";
+import { useQuery } from "@tanstack/react-query";
+import { practiceProgressOptions, summaryAchievement } from "../practice-records/practiceRecordStorage";
 import { recordKey } from "../practice-records/practiceRecords";
 import { useAssistantPageContext } from "../assistant/assistantContext";
 import { Suspense, useEffect, useSyncExternalStore, useLayoutEffect, useRef, type UIEvent } from "react";
@@ -58,7 +59,7 @@ function PresetLibrary({ presetTopics }: { presetTopics: PracticeTopic[] }) {
   const questions = topic.modes.find(group => group.mode === selectedMode)?.questions ?? [];
   const targets = questions.slice(0, 50).map(question => ({ source: "preset" as const, exerciseId: question.id,
     exercise: question.exercise, mode: selectedMode as "tapping" | "dictation" }));
-  const progressQuery = useRecordQuery(JSON.stringify(targets), () => queryPracticeProgress(targets));
+  const progressQuery = useQuery(practiceProgressOptions(targets));
   const progress = { status: progressQuery.error ? "read-error" : progressQuery.data ? "available" : "loading", records: progressQuery.data ?? [] };
   useAssistantPageContext({ page: "preset_catalog", description: "预设练习目录，题目摘要不包含谱面；只提供当前分类的前50题；完成状态来自同题同谱面版本的本地历史。",
     state: { mode: selectedMode, topic: { id: topic.id, title: topic.title },

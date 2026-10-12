@@ -101,7 +101,8 @@ async (page) => {
   check(c.page === 'practice_records' && c.state.overview.count >= 12, '记录统计');
   await page.getByRole('button', { name: '近 7 天', exact: true }).click();
   await page.getByRole('button', { name: '击拍练习', exact: true }).click();
-  c = await ask(); check(c.state.filter.period === 'week' && c.state.filter.mode === 'tapping', '筛选同步');
+  await page.waitForFunction(() => document.querySelector('.record-results')?.getAttribute('aria-busy') === 'false');
+  c = await ask(); check(c.state.filter.period === 'week' && c.state.filter.mode === 'tapping', '筛选完成后上下文同步');
   await page.getByRole('textbox', { name: '向助手提问' }).fill('解释详情');
   await page.getByRole('button', { name: '查看详情：“上下文测试记录”的练习记录' }).click();
   await page.getByRole('table', { name: '击拍练习明细' }).waitFor();

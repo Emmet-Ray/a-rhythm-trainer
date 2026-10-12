@@ -1,5 +1,8 @@
+import { useRetainedData } from "../ui/useRetainedData";
+import { useQuery } from "@tanstack/react-query";
 import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
-import { queryRecordAttempts, useRecordQuery, type RecordSummary } from "./practiceRecordStorage";
+import { AsyncStatus } from "../ui/AsyncStatus";
+import { recordAttemptsOptions, type RecordSummary } from "./practiceRecordStorage";
 import { RecordDetailContext } from "./recordDetailContext";
 import { exerciseSources } from "./PracticeRecord";
 import { useContext, useEffect, useId, useRef, useState } from "react";
@@ -38,7 +41,7 @@ function RecordScorePreview({ record }: { record: PracticeRecord }) {
           setState({ failed: false });
           setRequest(value => value + 1);
         }}>重试加载</button>
-      </div> : <p className="record-preview-status" role="status" aria-busy="true">正在加载题目预览…</p>}
+      </div> : <div className="record-preview-status" aria-busy="true"><AsyncStatus pending label="正在加载题目预览…" /></div>}
   </div>;
 }
 
@@ -73,11 +76,11 @@ function recordSummary(record: PracticeRecord) {
 /** 归档详情按页读取尝试，题目快照与汇总不会随翻页变化。 */
 export function StoredRecordDetail({ record, onClose }: { record: RecordSummary; onClose: () => void }) {
   const [page, setPage] = useState(1);
-  const query = useRecordQuery(`record:${record.id}:${page}`, () => queryRecordAttempts(record.id, page));
-  const data = query.data;
+  const query = useQuery(recordAttemptsOptions(record.id, page));
+  const data = useRetainedData(query.data, query.isFetching || query.isError);
   const summary = data?.record ?? record;
   return <RecordDetail record={{ ...summary, attempts: data?.attempts ?? [] } as PracticeRecord} onClose={onClose}
-    loadState={{ loading: !data && !query.error, error: query.error, retry: query.reload }}
+    loadState={{ loading: query.isFetching, hasData: data !== undefined, error: query.error?.message ?? "", retry: query.refetch }}
     archive={{ page: data?.page ?? page, pages: data?.pages ?? Math.max(1, Math.ceil(record.attemptCount / 10)), total: data?.total ?? record.attemptCount,
       passedCount: summary.passedCount, completedCount: summary.completedCount, onChange: setPage }} />;
 }
@@ -89,7 +92,7 @@ export function RecordDetail({
   loadState,
 }: {
   record: PracticeRecord;
-  loadState?: { loading: boolean; error: string; retry: () => void };
+  loadState?: { loading: boolean; hasData?: boolean; error: string; retry: () => void };
   archive?: { page: number; pages: number; total: number; passedCount: number; completedCount: number; onChange: (page: number) => void };
   onClose: () => void;
 }) {
@@ -137,6 +140,7 @@ export function RecordDetail({
       }}
     >
       {renderContext?.({ record, visibleRecord, tab, page: pagination.page, pages: pagination.pages,
+        status: loadState?.error ? "read-error" : loadState?.loading ? "loading" : "ready",
         totalAttempts: archive?.total ?? record.attempts.length })}
       <header className="record-detail-heading">
         <div>
@@ -173,12 +177,17 @@ export function RecordDetail({
           题目预览
         </button>
       </div>
-      <div className="record-detail">
+      <div className="record-detail" aria-busy={tab === "attempts" && !!loadState?.loading}>
+        {tab === "attempts" && <AsyncStatus pending={!!loadState?.loading}
+          label={loadState?.hasData ? "正在更新…（暂显示上次结果）" : "正在读取练习记录…"} />}
+        {tab === "attempts" && loadState?.error && loadState.hasData && <p role="alert" className="practice-record-error">
+          {loadState.error}；下方保留上次结果。<button type="button" onClick={loadState.retry}>重新读取</button>
+        </p>}
         {tab === "score" ? (
           <RecordScorePreview record={record} />
-        ) : loadState?.loading || loadState?.error ? (
+        ) : (loadState?.loading || loadState?.error) && !loadState?.hasData ? (
           <div className="record-preview-status">
-            <p role={loadState.error ? "alert" : "status"}>{loadState.error || "正在读取练习记录…"}</p>
+            {loadState.error && <p role="alert">{loadState.error}</p>}
             {loadState.error && <button type="button" onClick={loadState.retry}>重新读取</button>}
           </div>
         ) : (
@@ -243,7 +252,8 @@ export function RecordDetail({
             ) : (
               <DictationAttempts attempts={record.attempts} page={archive ? 1 : pagination.page} startIndex={archive ? pagination.start : 0} />
             )}
-            <RecordPagination {...pagination} onChange={archive?.onChange ?? setPage} label="练习明细分页" />
+            <RecordPagination {...pagination} onChange={archive?.onChange ?? setPage} label="练习明细分页"
+              disabled={!!loadState?.loading || !!loadState?.error} />
           </>
         )}
       </div>

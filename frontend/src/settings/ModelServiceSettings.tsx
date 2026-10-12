@@ -1,4 +1,5 @@
 import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
+import { AsyncStatus } from "../ui/AsyncStatus";
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { ActionError } from "../ui/ActionError";
@@ -64,7 +65,8 @@ export default function ModelServiceSettings() {
   }
   return <section className="settings-section model-service-settings" aria-labelledby="model-service-heading">
     <h2 id="model-service-heading">模型服务</h2>
-    {!data ? <p role="status">{error ? "无法读取模型配置" : "正在读取模型配置…"} {error && <button onClick={() => setRevision(v => v + 1)}>重试</button>}</p> : <>
+    {!data ? <><AsyncStatus pending={!error} label="正在读取模型配置…" />
+      {error && <p>无法读取模型配置 <button onClick={() => setRevision(v => v + 1)}>重试</button></p>}</> : <>
       {(["deepseek", "chatgpt"] as const).map(provider => {
         const config = data[provider];
         const name = provider === "deepseek" ? "DeepSeek" : "ChatGPT";

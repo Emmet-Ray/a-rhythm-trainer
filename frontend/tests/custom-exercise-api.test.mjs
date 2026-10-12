@@ -4,8 +4,9 @@ import { createServer } from "vite";
 
 const server = await createServer({ configFile: false,
   server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
-let api;
-try { api = await server.ssrLoadModule("/src/api/customExercises.ts"); }
+let api, queryClient;
+try { api = await server.ssrLoadModule("/src/api/customExercises.ts");
+  ({ queryClient } = await server.ssrLoadModule("/src/query/queryClient.ts")); }
 finally { await server.close(); }
 
 const content = { timeSignature: { beats: 4, beatType: 4 }, measures: [
@@ -112,4 +113,23 @@ test("非法查询不发送请求，非 JSON 和错误成功状态不作为成�
   assert.equal(fetch.mock.callCount(), 0);
   await assert.rejects(api.getExercise(detail.id), error => error.status === 502);
   await assert.rejects(api.saveExercise(input), error => error.status === 502);
+});
+
+
+test("题库统计拒绝非法响应，清空同时使已有列表与统计过期", async t => {
+  queryClient.clear(); t.after(() => queryClient.clear());
+  const totals = api.customExerciseTotalsOptions();
+  const list = api.customExerciseListOptions("tapping", 0);
+  const fetch = t.mock.method(globalThis, "fetch", async url => Response.json(
+    url.includes("local-data") ? { total: 1, tapping: 1, dictation: 0 } : { items: [detail], limit: 50, offset: 0 }
+  ));
+  await queryClient.fetchQuery(totals);
+  await queryClient.fetchQuery(list);
+  await api.clearCustomExercises();
+  assert.equal(fetch.mock.calls.at(-1).arguments[1].method, "DELETE");
+  assert.equal(queryClient.getQueryState(totals.queryKey).isInvalidated, true);
+  assert.equal(queryClient.getQueryState(list.queryKey).isInvalidated, true);
+  fetch.mock.mockImplementation(async () => Response.json({ total: -1, tapping: 0, dictation: 0 }));
+  await assert.rejects(queryClient.fetchQuery(totals), error => error.status === 502);
+  assert.deepEqual(queryClient.getQueryData(totals.queryKey), { total: 1, tapping: 1, dictation: 0 });
 });

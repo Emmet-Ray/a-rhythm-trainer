@@ -1,6 +1,10 @@
+import { useRetainedData } from "../ui/useRetainedData";
+import { useQuery } from "@tanstack/react-query";
 import { ActionError } from "../ui/ActionError";
 import { Plus, Pencil, Trash2, Play } from "lucide-react";
 import { SuccessToast } from "../ui/SuccessToast";
+import { AsyncStatus } from "../ui/AsyncStatus";
+import { LoadingPlaceholder } from "../ui/LoadingPlaceholder";
 import { useAssistantPageContext } from "../assistant/assistantContext";
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigationType, useMatch, useNavigate, useParams } from "react-router";
@@ -8,7 +12,7 @@ import NotFoundPage from "./NotFoundPage";
 import { PracticeHeading } from "../exercise-workspace/PracticeHeading";
 import { ExerciseWorkbench } from "../exercise-workspace/ExerciseWorkbench";
 import { useBrowsingState } from "../navigation/usePageNavigation";
-import { getExercise, listExercises, deleteExercise, type ExerciseSummary } from "../api/customExercises";
+import { getExercise, customExerciseListOptions, deleteExercise, type ExerciseSummary } from "../api/customExercises";
 import type { CustomExercise, CustomMode } from "../exercises/customExercises";
 
 // 自定义的开放范围不依赖预设题库；每个模式的草稿独立创建。
@@ -79,24 +83,23 @@ function CustomExerciseList({
   const navigate = useNavigate();
   const { state } = useLocation();
   const navigationType = useNavigationType();
-  type ListResult = {
-    items: ExerciseSummary[];
-    error: string | null;
-    loading: boolean;
-  };
-  function readExercises(): ListResult { return {items: [], error: null, loading: true}; }
-  const [result, setResult] = useState(readExercises);
   const [offset, setOffset] = useBrowsingState(
     `custom:${mode}:offset`,
     0,
   );
-  const [revision, setRevision] = useState(0);
+  const query = useQuery(customExerciseListOptions(mode, offset));
+  const displayed = useRetainedData(query.data, query.isFetching || query.isError);
+  const result = { items: displayed?.items ?? [], error: query.error?.message ?? "", loading: query.isFetching };
+  const displayedOffset = displayed?.offset ?? offset;
+  useEffect(() => {
+    if (!query.isFetching && !query.error && displayed && displayed.offset !== offset) setOffset(displayed.offset);
+  }, [query.isFetching, query.error, displayed, offset, setOffset]);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [mutationMessage, setMutationMessage] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   useAssistantPageContext({ page: "custom_library", description: "自定义题目列表，仅有题目摘要，不代表已读取每道题的谱面。列表仅表示已加载的一页。",
     state: { mode, source: "instance", status: result.loading ? "loading" : result.error ? "read-error" : "ready",
-      offset, loadedCount: result.items.length, totalCount: null,
+      offset: displayedOffset, requestedOffset: offset, loadedCount: result.items.length, totalCount: null,
       items: result.items.slice(0, 50).map(item => ({ id: item.id, name: item.name, mode: item.mode,
         measureCount: null })), truncated: result.items.length > 50 } });
   const mutationActive = useRef(false);
@@ -113,7 +116,6 @@ function CustomExerciseList({
       await deleteExercise(item.id);
       if (generation !== lifetime.current) return;
       setMutationMessage(`已删除「${item.name}」。`);
-      reload();
     } catch (error) {
       if (generation === lifetime.current) setMutationError(error instanceof Error ? error.message : "删除失败，请重试。");
     } finally {
@@ -123,37 +125,9 @@ function CustomExerciseList({
       }
     }
   }
-  useEffect(() => {
-    const controller = new AbortController();
-    void listExercises(mode, { offset, signal: controller.signal })
-      .then((page) => {
-        if (
-          !controller.signal.aborted &&
-          offset > 0 &&
-          page.items.length === 0
-        ) {
-          // 返回期间数据可能被删除，退到仍有内容的最近一页，再恢复滚动。
-          setOffset(Math.max(0, offset - 50));
-          return;
-        }
-        if (!controller.signal.aborted)
-          setResult({ items: page.items, error: null, loading: false });
-      })
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted)
-          setResult({
-            items: [],
-            error:
-              error instanceof Error ? error.message : "读取失败，请重试。",
-            loading: false,
-          });
-      });
-    return () => controller.abort();
-  }, [mode, offset, revision, setOffset]);
   function reload(nextOffset = offset) {
-    setResult(readExercises());
     setOffset(nextOffset);
-    setRevision((value) => value + 1);
+    if (nextOffset === offset) void query.refetch();
   }
   return (
     <div className="design-system practice-page custom-library">
@@ -170,6 +144,7 @@ function CustomExerciseList({
           onClick={() => { if (mode !== item.id) navigate(`/custom/${item.id}`); }}>{item.label}</button>)}
       </div>
       <section className="custom-catalog" aria-label="题目列表">
+      <AsyncStatus pending={result.loading && !!displayed} label="正在更新…（暂显示上次结果）" />
       {mutationError && <ActionError message={mutationError} />}
       {mutationMessage && <SuccessToast key={mutationMessage} message={mutationMessage} />}
       {result.error ? (
@@ -179,11 +154,9 @@ function CustomExerciseList({
             重试读取
           </button>
         </div>
-      ) : result.loading ? (
-        <p role="status" data-navigation-pending>
-          正在读取练习…
-        </p>
-      ) : result.items.length === 0 ? (
+      ) : null}
+      <div aria-busy={result.loading}>
+      {!displayed ? (result.loading ? <LoadingPlaceholder label="正在读取练习…" /> : null) : result.items.length === 0 ? (
         <p className="library-empty-state">
           {mode === "tapping" ? "暂无击拍练习" : "暂无听写练习"}
         </p>
@@ -204,7 +177,7 @@ function CustomExerciseList({
                 <Link to={`/custom/${mode}/${encodeURIComponent(item.id)}/edit`}>
                   <Pencil className="ui-icon" aria-hidden="true" />编辑
                 </Link>
-                <button type="button" disabled={deleting !== null} onClick={() => void remove(item)}>
+                <button type="button" disabled={deleting !== null || result.loading || !!result.error} onClick={() => void remove(item)}>
                   <Trash2 className="ui-icon" aria-hidden="true" />{deleting === item.id ? "正在删除…" : "删除"}
                 </button>
               </div>
@@ -212,27 +185,28 @@ function CustomExerciseList({
           ))}
         </ul>
       )}
-      {!result.loading && !result.error && result.items.length > 0 && (offset > 0 || result.items.length === 50) && (
+      {displayed && result.items.length > 0 && (displayedOffset > 0 || result.items.length === 50) && (
         <nav aria-label="题目分页">
           <button
             type="button"
-            disabled={result.loading || deleting !== null || offset === 0}
-            onClick={() => reload(Math.max(0, offset - 50))}
+            disabled={result.loading || !!result.error || deleting !== null || displayedOffset === 0}
+            onClick={() => reload(Math.max(0, displayedOffset - 50))}
           >
             上一页
           </button>
-          <span> 第 {offset / 50 + 1} 页 </span>
+          <span> 第 {displayedOffset / 50 + 1} 页 </span>
           <button
             type="button"
             disabled={
               result.loading || deleting !== null || !!result.error || result.items.length < 50
             }
-            onClick={() => reload(offset + 50)}
+            onClick={() => reload(displayedOffset + 50)}
           >
             下一页
           </button>
         </nav>
       )}
+      </div>
       </section>
     </div>
   );

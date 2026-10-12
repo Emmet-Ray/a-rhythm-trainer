@@ -1,9 +1,50 @@
+import { queryOptions } from "@tanstack/react-query";
+import { queryClient } from "../query/queryClient";
 import type { CustomExercise, CustomMode } from "../exercises/customExercises";
 import { parseRhythmExercise } from "../rhythm/RhythmModel";
 
 export type ExerciseSummary = Pick<CustomExercise, "id" | "name" | "mode"> & { createdAt: string };
 export type Exercise = ExerciseSummary & Pick<CustomExercise, "exercise">;
 export type ExercisePage = { items: ExerciseSummary[]; limit: number; offset: number };
+
+/** 删除可能使原页消失；找到有效页后再发布，避免先显示空页再跳回。 */
+export function customExerciseListOptions(mode: CustomMode, offset: number) {
+  return queryOptions({ queryKey: ["custom-exercises", mode, offset], queryFn: async ({ signal }) => {
+    let currentOffset = offset;
+    let page = await listExercises(mode, { offset: currentOffset, signal });
+    while (!page.items.length && currentOffset > 0) {
+      currentOffset = Math.max(0, currentOffset - 50);
+      page = await listExercises(mode, { offset: currentOffset, signal });
+    }
+    return page;
+  } });
+}
+
+type ExerciseTotals = { total: number; tapping: number; dictation: number };
+export const customExerciseTotalsOptions = () => queryOptions({
+  queryKey: ["custom-exercises", "totals"],
+  queryFn: async ({ signal }): Promise<ExerciseTotals> => {
+    const value = await requestInventory("GET", signal);
+    if (!isRecord(value) || ![value.total, value.tapping, value.dictation].every(n => typeof n === "number" && Number.isSafeInteger(n) && n >= 0)) {
+      throw new CustomExerciseApiError(502);
+    }
+    return value as ExerciseTotals;
+  },
+});
+
+/** 清空题库后同时使列表和统计失效，界面不需要了解缓存键。 */
+export async function clearCustomExercises() {
+  await requestInventory("DELETE");
+  void queryClient.invalidateQueries({ queryKey: ["custom-exercises"] });
+}
+async function requestInventory(method: "GET" | "DELETE", signal?: AbortSignal): Promise<unknown> {
+  const response = await fetch("/api/local-data/exercises", { method, signal, cache: "no-store" });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw Error(error.detail || "本地数据服务不可用");
+  }
+  return response.json();
+}
 
 export class CustomExerciseApiError extends Error {
   readonly status: number;
@@ -29,7 +70,9 @@ export async function saveExercise(input: Omit<CustomExercise, "id">): Promise<E
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name: input.name, mode: input.mode, exercise: input.exercise }),
   }, 201);
-  return parseDetail(value);
+  const item = parseDetail(value);
+  void queryClient.invalidateQueries({ queryKey: ["custom-exercises"] });
+  return item;
 }
 
 /** 返回单页摘要；只有成功的空页才返回空列表，错误不伪装成空题库。 */
@@ -89,12 +132,14 @@ export async function updateExercise(id: string, input: Omit<CustomExercise, "id
     body: JSON.stringify({ name: input.name, exercise: input.exercise }),
   }, 200));
   if (item.id !== id || item.mode !== input.mode) throw new CustomExerciseApiError(502);
+  void queryClient.invalidateQueries({ queryKey: ["custom-exercises"] });
   return item;
 }
 
 export async function deleteExercise(id: string): Promise<void> {
   if (!id.trim()) throw new CustomExerciseApiError(422);
   await request(`/${encodeURIComponent(id)}`, { method: "DELETE" }, 204);
+  void queryClient.invalidateQueries({ queryKey: ["custom-exercises"] });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

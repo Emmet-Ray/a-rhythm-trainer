@@ -6,6 +6,7 @@ export type RecordDetailSnapshot = {
   page: number;
   pages: number;
   totalAttempts: number;
+  status: "loading" | "read-error" | "ready";
   record: PracticeRecord;
   visibleRecord: PracticeRecord;
 };

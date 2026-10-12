@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createServer } from "vite";
@@ -169,7 +170,7 @@ test("随机页面首次进入已有默认两小节题目，设置关闭且入�
       const tree = createElement(VisitsContext.Provider, { value: visits },
         createElement(MemoryRouter, { initialEntries: [`/random/${mode}`] },
           createElement(Routes, null, createElement(Route, { path: "/random/:mode", element: createElement(RandomPracticePage) }))));
-      const stream = await renderToReadableStream(tree);
+      const stream = await renderToReadableStream(createElement(QueryClientProvider, { client: new QueryClient() }, tree));
       await stream.allReady;
       const html = await new Response(stream).text();
       for (const topic of randomMaterials) assert.ok(html.includes(topic.label));
@@ -203,7 +204,7 @@ test("随机页面首次进入已有默认两小节题目，设置关闭且入�
       assert.doesNotThrow(() => validateRhythmExercise(question.exercise));
       // 返回时即使设置已清空，也必须恢复原题，不能尝试用待应用配置重新生成。
       visits.write("default", `random:${mode}:config`, config([], 4, mode));
-      const restored = await renderToReadableStream(tree);
+      const restored = await renderToReadableStream(createElement(QueryClientProvider, { client: new QueryClient() }, tree));
       await restored.allReady;
       await new Response(restored).text();
       assert.equal(visits.read("default", `random:${mode}:question`, null), question);

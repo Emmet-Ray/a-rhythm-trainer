@@ -1,7 +1,7 @@
 import { RecordDetailContext, type RecordDetailSnapshot } from "./practice-records/recordDetailContext";
 import { RecordDetailAssistantContext } from "./assistant/RecordDetailAssistantContext";
 import { UnsavedChangesScope } from "./navigation/UnsavedChanges";
-import { refreshPracticeRecords, readExerciseHistory } from "./practice-records/practiceRecordStorage";
+import { readExerciseHistory } from "./practice-records/practiceRecordStorage";
 import { PracticeActivity, PracticeActivityContext } from "./assistant/practiceActivity";
 import { PlaybackContext, PlaybackGroup } from "./practice/PlaybackGroup";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -39,11 +39,6 @@ function App() {
 
 function AppShell() {
   const { pathname, key } = useLocation();
-  useEffect(() => {
-    const refresh = () => { void refreshPracticeRecords().catch(() => {}); };
-    refresh(); window.addEventListener("focus", refresh);
-    return () => window.removeEventListener("focus", refresh);
-  }, [pathname]);
   useEffect(() => { void preloadDestination(pathname); }, [pathname]);
   const mainRef = useRef<HTMLElement>(null);
   const [generatedExercises] = useState(() => new GeneratedExerciseStore());

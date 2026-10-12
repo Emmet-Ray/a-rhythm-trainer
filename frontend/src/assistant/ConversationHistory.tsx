@@ -1,6 +1,7 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref, type RefObject } from "react";
 import { X, Trash2, Plus, PanelLeftClose } from "lucide-react";
 import { deleteSession, listSessions, type ChatSession, type SessionSummary } from "../api/assistant";
+import { AsyncStatus } from "../ui/AsyncStatus";
 
 /** 按需读取历史摘要；打开和删除都由后端检查归属。 */
 export function ConversationHistory({ panelRef, anchor, currentId, onOpen, onDeleted, onClose, placement = "popover", onNew, currentSession }: {
@@ -92,7 +93,7 @@ export function ConversationHistory({ panelRef, anchor, currentId, onOpen, onDel
       </button>
       <button type="button" className="assistant-history-delete" aria-label={`删除对话：${item.title}`} disabled={busy || item.is_running} onClick={() => void remove(item)}><Trash2 size={16} aria-hidden="true" /></button>
     </li>)}</ul>
-    {busy && <p role="status" className="assistant-notice">正在读取…</p>}
+    <AsyncStatus pending={busy} label="正在读取…" />
     {items.length < total && <button type="button" disabled={busy} onClick={() => void more()}>加载更多</button>}
   </section>;
 }

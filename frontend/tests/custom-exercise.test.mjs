@@ -1,7 +1,8 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { createElement } from "react";
-import { renderToReadableStream, renderToStaticMarkup } from "react-dom/server";
+import { renderToReadableStream as renderStream, renderToStaticMarkup as renderStatic } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { createServer } from "vite";
 import { readFile } from "node:fs/promises";
@@ -446,7 +447,8 @@ test("历史保存标记不再产生常驻提示或高亮，返回列表不重�
 test("实例列表等待远程响应，不读取本地题库", async (t) => {
   mockSavedExercises(t, JSON.stringify({ version: 1, exercises: savedQuestions }));
   const html = await renderPage("/custom/tapping", "/custom/:mode", { state: { status: "authenticated", user: { id: 1 } }, busy: false });
-  assert.match(html, /正在读取练习/);
+  assert.match(html, /data-navigation-pending/);
+  assert.doesNotMatch(html, /正在读取练习/);
   assert.doesNotMatch(html, /saved-tapping|暂无题目/);
 });
 
@@ -642,3 +644,7 @@ test("新建练习无需身份检查，两种模式均提供保存入口", async
     assert.doesNotMatch(html, /登录|验证码|正在确认/);
   }
 });
+
+function withQueryClient(element) { return createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, element); }
+function renderToStaticMarkup(element) { return renderStatic(withQueryClient(element)); }
+function renderToReadableStream(element, options) { return renderStream(withQueryClient(element), options); }

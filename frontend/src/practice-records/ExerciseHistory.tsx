@@ -1,8 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { Check, History } from "lucide-react";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import type { ExerciseContext, PracticeRecord } from "./PracticeRecord";
-import { queryExerciseHistory, useRecordQuery, summaryAchievement } from "./practiceRecordStorage";
+import { exerciseHistoryOptions, summaryAchievement } from "./practiceRecordStorage";
 import { recordKey } from "./practiceRecords";
 import { StoredRecordDetail } from "./RecordDetail";
 
@@ -19,15 +20,14 @@ export function ExerciseHistory(props: ExerciseHistoryProps) {
 }
 
 function LocalHistory({ context, exercise, mode, children }: ExerciseHistoryProps) {
-  const key = recordKey(context, exercise, mode);
-  const query = useRecordQuery(key, () => queryExerciseHistory({ source: context.source, exerciseId: context.exerciseId, exercise, mode }));
-  const data = { record: query.data?.record, error: query.error };
+  const query = useQuery(exerciseHistoryOptions({ source: context.source, exerciseId: context.exerciseId, exercise, mode }));
+  const data = { record: query.data?.record, error: query.error?.message ?? "" };
   const [open, setOpen] = useState(false);
   const achievement = summaryAchievement(data.record);
   const status = achievement ? <span className="practice-achievement"><Check className="ui-icon" aria-hidden="true" />{achievement}</span> : null;
   const action = <div className="exercise-history text-actions">
     {data.error && <span>历史读取失败</span>}
-    {data.error ? <button type="button" title={data.error} onClick={query.reload}>重试读取</button> :
+    {data.error ? <button type="button" title={data.error} onClick={() => void query.refetch()}>重试读取</button> :
       <button type="button" disabled={!data.record} aria-haspopup="dialog" onClick={() => setOpen(true)}>
         <History className="ui-icon" aria-hidden="true" />练习历史
       </button>}

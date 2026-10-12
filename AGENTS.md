@@ -4,18 +4,20 @@
 
 ## 按任务阅读
 
-| 修改范围 | 说明的唯一详细出处 |
-| --- | --- |
-| 模块边界、状态与记录规则 | [架构说明](docs/ARCHITECTURE.md) |
+| 修改范围                   | 说明的唯一详细出处                |
+| -------------------------- | --------------------------------- |
+| 模块边界、状态与记录规则   | [架构说明](docs/ARCHITECTURE.md)  |
 | 前端开发、部署与浏览器验收 | [前端 README](frontend/README.md) |
-| 后端配置、备份与会话协议 | [后端 README](backend/README.md) |
-| 音频时钟、判定与输入延迟 | [TIMING](frontend/TIMING.md) |
-| 视觉、布局、焦点与反馈 | [DESIGN](frontend/DESIGN.md) |
-| 预设题库编辑与发布 | [题库 README](content/README.md) |
+| 后端配置、备份与会话协议   | [后端 README](backend/README.md)  |
+| 音频时钟、判定与输入延迟   | [TIMING](frontend/TIMING.md)      |
+| 视觉、布局、焦点与反馈     | [DESIGN](frontend/DESIGN.md)      |
+| 预设题库编辑与发布         | [题库 README](content/README.md)  |
 
 ## 修改与验证
 
 - 先确定状态和行为的拥有者；结构、API 或模块边界变化至少比较两个设计。
+- 遇到通用常见问题，先调查成熟的第三方库，结合需求匹配度、现有技术栈、维护状况和接入成本进行选型；有合适方案时优先复用，避免自行重做请求、缓存、状态同步等通用机制。
+- 确需自写时说明现有方案的具体缺口和取舍；采用第三方库后清理被替代的实现，业务模块只保留业务规则，避免再包装一套同义接口或并行机制。
 - 前端验证在 `frontend/` 执行：`npm test`、`npm run lint`、`npm run build`、`npm run validate:architecture`。
 - 后端验证在 `backend/` 执行：`uv run --locked --no-env-file pytest`。
 - 题库变化运行 `npm run validate:content`；交互变化运行相关浏览器回归，音频变化还需实际试听。

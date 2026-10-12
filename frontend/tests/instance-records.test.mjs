@@ -63,15 +63,19 @@ test('跨题目复用写入器被拒绝',async t=>{
   mock(t);const save=api.createPracticeRecordWriter();await save(play());
   await assert.rejects(save({...play(),exerciseId:'other'}),/切换题目/);
 });
-test('列表查询包含服务端分页与时间筛选，不要求加载全量记录',()=>{
+test('列表查询包含服务端分页与时间筛选，不要求加载全量记录',async t=>{
   const now=new Date('2026-10-07T10:00:00Z');
-  const params=new URLSearchParams(api.recordListQuery('dictation','week',2,now));
+  const { queryClient } = await server.ssrLoadModule('/src/query/queryClient.ts');
+  const fetch = t.mock.method(globalThis, 'fetch', async () => Response.json({ records: [] }));
+  await queryClient.fetchQuery(api.recordListOptions('dictation','week',2,now));
+  const params = new URL(fetch.mock.calls[0].arguments[0], 'http://localhost').searchParams;
   assert.equal(params.get('mode'),'dictation');assert.equal(params.get('page'),'2');
   assert.equal(params.get('before'),now.toISOString());assert.ok(params.get('after'));assert.ok(params.get('zone'));
 });
 
 
 test('历史缓存区分未加载、空记录、读取失败与删除后的失效', async t => {
+  const { queryClient } = await server.ssrLoadModule('/src/query/queryClient.ts');
   const target = { ...context, exercise, mode: 'dictation' };
   assert.equal(api.readExerciseHistory(context, exercise, 'dictation').status, 'not-loaded');
   let fail = false;
@@ -79,12 +83,56 @@ test('历史缓存区分未加载、空记录、读取失败与删除后的失�
     if (fail) throw Error('offline');
     return Response.json(null);
   });
-  await api.queryExerciseHistory(target);
+  await queryClient.fetchQuery(api.exerciseHistoryOptions(target));
   assert.deepEqual(api.readExerciseHistory(context, exercise, 'dictation'), { status: 'available', record: undefined, total: 0, attemptIds: [] });
   fail = true;
-  await assert.rejects(api.queryExerciseHistory(target), /offline/);
+  await assert.rejects(queryClient.fetchQuery(api.exerciseHistoryOptions(target)), /offline/);
   assert.equal(api.readExerciseHistory(context, exercise, 'dictation').status, 'read-error');
   fail = false;
   await api.clearPracticeRecords();
   assert.equal(api.readExerciseHistory(context, exercise, 'dictation').status, 'not-loaded');
+});
+
+test('记录摘要共享在途读取，取消查询会传递到 HTTP 请求', async t => {
+  const { queryClient } = await server.ssrLoadModule('/src/query/queryClient.ts');
+  queryClient.clear(); t.after(() => queryClient.clear());
+  let requests = 0, requestSignal;
+  t.mock.method(globalThis, 'fetch', (_url, { signal }) => {
+    requests++; requestSignal = signal;
+    return new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+  });
+  const first = queryClient.fetchQuery(api.recordTotalsOptions());
+  const second = queryClient.fetchQuery(api.recordTotalsOptions());
+  const outcomes = Promise.allSettled([first, second]);
+  assert.equal(requests, 1);
+  await queryClient.cancelQueries({ queryKey: ['records'] });
+  assert.equal(requestSignal.aborted, true);
+  assert.ok((await outcomes).every(result => result.status === 'rejected'));
+  assert.equal(queryClient.getQueryData(api.recordTotalsOptions().queryKey), undefined);
+});
+
+test('保存使活跃记录摘要刷新，慢读取不阻塞后续事实保存', { timeout: 2000 }, async t => {
+  const { QueryObserver } = await import('@tanstack/react-query');
+  const { queryClient } = await server.ssrLoadModule('/src/query/queryClient.ts');
+  queryClient.clear();
+  let reads = 0, writes = 0;
+  const releases = [];
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    if (url.endsWith('/summary')) {
+      if (++reads === 1) return Response.json({ recordCount: 1, attemptCount: 1 });
+      return new Promise(resolve => releases.push(() => resolve(Response.json({ recordCount: 1, attemptCount: 2 }))));
+    }
+    writes++; return Response.json({ id: 'archive-1' });
+  });
+  const observer = new QueryObserver(queryClient, api.recordTotalsOptions());
+  const unsubscribe = observer.subscribe(() => {});
+  t.after(() => { unsubscribe(); queryClient.clear(); });
+  await queryClient.fetchQuery(api.recordTotalsOptions());
+  const save = api.createPracticeRecordWriter();
+  const first = play(); await save(first); await save(play(first));
+  assert.equal(writes, 2);
+  assert.ok(reads >= 2);
+  for (const release of releases) release();
+  await queryClient.fetchQuery(api.recordTotalsOptions());
+  assert.equal(queryClient.getQueryData(api.recordTotalsOptions().queryKey).attemptCount, 2);
 });

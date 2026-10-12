@@ -1,8 +1,9 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { createServer } from "vite";
 import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup as renderStatic } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 
 const server = await createServer({ configFile: false, server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
@@ -143,3 +144,6 @@ test("历史尚未加载时入口禁用，不伪装成无历史", () => {
   assert.match(html, /disabled/);
   assert.doesNotMatch(html, /暂无记录/);
 });
+
+function withQueryClient(element) { return createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, element); }
+function renderToStaticMarkup(element) { return renderStatic(withQueryClient(element)); }
