@@ -322,7 +322,7 @@ test("设置页不要求登录，明暗模式与三套配色独立选择", async
   assert.match(html, /蓝色/);
   assert.match(html, /青绿色/);
   assert.match(html, /恢复默认/);
-  assert.match(html, /class="settings-unavailable">未开放<\/span>/);
+  assert.doesNotMatch(html, /settings-unavailable/);
   assert.doesNotMatch(html, /请登录后/);
 });
 
@@ -332,7 +332,7 @@ test("设置页提供四个分类，默认展示外观且没有账号入口", as
     ["appearance", "外观"], ["local-data", "本地数据"],
     ["sound", "声音"], ["tapping-precision", "击拍精度"],
   ]) {
-    const badge = id === "sound" ? '<span class="settings-unavailable">未开放</span>' : "";
+    const badge = "";
     assert.match(withoutSvg(html), new RegExp(`<button[^>]*aria-pressed="${id === "appearance"}"[^>]*>${title}${badge}</button>`));
   }
   for (const id of ["local-data", "sound", "tapping-precision"]) {
@@ -345,7 +345,7 @@ test("设置页提供四个分类，默认展示外观且没有账号入口", as
 
 test("设置分类图标保留文字名称且不参与朗读", async () => {
   const cases = [
-    [await renderApp("/settings?category=appearance"), ["外观", "本地数据", "声音未开放", "击拍精度"]],
+    [await renderApp("/settings?category=appearance"), ["外观", "本地数据", "声音", "击拍精度"]],
   ];
   for (const [html, labels] of cases) {
     for (const label of labels) {

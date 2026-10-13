@@ -1,3 +1,4 @@
+import { getSoundPreferences } from "../settings/soundPreferences";
 import { ActionError } from "../ui/ActionError";
 import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LoaderCircle, Play, Square } from "lucide-react";
@@ -134,8 +135,8 @@ export default function RhythmPlayback({ options, timeSignature, bpm, metronomeE
         contextRef.current ?? (contextRef.current = new AudioContext());
       await Promise.all([
         context.resume(),
-        prepareTapSound(context),
-        prepareMetronomeSound(context),
+        prepareTapSound(context, getSoundPreferences().practice),
+        prepareMetronomeSound(context, getSoundPreferences().metronome),
       ]);
       if (request !== requestRef.current) return;
       const clock = createPracticeClock(context, timeline.countInDurationMs);

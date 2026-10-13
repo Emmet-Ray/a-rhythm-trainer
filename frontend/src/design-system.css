@@ -1321,3 +1321,7 @@
   border-radius: 2px; background: var(--ds-primary); pointer-events: none;
 }
 .tapping-range-summary { margin: 0; min-height: 1.6em; }
+
+.sound-setting { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 28px; }
+.sound-setting > label { color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.sound-setting .record-filter-trigger { width: 260px; max-width: 100%; }

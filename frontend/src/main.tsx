@@ -1,3 +1,4 @@
+import { initializeSoundPreferences } from "./settings/soundPreferences";
 import { QueryClientProvider } from "@tanstack/react-query"
 import { queryClient } from "./query/queryClient"
 import { StrictMode } from 'react'
@@ -11,6 +12,7 @@ import { preloadDestination } from './navigation/routeModules'
 
 initializeAppearance()
 initializeTappingPrecision()
+initializeSoundPreferences()
 void preloadDestination(window.location.pathname)
 // Data router supplies navigation blocking for unsaved editor changes.
 const router = createBrowserRouter([{ path: '*', element: <App /> }])

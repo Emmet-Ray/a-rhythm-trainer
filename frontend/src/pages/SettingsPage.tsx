@@ -1,3 +1,4 @@
+import SoundSettings from "../settings/SoundSettings";
 import { useAssistantPageContext, useAssistantPageSection } from "../assistant/assistantContext";
 import { useContext, useLayoutEffect, useState } from "react";
 import { VisitsContext } from "../navigation/usePageNavigation";
@@ -42,8 +43,8 @@ export default function SettingsPage() {
     categories.find((item) => item.id === params.get("category"))?.id ??
     "appearance";
   const [appearance, setAppearance] = useState(getAppearance);
-  useAssistantPageContext({ page: "settings", description: "设置页，仅提供公开偏好，不包含模型凭证；声音设置尚未开放。",
-    state: { category, categories: categories.map(({ id, label }) => ({ id, label, available: id !== "sound" })),
+  useAssistantPageContext({ page: "settings", description: "设置页，仅提供公开偏好，不包含模型凭证。",
+    state: { category, categories: categories.map(({ id, label }) => ({ id, label, available: true })),
       appearance: { colorMode: appearance.colorMode, theme: appearance.theme } } });
   const visits = useContext(VisitsContext);
   useLayoutEffect(() => {
@@ -88,9 +89,7 @@ export default function SettingsPage() {
                 focusable="false"
               />
               {item.label}
-              {item.id === "sound" && (
-                <span className="settings-unavailable">未开放</span>
-              )}
+
             </button>
           ))}
         </nav>
@@ -152,18 +151,7 @@ export default function SettingsPage() {
           )}
           {category === "models" && <ModelServiceSettings />}
           {category === "local-data" && <LocalDataSettings />}
-          {category === "sound" && (
-            <section
-              className="settings-section"
-              aria-labelledby="sound-heading"
-            >
-              <header className="settings-section-heading">
-                <h2 id="sound-heading">声音</h2>
-              </header>
-              <p>暂未提供音色设置。</p>
-              {/* TODO: 接入音色偏好与试听；练习页仍保留节拍器开关。 */}
-            </section>
-          )}
+          {category === "sound" && <SoundSettings />}
           {category === "tapping-precision" && <TappingPrecisionSettings />}
         </div>
       </div>

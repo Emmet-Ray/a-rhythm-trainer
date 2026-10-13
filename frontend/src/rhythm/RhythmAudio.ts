@@ -1,3 +1,5 @@
+import { practiceSounds, metronomeSounds, type PracticeSound, type MetronomeSound } from "./SoundSamples";
+
 /**
  * 为本轮练习固定一个音频时钟上的正式起点。
  * 正式起点位于“创建时刻 + 调度余量 + 预备拍总时长”之后。
@@ -70,7 +72,7 @@ export function createPracticeClock(
 export type PracticeClock = ReturnType<typeof createPracticeClock>;
 
 /** 正式阶段的独立节拍器声部。共用练习时钟，拍点位于 [0, durationMs)。
- * 开启时只安排尚未到来的拍点，不补响、不重置拍位；关闭不影响预备拍或钢琴。
+ * 开启时只安排尚未到来的拍点，不补响、不重置拍位；关闭不影响预备拍或练习音色。
  * dispose 用于结束本轮，之后不能重新开启。当前 BPM 和重音按四分拍计算。
  */
 export function createMetronome(
@@ -105,31 +107,39 @@ export function createMetronome(
 
 export type Metronome = ReturnType<typeof createMetronome>;
 
-const METRONOME_URL = `${import.meta.env.BASE_URL}assets/audio/metronome.mp3`;
-// 当前素材主起音约在 46ms；保留少量起音余量，不修改原文件。
-const METRONOME_OFFSET_SECONDS = 0.044;
-const METRONOME_DURATION_SECONDS = 0.2;
-const metronomeBuffers = new WeakMap<AudioContext, AudioBuffer>();
-const metronomeLoads = new WeakMap<AudioContext, Promise<void>>();
+type PreparedSound = { buffer: AudioBuffer; offset: number; duration: number };
+const metronomeBuffers = new WeakMap<AudioContext, PreparedSound>();
+const tapBuffers = new WeakMap<AudioContext, AudioBuffer>();
+const loads = new WeakMap<AudioContext, Map<string, Promise<AudioBuffer>>>();
 
-/** 预备拍也依赖此采样，因此节拍器关闭时仍需准备。失败后允许重试。 */
-export function prepareMetronomeSound(context: AudioContext): Promise<void> {
-  const existing = metronomeLoads.get(context);
-  if (existing) return existing;
-  const pending = (async () => {
-    try {
-      const response = await fetch(METRONOME_URL);
+/** 每个音频上下文按素材缓存解码结果，失败项移除以允许重试。 */
+function loadSound(context: AudioContext, file: string, minimumDuration = 0.02): Promise<AudioBuffer> {
+  let cache = loads.get(context);
+  if (!cache) { cache = new Map(); loads.set(context, cache); }
+  let pending = cache.get(file);
+  if (!pending) {
+    pending = (async () => {
+      const response = await fetch(`${import.meta.env.BASE_URL}assets/audio/${file}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const buffer = await context.decodeAudioData(await response.arrayBuffer());
-      if (buffer.duration < METRONOME_OFFSET_SECONDS + METRONOME_DURATION_SECONDS) throw new Error("采样过短");
-      metronomeBuffers.set(context, buffer);
-    } catch {
-      metronomeLoads.delete(context);
-      throw new Error("节拍器声音加载失败，请重试。");
-    }
-  })();
-  metronomeLoads.set(context, pending);
+      if (!Number.isFinite(buffer.duration) || buffer.duration <= minimumDuration) throw new Error("采样过短");
+      return buffer;
+    })().catch(error => { cache.delete(file); throw error; });
+    cache.set(file, pending);
+  }
   return pending;
+}
+
+/** 预备拍也使用所选节拍器。开始一轮前准备，运行中不切换。 */
+export async function prepareMetronomeSound(context: AudioContext, sound: MetronomeSound = "mechanical"): Promise<void> {
+  const sample = metronomeSounds.find(s => s.id === sound)!;
+  try {
+    const buffer = await loadSound(context, sample.file, sound === "mechanical" ? 0.244 : 0.02);
+    metronomeBuffers.set(context, {
+      buffer, offset: sound === "mechanical" ? 0.044 : 0,
+      duration: sound === "mechanical" ? 0.2 : buffer.duration,
+    });
+  } catch { throw new Error("节拍器声音加载失败，请重试。"); }
 }
 
 /** 提前安排一声预备拍提示音，并保留声源以便中途取消。 */
@@ -140,12 +150,13 @@ export function scheduleCountIn(
   sources: AudioScheduledSourceNode[],
 ) {
   if (!Number.isFinite(startsAt) || startsAt < 0) throw new Error("节拍器起点必须是有效音频时间。");
-  const buffer = metronomeBuffers.get(context);
+  const prepared = metronomeBuffers.get(context);
+  const buffer = prepared?.buffer;
   if (!buffer) throw new Error("请先等待 prepareMetronomeSound() 完成。");
   const source = context.createBufferSource();
   source.buffer = buffer;
   const gain = context.createGain();
-  const duration = METRONOME_DURATION_SECONDS;
+  const duration = prepared!.duration;
   const volume = accent ? 0.7 : 0.45;
   gain.gain.setValueAtTime(0, startsAt);
   gain.gain.linearRampToValueAtTime(volume, startsAt + 0.001);
@@ -158,37 +169,21 @@ export function scheduleCountIn(
     const index = sources.indexOf(source);
     if (index !== -1) sources.splice(index, 1);
   };
-  source.start(startsAt, METRONOME_OFFSET_SECONDS, duration);
+  source.start(startsAt, prepared!.offset, duration);
   sources.push(source);
 }
 
 // 试听参数集中在这里；保留原始采样，便于按实际听感调整。
-const PIANO_URL = `${import.meta.env.BASE_URL}assets/audio/felt-piano-a4.mp3`;
-const PIANO_OFFSET_SECONDS = 0.01;
-const PIANO_FADE_SECONDS = 0.08;
+const NOTE_OFFSET_SECONDS = 0;
+const NOTE_FADE_SECONDS = 0.08;
 const TAP_SOUND_SECONDS = 0.2;
-const PIANO_GAIN = 0.7;
-const pianoBuffers = new WeakMap<AudioContext, AudioBuffer>();
-const pianoLoads = new WeakMap<AudioContext, Promise<void>>();
+const NOTE_GAIN = 0.7;
 
-/** 开始一轮前等待加载/解码完成，再建立时钟。重复调用复用结果，失败后允许重试。 */
-export function prepareTapSound(context: AudioContext): Promise<void> {
-  const existing = pianoLoads.get(context);
-  if (existing) return existing;
-  const pending = (async () => {
-    try {
-      const response = await fetch(PIANO_URL);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const buffer = await context.decodeAudioData(await response.arrayBuffer());
-      if (buffer.duration <= PIANO_OFFSET_SECONDS) throw new Error("采样过短");
-      pianoBuffers.set(context, buffer);
-    } catch {
-      pianoLoads.delete(context);
-      throw new Error("钢琴声音加载失败，请重试。");
-    }
-  })();
-  pianoLoads.set(context, pending);
-  return pending;
+/** 开始一轮前准备所选乐器，再建立时钟。 */
+export async function prepareTapSound(context: AudioContext, sound: PracticeSound = "piano"): Promise<void> {
+  try {
+    tapBuffers.set(context, await loadSound(context, practiceSounds.find(s => s.id === sound)!.file));
+  } catch { throw new Error("练习声音加载失败，请重试。"); }
 }
 
 /** 立即播放固定长度的击拍反馈，不依赖谱面时值或命中误差。 */
@@ -207,19 +202,19 @@ export function scheduleTapSound(
   if (!Number.isFinite(startsAt) || startsAt < 0 || !Number.isFinite(endsAt) || endsAt <= startsAt) {
     throw new Error("声音终点必须晚于起点，且起止时刻必须是有效音频时间。");
   }
-  const buffer = pianoBuffers.get(context);
+  const buffer = tapBuffers.get(context);
   if (!buffer) throw new Error("请先等待 prepareTapSound() 完成。");
   const source = context.createBufferSource();
   source.buffer = buffer;
   const gain = context.createGain();
   // 音符结束或素材播完时收音；不循环或拉伸采样来伪造延音。
-  const duration = Math.min(endsAt - startsAt, buffer.duration - PIANO_OFFSET_SECONDS);
+  const duration = Math.min(endsAt - startsAt, buffer.duration - NOTE_OFFSET_SECONDS);
   const attack = Math.min(0.002, duration / 4);
-  const fadeStart = duration - Math.min(PIANO_FADE_SECONDS, duration / 4);
-  // 跳过开头弱信号，短淡入避免切入噪声，末尾淡出避免截断产生爆音。
+  const fadeStart = duration - Math.min(NOTE_FADE_SECONDS, duration / 4);
+  // 保留素材起音，短淡入避免切入噪声，末尾淡出避免截断产生爆音。
   gain.gain.setValueAtTime(0, startsAt);
-  gain.gain.linearRampToValueAtTime(PIANO_GAIN, startsAt + attack);
-  gain.gain.setValueAtTime(PIANO_GAIN, startsAt + fadeStart);
+  gain.gain.linearRampToValueAtTime(NOTE_GAIN, startsAt + attack);
+  gain.gain.setValueAtTime(NOTE_GAIN, startsAt + fadeStart);
   gain.gain.linearRampToValueAtTime(0, startsAt + duration);
 
   source.connect(gain).connect(context.destination);
@@ -233,6 +228,6 @@ export function scheduleTapSound(
     }
   };
 
-  source.start(startsAt, PIANO_OFFSET_SECONDS, duration);
+  source.start(startsAt, NOTE_OFFSET_SECONDS, duration);
   sources?.push(source);
 }

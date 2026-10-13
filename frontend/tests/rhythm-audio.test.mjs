@@ -218,17 +218,17 @@ test("钢琴采样并发和重复准备只下载解码一次", async (t) => {
   await audio.prepareTapSound(context);
   assert.equal(fetch.mock.callCount(), 1);
   assert.equal(context.decodes, 1);
-  assert.match(fetch.mock.calls[0].arguments[0], /assets\/audio\/felt-piano-a4\.mp3$/);
+  assert.match(fetch.mock.calls[0].arguments[0], /assets\/audio\/piano-c4\.flac$/);
 });
 
 test("下载或解码失败后可以重新加载", async (t) => {
   let attempt = 0;
   t.mock.method(globalThis, "fetch", async () => ++attempt === 1 ? { ok: false, status: 404 } : response());
   const context = fakeContext();
-  await assert.rejects(audio.prepareTapSound(context), /钢琴声音加载失败/);
+  await assert.rejects(audio.prepareTapSound(context), /练习声音加载失败/);
   const decode = context.decodeAudioData;
   context.decodeAudioData = async () => { throw new Error("bad audio"); };
-  await assert.rejects(audio.prepareTapSound(context), /钢琴声音加载失败/);
+  await assert.rejects(audio.prepareTapSound(context), /练习声音加载失败/);
   context.decodeAudioData = decode;
   await audio.prepareTapSound(context);
   assert.equal(attempt, 3);
@@ -246,9 +246,9 @@ test("发声同步复用采样，保留调度时刻并应用偏移和淡出，�
   assert.equal(pending.length, 2);
   assert.notEqual(pending[0], pending[1]);
   assert.equal(pending[0].buffer, pending[1].buffer);
-  assert.deepEqual(pending[0].started, [12, 0.01, 2]);
+  assert.deepEqual(pending[0].started, [12, 0, 2]);
   assert.equal(pending[1].started[0], 10);
-  assert.equal(pending[1].started[1], 0.01);
+  assert.equal(pending[1].started[1], 0);
   assert.ok(Math.abs(pending[1].started[2] - 0.2) < 1e-10);
   assert.deepEqual(context.gains[0].gain.changes.at(-2), [0.7, 13.92]);
   assert.deepEqual(context.gains[0].gain.changes.at(-1), [0, 14]);
@@ -279,7 +279,7 @@ test("短音按比例淡出，慢速长音保持完整时值，采样不循环�
   await audio.prepareTapSound(context);
   for (const duration of [0.05, 0.125, 1, 2, 4, 8, 20]) {
     audio.scheduleTapSound(context, 0, duration);
-    const actual = Math.min(duration, 13.32 - 0.01);
+    const actual = Math.min(duration, 13.32);
     assert.equal(context.sources.at(-1).started[2], actual);
     assert.deepEqual(context.gains.at(-1).gain.changes.at(-2), [0.7, actual - Math.min(0.08, actual / 4)]);
     assert.deepEqual(context.gains.at(-1).gain.changes.at(-1), [0, actual]);
@@ -287,4 +287,23 @@ test("短音按比例淡出，慢速长音保持完整时值，采样不循环�
   for (const [start, end] of [[1, 1], [1, 0], [-1, 1], [0, NaN], [0, Infinity]]) {
     assert.throws(() => audio.scheduleTapSound(context, start, end), /声音终点/);
   }
+});
+
+test("切换音色后采用新素材，切回复用缓存，已有声源不受影响", async t => {
+  const fetched = t.mock.method(globalThis, "fetch", async () => response());
+  const context = fakeContext();
+  await audio.prepareTapSound(context, "piano");
+  audio.playTapSound(context);
+  const piano = context.sources.at(-1).buffer;
+  await audio.prepareTapSound(context, "guitar");
+  audio.playTapSound(context);
+  assert.notEqual(context.sources.at(-1).buffer, piano);
+  assert.equal(context.sources[0].buffer, piano);
+  await audio.prepareTapSound(context, "piano");
+  audio.playTapSound(context);
+  assert.equal(context.sources.at(-1).buffer, piano);
+  assert.equal(fetched.mock.callCount(), 2);
+  await audio.prepareMetronomeSound(context, "cowbell");
+  audio.scheduleCountIn(context, 20, false, []);
+  assert.deepEqual(context.sources.at(-1).started, [20, 0, 13.32]);
 });

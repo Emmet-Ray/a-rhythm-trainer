@@ -1,3 +1,4 @@
+import { getSoundPreferences } from "../settings/soundPreferences";
 import { ActionError } from "../ui/ActionError";
 import { PlaybackContext } from "./PlaybackGroup";
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -326,7 +327,7 @@ function RhythmTrainer({
         audioContextRef.current.addEventListener("statechange", resetInputTime);
       }
       const context = audioContextRef.current;
-      await Promise.all([context.resume(), prepareTapSound(context), prepareMetronomeSound(context)]);
+      await Promise.all([context.resume(), prepareTapSound(context, getSoundPreferences().practice), prepareMetronomeSound(context, getSoundPreferences().metronome)]);
       if (request !== startRequestRef.current) return;
 
       stopScheduledSounds();
