@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   BarlineType,
   Formatter,
@@ -9,12 +9,13 @@ import {
 
 import type { RhythmExercise } from "../RhythmModel";
 import { createRhythmStave, getRhythmLineY, prepareRhythmMeasure } from "./RhythmNotation";
-import type { ExerciseTimeline, TimingEvent } from "../RhythmTiming";
+import type { ExerciseTimeline, MeasureRange, TimingEvent } from "../RhythmTiming";
 import { drawTimingMarker } from "./RhythmTimingMarker";
 import {
   createPracticeScoreLayout,
   createTimingFeedbackLayout,
   getScoreViewportHeight,
+  getScoreMeasureBounds,
   getScoreFollowTop,
   timingOffsetToScorePosition,
   type MeasureGeometry,
@@ -36,6 +37,8 @@ type RhythmScoreProps = {
   playback: { roundId: number; eventIndex: number } | null;
   /** 固定在可视窗口上的临时提示，由调用方决定内容；不随谱面滚动或参与排版。 */
   overlay?: ReactNode;
+  /** 小节选择只报告原谱面下标，不启动播放；范围由训练组件持有。 */
+  selection?: { range: MeasureRange; disabled: boolean; onSelect: (measure: number) => void };
 };
 
 type RenderedScore = {
@@ -54,6 +57,7 @@ function RhythmScore({
   timingEvents,
   playback,
   overlay,
+  selection,
 }: RhythmScoreProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -66,6 +70,9 @@ function RhythmScore({
   const followingEventIndex = playback?.eventIndex ?? null;
   const followPaused = roundId !== null && pausedRound === roundId;
   const { measures, timeSignature } = exercise;
+  const minimumWidth = useMemo(() => containerWidth === 0 ? 320 : Math.max(320, ...measures.map(measure => prepareRhythmMeasure(measure.elements).minimumWidth)), [measures, containerWidth]);
+  const scoreLayout = useMemo(() => createPracticeScoreLayout(measures.length, containerWidth, minimumWidth), [measures.length, containerWidth, minimumWidth]);
+  const pointerOrigin = useRef<{ x: number; y: number; moved: boolean } | null>(null);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -90,8 +97,6 @@ function RhythmScore({
     container.replaceChildren();
     if (containerWidth === 0) return;
     const preparedMeasures = measures.map(measure => prepareRhythmMeasure(measure.elements));
-    const minimumWidth = Math.max(320, ...preparedMeasures.map(measure => measure.minimumWidth));
-    const scoreLayout = createPracticeScoreLayout(measures.length, containerWidth, minimumWidth);
     if (scoreLayout.measures.length === 0) return;
     const renderer = new Renderer(container, Renderer.Backends.SVG);
     renderer.resize(containerWidth, scoreLayout.height * scoreLayout.scale);
@@ -141,7 +146,7 @@ function RhythmScore({
       renderedRef.current = null;
       container.replaceChildren();
     };
-  }, [containerWidth, measures, timeSignature.beats, timeSignature.beatType]);
+  }, [containerWidth, measures, timeSignature.beats, timeSignature.beatType, scoreLayout]);
 
   // 可视高度改变只改变裁剪窗口，不能重建谱面或影响音频时间线。
   useLayoutEffect(() => {
@@ -187,7 +192,7 @@ function RhythmScore({
       activeNote.style.color = ACTIVE_NOTE_COLOR;
     }
     // 复用音符实际排版坐标，只有误敲的位置插值需要当前 BPM 的时间线。
-    const layouts = createTimingFeedbackLayout(timeline, rendered.measures);
+    const layouts = createTimingFeedbackLayout(timeline, rendered.measures).slice(timeline.range.startMeasure, timeline.range.endMeasure);
 
     const feedback = context.openGroup("timing-feedback") as SVGGElement;
     timingEvents.forEach((event) => {
@@ -221,10 +226,33 @@ function RhythmScore({
             if (Math.abs(top - automaticScrollTop.current) > 1) pauseFollow();
             automaticScrollTop.current = top;
           }}
+          onClick={event => { if (event.detail > 0) event.currentTarget.blur(); }}
           onKeyDown={event => {
             if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"].includes(event.key)) pauseFollow();
           }}>
-          <div ref={containerRef} />
+          <div className="rhythm-score-content">
+            <div ref={containerRef} />
+            {selection && getScoreMeasureBounds(scoreLayout).map((bounds, index) => <button
+              key={index} type="button" className="score-measure-select"
+              aria-label={`第 ${index + 1} 小节，设为练习起点`}
+              aria-pressed={index === selection.range.startMeasure}
+              disabled={selection.disabled}
+              data-in-range={index >= selection.range.startMeasure && index < selection.range.endMeasure}
+              style={bounds}
+              onPointerDown={event => { pointerOrigin.current = { x: event.clientX, y: event.clientY, moved: false }; }}
+              onPointerMove={event => {
+                const origin = pointerOrigin.current;
+                if (origin && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 8) origin.moved = true;
+              }}
+              onPointerCancel={() => { pointerOrigin.current = null; }}
+              onClick={event => {
+                if (event.detail > 0) event.currentTarget.blur();
+                const moved = pointerOrigin.current?.moved;
+                pointerOrigin.current = null;
+                if (event.detail !== 0 && moved) return;
+                selection.onSelect(index);
+              }} />)}
+          </div>
         </div>
         {overlay && <div className="rhythm-score-overlay">{overlay}</div>}
       </div>

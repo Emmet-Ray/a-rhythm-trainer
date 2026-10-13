@@ -1,8 +1,9 @@
 import type { RhythmElement } from "../rhythm/RhythmModel";
-import type { PracticeResult, TimingWindows } from "../rhythm/RhythmTiming";
+import type { MeasureRange, PracticeResult, TimingWindows } from "../rhythm/RhythmTiming";
 
-/** 开始一轮时提供实际条件；返回的回调接受该轮结果及迟到输入产生的修正。 */
-export type TappingAttemptRecorder = (conditions: { bpm: number; metronomeEnabled?: boolean; timingWindows: TimingWindows }) => ((result: PracticeResult) => void) | undefined;
+/** 开始一轮时提供实际条件；省略范围表示整首。记录方可拒绝局部练习。
+ * 返回的回调接受该轮结果及迟到输入产生的修正。 */
+export type TappingAttemptRecorder = (conditions: { range?: MeasureRange; bpm: number; metronomeEnabled?: boolean; timingWindows: TimingWindows }) => ((result: PracticeResult) => void) | undefined;
 
 /** 组件报告事实，记录模块决定如何累计；不接收每次编辑的答案日志。 */
 export type DictationEvent =

@@ -1018,3 +1018,48 @@ test("三连音拒绝缺音、多音、附点、休止符及嵌套", () => {
     }), /第 1 小节第 1 个事件：小三连/);
   }
 });
+
+test("局部练习以选中小节归零，保留原事件编号且只判定范围内音符", () => {
+  const score = { timeSignature: { beats: 4, beatType: 4 }, measures: [
+    { elements: [{ kind: "note", noteValue: "whole" }] },
+    { elements: [{ kind: "rest", noteValue: "quarter" }, { kind: "note", noteValue: "quarter" }, { kind: "rest", noteValue: "half" }] },
+    { elements: Array.from({ length: 4 }, () => ({ kind: "note", noteValue: "quarter" })) },
+  ] };
+  const local = timing.createExerciseTimeline(score, 60, undefined, windows, { startMeasure: 1, endMeasure: 2 });
+  assert.equal(local.durationMs, 4000);
+  assert.equal(local.finishOffsetMs, 4000);
+  assert.deepEqual(local.countInOffsetsMs, [-4000, -3000, -2000, -1000]);
+  assert.deepEqual(local.targetTaps, [{ eventIndex: 2, offsetMs: 1000 }]);
+  assert.equal(timing.getPlaybackPosition(local, -1).playingBeatIndex, 1);
+  assert.equal(timing.getPlaybackPosition(local, 0).playingBeatIndex, 1);
+  assert.equal(timing.getPlaybackPosition(local, 2500).playingBeatIndex, 3);
+  assert.equal(timing.getPlaybackPosition(local, 4000).phase, "finished");
+  const result = timing.judgePractice(local, [1000], 4000, windows);
+  assert.equal(timing.summarizePractice(local.targetTaps.length, result.events).passed, true);
+  assert.equal(timing.stopPractice(local, [], 100, windows).result.targetCount, 1);
+  const tail = timing.createExerciseTimeline(score, 60, 0, windows, { startMeasure: 1, endMeasure: 3 });
+  assert.equal(tail.durationMs, 8000);
+  assert.equal(tail.targetTaps.length, 5);
+  assert.equal(tail.targetTaps[1].offsetMs, 4000);
+  assert.equal(score.measures.length, 3);
+});
+
+test("单小节范围支持三连音和全休止符；非法小节范围在边界拒绝", () => {
+  const score = { timeSignature: { beats: 4, beatType: 4 }, measures: [
+    { elements: [{ kind: "rest", noteValue: "whole" }] },
+    { elements: [{ kind: "triplet", notes: Array.from({ length: 3 }, () => ({ kind: "note", noteValue: "eighth" })) },
+      { kind: "note", noteValue: "half", dots: 1 }] },
+  ] };
+  const local = timing.createExerciseTimeline(score, 120, 0, windows, { startMeasure: 1, endMeasure: 2 });
+  assert.equal(local.firstEventIndex, 1);
+  assert.equal(local.targetTaps.length, 4);
+  assert.ok(Math.abs(local.targetTaps[1].offsetMs - 500 / 3) < 1e-8);
+  assert.equal(local.durationMs, 2000);
+  const rests = timing.createExerciseTimeline(score, 120, 0, windows, { startMeasure: 0, endMeasure: 1 });
+  assert.equal(rests.targetTaps.length, 0);
+  assert.equal(rests.finishOffsetMs, 2000);
+  for (const range of [{ startMeasure: -1, endMeasure: 1 }, { startMeasure: 1, endMeasure: 1 },
+    { startMeasure: 0, endMeasure: 3 }, { startMeasure: 0.5, endMeasure: 2 }]) {
+    assert.throws(() => timing.createExerciseTimeline(score, 60, 0, windows, range), /练习范围/);
+  }
+});

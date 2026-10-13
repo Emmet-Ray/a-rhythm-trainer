@@ -217,3 +217,13 @@ export function timingOffsetToScorePosition(
 export function createPracticeScoreLayout(measureCount: number, containerWidth: number, minimumWidth: number): ScoreLayout {
   return createScoreLayout(measureCount, containerWidth, minimumWidth, Math.min(1.6, Math.max(1, containerWidth / 760)));
 }
+
+/** 小节命中区域使用与谱面相同的排版坐标，覆盖完整谱行高度；返回显示像素。 */
+export function getScoreMeasureBounds(layout: ScoreLayout) {
+  return layout.measures.map(measure => ({
+    left: measure.x * layout.scale,
+    top: (measure.y - STAVE_TOP) * layout.scale,
+    width: measure.width * layout.scale,
+    height: ROW_HEIGHT * layout.scale,
+  }));
+}

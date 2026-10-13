@@ -561,10 +561,10 @@ test("预设与随机击拍都有题目，顶部控制区将播放和设置放�
     assert.doesNotMatch(html, /practice-layout--stacked/);
     const body = html.indexOf('class="practice-body"');
     assert.ok(html.indexOf('aria-label="播放范围"') < body);
-    assert.match(html, /class="dictation-scope-toggle"><input type="checkbox"/);
+    assert.match(html, /class="practice-scope-toggle"><input type="checkbox"/);
     assert.match(html, /仅播放当前小节/);
-    assert.doesNotMatch(html, /dictation-scope-options|class="dictation-scope-toggle"><input[^>]*checked/);
-    assert.doesNotMatch(html, /class="dictation-scope-toggle"><input[^>]*disabled/);
+    assert.doesNotMatch(html, /dictation-scope-options|class="practice-scope-toggle"><input[^>]*checked/);
+    assert.doesNotMatch(html, /class="practice-scope-toggle"><input[^>]*disabled/);
     assert.ok(html.indexOf('data-source="question"') < body);
     assert.ok(html.indexOf('aria-label="练习设置"') < body);
     assert.equal((html.match(/aria-label="速度 BPM"/g) ?? []).length, 1);
@@ -602,7 +602,7 @@ test("谱面临时提示位于滚动内容之外，省略提示时不渲染浮�
   const html = renderToStaticMarkup(createElement(RhythmScore, { ...props,
     overlay: createElement("span", null, "临时提示"),
   }));
-  assert.match(html, /aria-label="节奏乐谱"[^>]*><div><\/div><\/div><div class="rhythm-score-overlay"><span>临时提示<\/span><\/div><\/div>/);
+  assert.match(html, /aria-label="节奏乐谱"[^>]*><div class="rhythm-score-content"><div><\/div><\/div><\/div><div class="rhythm-score-overlay"><span>临时提示<\/span><\/div><\/div>/);
   assert.match(html, /class="rhythm-score-stage"/);
 });
 

@@ -94,6 +94,21 @@ function RhythmTrainer({
     () => ({ perfectMs, hitMs }),
     [perfectMs, hitMs],
   );
+  const [selectionExercise, setSelectionExercise] = useState(exercise);
+  const [selectedMeasure, setSelectedMeasure] = useState(0);
+  const [currentMeasureOnly, setCurrentMeasureOnly] = useState(false);
+  if (selectionExercise !== exercise) {
+    setSelectionExercise(exercise);
+    setSelectedMeasure(0);
+    setCurrentMeasureOnly(false);
+  }
+  const range = useMemo(() => ({
+    startMeasure: selectionExercise === exercise ? selectedMeasure : 0,
+    endMeasure: selectionExercise === exercise && currentMeasureOnly ? selectedMeasure + 1 : exercise.measures.length,
+  }), [selectedMeasure, currentMeasureOnly, exercise, selectionExercise]);
+  const rangeLabel = range.endMeasure === range.startMeasure + 1
+    ? `第 ${range.startMeasure + 1} 小节`
+    : `第 ${range.startMeasure + 1} 小节 — 第 ${range.endMeasure} 小节`;
   const timeline = useMemo(
     () =>
       createExerciseTimeline(
@@ -101,8 +116,9 @@ function RhythmTrainer({
         bpm,
         countInBeatCount,
         effectiveTimingWindows,
+        range,
       ),
-    [exercise, bpm, countInBeatCount, effectiveTimingWindows],
+    [exercise, bpm, countInBeatCount, effectiveTimingWindows, range],
   );
   const targetTapTimeline = timeline.targetTaps;
 
@@ -115,11 +131,11 @@ function RhythmTrainer({
   const [startingMode, setStartingMode] = useState<PlaybackMode | null>(null);
   const isStarting = startingMode !== null;
   const [audioError, setAudioError] = useState<string | null>(null);
-  const [configuration, setConfiguration] = useState({ exercise, bpm, countInBeatCount });
-  if (configuration.exercise !== exercise || configuration.bpm !== bpm || configuration.countInBeatCount !== countInBeatCount) {
+  const [configuration, setConfiguration] = useState({ exercise, bpm, countInBeatCount, range });
+  if (configuration.exercise !== exercise || configuration.bpm !== bpm || configuration.countInBeatCount !== countInBeatCount || configuration.range !== range) {
     // 在渲染子级前重置画面，不能把旧判定记录交给新速度的时间线。
     // 音频等外部资源在下方 layout effect 的清理中释放，不在 render 中操作。
-    setConfiguration({ exercise, bpm, countInBeatCount });
+    setConfiguration({ exercise, bpm, countInBeatCount, range });
     setPlayback(IDLE_PLAYBACK);
     setTimingEvents([]);
     setStopped(false);
@@ -253,7 +269,7 @@ function RhythmTrainer({
       context?.removeEventListener("statechange", resetInputTime);
       if (context && context.state !== "closed") void context.close();
     };
-  }, [exercise, bpm, countInBeatCount, stopScheduledSounds, resetInputTime]);
+  }, [exercise, bpm, countInBeatCount, range, stopScheduledSounds, resetInputTime]);
 
   // 手动停止与被其他播放器中断共用结算规则；准备期只取消，正式击拍记录中断。
   const stopPlayback = useCallback(() => {
@@ -306,7 +322,7 @@ function RhythmTrainer({
       const nextWindows = { ...(timingWindows ?? getTappingTimingWindows(
         requestedMode === "listen" ? DEFAULT_TAPPING_PRECISION : undefined,
       )) };
-      const nextTimeline = createExerciseTimeline(exercise, bpm, countInBeatCount, nextWindows);
+      const nextTimeline = createExerciseTimeline(exercise, bpm, countInBeatCount, nextWindows, range);
       if (audioContextRef.current === null) {
         audioContextRef.current = new AudioContext();
         audioContextRef.current.addEventListener("statechange", resetInputTime);
@@ -318,7 +334,7 @@ function RhythmTrainer({
       stopScheduledSounds();
       const clock = createPracticeClock(context, nextTimeline.countInDurationMs);
       clockRef.current = clock;
-      metronomeRef.current = createMetronome(context, clock, bpm, exercise.timeSignature.beats, nextTimeline.eventEndOffsetsMs.at(-1) ?? 0);
+      metronomeRef.current = createMetronome(context, clock, bpm, exercise.timeSignature.beats, nextTimeline.durationMs);
       metronomeRef.current.setEnabled(metronomeEnabledRef.current);
       setRoundTimingWindows(nextWindows);
       setMode(requestedMode);
@@ -348,12 +364,12 @@ function RhythmTrainer({
       clearMetronomePlaybackRef.current = metronomePlayback?.start({
         readTimeMs: clock.readTimeMs, bpm,
         countInDurationMs: nextTimeline.countInDurationMs,
-        durationMs: nextTimeline.eventEndOffsetsMs.at(-1) ?? 0,
+        durationMs: nextTimeline.durationMs,
       }) ?? null;
 
       nextTargetIndexRef.current = 0;
       tapOffsetsRef.current = [];
-      recordResultRef.current = requestedMode === "practice" ? onAttemptStart?.({ bpm, metronomeEnabled, timingWindows: nextWindows }) : undefined;
+      recordResultRef.current = requestedMode === "practice" ? onAttemptStart?.({ range: nextTimeline.range, bpm, metronomeEnabled, timingWindows: nextWindows }) : undefined;
       setTimingEvents([]);
       setRoundId(previous => previous + 1);
       setPlayback(getPlaybackPosition(nextTimeline, clock.nowMs()));
@@ -485,16 +501,23 @@ function RhythmTrainer({
           {startingMode === "listen" ? <LoaderCircle className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" /> : isRunning && mode === "listen" ? <Square className="ui-icon ui-icon--stop" aria-hidden="true" focusable="false" /> : <Play className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />}
           {startingMode === "listen" ? "准备中…" : isRunning && mode === "listen" ? "停止" : "试听"}
         </button>
+        {exercise.measures.length > 1 && <label className="practice-scope-toggle">
+          <input type="checkbox" checked={currentMeasureOnly} disabled={busy}
+            onChange={event => setCurrentMeasureOnly(event.target.checked)} />
+          <span>只练习当前小节</span>
+        </label>}
       </div>
       <PracticeResult passed={result?.passed ?? null} />
       {audioError && <ActionError message={audioError} />}
     </>}>
+      <p className="tapping-range-summary" aria-live="polite">{rangeLabel}</p>
       <RhythmScore
         exercise={exercise}
+        selection={exercise.measures.length > 1 ? { range, disabled: busy, onSelect: setSelectedMeasure } : undefined}
         activeEventIndex={activeEventIndex}
         timeline={timeline}
         timingEvents={timingEvents}
-        playback={isRunning ? { roundId, eventIndex: phase === "countIn" ? 0 : playingBeatIndex } : null}
+        playback={isRunning ? { roundId, eventIndex: phase === "countIn" ? timeline.firstEventIndex : playingBeatIndex } : null}
         overlay={countInRemaining !== null ? (
           <PracticeCue countdown={countInRemaining} />
         ) : null}

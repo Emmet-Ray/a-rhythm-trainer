@@ -6,6 +6,9 @@ import {
   type RhythmElement,
 } from "./RhythmModel";
 
+/** 小节范围使用从 0 开始的下标，endMeasure 不包含在范围内。 */
+export type MeasureRange = { startMeasure: number; endMeasure: number };
+
 export type TargetTap = {
   // 按小节顺序展开后的全局事件下标，包含休止符占据的位置。
   eventIndex: number;
@@ -108,7 +111,9 @@ export type PlaybackPosition = {
  *   它是音符/休止符的结束时刻，不是命中窗口关闭时刻。
  * - countInDurationMs：预备拍的总时长，是持续时间而非时间点。
  * - countInOffsetsMs：每声预备拍的起点偏移，位于正式起点之前，因而为负数。
- * - finishOffsetMs：谱子总时长与最后一个目标窗口关闭时刻中较晚的值，
+ * range 可指定本轮范围，省略为整首；范围外事件保留编号及相对偏移，不参与判定。
+ * durationMs 是所选范围的音乐时长；firstEventIndex/endEventIndex 定位原谱面。
+ * - finishOffsetMs：所选范围时长与最后一个目标窗口关闭时刻中较晚的值，
  *   确保末尾休止符完整播放，也保留最后一拍允许晚击的时间。
  *
  * 例如 BPM 60、三拍预备拍：预备拍偏移为 [-3000, -2000, -1000]。
@@ -119,6 +124,7 @@ export function createExerciseTimeline(
   bpm: number,
   countInBeatCount: number | undefined,
   windows: TimingWindows,
+  range: MeasureRange = { startMeasure: 0, endMeasure: exercise.measures.length },
 ) {
   if (!Number.isFinite(bpm) || bpm <= 0) {
     throw new Error("BPM 必须是大于 0 的有限数字。");
@@ -127,6 +133,11 @@ export function createExerciseTimeline(
   validateTimingWindows(windows);
 
   validateRhythmExercise(exercise);
+  const emptyExercise = exercise.measures.length === 0 && range.startMeasure === 0 && range.endMeasure === 0;
+  if (!Number.isInteger(range.startMeasure) || !Number.isInteger(range.endMeasure)
+    || range.startMeasure < 0 || range.endMeasure > exercise.measures.length || (range.startMeasure >= range.endMeasure && !emptyExercise)) {
+    throw new Error("练习范围必须包含题目中连续的至少一个小节。");
+  }
 
   const quarterNoteDurationMs = 60_000 / bpm;
   let offsetMs = 0;
@@ -155,17 +166,28 @@ export function createExerciseTimeline(
     return { startOffsetMs, endOffsetMs: offsetMs, firstEventIndex };
   });
 
-  const lastTarget = targetTaps.at(-1);
+  // 保留完整谱面的事件编号与小节位置；仅本轮目标被筛选，所有偏移以选中起点归零。
+  const startOffset = measures[range.startMeasure]?.startOffsetMs ?? 0;
+  const durationMs = (measures[range.endMeasure - 1]?.endOffsetMs ?? 0) - startOffset;
+  const firstEventIndex = measures[range.startMeasure]?.firstEventIndex ?? 0;
+  const endEventIndex = measures[range.endMeasure]?.firstEventIndex ?? eventEndOffsetsMs.length;
+  const selectedTargets = targetTaps.filter(target => target.eventIndex >= firstEventIndex && target.eventIndex < endEventIndex)
+    .map(target => ({ ...target, offsetMs: target.offsetMs - startOffset }));
+  const lastTarget = selectedTargets.at(-1);
   const finishOffsetMs = Math.max(
-    offsetMs,
+    durationMs,
     lastTarget ? getTargetTimingWindow(lastTarget, windows).closesAtMs : 0,
   );
 
   return {
-    targetTaps,
-    measures,
-    eventStartOffsetsMs,
-    eventEndOffsetsMs,
+    targetTaps: selectedTargets,
+    measures: measures.map(measure => ({ ...measure, startOffsetMs: measure.startOffsetMs - startOffset, endOffsetMs: measure.endOffsetMs - startOffset })),
+    eventStartOffsetsMs: eventStartOffsetsMs.map(offset => offset - startOffset),
+    eventEndOffsetsMs: eventEndOffsetsMs.map(offset => offset - startOffset),
+    range: { ...range },
+    firstEventIndex,
+    endEventIndex,
+    durationMs,
     ...countIn,
     finishOffsetMs,
   };
@@ -202,7 +224,7 @@ export function getPlaybackPosition(
       phase: "countIn",
       // -1 表示还在第一声之前的调度缓冲中。
       countInBeat: timeline.countInOffsetsMs.findLastIndex((at) => nowMs >= at),
-      playingBeatIndex: 0,
+      playingBeatIndex: timeline.firstEventIndex,
     };
   }
   if (nowMs >= timeline.finishOffsetMs) {
@@ -213,7 +235,7 @@ export function getPlaybackPosition(
     phase: "playing",
     countInBeat: 0,
     playingBeatIndex:
-      index === -1 ? timeline.eventEndOffsetsMs.length - 1 : index,
+      Math.min(timeline.endEventIndex - 1, index === -1 ? timeline.endEventIndex - 1 : index),
   };
 }
 

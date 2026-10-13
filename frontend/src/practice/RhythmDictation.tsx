@@ -218,7 +218,7 @@ export function RhythmDictation({
                   role="group"
                   aria-label="播放范围"
                 >
-                  <label className="dictation-scope-toggle">
+                  <label className="practice-scope-toggle">
                     <input
                       type="checkbox"
                       checked={playbackScope === "measure"}

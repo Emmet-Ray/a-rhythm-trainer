@@ -65,6 +65,8 @@ export function usePracticeRecorder({ mode, context, exercise, enabled, scope, o
 
   const startAttempt: TappingAttemptRecorder = (conditions) => {
     if (mode !== "tapping" || !context || !exercise || !active.current) return;
+    // 局部练习只显示本轮反馈，不累计历史或发布助手活动；旧调用省略范围即整首。
+    if (conditions.range && (conditions.range.startMeasure !== 0 || conditions.range.endMeasure !== exercise.measures.length)) return;
     const id = crypto.randomUUID();
     const timingWindows = { ...conditions.timingWindows };
     let completedAt: string | undefined;

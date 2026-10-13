@@ -618,9 +618,9 @@
 .rhythm-dictation .rhythm-playback-buttons button[data-source="question"][data-action="play"]:hover:not(:disabled), .rhythm-dictation .dictation-verify:hover:not(:disabled) { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
 .rhythm-playback .rhythm-playback-buttons button:active:not(:disabled), .rhythm-dictation .dictation-verify:active:not(:disabled) { box-shadow: none; }
 .rhythm-dictation .dictation-scope { min-height: 48px; color: var(--ds-muted); font-size: var(--ds-text-sm); gap: var(--ds-space-3); }
-.dictation-scope-toggle { display: inline-flex; align-items: center; gap: var(--ds-space-2); min-height: 44px; cursor: pointer; }
-.dictation-scope-toggle input { width: 18px; height: 18px; flex: 0 0 auto; margin: 0; accent-color: var(--ds-primary); }
-.dictation-scope-toggle:has(input:disabled) { color: var(--ds-muted); cursor: default; opacity: 0.6; }
+.practice-scope-toggle { display: inline-flex; align-items: center; gap: var(--ds-space-2); min-height: 44px; cursor: pointer; }
+.practice-scope-toggle input { width: 18px; height: 18px; flex: 0 0 auto; margin: 0; accent-color: var(--ds-primary); }
+.practice-scope-toggle:has(input:disabled) { color: var(--ds-muted); cursor: default; opacity: 0.6; }
 .rhythm-editor button.rhythm-measure-selection { box-shadow: none; transform: none; transition: none; }
 .rhythm-editor button.rhythm-measure-selection:active:not(:disabled) { transform: none; box-shadow: none; }
 .rhythm-editor button.rhythm-measure-selection[aria-pressed="true"] { box-shadow: inset 0 -2px 0 var(--ds-primary); }
@@ -643,7 +643,8 @@
 .rhythm-symbol svg { display: block; width: 100%; height: 100%; }
 .rhythm-editor .rhythm-editor-edit-actions { margin-top: 20px; gap: 8px; }
 .rhythm-editor .rhythm-editor-edit-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 6px 10px; font-size: 13px; font-weight: 550; color: var(--ds-muted); }
-.rhythm-editor-group-label { margin: 0 0 10px; color: var(--ds-muted); font-size: 13px; font-weight: 550; }
+.rhythm-editor-group-label { margin: 0 0 10px; }
+.rhythm-editor-group-label { color: var(--ds-muted); font-size: 13px; font-weight: 550; }
 .rhythm-editor .rhythm-editor-controls button { border-width: 1px; box-shadow: none; transform: none; font-weight: 550; }
 .rhythm-editor .rhythm-editor-controls button:active:not(:disabled) { box-shadow: none; transform: none; background: var(--ds-tint); }
 .rhythm-editor button.rhythm-editor-dot[aria-pressed="true"]:not(:disabled) { background: var(--ds-tint); color: var(--ds-primary); border-color: var(--ds-primary); }
@@ -658,6 +659,7 @@
 .rhythm-draft-score { min-width: 0; }
 .draft-measure-navigation { display: flex; align-items: center; gap: 4px; min-height: 44px; margin-bottom: 8px; overflow-x: auto; color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .draft-measure-navigation > span { flex: 0 0 auto; margin-right: 8px; }
+.draft-measure-navigation > span, .tapping-range-summary { color: var(--ds-muted); font-size: var(--ds-text-sm); font-weight: 400; line-height: 1.6; }
 .design-system .draft-measure-navigation button { flex: 0 0 auto; min-width: 36px; min-height: 36px; padding: 4px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--ds-muted); box-shadow: none; transform: none; font-size: inherit; }
 .design-system .draft-measure-navigation button:hover:not(:disabled) { background: var(--ds-subtle); }
 .design-system .draft-measure-navigation button[aria-pressed="true"] { background: var(--ds-tint); color: var(--ds-primary); }
@@ -1301,3 +1303,26 @@
 .editor-measures .draft-measure-navigation { margin: 0; min-width: 0; }
 .editor-playback { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-left: auto; }
 .exercise-editor .editor-playback .rhythm-playback-buttons button { min-width: 88px; min-height: 44px; }
+
+/* 小节选择覆盖谱面命中区域；不改变 SVG 排版或播放反馈。 */
+.rhythm-score-content { position: relative; }
+.design-system button.score-measure-select {
+  position: absolute; display: block; padding: 0; min-height: 0;
+  border: 1px solid transparent; border-radius: 6px; background: transparent;
+  color: var(--ds-primary); box-shadow: none; transform: none;
+  touch-action: pan-y; transition: none;
+}
+.design-system button.score-measure-select[data-in-range="true"] { background: color-mix(in srgb, var(--ds-primary) 4%, transparent); }
+.design-system button.score-measure-select[aria-pressed="true"] { background: color-mix(in srgb, var(--ds-primary) 8%, transparent); }
+.design-system button.score-measure-select:not(:disabled):hover { background: color-mix(in srgb, var(--ds-primary) 9%, transparent); border-color: transparent; box-shadow: none; transform: none; }
+.design-system button.score-measure-select:disabled { opacity: 1; cursor: default; }
+.design-system button.score-measure-select:focus-visible,
+.design-system .rhythm-score-viewport:focus-visible { outline: none; }
+.design-system button.score-measure-select:focus-visible::after,
+.rhythm-score-stage:has(> .rhythm-score-viewport:focus-visible)::after {
+  content: ""; position: absolute; top: 6px; left: 12px; width: 32px; height: 3px;
+  border-radius: 2px; background: var(--ds-primary); pointer-events: none;
+}
+.tapping-range-summary { margin: 0 0 var(--ds-space-3); min-height: 1.6em; }
+
+@media (max-width: 600px) { .rhythm-trainer .trainer-actions .practice-scope-toggle { grid-column: 1 / -1; } }
