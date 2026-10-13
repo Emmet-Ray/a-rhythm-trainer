@@ -175,3 +175,24 @@ test("所有普通时值及休止符保持记谱时值、落在中线，无音�
     }
   }
 });
+
+
+test("小节背景包含谱面外侧留白，内部无缝且不拉伸末行", () => {
+  for (const score of [layout.createDraftScoreLayout(4, 1180, 4), layout.createScoreLayout(5, 1000), layout.createScoreLayout(3, 280)]) {
+    const bounds = layout.getScoreMeasureBounds(score);
+    score.measures.forEach((measure, index) => {
+      const bound = bounds[index];
+      if (measure.isRowStart) assert.equal(bound.left, 0);
+      else assert.ok(Math.abs(bounds[index - 1].left + bounds[index - 1].width - bound.left) < 0.001);
+      assert.ok(bound.left <= measure.x * score.scale);
+      assert.ok(bound.left + bound.width >= (measure.x + measure.width) * score.scale - 0.001);
+      if (!score.measures[index + 1] || score.measures[index + 1].isRowStart) {
+        assert.ok(Math.abs(bound.left + bound.width - (measure.x + measure.width + 10) * score.scale) < 0.001);
+      }
+    });
+  }
+  const score = layout.createScoreLayout(5, 1000);
+  const bounds = layout.getScoreMeasureBounds(score);
+  assert.equal(bounds[1].left + bounds[1].width, score.width * score.scale);
+  assert.ok(bounds.at(-1).width < score.width * score.scale);
+});

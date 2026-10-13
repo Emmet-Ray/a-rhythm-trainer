@@ -4,7 +4,6 @@ import { useAssistantPractice } from "../assistant/assistantContext";
 import { PracticeActivityContext } from "../assistant/practiceActivity";
 import { readExerciseHistory } from "../practice-records/practiceRecordStorage";
 import { buildPracticeContextSummary } from "../assistant/practiceContextSummary";
-import PracticeShortcutHelp from "./PracticeShortcutHelp";
 import PracticeSettings, { type PracticeSettingsValue } from "../practice/PracticeSettings";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 import RhythmTrainer from "../practice/RhythmTrainer";
@@ -77,7 +76,6 @@ function WorkspaceSession({
         selectedMeasure: state.selectedMeasureIndex + 1, verdicts: state.measureVerdicts } : {}),
     };
   });
-  const shortcutHelp = <PracticeShortcutHelp mode={mode} source={recordContext?.source} />;
   return (
     <PracticeSettings layout="sidebar" initialValue={settings} onChange={rememberSettings}>
       {({ bpm, metronomeEnabled }, settingsPanel) => (
@@ -86,7 +84,7 @@ function WorkspaceSession({
           {mode === "dictation" ? (
             // BPM 改变只重建听写内部播放器，保留草稿、验证结果和参考答案状态。
             <RhythmDictation key={binding} session={{ state, onChange: update }} exercise={exercise} bpm={bpm} metronomeEnabled={metronomeEnabled} onBusyChange={reportBusy} settingsPanel={settingsPanel}
-              onRecord={event => { if (event.type === "view-answer") onAnswerViewed?.(); recorder.dictation(event); }} toolbarEnd={shortcutHelp} />
+              onRecord={event => { if (event.type === "view-answer") onAnswerViewed?.(); recorder.dictation(event); }} />
           ) : (
             // 换题重建；调速由训练组件原地停止旧轮次，保留谱面。
             <RhythmTrainer
@@ -97,7 +95,7 @@ function WorkspaceSession({
               settingsPanel={settingsPanel}
               onBusyChange={reportBusy}
               onAttemptStart={recorder.startAttempt}
-              toolbarEnd={shortcutHelp}
+
             />
           )}
         </section>

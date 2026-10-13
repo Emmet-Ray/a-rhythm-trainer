@@ -116,14 +116,6 @@ export default function PracticeSettings({
       className="practice-settings design-system"
       aria-label="练习设置"
     >
-      <MechanicalMetronome
-        enabled={metronomeEnabled}
-        onToggle={() => {
-          setMetronomeEnabled(!metronomeEnabled);
-          onChange?.({ bpm, metronomeEnabled: !metronomeEnabled });
-        }}
-        playback={metronomePlayback}
-      />
       <form
         className="tempo-settings"
         noValidate
@@ -231,6 +223,14 @@ export default function PracticeSettings({
           </p>
         )}
       </form>
+      <MechanicalMetronome
+        enabled={metronomeEnabled}
+        onToggle={() => {
+          setMetronomeEnabled(!metronomeEnabled);
+          onChange?.({ bpm, metronomeEnabled: !metronomeEnabled });
+        }}
+        playback={metronomePlayback}
+      />
       {extraControls}
     </section>
   );

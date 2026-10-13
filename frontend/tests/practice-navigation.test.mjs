@@ -60,20 +60,20 @@ test("历史成就保留已通过，与最后一次结果无关；听写优先�
   assert.equal(historicalStatus({ mode: "dictation", attempts: [{ completedAt: "now", viewedAnswer: false }, { completedAt: "later", viewedAnswer: true }] }), "已独立完成");
 });
 
-test("两种练习通过工具栏插槽组合说明，不提供时不出现快捷键入口", async () => {
+test("快捷键帮助属于练习题头，训练工具栏不重复显示入口", async () => {
+  const { PracticeHeading } = await server.ssrLoadModule("/src/exercise-workspace/PracticeHeading.tsx");
   const { default: Trainer } = await server.ssrLoadModule("/src/practice/RhythmTrainer.tsx");
   const { RhythmDictation } = await server.ssrLoadModule("/src/practice/RhythmDictation.tsx");
-  const { default: Help } = await server.ssrLoadModule("/src/exercise-workspace/PracticeShortcutHelp.tsx");
   for (const [Component, mode] of [[Trainer, "tapping"], [RhythmDictation, "dictation"]]) {
-    const props = { exercise: null, bpm: 60 };
-    assert.doesNotMatch(renderToStaticMarkup(createElement(Component, props)), /查看快捷键/);
-    const html = renderToStaticMarkup(createElement(Component, {
-      ...props,
-      toolbarEnd: createElement(Help, { mode, source: "preset" }),
+    assert.doesNotMatch(renderToStaticMarkup(createElement(Component, { exercise: null, bpm: 60 })), /查看快捷键/);
+    const html = renderToStaticMarkup(createElement(PracticeHeading, {
+      title: "练习", history: { context: { source: "preset", exerciseId: "one", title: "练习" }, exercise, mode },
     }));
     assert.equal((html.match(/aria-label="查看快捷键"/g) ?? []).length, 1);
-    assert.ok(html.indexOf('aria-label="查看快捷键"') < html.indexOf('class="practice-body"'));
+    assert.ok(html.indexOf('练习历史') < html.indexOf('aria-label="查看快捷键"'));
+    assert.match(html, /快捷键<\/button>/);
   }
+  assert.doesNotMatch(renderToStaticMarkup(createElement(PracticeHeading, { title: "编辑练习" })), /查看快捷键/);
 });
 
 test("历史尚未加载时，历史插槽仍保留题名与题头操作", async () => {

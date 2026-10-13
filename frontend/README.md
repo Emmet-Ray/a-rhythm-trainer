@@ -43,6 +43,7 @@ npm run preview
 | 记录、筛选稳定性、活动确认与分析上下文 | `record-filters.js`、`async-surfaces.js`、`custom-mode-switch.js`、`practice-activity.js`、`practice-insight.js`、`page-context.js` |
 | 助手跨路由挂载和响应式布局 | `assistant-resize.js`、`responsive-feedback.js`、`conversation-switch.js` |
 | 击拍小节选择、局部练习与记录 | `tapping-range.js` |
+| 操作／设置布局、听写小节导航与参考答案 | `practice-layout.js` |
 | 编辑保存与生成题目 | `editor-feedback.js`、`edit-generated-exercise.js`、`random-settings.js` |
 | 图片、流与发送确认 | `assistant-images.js`、`assistant-stream.js`、`assistant-confirmation.js` |
 | 导航和浮层动效 | `page-motion.js`、`navigation-repeat.js`、`surface-motion.js` |

@@ -3,7 +3,7 @@ import { Check, X } from "lucide-react";
 import { BarlineType, Formatter, Renderer } from "vexflow";
 import { type RhythmElement, type RhythmExercise } from "../RhythmModel";
 import { createRhythmStave, prepareRhythmMeasure } from "./RhythmNotation";
-import { createDraftScoreLayout, createPracticeScoreLayout, getDraftMeasureScrollLeft } from "./RhythmScoreLayout";
+import { createDraftScoreLayout, createPracticeScoreLayout, getDraftMeasureScrollLeft, getScoreMeasureBounds } from "./RhythmScoreLayout";
 
 export type MeasureFeedback = "unchecked" | "correct" | "incorrect";
 const feedbackLabels = { correct: "正确", incorrect: "有错误" };
@@ -138,6 +138,8 @@ export function RhythmDraftScore({
     }
   }
 
+  const measureBounds = getScoreMeasureBounds(layout);
+
   return (
     <div className="rhythm-draft-score">
       {showNavigation && <div className="draft-measure-navigation" role="group" aria-label="小节导航">
@@ -164,7 +166,7 @@ export function RhythmDraftScore({
       >
         {onSelectMeasure && (
           <div role="group" aria-label="选择小节">
-            {score.measures.map(({ x, y, width }, index) => (
+            {score.measures.map(({ y }, index) => (
               <button
                 key={index}
                 type="button"
@@ -174,9 +176,9 @@ export function RhythmDraftScore({
                 onClick={() => selectMeasure(index)}
                 style={{
                   position: "absolute",
-                  left: x * score.scale,
+                  left: measureBounds[index].left,
                   top: (layoutMode === "practice" ? y - 30 : 10) * score.scale,
-                  width: width * score.scale,
+                  width: measureBounds[index].width,
                   height: (layoutMode === "practice" ? 130 : score.height - 20) * score.scale,
                   padding: 0,
                   border: 0,

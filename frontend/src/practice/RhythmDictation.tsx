@@ -75,7 +75,6 @@ type RhythmDictationProps = {
   metronomeEnabled?: boolean;
   onBusyChange?: (busy: boolean) => void;
   settingsPanel?: ReactNode;
-  toolbarEnd?: ReactNode;
   onRecord?: (event: DictationEvent) => void;
   /** 可选受控作答；工作区负责历史恢复，听写组件不依赖路由或存储。 */
   session?: {
@@ -92,7 +91,6 @@ export function RhythmDictation({
   metronomeEnabled = true,
   onBusyChange,
   settingsPanel,
-  toolbarEnd,
   session,
   onRecord,
 }: RhythmDictationProps) {
@@ -167,7 +165,31 @@ export function RhythmDictation({
     <div className="rhythm-dictation design-system">
       <PracticeFrame
         settingsPanel={settingsPanel}
-        utilities={toolbarEnd}
+        scopeControls={
+                <div
+                  className="dictation-scope"
+                  role="group"
+                  aria-label="播放范围"
+                >
+                  <label className="practice-scope-toggle">
+                    <input
+                      type="checkbox"
+                      checked={playbackScope === "measure"}
+                      disabled={!exercise}
+                      onChange={(event) => {
+                        const playbackScope = event.target.checked
+                          ? "measure"
+                          : "all";
+                        updateState((previous) => ({
+                          ...previous,
+                          playbackScope,
+                        }));
+                      }}
+                    />
+                    <span>仅播放当前小节</span>
+                  </label>
+                </div>
+        }
         toolbar={
           <>
           <div className="dictation-playbar">
@@ -212,31 +234,7 @@ export function RhythmDictation({
                         ),
                 },
               ]}
-              controls={
-                <div
-                  className="dictation-scope"
-                  role="group"
-                  aria-label="播放范围"
-                >
-                  <label className="practice-scope-toggle">
-                    <input
-                      type="checkbox"
-                      checked={playbackScope === "measure"}
-                      disabled={!exercise}
-                      onChange={(event) => {
-                        const playbackScope = event.target.checked
-                          ? "measure"
-                          : "all";
-                        updateState((previous) => ({
-                          ...previous,
-                          playbackScope,
-                        }));
-                      }}
-                    />
-                    <span>仅播放当前小节</span>
-                  </label>
-                </div>
-              }
+
             />
           </div>
           <PracticeResult passed={isComplete && resultVisible ? true : null} complete />

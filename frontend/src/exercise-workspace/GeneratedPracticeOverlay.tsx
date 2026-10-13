@@ -1,3 +1,4 @@
+import PracticeShortcutHelp from "./PracticeShortcutHelp";
 import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
 import { PlaybackContext } from "../practice/PlaybackGroup";
 import { useCallback, useContext, useLayoutEffect, useRef, type ReactNode } from "react";
@@ -20,7 +21,7 @@ export function GeneratedPracticeOverlay({ generated, onClose }: { generated: Ge
     <ExerciseHistory {...view.history}>
       {({ status, action }) => <header className="generated-practice-heading">
         <div className="generated-practice-title"><h2 id="generated-practice-title">{view.title}</h2>{!view.editing && status}</div>
-        <div className="generated-practice-actions">{view.editAction}{!view.editing && action}
+        <div className="generated-practice-actions">{view.editAction}{!view.editing && <>{action}<PracticeShortcutHelp mode={view.history.mode} source={view.history.context.source} /></>}
           <button type="button" className="generated-practice-close" aria-label="关闭练习" onClick={close}><X size={22} aria-hidden="true" /></button>
         </div>
       </header>}

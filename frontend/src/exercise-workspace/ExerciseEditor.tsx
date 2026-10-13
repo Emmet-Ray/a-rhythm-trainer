@@ -220,7 +220,7 @@ export default function ExerciseEditor({ initial, scope, settingsScope = scope, 
     <fieldset className="custom-exercise-fields" disabled={saving}>
       <PracticeSettings layout="sidebar" initialValue={settings} onChange={rememberSettings}>
         {({ bpm, metronomeEnabled }, settingsPanel) => <PracticeFrame
-          toolbar={<div className="editor-measures">
+          scopeControls={<div className="editor-measures">
             <div className="draft-measure-navigation" role="group" aria-label="小节导航">
               <span>小节</span>
               {measures.map((_, index) => <button key={index} type="button" aria-label={`跳到小节 ${index + 1}`}
@@ -232,12 +232,12 @@ export default function ExerciseEditor({ initial, scope, settingsScope = scope, 
               <button type="button" aria-label="增加小节" title="增加小节" onClick={addMeasure}><Plus className="ui-icon" aria-hidden="true" focusable="false" /></button>
             </div>
           </div>}
-          settingsPanel={<div className="editor-playback">
+          settingsPanel={settingsPanel}
+          toolbar={<div className="editor-playback">
             <RhythmPlayback key={[bpm, measures.length, assistantRevision].join(":")}
               bpm={bpm} metronomeEnabled={metronomeEnabled} timeSignature={timeSignature}
               options={[{ id: "draft", label: "试听", stopLabel: "停止", measures }]}
               onCountInChange={setCountdown} />
-            {settingsPanel}
           </div>}>
           {assistantApplied && <SuccessToast key={assistantRevision} message="已放入，可继续编辑" />}
           {saveError && <ActionError message={saveError} onRetry={() => void save()} />}

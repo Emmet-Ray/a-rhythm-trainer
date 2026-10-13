@@ -218,12 +218,19 @@ export function createPracticeScoreLayout(measureCount: number, containerWidth: 
   return createScoreLayout(measureCount, containerWidth, minimumWidth, Math.min(1.6, Math.max(1, containerWidth / 760)));
 }
 
-/** 小节命中区域使用与谱面相同的排版坐标，覆盖完整谱行高度；返回显示像素。 */
+/** 背景与命中区域共用边界：行首、行尾包含记谱留白，内部小节仍以谱线分界。
+ * 符号坐标不变，末行未填满时不把最后一个小节拉伸到整行；返回显示像素。
+ */
 export function getScoreMeasureBounds(layout: ScoreLayout) {
-  return layout.measures.map(measure => ({
-    left: measure.x * layout.scale,
-    top: (measure.y - STAVE_TOP) * layout.scale,
-    width: measure.width * layout.scale,
-    height: ROW_HEIGHT * layout.scale,
-  }));
+  return layout.measures.map((measure, index) => {
+    const left = measure.isRowStart ? 0 : measure.x;
+    const isRowEnd = !layout.measures[index + 1] || layout.measures[index + 1].isRowStart;
+    const right = measure.x + measure.width + (isRowEnd ? HORIZONTAL_PADDING : 0);
+    return {
+      left: left * layout.scale,
+      top: (measure.y - STAVE_TOP) * layout.scale,
+      width: (right - left) * layout.scale,
+      height: ROW_HEIGHT * layout.scale,
+    };
+  });
 }

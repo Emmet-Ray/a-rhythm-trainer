@@ -1,3 +1,4 @@
+import PracticeShortcutHelp from "./PracticeShortcutHelp";
 import { ReturnLink } from "../navigation/PageNavigation";
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
@@ -15,7 +16,7 @@ export function PracticeHeading({ backTo, backLabel, title, children, history }:
     <header className="practice-titlebar">
       {backTo && <ReturnLink className="practice-return" to={backTo}><ArrowLeft className="ui-icon" aria-hidden="true" focusable="false" />{backLabel}</ReturnLink>}
       <div className="practice-heading-identity">{title && <h1>{title}</h1>}{status}</div>
-      {(children || action) && <div className="practice-heading-actions">{children}{action}</div>}
+      {(children || action || history) && <div className="practice-heading-actions">{children}{action}{history && <PracticeShortcutHelp mode={history.mode} source={history.context.source} />}</div>}
     </header>
   );
   return history ? <ExerciseHistory {...history}>{render}</ExerciseHistory> : render({ status: null, action: null });

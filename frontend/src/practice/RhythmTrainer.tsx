@@ -57,7 +57,6 @@ export type RhythmTrainerProps = {
   metronomeEnabled?: boolean;
   /** 公共设置提供的面板，仅负责放置，不拥有第二份设置状态。 */
   settingsPanel?: ReactNode;
-  toolbarEnd?: ReactNode;
   onBusyChange?: (busy: boolean) => void;
   /** 成功启动时固定本轮记录目标；自然结束、主动停止及迟到输入修正共用回调。 */
   onAttemptStart?: TappingAttemptRecorder;
@@ -75,7 +74,6 @@ function RhythmTrainer({
   countInBeatCount,
   metronomeEnabled = true,
   settingsPanel,
-  toolbarEnd,
   onBusyChange,
   onAttemptStart,
 }: RhythmTrainerProps) {
@@ -469,7 +467,13 @@ function RhythmTrainer({
   const listenShortcut = practiceShortcuts[isRunning && mode === "listen" ? "stop" : "listen"];
   return (
     <div className="rhythm-trainer design-system">
-    <PracticeFrame settingsPanel={settingsPanel} utilities={toolbarEnd} toolbar={<>
+    <PracticeFrame settingsPanel={settingsPanel} scopeControls={<>
+        {exercise.measures.length > 1 && <label className="practice-scope-toggle">
+          <input type="checkbox" checked={currentMeasureOnly} disabled={busy}
+            onChange={event => setCurrentMeasureOnly(event.target.checked)} />
+          <span>只练习当前小节</span>
+        </label>}
+    </>} toolbar={<>
       <div className="trainer-actions">
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
         <button
@@ -501,11 +505,7 @@ function RhythmTrainer({
           {startingMode === "listen" ? <LoaderCircle className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" /> : isRunning && mode === "listen" ? <Square className="ui-icon ui-icon--stop" aria-hidden="true" focusable="false" /> : <Play className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />}
           {startingMode === "listen" ? "准备中…" : isRunning && mode === "listen" ? "停止" : "试听"}
         </button>
-        {exercise.measures.length > 1 && <label className="practice-scope-toggle">
-          <input type="checkbox" checked={currentMeasureOnly} disabled={busy}
-            onChange={event => setCurrentMeasureOnly(event.target.checked)} />
-          <span>只练习当前小节</span>
-        </label>}
+
       </div>
       <PracticeResult passed={result?.passed ?? null} />
       {audioError && <ActionError message={audioError} />}
@@ -532,7 +532,7 @@ export default function RhythmTrainerWorkspace(props: Omit<RhythmTrainerProps, "
   if (props.exercise) return <RhythmTrainer {...props} exercise={props.exercise} />;
   return (
     <div className="rhythm-trainer design-system">
-    <PracticeFrame settingsPanel={props.settingsPanel} utilities={props.toolbarEnd} toolbar={<>
+    <PracticeFrame settingsPanel={props.settingsPanel} toolbar={<>
       <div className="trainer-actions">
         <button type="button" disabled><Hand className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />击拍练习</button>
         <button type="button" disabled><Play className="ui-icon ui-icon--action" aria-hidden="true" focusable="false" />试听</button>

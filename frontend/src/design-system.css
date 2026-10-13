@@ -392,7 +392,7 @@
   .not-found .not-found-action:active { transform: none; }
 }
 .practice-page .back-link { font-size: var(--ds-text-sm); font-weight: 650; color: var(--ds-muted); }
-.practice-page .practice-heading { margin: var(--ds-space-4) 0 var(--ds-space-8); }
+.practice-page .practice-heading { margin: var(--ds-space-4) 0 var(--ds-space-6); }
 .practice-page .practice-heading .eyebrow { color: var(--ds-primary); font-size: var(--ds-text-sm); font-weight: 650; margin-bottom: var(--ds-space-2); }
 .design-system.practice-settings { padding: var(--ds-space-4) 0 var(--ds-space-6); gap: var(--ds-space-4) var(--ds-space-6); border-top: var(--ds-border) solid var(--ds-line); border-bottom: var(--ds-border) solid var(--ds-line); justify-content: flex-start; }
 .practice-settings .tempo-settings { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: min(100%, 420px); gap: var(--ds-space-3); min-width: 0; }
@@ -451,12 +451,18 @@
 .site-shell:has(main .practice-layout--training) { background: var(--ds-surface); }
 .practice-layout--training { --practice-gutter: 0px; min-width: 0; background: transparent; container-type: inline-size; }
 .practice-layout--training > .practice-body > .practice-content { width: 100%; }
-.rhythm-dictation .practice-layout--training > .practice-body > .practice-content { padding-top: 28px; }
+.practice-layout--training > .practice-body > .practice-content { padding-top: 20px; }
 
-.practice-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 18px 28px; border-bottom: 1px solid var(--ds-line); }
+.practice-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 12px 28px 20px; border-bottom: 1px solid var(--ds-line); }
+.practice-settings-row { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 12px 24px; margin-left: auto; min-width: 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.practice-scope-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 24px; min-width: 0; }
+.practice-settings-row .draft-measure-navigation { min-width: 0; max-width: 100%; margin: 0; }
+.practice-settings-row .dictation-scope { display: flex; align-items: center; min-height: 44px; }
+.practice-settings-row .practice-scope-toggle { font-size: var(--ds-text-sm); color: var(--ds-muted); }
 .practice-controls .practice-toolbar { display: flex; align-items: center; flex-wrap: wrap; flex: 1 1 380px; gap: 12px; min-width: 0; }
 .practice-controls .trainer-actions { justify-content: flex-start; flex-wrap: wrap; }
 .practice-controls .practice-settings { flex: 0 0 auto; display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; padding: 0; border: 0; min-width: 0; }
+.practice-controls .practice-settings-row > .practice-settings { padding-left: 24px; border-left: 1px solid var(--ds-line); }
 .practice-controls .mechanical-metronome { width: 44px; min-height: 48px; padding: 0; }
 .practice-controls .mechanical-metronome svg { width: 36px; height: 42px; }
 .practice-controls .tempo-settings { flex: 1; width: auto; grid-template-columns: auto; align-items: center; gap: 8px; }
@@ -469,29 +475,20 @@
 .practice-controls .tempo-step:disabled { opacity: .35; cursor: default; background: transparent; box-shadow: none; }
 .practice-controls .tempo-step:active:not(:disabled) { transform: none; box-shadow: none; }
 .practice-controls .tempo-step .ui-icon { width: 24px; height: 24px; }
-.practice-utilities { margin-left: auto; }
 .practice-layout--training > .practice-body { display: block; }
-/* 助手会压缩工作区；按容器宽度让播放区与设置区整组换行。 */
-@container (max-width: 1050px) {
+/* 助手展开或窄屏时整组换行，保持操作、范围、速度的阅读顺序。 */
+@container (max-width: 900px) {
   .practice-controls .practice-toolbar { flex-basis: 100%; }
-  .practice-controls .practice-settings { margin-left: 0; }
-  .practice-controls .practice-utilities { margin-left: auto; }
+  .practice-settings-row { margin-left: 0; justify-content: flex-start; }
 }
 @container (max-width: 600px) {
-  .practice-controls { padding: 16px; gap: 12px 8px; }
   .practice-controls .tempo-value input[type="number"] { width: 48px; }
   .practice-controls .tempo-step { width: 36px; min-height: 44px; }
-  .practice-controls .practice-settings { margin-left: 0; }
-  .practice-controls .practice-utilities { margin-left: auto; }
-}
-@media (max-width: 600px) {
-  .practice-controls { padding: 16px; gap: 16px 8px; }
-  .practice-controls .tempo-value input[type="number"] { width: 48px; }
-  .practice-controls .tempo-step { width: 36px; min-height: 44px; }
-  .practice-controls .practice-settings { flex: 0 0 auto; }
-  .practice-controls .practice-toolbar { flex-basis: 100%; }
   .practice-controls .trainer-actions { width: 100%; }
+  .practice-settings-row { gap: 8px 16px; }
+  .practice-controls .practice-settings-row > .practice-settings { padding-left: 0; border-left: 0; }
 }
+
 .practice-body { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "settings" "score"; }
 .practice-content { grid-area: score; display: flex; flex-direction: column; justify-content: center; gap: var(--ds-space-4); min-width: 0; padding: var(--ds-space-6) var(--ds-space-8); }
 .rhythm-score { min-width: 0; }
@@ -1301,7 +1298,7 @@
 .exercise-editor .practice-controls .practice-toolbar { flex: 1 1 220px; }
 .editor-measures { display: flex; align-items: center; gap: 12px; min-width: 0; max-width: 100%; }
 .editor-measures .draft-measure-navigation { margin: 0; min-width: 0; }
-.editor-playback { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-left: auto; }
+.editor-playback { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .exercise-editor .editor-playback .rhythm-playback-buttons button { min-width: 88px; min-height: 44px; }
 
 /* 小节选择覆盖谱面命中区域；不改变 SVG 排版或播放反馈。 */
@@ -1323,6 +1320,4 @@
   content: ""; position: absolute; top: 6px; left: 12px; width: 32px; height: 3px;
   border-radius: 2px; background: var(--ds-primary); pointer-events: none;
 }
-.tapping-range-summary { margin: 0 0 var(--ds-space-3); min-height: 1.6em; }
-
-@media (max-width: 600px) { .rhythm-trainer .trainer-actions .practice-scope-toggle { grid-column: 1 / -1; } }
+.tapping-range-summary { margin: 0; min-height: 1.6em; }
