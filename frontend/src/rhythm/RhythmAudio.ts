@@ -176,7 +176,6 @@ export function scheduleCountIn(
 // 试听参数集中在这里；保留原始采样，便于按实际听感调整。
 const NOTE_OFFSET_SECONDS = 0;
 const NOTE_FADE_SECONDS = 0.08;
-const TAP_SOUND_SECONDS = 0.2;
 const NOTE_GAIN = 0.7;
 
 /** 开始一轮前准备所选乐器，再建立时钟。 */
@@ -184,12 +183,6 @@ export async function prepareTapSound(context: AudioContext, sound: PracticeSoun
   try {
     tapBuffers.set(context, await loadSound(context, practiceSounds.find(s => s.id === sound)!.file));
   } catch { throw new Error("练习声音加载失败，请重试。"); }
-}
-
-/** 立即播放固定长度的击拍反馈，不依赖谱面时值或命中误差。 */
-export function playTapSound(context: AudioContext, sources?: AudioScheduledSourceNode[]): void {
-  const startsAt = context.currentTime;
-  scheduleTapSound(context, startsAt, startsAt + TAP_SOUND_SECONDS, sources);
 }
 
 /** 起止时刻均为 AudioContext 上的绝对秒数；终点前平滑淡出，不越过音符边界。 */
@@ -230,4 +223,51 @@ export function scheduleTapSound(
 
   source.start(startsAt, NOTE_OFFSET_SECONDS, duration);
   sources?.push(source);
+}
+
+/** 每轮独立的击拍发声器。先 prepareTapSound，再创建；音色固定在创建时。
+ * 每次 tap 同步起音，松键不截断。stop 清除所有尾音，之后仍可继续敲击。
+ * 有限重叠：2 秒自然采样（末尾 300ms 收音），最多 4 个有效声部，
+ * 超额时最旧声部用 40ms 淡出；淡出期间允许短暂共存。
+ * 自然结算不必 stop，让末次尾音衰减；主动停止或开始下一轮时必须 stop。
+ */
+export function createTapFeedback(context: AudioContext) {
+  const buffer = tapBuffers.get(context);
+  if (!buffer) throw new Error("请先等待 prepareTapSound() 完成。");
+  type Voice = { source: AudioBufferSourceNode; gain: GainNode; end: number; retiring: boolean };
+  const voices = new Set<Voice>();
+  function retire(voice: Voice, at: number) {
+    if (voice.retiring || voice.end <= at) return;
+    voice.retiring = true;
+    const end = Math.min(voice.end, at + 0.04);
+    // 保留包络在此刻的实际值，不能恢复成峰值，否则旧尾音会突然变响。
+    voice.gain.gain.cancelAndHoldAtTime(at);
+    voice.gain.gain.linearRampToValueAtTime(0, end);
+    voice.end = end;
+    voice.source.stop(end);
+  }
+  return {
+    tap() {
+      const at = context.currentTime;
+      const active = [...voices].filter(voice => !voice.retiring && voice.end > at);
+      for (const voice of active.slice(0, Math.max(0, active.length - 4 + 1))) retire(voice, at);
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      const gain = context.createGain();
+      const duration = Math.min(2, buffer.duration);
+      const end = at + duration;
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(NOTE_GAIN, at + Math.min(0.002, duration / 4));
+      gain.gain.setValueAtTime(NOTE_GAIN, end - Math.min(0.3, duration / 4));
+      gain.gain.linearRampToValueAtTime(0, end);
+      source.connect(gain).connect(context.destination);
+      const voice = { source, gain, end, retiring: false };
+      voices.add(voice);
+      source.onended = () => { voices.delete(voice); source.disconnect(); gain.disconnect(); };
+      source.start(at, 0, duration);
+    },
+    stop() {
+      for (const voice of voices) retire(voice, context.currentTime);
+    },
+  };
 }

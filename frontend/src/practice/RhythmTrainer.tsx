@@ -31,7 +31,7 @@ import {
   type Metronome,
   scheduleCountIn,
   scheduleTapSound,
-  playTapSound,
+  createTapFeedback,
   prepareTapSound,
   prepareMetronomeSound,
   type PracticeClock,
@@ -158,6 +158,7 @@ function RhythmTrainer({
   const nextTargetIndexRef = useRef(0);
   const tapOffsetsRef = useRef<number[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const tapFeedbackRef = useRef<ReturnType<typeof createTapFeedback> | null>(null);
   const scheduledSourcesRef = useRef<AudioScheduledSourceNode[]>([]);
   const startingRef = useRef(false);
   const startRequestRef = useRef(0);
@@ -177,6 +178,8 @@ function RhythmTrainer({
       : null;
 
   const stopScheduledSounds = useCallback(() => {
+    tapFeedbackRef.current?.stop();
+    tapFeedbackRef.current = null;
     clearMetronomePlaybackRef.current?.();
     clearMetronomePlaybackRef.current = null;
     metronomeRef.current?.dispose();
@@ -331,6 +334,7 @@ function RhythmTrainer({
       if (request !== startRequestRef.current) return;
 
       stopScheduledSounds();
+      if (requestedMode === "practice") tapFeedbackRef.current = createTapFeedback(context);
       const clock = createPracticeClock(context, nextTimeline.countInDurationMs);
       clockRef.current = clock;
       metronomeRef.current = createMetronome(context, clock, bpm, exercise.timeSignature.beats, nextTimeline.durationMs);
@@ -439,7 +443,7 @@ function RhythmTrainer({
       // 自然结束后补交的旧输入只纠正结果，不能在结束后再补响。
       const nowMs = clock.nowMs();
       if (!finishedRef.current && nowMs < timeline.finishOffsetMs) {
-        playTapSound(audioContext, scheduledSourcesRef.current);
+        tapFeedbackRef.current?.tap();
       }
       tapOffsetsRef.current.push(tapOffsetMs);
       const judgement = judgePractice(

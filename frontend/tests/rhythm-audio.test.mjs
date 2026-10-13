@@ -41,6 +41,8 @@ function fakeContext() {
       const gain = {
         gain: {
           changes: [],
+          holds: [],
+          cancelAndHoldAtTime(time) { this.holds.push(time); },
           setValueAtTime(value, time) { this.changes.push([value, time]); },
           linearRampToValueAtTime(value, time) { this.changes.push([value, time]); },
           exponentialRampToValueAtTime(value, time) { this.changes.push([value, time]); },
@@ -135,7 +137,7 @@ test("节拍器采样并发缓存独立于钢琴，发声保留偏移、淡出�
   const sources = [];
   audio.scheduleCountIn(context, 12, true, sources);
   audio.scheduleCountIn(context, 13, false, sources);
-  audio.playTapSound(context);
+  audio.createTapFeedback(context).tap();
   assert.equal(sources[0].buffer, sources[1].buffer);
   assert.notEqual(sources[0].buffer, context.sources[2].buffer);
   assert.deepEqual(sources[0].started, [12, 0.044, 0.2]);
@@ -237,11 +239,11 @@ test("下载或解码失败后可以重新加载", async (t) => {
 test("发声同步复用采样，保留调度时刻并应用偏移和淡出，结束释放节点", async (t) => {
   const fetch = t.mock.method(globalThis, "fetch", async () => response());
   const context = fakeContext();
-  assert.throws(() => audio.playTapSound(context), /prepareTapSound/);
+  assert.throws(() => audio.createTapFeedback(context).tap(), /prepareTapSound/);
   await audio.prepareTapSound(context);
   const pending = [];
   audio.scheduleTapSound(context, 12, 14, pending);
-  audio.playTapSound(context, pending);
+  audio.scheduleTapSound(context, 10, 10.2, pending);
   assert.equal(fetch.mock.callCount(), 1);
   assert.equal(pending.length, 2);
   assert.notEqual(pending[0], pending[1]);
@@ -259,17 +261,17 @@ test("发声同步复用采样，保留调度时刻并应用偏移和淡出，�
   assert.equal(context.gains[0].disconnected, true);
 });
 
-test("击拍立即发声，每次均为固定短音，不依赖目标时值或敲击时刻", async (t) => {
+test("击拍立即发声，保留两秒尾音且不依赖目标时值或敲击时刻", async (t) => {
   t.mock.method(globalThis, "fetch", async () => response());
   const context = fakeContext();
   await audio.prepareTapSound(context);
   for (const now of [9.9, 10, 10.1]) {
     context.currentTime = now;
-    audio.playTapSound(context);
+    audio.createTapFeedback(context).tap();
     const [start, , duration] = context.sources.at(-1).started;
     assert.equal(start, now);
-    assert.ok(Math.abs(duration - 0.2) < 1e-10);
-    assert.deepEqual(context.gains.at(-1).gain.changes.at(-1), [0, now + 0.2]);
+    assert.equal(duration, 2);
+    assert.deepEqual(context.gains.at(-1).gain.changes.at(-1), [0, now + 2]);
   }
 });
 
@@ -293,17 +295,59 @@ test("切换音色后采用新素材，切回复用缓存，已有声源不受�
   const fetched = t.mock.method(globalThis, "fetch", async () => response());
   const context = fakeContext();
   await audio.prepareTapSound(context, "piano");
-  audio.playTapSound(context);
+  audio.createTapFeedback(context).tap();
   const piano = context.sources.at(-1).buffer;
   await audio.prepareTapSound(context, "guitar");
-  audio.playTapSound(context);
+  audio.createTapFeedback(context).tap();
   assert.notEqual(context.sources.at(-1).buffer, piano);
   assert.equal(context.sources[0].buffer, piano);
   await audio.prepareTapSound(context, "piano");
-  audio.playTapSound(context);
+  audio.createTapFeedback(context).tap();
   assert.equal(context.sources.at(-1).buffer, piano);
   assert.equal(fetched.mock.callCount(), 2);
   await audio.prepareMetronomeSound(context, "cowbell");
   audio.scheduleCountIn(context, 20, false, []);
   assert.deepEqual(context.sources.at(-1).started, [20, 0, 13.32]);
+});
+
+
+test("击拍最多保留四声，第五声回收最旧声，停止幂等且节点正常释放", async t => {
+  t.mock.method(globalThis, "fetch", async () => response());
+  const context = fakeContext();
+  await audio.prepareTapSound(context);
+  const player = audio.createTapFeedback(context);
+  for (let i = 0; i < 5; i++) {
+    context.currentTime = 10 + i * 0.1;
+    player.tap();
+    assert.deepEqual(context.sources[i].started, [context.currentTime, 0, 2]);
+    assert.equal(context.sources.filter(source => source.stops.length === 0).length, Math.min(i + 1, 4));
+  }
+  assert.ok(Math.abs(context.sources[0].stops[0] - 10.44) < 1e-9);
+  assert.equal(context.gains[0].gain.holds.length, 1);
+  player.stop(); player.stop();
+  assert.ok(context.sources.every(source => source.stops.length === 1));
+  for (const source of context.sources) source.onended();
+  assert.ok(context.gains.every(gain => gain.disconnected));
+  context.currentTime = 20;
+  player.tap();
+  assert.equal(context.sources.at(-1).stops.length, 0);
+});
+
+test("旧音自然结束后不回收，每轮音色固定于创建时", async t => {
+  t.mock.method(globalThis, "fetch", async () => response());
+  const context = fakeContext();
+  await audio.prepareTapSound(context, "piano");
+  const player = audio.createTapFeedback(context);
+  player.tap();
+  const piano = context.sources[0].buffer;
+  await audio.prepareTapSound(context, "guitar");
+  context.currentTime = 14;
+  player.tap();
+  assert.equal(context.sources[0].stops.length, 0);
+  assert.equal(context.sources.at(-1).buffer, piano);
+  const nextRound = audio.createTapFeedback(context);
+  nextRound.tap();
+  assert.notEqual(context.sources.at(-1).buffer, piano);
+  nextRound.stop();
+  assert.equal(context.sources[1].stops.length, 0);
 });
