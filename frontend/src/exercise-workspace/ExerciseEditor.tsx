@@ -8,28 +8,25 @@ import { useVisitState } from "../navigation/usePageNavigation";
 import { useAssistantExerciseTarget, useAssistantPageSection } from "../assistant/assistantContext";
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
 import type { CustomExercise, ExerciseDraft } from "../exercises/customExercises";
-import { parseRhythmExercise, expandRhythmElements, TICKS_PER_QUARTER, type RhythmElement, type RhythmExercise } from "../rhythm/RhythmModel";
+import { getMeasureTicks, parseRhythmExercise, expandRhythmElements, TICKS_PER_QUARTER, type RhythmElement, type RhythmExercise } from "../rhythm/RhythmModel";
 import { editorModule } from "./workspaceModules";
 import type { RhythmEditorHandle } from "../practice/RhythmEditor";
 import PracticeSettings, { type PracticeSettingsValue } from "../practice/PracticeSettings";
 import RhythmPlayback from "../practice/RhythmPlayback";
 import PracticeFrame from "../practice/PracticeFrame";
 import PracticeCue from "../practice/PracticeCue";
+import { TimeSignatureSelect } from "./TimeSignatureSelect";
 const RhythmEditor = editorModule.Component;
-
-const timeSignature: RhythmExercise["timeSignature"] = {
-  beats: 4,
-  beatType: 4,
-};
 
 /**
  * 一次历史访问及身份对应一份未保存草稿。允许小节未填满，试听保留完整小节时长，不做判题。
  * 小节只从末尾增减，删除有内容的小节需确认；至少保留一节，选择始终在有效范围内。
  * 返回原记录时恢复草稿，新建访问不复用；保存成功只清除提交版本，失败时保留。
  */
-export default function ExerciseEditor({ initial, scope, settingsScope = scope, onSave, onSaved, onCancel, registerGuard, children }: {
+export default function ExerciseEditor({ initial, allowTimeSignatureChange = false, scope, settingsScope = scope, onSave, onSaved, onCancel, registerGuard, children }: {
   children: (view: { title: ReactNode; actions: ReactNode; content: ReactNode }) => ReactNode;
   initial: ExerciseDraft;
+  allowTimeSignatureChange?: boolean;
   scope: string;
   settingsScope?: string;
   onSave: (draft: ExerciseDraft) => Promise<CustomExercise>;
@@ -45,29 +42,33 @@ export default function ExerciseEditor({ initial, scope, settingsScope = scope, 
   const [countdown, setCountdown] = useState<number | null>(null);
   const [draft, setDraft, forgetDraft] = useVisitState<{
     name: string;
+    timeSignature: RhythmExercise["timeSignature"];
     measures: RhythmElement[][];
     selectedMeasureIndex: number;
   }>(`editor:${scope}:draft`, {
     name: initial.name,
+    timeSignature: initial.exercise.timeSignature,
     measures: structuredClone(initial.exercise.measures.map(measure => measure.elements)),
     selectedMeasureIndex: 0,
   });
   const [settings, rememberSettings] = useVisitState<PracticeSettingsValue>(`practice:${settingsScope}:settings`, { bpm: 60, metronomeEnabled: true });
-  const { name, measures, selectedMeasureIndex } = draft;
+  const { name, timeSignature, measures, selectedMeasureIndex } = draft;
   useAssistantPageSection("editor", {
     page: "exercise_editor",
     description: "题目编辑视图，正在编辑未保存草稿；小节可能未填满，selectedMeasureIndex 从 0 开始。",
     state: { mode, name,
-      timeSignature: { beats: 4, beatType: 4 }, measure_count: measures.length,
+      timeSignature, canChangeTimeSignature: allowTimeSignatureChange, measure_count: measures.length,
       measures: measures.map(elements => ({ elements })), selectedMeasureIndex,
       bpm: settings.bpm, metronomeEnabled: settings.metronomeEnabled },
   });
   const [settled, setSettled] = useState(false);
   const [savedContent, setSavedContent] = useState(() => ({
     name: initial.name,
+    timeSignature: initial.exercise.timeSignature,
     measures: initial.exercise.measures.map(measure => measure.elements),
   }));
   const dirty = !settled && (name !== savedContent.name
+    || timeSignature.beats !== savedContent.timeSignature.beats
     || JSON.stringify(measures) !== JSON.stringify(savedContent.measures));
   const editorRef = useRef<RhythmEditorHandle>(null);
   const [saving, setSaving] = useState(false);
@@ -103,6 +104,10 @@ export default function ExerciseEditor({ initial, scope, settingsScope = scope, 
   }, [assistantRevision]);
   const applyAssistantExercise = useCallback((proposal: GeneratedExercise) => {
     if (locked.current) return false;
+    if (proposal.exercise.timeSignature.beats !== timeSignature.beats) {
+      setSaveError("候选练习的拍号与当前编辑拍号不同，请生成相同拍号的练习后再放入。");
+      return false;
+    }
     if (dirty && !window.confirm("替换当前未保存的练习内容？")) return false;
     setDraft(previous => ({ ...previous, name: proposal.title,
       measures: structuredClone(proposal.exercise.measures.map(measure => measure.elements)),
@@ -114,8 +119,20 @@ export default function ExerciseEditor({ initial, scope, settingsScope = scope, 
     setSaveError(null);
     editorRef.current?.clearMessage();
     return true;
-  }, [dirty, setDraft]);
+  }, [dirty, setDraft, timeSignature.beats]);
   useAssistantExerciseTarget(saving ? null : applyAssistantExercise);
+
+  function changeTimeSignature(next: RhythmExercise["timeSignature"]) {
+    if (locked.current || !allowTimeSignatureChange || next.beats === timeSignature.beats) return;
+    if (measures.some(elements => elements.length > 0)
+      && !window.confirm("切换拍号将清空已填写的节奏，是否继续？")) return;
+    setDraft(previous => ({ ...previous, timeSignature: next,
+      measures: previous.measures.map(() => []), selectedMeasureIndex: 0 }));
+    setCountdown(null);
+    setSaveError(null);
+    setAssistantApplied(false);
+    editorRef.current?.clearMessage();
+  }
 
   function addMeasure() {
     setSaveError(null);
@@ -159,11 +176,11 @@ export default function ExerciseEditor({ initial, scope, settingsScope = scope, 
       return;
     }
     setNameError(false);
-    const invalidMeasure = measures.findIndex(elements => expandRhythmElements(elements).durationTicks !== timeSignature.beats * TICKS_PER_QUARTER);
+    const invalidMeasure = measures.findIndex(elements => expandRhythmElements(elements).durationTicks !== getMeasureTicks(timeSignature));
     if (invalidMeasure !== -1) {
       const beats = expandRhythmElements(measures[invalidMeasure]).durationTicks / TICKS_PER_QUARTER;
       setDraft(previous => ({ ...previous, selectedMeasureIndex: invalidMeasure }));
-      editorRef.current?.showMessage(`第 ${invalidMeasure + 1} 小节${beats < 4 ? `还差 ${4 - beats} 拍` : `超出 ${beats - 4} 拍`}，请修改后保存`);
+      editorRef.current?.showMessage(`第 ${invalidMeasure + 1} 小节${beats < timeSignature.beats ? `还差 ${timeSignature.beats - beats} 拍` : `超出 ${beats - timeSignature.beats} 拍`}，请修改后保存`);
       return;
     }
     locked.current = true;
@@ -185,7 +202,7 @@ export default function ExerciseEditor({ initial, scope, settingsScope = scope, 
       forgetDraft(draft);
       if (generation !== saveGeneration.current) return;
       flushSync(() => {
-        setSavedContent({ name: saved.name, measures: saved.exercise.measures.map(measure => measure.elements) });
+        setSavedContent({ name: saved.name, timeSignature: saved.exercise.timeSignature, measures: saved.exercise.measures.map(measure => measure.elements) });
         setSettled(true);
       });
       onSaved(saved);
@@ -221,6 +238,12 @@ export default function ExerciseEditor({ initial, scope, settingsScope = scope, 
       <PracticeSettings layout="sidebar" initialValue={settings} onChange={rememberSettings}>
         {({ bpm, metronomeEnabled }, settingsPanel) => <PracticeFrame
           scopeControls={<div className="editor-measures">
+            <div className="editor-meter">
+              <span>拍号</span>
+              {allowTimeSignatureChange
+                ? <TimeSignatureSelect value={timeSignature} onChange={changeTimeSignature} />
+                : <span>{timeSignature.beats}/{timeSignature.beatType}</span>}
+            </div>
             <div className="draft-measure-navigation" role="group" aria-label="小节导航">
               <span>小节</span>
               {measures.map((_, index) => <button key={index} type="button" aria-label={`跳到小节 ${index + 1}`}
@@ -234,7 +257,7 @@ export default function ExerciseEditor({ initial, scope, settingsScope = scope, 
           </div>}
           settingsPanel={settingsPanel}
           toolbar={<div className="editor-playback">
-            <RhythmPlayback key={[bpm, measures.length, assistantRevision].join(":")}
+            <RhythmPlayback key={[bpm, timeSignature.beats, measures.length, assistantRevision].join(":")}
               bpm={bpm} metronomeEnabled={metronomeEnabled} timeSignature={timeSignature}
               options={[{ id: "draft", label: "试听", stopLabel: "停止", measures }]}
               onCountInChange={setCountdown} />

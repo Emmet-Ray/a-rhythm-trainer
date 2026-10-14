@@ -6,8 +6,8 @@ import {
 import { exerciseSources } from "./PracticeRecord";
 import {
   parseRhythmExercise,
+  getMeasureTicks,
   expandRhythmElements,
-  TICKS_PER_QUARTER,
 } from "../rhythm/RhythmModel";
 import type { PracticeRecord } from "./PracticeRecord";
 import { recordKey } from "./practiceRecords";
@@ -196,7 +196,7 @@ export function parsePracticeRecord(value: unknown): PracticeRecord {
           if (
             !Array.isArray(measure) ||
             expandRhythmElements(measure).durationTicks >
-              exercise.timeSignature.beats * TICKS_PER_QUARTER
+              getMeasureTicks(exercise.timeSignature)
           )
             throw new Error("作答内容无效");
         }

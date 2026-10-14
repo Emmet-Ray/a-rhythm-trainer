@@ -9,6 +9,7 @@ import { useBrowsingState, useVisitState } from "../navigation/usePageNavigation
 import { Navigate, useNavigate, useParams } from "react-router";
 import NotFoundPage from "./NotFoundPage";
 import { generateRandomExercise, randomMaterials, defaultRandomMaterials, randomMeasureCounts, DEFAULT_RANDOM_MEASURE_COUNT, type RandomGenerationConfig } from "../exercises/randomExercises";
+import { TimeSignatureSelect } from "../exercise-workspace/TimeSignatureSelect";
 import type { RhythmExercise } from "../rhythm/RhythmModel";
 
 // 进入对应模式后加载完整工作区。
@@ -51,10 +52,13 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
   const rangeErrorId = useId();
   const drawerRef = useRef<HTMLDialogElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
-  const [config, setConfig] = useBrowsingState<RandomGenerationConfig>(`random:${mode}:config`, { mode, materials: defaultRandomMaterials, measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
+  const [config, setConfig] = useBrowsingState<RandomGenerationConfig>(`random:${mode}:config`, { mode, timeSignature: { beats: 4, beatType: 4 }, materials: defaultRandomMaterials, measureCount: DEFAULT_RANDOM_MEASURE_COUNT });
   const [generated, setGenerated] = useVisitState<{ id: string; exercise: RhythmExercise | null }>(`random:${mode}:question`, () => ({
     id: crypto.randomUUID(),
-    exercise: config.materials.length > 0 ? generateRandomExercise(config) : null,
+    exercise: (() => {
+      try { return generateRandomExercise(config); }
+      catch { return null; }
+    })(),
   }));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -64,7 +68,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
   const rangeError = config.materials.length === 0 ? "至少选择一个练习范围" : null;
 
   useAssistantPageContext(editing ? null : { page: "random_practice", description: "随机练习；生成设置是下一次换题的条件，不一定是当前题目的生成条件。",
-    state: { mode, settingsOpen, generationSettings: { measureCount: config.measureCount,
+    state: { mode, settingsOpen, generationSettings: { timeSignature: config.timeSignature, measureCount: config.measureCount,
       materials: randomMaterials.filter(item => config.materials.includes(item.id)).map(({ id, label, group }) => ({ id, label, group })) },
       exerciseAvailable: generated.exercise !== null, configurationError: rangeError ?? error } });
 
@@ -125,6 +129,13 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
       </header>
       <section className="design-system random-generation" aria-label="生成配置">
         <div className="random-config">
+            <div className="editor-meter">
+              <span>拍号</span>
+              <TimeSignatureSelect value={config.timeSignature} onChange={timeSignature => {
+                setConfig(previous => ({ ...previous, timeSignature }));
+                setError(null);
+              }} />
+            </div>
             <fieldset className="measure-count">
               <legend>小节数</legend>
               <div className="measure-count-options">
@@ -193,7 +204,8 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
           </>}
         </ExerciseWorkbench>}
         {!generated.exercise && <div className="design-system practice-page"><PracticeHeading title="随机练习" />
-          <button type="button" onClick={() => setSettingsOpen(true)}>生成设置</button></div>}
+          <button type="button" onClick={() => setSettingsOpen(true)}>生成设置</button>
+          <button type="button" disabled={config.materials.length === 0} onClick={generate}>换一题</button></div>}
 
     </>
   );

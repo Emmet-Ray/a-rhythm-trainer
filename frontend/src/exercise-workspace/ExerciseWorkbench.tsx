@@ -64,7 +64,7 @@ export function ExerciseWorkbench({ initial, origin, settingsScope, initialEditi
   }}><Pencil className="ui-icon" aria-hidden="true" />编辑</button></div>;
   const view = { name: current.name, title: current.name, editing, editAction, history: { context, exercise: current.exercise, mode: current.mode }, canLeave };
   return <Suspense fallback={children({ ...view, content: <LoadingPlaceholder workspace label="正在加载练习…" /> })}>
-    {editing ? <ExerciseEditor initial={current} scope={scope} settingsScope={settingsScope} registerGuard={registerGuard}
+    {editing ? <ExerciseEditor allowTimeSignatureChange={origin === null && saved === null} initial={current} scope={scope} settingsScope={settingsScope} registerGuard={registerGuard}
       onSave={draft => {
         const id = saved?.id ?? (origin?.source === "custom" ? origin.exerciseId : undefined);
         return id ? updateExercise(id, draft) : saveExercise(draft);

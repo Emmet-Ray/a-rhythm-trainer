@@ -23,7 +23,7 @@ class ExerciseProposal(BaseModel):
     description: str = Field(min_length=1, max_length=1000)
     exercise: dict = Field(description=(
         '格式为 {timeSignature: {beats: 4, beatType: 4}, measures: [{elements: [...]}]}。'
-        '每小节恰好四拍。普通元素为 {kind: "note" 或 "rest", '
+        'beats 可为 2、3、4，beatType 固定为 4；每小节恰好 beats 拍。编辑已有题目时保持页面拍号，新建时遵循用户选择，未指定则用 4/4。普通元素为 {kind: "note" 或 "rest", '
         'noteValue: "whole"、"half"、"quarter"、"eighth" 或 "sixteenth", dots: 0 或 1（可省略）}。'
         '小三连为 {kind: "triplet", notes: 三个无附点 eighth 音符}。'
     ))
@@ -84,7 +84,7 @@ def create_propose_rhythm_exercise_tool() -> Tool:
     return Tool.from_schema(
         function=execute,
         name="propose_rhythm_exercise",
-        description="生成一份可试听和练习的完整 4/4 节奏练习；每小节必须恰好四拍。不会自动应用或保存到题库。",
+        description="生成一份可试听和练习的完整 2/4、3/4 或 4/4 节奏练习；每小节必须填满所选拍号。不会自动应用或保存到题库。",
         json_schema=ExerciseProposal.model_json_schema(),
         sequential=True,
     )

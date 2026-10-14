@@ -5,12 +5,11 @@ export { noteValueToDurationInQuarterNotes, rhythmEventToDurationInQuarterNotes,
 // 核心模型部分
 type NoteValue = "whole" | "half" | "quarter" | "eighth" | "sixteenth";
 
+export const supportedBeats = [2, 3, 4] as const;
+export type TimeSignature = { beats: typeof supportedBeats[number]; beatType: 4 };
+
 type RhythmExercise = {
-  // todo：目前是写死的 4/4 拍
-  timeSignature: {
-    beats: 4;
-    beatType: 4;
-  };
+  timeSignature: TimeSignature;
 
   // 每个小节约定填满当前拍号；事件不跨小节，暂不支持连音线。
   measures: RhythmMeasure[];
@@ -39,9 +38,18 @@ type RhythmElement = RhythmEvent | EighthTriplet;
 // 与 VexFlow 的内部 ticks 无关，只在生成播放时间线时换算为毫秒。
 export const TICKS_PER_QUARTER = 24;
 
+/** 支持范围与小节容量的唯一入口；时值单位始终是四分音符 24 tick。 */
+export function getMeasureTicks(signature: TimeSignature): number {
+  if (!signature || !supportedBeats.includes(signature.beats) || signature.beatType !== 4) {
+    throw new Error("目前只支持 2/4、3/4、4/4 拍。");
+  }
+  return signature.beats * TICKS_PER_QUARTER;
+}
+
+
 /** 展开一个小节的元素（也可用于未填满的小节片段）。
  * 输出事件起点为小节内 tick，组下标指向展开事件；不修改输入。
- * 验证三连音结构，允许非拍头起点；四拍总长由 validateRhythmExercise 检查。
+ * 验证三连音结构，允许非拍头起点；小节总长由 validateRhythmExercise 检查。
  */
 export function expandRhythmElements(elements: readonly RhythmElement[]) {
   const events: { event: RhythmEvent; startTick: number; durationTicks: number }[] = [];
@@ -84,14 +92,12 @@ function rhythmEventToDurationInQuarterNotes(event: RhythmEvent): number {
   return noteValueToDurationInQuarterNotes(event.noteValue) * (event.dots === 1 ? 1.5 : 1);
 }
 
-/** 校验当前 4/4 模型：每个已存在的小节必须填满四拍，不自动补拍或拆分。
+/** 校验完整模型：每个已存在的小节必须填满拍号指定的容量，不自动补拍或拆分。
  * 零小节保留为空练习；空小节不同于全小节休止，必须显式录入休止符。
  * 这是类型化练习的内容校验，不是任意外部 JSON 的结构解析器。
  */
 function validateRhythmExercise(exercise: RhythmExercise): void {
-  if (exercise.timeSignature.beats !== 4 || exercise.timeSignature.beatType !== 4) {
-    throw new Error("目前只支持 4/4 拍。");
-  }
+  const measureTicks = getMeasureTicks(exercise.timeSignature);
   exercise.measures.forEach((measure, measureIndex) => {
     let expanded;
     try {
@@ -99,8 +105,8 @@ function validateRhythmExercise(exercise: RhythmExercise): void {
     } catch (error) {
       throw new Error(`第 ${measureIndex + 1} 小节${error instanceof Error ? error.message : String(error)}`, { cause: error });
     }
-    if (expanded.durationTicks !== 4 * TICKS_PER_QUARTER) {
-      throw new Error(`第 ${measureIndex + 1} 小节时值为 ${expanded.durationTicks / TICKS_PER_QUARTER} 拍，应为 4 拍。`);
+    if (expanded.durationTicks !== measureTicks) {
+      throw new Error(`第 ${measureIndex + 1} 小节时值为 ${expanded.durationTicks / TICKS_PER_QUARTER} 拍，应为 ${exercise.timeSignature.beats} 拍。`);
     }
   });
 }

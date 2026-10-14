@@ -186,7 +186,7 @@ def _validate_records(records):
                         and len(attempt["answerMeasures"]) == len(measures)
                     )
                     for measure in attempt["answerMeasures"]:
-                        parse_rhythm_elements(measure)
+                        parse_rhythm_elements(measure, exercise["timeSignature"])
     return deepcopy(records)
 
 

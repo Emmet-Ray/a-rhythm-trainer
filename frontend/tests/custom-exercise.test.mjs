@@ -396,7 +396,7 @@ test("工作区恢复听写答案、验证及设置但不恢复结果遮罩，�
 test("原访问恢复草稿内容和生效设置，模式不同不载入，清除后回到空草稿", async () => {
   const visits = new PageVisits();
   const draft = {
-    name: "本地草稿",
+    name: "本地草稿", timeSignature: { beats: 4, beatType: 4 },
     measures: [[], [], [{ kind: "note", noteValue: "half" }]],
     selectedMeasureIndex: 2,
     settings: { bpm: 93, metronomeEnabled: false },

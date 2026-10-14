@@ -1,6 +1,17 @@
 """完整节奏的结构解析和音乐规则；与前端 RhythmModel 的支持范围保持一致。"""
 
 MAX_MEASURES = 64
+TICKS_PER_QUARTER = 24
+
+
+def measure_ticks(signature):
+    """解析支持的拍号并返回小节容量，完整题目与作答校验共用。"""
+    signature = _object(signature, ("beats", "beatType"))
+    if (type(signature["beats"]) is not int or signature["beats"] not in (2, 3, 4)
+            or type(signature["beatType"]) is not int or signature["beatType"] != 4):
+        raise ValueError("目前只支持 2/4、3/4、4/4 拍。")
+    return signature["beats"] * TICKS_PER_QUARTER
+
 # 与前端相同的音乐时间单位：四分音符 24 tick，三连音中每音 8 tick。
 _NOTE_TICKS = {"whole": 96, "half": 48, "quarter": 24, "eighth": 12, "sixteenth": 6}
 
@@ -28,15 +39,14 @@ def _event(value, *, triplet=False):
 
 
 def parse_rhythm_exercise(value: object) -> dict:
-    """解析完整 4/4 节奏并返回独立副本；非法输入抛出 ValueError。
+    """解析完整 2/4、3/4、4/4 节奏并返回独立副本；非法输入抛出 ValueError。
 
-    限 1–64 小节，每小节恰好四拍；支持现有音符、休止符、单附点和小三连。
+    限 1–64 小节，每小节填满拍号指定的容量；支持现有音符、休止符、单附点和小三连。
     拒绝额外字段，不修改输入；不依赖 HTTP、数据库或外部服务。
     """
     exercise = _object(value, ("timeSignature", "measures"))
     signature = _object(exercise["timeSignature"], ("beats", "beatType"))
-    if any(type(signature[key]) is not int or signature[key] != 4 for key in ("beats", "beatType")):
-        raise ValueError("目前只支持 4/4 拍。")
+    capacity = measure_ticks(signature)
     measures = exercise["measures"]
     if not isinstance(measures, list) or not 1 <= len(measures) <= MAX_MEASURES:
         raise ValueError("练习须包含 1–64 个小节。")
@@ -44,21 +54,22 @@ def parse_rhythm_exercise(value: object) -> dict:
     for index, measure in enumerate(measures, 1):
         try:
             elements = _object(measure, ("elements",))["elements"]
-            # 最短普通音符为十六分音符，合法四拍最多 16 个顶层元素。
-            if not isinstance(elements, list) or not 1 <= len(elements) <= 16:
-                raise ValueError("小节须包含 1–16 个节奏元素。")
-            copied, total = parse_rhythm_elements(elements)
-            if total != 96:
-                raise ValueError("小节必须恰好四拍。")
+            # 最短普通音符为十六分音符，每拍最多四个顶层元素。
+            if not isinstance(elements, list) or not 1 <= len(elements) <= signature["beats"] * 4:
+                raise ValueError(f"小节须包含 1–{signature['beats'] * 4} 个节奏元素。")
+            copied, total = parse_rhythm_elements(elements, signature)
+            if total != capacity:
+                raise ValueError(f"小节必须恰好 {signature['beats']} 拍。")
             result.append({"elements": copied})
         except ValueError as error:
             raise ValueError(f"第 {index} 小节：{error}") from None
-    return {"timeSignature": {"beats": 4, "beatType": 4}, "measures": result}
+    return {"timeSignature": dict(signature), "measures": result}
 
 
-def parse_rhythm_elements(elements):
+def parse_rhythm_elements(elements, signature):
     """校验一小节草稿（允许空白和欠拍），返回元素副本与 tick 总长。"""
-    if not isinstance(elements, list) or len(elements) > 16:
+    capacity = measure_ticks(signature)
+    if not isinstance(elements, list) or len(elements) > signature["beats"] * 4:
         raise ValueError("小节节奏元素无效")
     copied, total = [], 0
     for element in elements:
@@ -72,8 +83,8 @@ def parse_rhythm_elements(elements):
             event, ticks = _event(element)
             copied.append(event)
             total += ticks
-    if total > 96:
-        raise ValueError("小节必须恰好四拍")
+    if total > capacity:
+        raise ValueError(f"小节不能超过 {signature['beats']} 拍")
     return copied, total
 
 

@@ -1296,7 +1296,7 @@
 .design-system .exercise-name-field input:focus { outline: 2px solid var(--ds-primary); outline-offset: 4px; background: var(--ds-surface); }
 .design-system .exercise-name-field input[aria-invalid="true"] { outline: 2px solid var(--ds-error); outline-offset: 4px; }
 .exercise-editor .practice-controls .practice-toolbar { flex: 1 1 220px; }
-.editor-measures { display: flex; align-items: center; gap: 12px; min-width: 0; max-width: 100%; }
+.editor-measures { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-width: 0; max-width: 100%; }
 .editor-measures .draft-measure-navigation { margin: 0; min-width: 0; }
 .editor-playback { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .exercise-editor .editor-playback .rhythm-playback-buttons button { min-width: 88px; min-height: 44px; }
@@ -1325,3 +1325,8 @@
 .sound-setting { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 28px; }
 .sound-setting > label { color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .sound-setting .record-filter-trigger { width: 260px; max-width: 100%; }
+
+/* 拍号是草稿／生成条件，与小节导航分组显示。 */
+.editor-meter { display: flex; align-items: center; gap: 12px; color: var(--ds-muted); }
+.editor-meter .record-filter-trigger { width: auto; min-width: 90px; }
+.random-config > .editor-meter { margin-bottom: 20px; }

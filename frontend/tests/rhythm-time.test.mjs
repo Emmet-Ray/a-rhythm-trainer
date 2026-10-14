@@ -867,7 +867,7 @@ test("小节校验拒绝空、欠拍、超拍以及非法附点，并给出小�
       ...exercise, measures: [{ elements: [{ kind: "note", noteValue: "whole", dots }] }],
     }, 60, 3, windows), /第 1 小节第 1 个事件：附点数/);
   }
-  assert.throws(() => model.validateRhythmExercise({ ...exercise, timeSignature: { beats: 3, beatType: 4 } }), /4\/4/);
+  assert.throws(() => model.validateRhythmExercise({ ...exercise, timeSignature: { beats: 5, beatType: 4 } }), /4\/4/);
 });
 
 test("附点后的连梁按完整时值定位，跨拍的附点组合不连梁", () => {

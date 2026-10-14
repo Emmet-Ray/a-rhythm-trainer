@@ -1,7 +1,7 @@
 import { useImperativeHandle, useState, type ReactNode, type Ref } from "react";
 import { Delete, Eraser } from "lucide-react";
 import {
-  expandRhythmElements,
+  getMeasureTicks, expandRhythmElements,
   rhythmEventToDurationInQuarterNotes,
   TICKS_PER_QUARTER,
   type RhythmElement,
@@ -102,7 +102,7 @@ export function RhythmEditor({
   onSelectMeasure,
   onChange,
 }: RhythmEditorProps) {
-  const measureBeats = timeSignature.beats * (4 / timeSignature.beatType);
+  const measureBeats = getMeasureTicks(timeSignature) / TICKS_PER_QUARTER;
   const [addEventMessage, setAddEventMessage] = useState("");
   useImperativeHandle(
     ref,

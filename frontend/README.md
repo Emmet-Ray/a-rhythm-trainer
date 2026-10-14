@@ -46,7 +46,7 @@ npm run preview
 | 击拍小节选择、局部练习与记录 | `tapping-range.js` |
 | 击拍尾音重叠、停止与离页清理 | `tap-feedback.js` |
 | 操作／设置布局、听写小节导航与参考答案 | `practice-layout.js` |
-| 编辑保存与生成题目 | `editor-feedback.js`、`edit-generated-exercise.js`、`random-settings.js` |
+| 编辑保存与生成题目 | `editor-feedback.js`、`edit-generated-exercise.js`、`random-settings.js`、`time-signatures.js` |
 | 图片、流与发送确认 | `assistant-images.js`、`assistant-stream.js`、`assistant-confirmation.js` |
 | 导航和浮层动效 | `page-motion.js`、`navigation-repeat.js`、`surface-motion.js` |
 

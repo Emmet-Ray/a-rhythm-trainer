@@ -54,7 +54,7 @@ def test_missing_or_non_object_input_rejected(value):
 def test_underfull_and_overfull_measure_report_location(count):
     value = candidate()
     value["exercise"]["measures"].append({"elements": [{"kind": "note", "noteValue": "quarter"}] * count})
-    with pytest.raises(ValidationError, match="第 2 小节：小节必须恰好四拍"):
+    with pytest.raises(ValidationError, match=r"第 2 小节：小节.*4 拍"):
         GeneratedExercise(value)
 
 

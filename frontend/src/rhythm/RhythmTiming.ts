@@ -1,5 +1,5 @@
 import {
-  expandRhythmElements,
+  getMeasureTicks, expandRhythmElements,
   TICKS_PER_QUARTER,
   validateRhythmExercise,
   type RhythmExercise,
@@ -420,7 +420,7 @@ export function createRhythmPlaybackTimeline(
   if (!Number.isFinite(bpm) || bpm <= 0) throw new Error("BPM 必须为正数。");
   const beatMs = 60000 / bpm;
   const measureTicks =
-    timeSignature.beats * (4 / timeSignature.beatType) * TICKS_PER_QUARTER;
+    getMeasureTicks(timeSignature);
   const notes: { startOffsetMs: number; endOffsetMs: number }[] = [];
   measures.forEach((elements, index) => {
     const expanded = expandRhythmElements(elements);

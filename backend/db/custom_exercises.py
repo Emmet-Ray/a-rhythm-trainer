@@ -40,7 +40,7 @@ def create_custom_exercise(
 ) -> CustomExercise:
     """校验后新建独立快照；同名不覆盖，ID/创建时间由后端生成。
 
-    名称去除首尾空白，限 1–100 字符；题目限 1–64 小节，每小节完整四拍。
+    名称去除首尾空白，限 1–100 字符；题目限 1–64 小节，每小节填满拍号指定的容量。
     拒绝额外字段及尚未支持的节奏；不会修改调用方的输入。
     flush 后返回 ORM 对象，不 commit/rollback/关闭 Session；提交成功才可通知用户。
     """
@@ -94,6 +94,8 @@ def update_custom_exercise(session: Session, exercise_id: str, *, name: str, exe
     if not isinstance(name, str) or not 1 <= len(name.strip()) <= MAX_NAME_LENGTH:
         raise ValueError("练习名称须为 1–100 个字符。")
     normalized = parse_rhythm_exercise(exercise)
+    if normalized["timeSignature"] != item.exercise["timeSignature"]:
+        raise ValueError("已有练习不能修改拍号，请新建练习。")
     item.name = name.strip()
     item.exercise = normalized
     session.flush()

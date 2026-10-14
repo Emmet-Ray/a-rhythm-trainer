@@ -23,7 +23,7 @@ try {
 }
 
 
-const config = (materials, measureCount = 2, mode = "tapping") => ({ materials, measureCount, mode });
+const config = (materials, measureCount = 2, mode = "tapping") => ({ materials, measureCount, mode, timeSignature: { beats: 4, beatType: 4 } });
 const basic = ["whole-note", "half-note", "quarter-note"];
 
 test("每个范围只启用对应材料，组合无需勾选基础音符，重复选择不增加权重", () => {
