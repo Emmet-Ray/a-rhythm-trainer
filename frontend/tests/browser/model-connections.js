@@ -44,10 +44,10 @@ async (page) => {
   await page.goto(origin + '/settings?category=models');
   await page.getByRole('button', { name: '配置 DeepSeek', exact: true }).click();
   await page.getByLabel('API Key', { exact: true }).fill('invalid');
-  await page.getByRole('button', { name: '验证并保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByText('API Key 无效', { exact: true }).waitFor();
   await page.getByLabel('API Key', { exact: true }).fill('test-only-key');
-  await page.getByRole('button', { name: '验证并保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: '管理 DeepSeek', exact: true }).waitFor();
   if (await page.getByRole('textbox').count()) throw new Error('configured key field should be collapsed');
   if (await page.getByRole('radio').count()) throw new Error('connections must not be mutually exclusive');
@@ -82,7 +82,7 @@ async (page) => {
   await started;
   await page.getByRole('button', { name: '配置 DeepSeek', exact: true }).click();
   await page.getByLabel('API Key', { exact: true }).fill('replacement-test-key');
-  await page.getByRole('button', { name: '验证并保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: '管理 DeepSeek', exact: true }).waitFor();
   await cancelled;
   releaseCatalog();

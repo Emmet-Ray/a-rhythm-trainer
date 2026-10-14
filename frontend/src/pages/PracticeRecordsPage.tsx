@@ -1,3 +1,4 @@
+import { useConfirm } from "../ui/confirmation";
 import { useRetainedData } from "../ui/useRetainedData";
 import { useQuery } from "@tanstack/react-query";
 import { ActionError } from "../ui/ActionError";
@@ -65,11 +66,10 @@ function LocalRecords() {
       records: data.error ? [] : filtered.map(record => ({ id: record.id, source: record.source,
         exerciseId: record.exerciseId, title: record.title, mode: record.mode, allTimeAttempts: record.attemptCount })), selectedRecordId: selected?.id ?? null } });
   if (!query.isFetching && !query.error && page !== pagination.page) setPage(pagination.page);
+  const confirm = useConfirm();
   async function remove(record: RecordSummary) {
     if (
-      !window.confirm(
-        `确定删除“${record.title}”的全部 ${record.attemptCount} 次尝试？此操作无法撤销。`,
-      )
+      !await confirm({ title: "删除练习记录", description: `将删除全部 ${record.attemptCount} 次尝试。`, confirmLabel: "删除", danger: true })
     )
       return;
     setActionError("");

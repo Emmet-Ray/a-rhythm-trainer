@@ -1,3 +1,4 @@
+import { lockModalScroll } from "../ui/modalScroll";
 import { useRetainedData } from "../ui/useRetainedData";
 import { useQuery } from "@tanstack/react-query";
 import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
@@ -109,11 +110,10 @@ export function RecordDetail({
     const element = dialog.current!;
     const trigger = document.activeElement;
     element.showModal();
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockModalScroll();
     return () => {
       element.close();
-      document.body.style.overflow = previous;
+      unlockScroll();
       if (trigger instanceof HTMLElement && trigger.isConnected)
         trigger.focus({ preventScroll: true });
     };

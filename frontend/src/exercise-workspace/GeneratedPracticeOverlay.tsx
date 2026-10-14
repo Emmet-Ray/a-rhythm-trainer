@@ -1,3 +1,4 @@
+import { lockModalScroll } from "../ui/modalScroll";
 import PracticeShortcutHelp from "./PracticeShortcutHelp";
 import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
 import { PlaybackContext } from "../practice/PlaybackGroup";
@@ -36,7 +37,7 @@ export function GeneratedPracticeOverlay({ generated, onClose }: { generated: Ge
 /** 对话框的显示、焦点和键盘作用域与实际 DOM 一起挂载。 */
 function PracticeDialog({ prepare, canLeave, onClose, children }: {
   prepare: (element: HTMLDialogElement) => void;
-  canLeave: () => boolean;
+  canLeave: () => Promise<boolean>;
   onClose: () => void;
   children: (close: () => void) => ReactNode;
 }) {
@@ -47,18 +48,17 @@ function PracticeDialog({ prepare, canLeave, onClose, children }: {
     playback?.stop();
     const element = dialog.current!;
     const trigger = document.activeElement;
-    const overflow = document.body.style.overflow;
+    const unlockScroll = lockModalScroll();
     prepare(element);
     element.showModal();
     element.focus({ preventScroll: true });
-    document.body.style.overflow = "hidden";
     return () => {
       element.close();
-      document.body.style.overflow = overflow;
+      unlockScroll();
       if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus({ preventScroll: true });
     };
   }, [playback, prepare]);
-  const close = () => { if (canLeave()) { playback?.stop(); dismiss(); } };
+  const close = async () => { if (await canLeave()) { playback?.stop(); dismiss(); } };
   return createPortal(<dialog ref={dialog} className="generated-practice-overlay design-system" tabIndex={-1}
     aria-label="练习" aria-modal="true" onCancel={event => {
       if (event.target !== event.currentTarget) return;

@@ -57,7 +57,7 @@ export function ExerciseProposalResult({ value, playbackGroup, onPracticeStart, 
       }}>{proposal.mode === "dictation" ? <Ear size={16} aria-hidden="true" /> : <Hand size={16} aria-hidden="true" />}
         {proposal.mode === "dictation" ? "开始听写" : "开始击拍"}
       </button>}
-      {apply && <button className="exercise-start" type="button" onClick={() => { const applied = apply(proposal); if (applied) { store?.markAnswerViewed(proposal.id); playbackGroup.stop(); } }}>
+      {apply && <button className="exercise-start" type="button" onClick={async () => { const applied = await apply(proposal); if (applied) { store?.markAnswerViewed(proposal.id); playbackGroup.stop(); } }}>
         <PanelLeft size={16} aria-hidden="true" />放入编辑器
       </button>}
     </>} />

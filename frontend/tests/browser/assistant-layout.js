@@ -4,7 +4,6 @@ async (page) => {
   function check(value, message) { if (!value) throw new Error(message); }
   // 此脚本会应用测试草稿后离开，直接接受应用内的离开确认。
   await page.addInitScript(() => {
-    window.confirm = () => true;
     window.practiceAudioContexts = [];
     const NativeAudioContext = window.AudioContext;
     window.AudioContext = new Proxy(NativeAudioContext, {

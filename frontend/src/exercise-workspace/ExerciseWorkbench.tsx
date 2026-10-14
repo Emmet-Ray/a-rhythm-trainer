@@ -18,8 +18,8 @@ export type WorkbenchView = {
   editAction: ReactNode;
   content: ReactNode;
   history: { context: ExerciseContext; exercise: ExerciseDraft["exercise"]; mode: ExerciseDraft["mode"] };
-  /** 关闭所在弹窗等非路由离开也必须经过草稿保护。 */
-  canLeave: () => boolean;
+  /** 关闭所在弹窗等非路由离开须等待草稿确认；取消或编辑器卸载返回 false。 */
+  canLeave: () => Promise<boolean>;
 };
 
 /** 同一道题的练习／编辑生命周期。来源决定首次保存的身份，之后始终更新保存的副本。
@@ -44,8 +44,8 @@ export function ExerciseWorkbench({ initial, origin, settingsScope, initialEditi
   const [viewed, setViewed] = useVisitState(`workbench:${scope}:viewed`, false);
   const [version, setVersion] = useVisitState(`workbench:${scope}:version`, 0);
   const playback = useContext(PlaybackContext);
-  const [guard, setGuard] = useState<(() => boolean) | null>(null);
-  const registerGuard = useCallback((next: (() => boolean) | null) => { setGuard(() => next); }, []);
+  const [guard, setGuard] = useState<(() => Promise<boolean>) | null>(null);
+  const registerGuard = useCallback((next: (() => Promise<boolean>) | null) => { setGuard(() => next); }, []);
   const current = saved ?? initial;
   const context: ExerciseContext = saved
     ? { source: "custom", exerciseId: saved.id, title: saved.name }
@@ -58,7 +58,7 @@ export function ExerciseWorkbench({ initial, origin, settingsScope, initialEditi
     return () => onEditingChange?.(false);
   }, [editing, onEditingChange]);
   const stop = () => { playback?.stop(); onBusyChange?.(false); };
-  const canLeave = () => !editing || (guard?.() ?? false);
+  const canLeave = async () => !editing || (guard?.() ?? false);
   const editAction = editing ? null : <div className="text-actions"><button type="button" className="exercise-edit" onClick={() => {
     stop(); setViewed(true); setEditing(true);
   }}><Pencil className="ui-icon" aria-hidden="true" />编辑</button></div>;

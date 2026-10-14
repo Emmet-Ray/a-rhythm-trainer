@@ -1,26 +1,19 @@
-import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
+import { useConfirm } from "../ui/confirmation";
+import { Modal } from "../ui/Modal";
 import { AsyncStatus } from "../ui/AsyncStatus";
 import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
 import { ActionError } from "../ui/ActionError";
 import { SuccessToast } from "../ui/SuccessToast";
 import { requestConnections, connectionsChanged, type Connections } from "../api/modelConnections";
 
 export default function ModelServiceSettings() {
+  const confirm = useConfirm();
   const [data, setData] = useState<Connections | null>(null);
   const [managing, setManaging] = useState<"deepseek" | "chatgpt" | null>(null);
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    if (managing) {
-      dialog.current?.showModal();
-      if (managing === "deepseek") dialog.current?.querySelector("input")?.focus();
-    } else dialog.current?.close();
-  }, [managing]);
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
-  const dismiss = useAnimatedDismiss(dialog, () => { setManaging(null); setKey(""); }, !!managing);
-  function close() { if (!running.current) dismiss(); }
+  function finish() { setManaging(null); setKey(""); }
   const loading = useRef<AbortController | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -80,34 +73,29 @@ export default function ModelServiceSettings() {
         </div>;
       })}
     </>}
-    <dialog ref={dialog} className="design-system model-service-dialog" aria-labelledby="connection-dialog-title"
-      onCancel={event => { event.preventDefault(); close(); }} onClose={() => { setManaging(null); setKey(""); }}
-      onClick={event => { if (event.target === event.currentTarget) { const bounds = event.currentTarget.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) close(); } }}>
-      <div className="model-service-dialog-heading"><h2 id="connection-dialog-title">{managing === "deepseek" ? "DeepSeek" : "ChatGPT"}</h2>
-        <button type="button" disabled={busy} aria-label="关闭模型服务管理" onClick={close}><X size={20} /></button>
-      </div>
+    {managing && <Modal title={managing === "deepseek" ? "DeepSeek" : "ChatGPT"} closeLabel="关闭模型服务管理" busy={busy} onClose={finish}>
+      {close => <>
       {managing === "deepseek" && data && <>
         <form className="model-connection-form" onSubmit={event => { event.preventDefault(); void run(async () => {
           updated(await requestConnections("/deepseek/key", "PUT", { key })); setKey(""); setManaging(null); setNotice("API Key 已验证并保存");
         }); }}>
           <label htmlFor="model-api-key">{data.deepseek.configured ? "更新 API Key" : "API Key"}</label>
-          <input autoFocus id="model-api-key" type="password" autoComplete="new-password" value={key} onChange={e => setKey(e.target.value)} placeholder="输入 DeepSeek API Key" disabled={busy} />
-          <div className="settings-actions"><button className="primary" disabled={busy || !key.trim()} type="submit">{busy ? "正在验证…" : "验证并保存"}</button>
-            <button type="button" disabled={busy} onClick={close}>取消</button></div>
+          <input data-dialog-autofocus id="model-api-key" type="password" autoComplete="new-password" value={key} onChange={e => setKey(e.target.value)} placeholder="输入 DeepSeek API Key" disabled={busy} />
+          <div className="app-dialog-footer"><button type="button" disabled={busy} onClick={close}>取消</button><button className="app-dialog-primary" disabled={busy || !key.trim()} type="submit">{busy ? "验证中…" : "保存"}</button></div>
         </form>
-        {data.deepseek.configured && <div className="model-service-dialog-secondary"><button className="danger" disabled={busy} onClick={() => {
-          if (window.confirm("移除 DeepSeek API Key？使用它的对话需要重新选择模型，已有练习和对话会保留")) void run(async () => {
+        {data.deepseek.configured && <div className="model-service-dialog-secondary"><button className="danger" disabled={busy} onClick={async () => {
+          if (await confirm({ title: "移除 API Key", description: "使用前需重新配置。", confirmLabel: "移除", danger: true })) void run(async () => {
             updated(await requestConnections("/deepseek/key", "DELETE")); setKey(""); setManaging(null); setNotice("API Key 已移除");
           });
         }}>移除 API Key</button></div>}
       </>}
       {managing === "chatgpt" && data && <>
         <p className="model-service-account">{data.chatgpt.configured ? data.chatgpt.account || "已授权" : "使用 ChatGPT 账号授权"}</p>
-        <div className="settings-actions"><button disabled={busy} onClick={() => void run(authorize)}>{busy ? "正在连接…" : data.chatgpt.configured ? "重新授权" : "授权 ChatGPT"}</button></div>
+        <div className="app-dialog-footer"><button type="button" disabled={busy} onClick={close}>取消</button><button className="app-dialog-primary" disabled={busy} onClick={() => void run(authorize)}>{busy ? "正在连接…" : data.chatgpt.configured ? "重新授权" : "授权 ChatGPT"}</button></div>
         {data.chatgpt.configured && <div className="model-service-dialog-secondary">
           <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noreferrer">用量与应用权限 ↗</a>
-          <button className="danger" disabled={busy} onClick={() => {
-            if (window.confirm("移除 ChatGPT 授权？使用它的对话需要重新选择模型，已有练习和对话会保留")) void run(async () => {
+          <button className="danger" disabled={busy} onClick={async () => {
+            if (await confirm({ title: "移除 ChatGPT 授权", description: "使用前需重新授权。", confirmLabel: "移除", danger: true })) void run(async () => {
               const value = await requestConnections<{ connections: Connections; message: string }>("/chatgpt/authorization", "DELETE");
               updated(value.connections); setManaging(null); setNotice(value.message);
             });
@@ -115,7 +103,8 @@ export default function ModelServiceSettings() {
         </div>}
       </>}
       {error && managing && <p className="assistant-error" role="alert">{error}</p>}
-    </dialog>
+      </>}
+    </Modal>}
     {error && !managing && <ActionError message={error} />}
     {notice && <SuccessToast key={notice} message={notice} />}
   </section>;

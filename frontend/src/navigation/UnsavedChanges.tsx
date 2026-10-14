@@ -1,3 +1,4 @@
+import { Modal } from "../ui/Modal";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import { UNSAFE_DataRouterContext, useBlocker } from "react-router";
 
@@ -42,10 +43,11 @@ function Protection({ dirty }: { dirty: boolean }) {
 
 function NavigationGuard({ dirty }: { dirty: boolean }) {
   const blocker = useBlocker(dirty);
-  useEffect(() => {
-    if (blocker.state !== "blocked") return;
-    if (window.confirm("修改尚未保存，确定离开编辑页吗？")) blocker.proceed();
-    else blocker.reset();
-  }, [blocker]);
-  return null;
+  if (blocker.state !== "blocked") return null;
+  return <Modal title="离开编辑页" description="未保存的修改将丢失。" onClose={() => blocker.reset()}>
+    {close => <div className="app-dialog-footer">
+      <button type="button" data-dialog-autofocus onClick={close}>取消</button>
+      <button type="button" className="app-dialog-danger" onClick={() => blocker.proceed()}>离开</button>
+    </div>}
+  </Modal>;
 }

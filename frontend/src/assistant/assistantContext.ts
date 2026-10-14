@@ -2,7 +2,8 @@ import { createContext, useContext, useLayoutEffect, useState, useSyncExternalSt
 
 import type { GeneratedExercise } from "../exercises/GeneratedExercise";
 
-export type ApplyExercise = (proposal: GeneratedExercise) => boolean;
+/** 返回实际应用结果；替换草稿时可等待站内确认，取消不得标记答案已公开。 */
+export type ApplyExercise = (proposal: GeneratedExercise) => boolean | Promise<boolean>;
 
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type PageContext = { page: string; description: string; state: { [key: string]: JsonValue } };

@@ -1,3 +1,4 @@
+import { useConfirm } from "../ui/confirmation";
 import { clearCustomExercises, customExerciseTotalsOptions } from "../api/customExercises";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -12,6 +13,7 @@ import {
 } from "../practice-records/practiceRecordStorage";
 
 export default function LocalDataSettings() {
+  const confirm = useConfirm();
   const query = useQuery(customExerciseTotalsOptions());
   const summary = query.data;
   const loadingError = query.error?.message;
@@ -61,8 +63,8 @@ export default function LocalDataSettings() {
             type="button"
             className="local-data-clear"
             disabled={busy || query.isFetching || query.isError || !summary?.total}
-            onClick={() => {
-              if (confirm("清空当前实例的自定义题库？此操作无法撤销"))
+            onClick={async () => {
+              if (await confirm({ title: "清空题库", description: "全部自定义题目将被删除。", confirmLabel: "清空", danger: true }))
                 void clearLibrary();
             }}
           >
@@ -79,6 +81,7 @@ export default function LocalDataSettings() {
 }
 
 function RecordData() {
+  const confirm = useConfirm();
   const query = useQuery(recordTotalsOptions());
   const data = { count: query.data?.recordCount ?? null, attempts: query.data?.attemptCount ?? 0, error: query.error?.message ?? "" };
   const [notice, setNotice] = useState(0);
@@ -93,7 +96,7 @@ function RecordData() {
   const [clearAttempt, setClearAttempt] = useState(0);
   async function clear() {
     if (clearingRef.current) return;
-    if (!window.confirm("将删除当前实例的全部练习记录，无法恢复，确定清空吗？"))
+    if (!await confirm({ title: "清空练习记录", description: "全部练习记录将被删除。", confirmLabel: "清空", danger: true }))
       return;
     clearingRef.current = true;
     setClearing(true);

@@ -106,13 +106,13 @@ async page => {
   failTotals = false;
   await page.getByRole('button', { name: '重新读取', exact: true }).click();
   await page.getByText('2 道题目 · 击拍 2 道 · 听写 0 道', { exact: true }).waitFor();
-  await page.evaluate(() => { window.confirm = () => true; });
   await page.getByRole('button', { name: '清空题库', exact: true }).click();
+  await page.locator('.app-dialog').getByRole('button', { name: '清空', exact: true }).click();
   await page.getByText('测试清空失败').waitFor();
   check(!cleared, '失败清空改变了题库');
   failClear = false;
-  await page.evaluate(() => { window.confirm = () => true; });
   await page.getByRole('button', { name: '清空题库', exact: true }).click();
+  await page.locator('.app-dialog').getByRole('button', { name: '清空', exact: true }).click();
   await page.getByText('0 道题目 · 击拍 0 道 · 听写 0 道', { exact: true }).waitFor();
   check(await page.getByRole('button', { name: '清空题库', exact: true }).isDisabled(), '清空后未刷新统计');
   check(errors.length === 0, errors.join('\n'));

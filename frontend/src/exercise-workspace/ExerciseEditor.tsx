@@ -1,3 +1,4 @@
+import { useConfirm } from "../ui/confirmation";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { LoaderCircle, Minus, Plus, Save } from "lucide-react";
@@ -32,8 +33,9 @@ export default function ExerciseEditor({ initial, allowTimeSignatureChange = fal
   onSave: (draft: ExerciseDraft) => Promise<CustomExercise>;
   onSaved: (item: CustomExercise) => void;
   onCancel: () => void;
-  registerGuard: (guard: (() => boolean) | null) => void;
+  registerGuard: (guard: (() => Promise<boolean>) | null) => void;
 }) {
+  const confirm = useConfirm();
   const { mode } = initial;
   const nameErrorId = useId();
   const nameInput = useRef<HTMLInputElement>(null);
@@ -74,14 +76,14 @@ export default function ExerciseEditor({ initial, allowTimeSignatureChange = fal
   const [saving, setSaving] = useState(false);
   const locked = useRef(false);
   const saveGeneration = useRef(0);
-  const discard = useCallback(() => {
+  const discard = useCallback(async () => {
     if (locked.current) return false;
-    if (dirty && !window.confirm("修改尚未保存，确定放弃修改吗？")) return false;
+    if (dirty && !await confirm({ title: "放弃修改", description: "未保存的修改将丢失。", confirmLabel: "放弃", danger: true })) return false;
     forgetDraft(draft);
     // 取消新建可能紧接着离开页面，先解除本草稿的路由保护，避免重复确认。
     flushSync(() => setSettled(true));
     return true;
-  }, [dirty, draft, forgetDraft]);
+  }, [dirty, draft, forgetDraft, confirm]);
   useEffect(() => {
     registerGuard(discard);
     return () => registerGuard(null);
@@ -102,13 +104,13 @@ export default function ExerciseEditor({ initial, allowTimeSignatureChange = fal
     const timer = window.setTimeout(() => setAssistantApplied(false), 3500);
     return () => window.clearTimeout(timer);
   }, [assistantRevision]);
-  const applyAssistantExercise = useCallback((proposal: GeneratedExercise) => {
+  const applyAssistantExercise = useCallback(async (proposal: GeneratedExercise) => {
     if (locked.current) return false;
     if (proposal.exercise.timeSignature.beats !== timeSignature.beats) {
       setSaveError("候选练习的拍号与当前编辑拍号不同，请生成相同拍号的练习后再放入。");
       return false;
     }
-    if (dirty && !window.confirm("替换当前未保存的练习内容？")) return false;
+    if (dirty && !await confirm({ title: "替换练习", description: "当前内容将被替换。", confirmLabel: "替换", danger: true })) return false;
     setDraft(previous => ({ ...previous, name: proposal.title,
       measures: structuredClone(proposal.exercise.measures.map(measure => measure.elements)),
       selectedMeasureIndex: 0 }));
@@ -119,13 +121,13 @@ export default function ExerciseEditor({ initial, allowTimeSignatureChange = fal
     setSaveError(null);
     editorRef.current?.clearMessage();
     return true;
-  }, [dirty, setDraft, timeSignature.beats]);
+  }, [dirty, setDraft, timeSignature.beats, confirm]);
   useAssistantExerciseTarget(saving ? null : applyAssistantExercise);
 
-  function changeTimeSignature(next: RhythmExercise["timeSignature"]) {
+  async function changeTimeSignature(next: RhythmExercise["timeSignature"]) {
     if (locked.current || !allowTimeSignatureChange || next.beats === timeSignature.beats) return;
     if (measures.some(elements => elements.length > 0)
-      && !window.confirm("切换拍号将清空已填写的节奏，是否继续？")) return;
+      && !await confirm({ title: "切换拍号", description: "已填写的节奏将被清空。", confirmLabel: "切换", danger: true })) return;
     setDraft(previous => ({ ...previous, timeSignature: next,
       measures: previous.measures.map(() => []), selectedMeasureIndex: 0 }));
     setCountdown(null);
@@ -143,15 +145,13 @@ export default function ExerciseEditor({ initial, allowTimeSignatureChange = fal
     editorRef.current?.clearMessage();
   }
 
-  function removeMeasure() {
+  async function removeMeasure() {
     if (measures.length <= 1) return;
     const lastMeasure = measures[measures.length - 1];
     // 确认放在事件处理器中，而非 React 状态更新函数中，避免重复弹窗。
     if (
       lastMeasure.length > 0 &&
-      !window.confirm(
-        `第 ${measures.length} 小节已有内容，确定删除这个小节吗？`,
-      )
+      !await confirm({ title: `删除第 ${measures.length} 小节`, description: "小节内容将被删除。", confirmLabel: "删除", danger: true })
     )
       return;
 
@@ -227,7 +227,7 @@ export default function ExerciseEditor({ initial, allowTimeSignatureChange = fal
     {nameError && <span id={nameErrorId} className="custom-name-error" role="alert">请输入练习名称</span>}
   </span>;
   const actions = <div className="custom-editor-actions" role="group" aria-label="保存与取消">
-    <button type="button" disabled={saving} onClick={() => { if (discard()) onCancel(); }}>取消</button>
+    <button type="button" disabled={saving} onClick={async () => { if (await discard()) onCancel(); }}>取消</button>
     <button className="custom-save-button" type="button" disabled={saving} onClick={() => void save()}>
       {saving ? <LoaderCircle className="ui-icon" aria-hidden="true" focusable="false" /> : <Save className="ui-icon" aria-hidden="true" focusable="false" />}
       {saving ? "正在保存…" : "保存练习"}

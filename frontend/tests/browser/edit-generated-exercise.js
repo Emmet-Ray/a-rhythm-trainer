@@ -1,5 +1,7 @@
 // 使用模拟接口验证跨来源编辑与保存，不调用模型、不写入本地题库。
 async page => {
+  page.on('dialog', dialog => { if (dialog.type() === 'beforeunload') void dialog.accept(); });
+  const origin = new URL(page.url()).origin;
   await page.setViewportSize({ width: 1600, height: 1000 });
   const check = (value, message) => { if (!value) throw new Error(message); };
   const exercise = { timeSignature: { beats: 4, beatType: 4 }, measures: [
@@ -42,7 +44,7 @@ async page => {
     if (/\/saved-\d+$/.test(url.pathname)) return route.fulfill({ json: saved });
     return route.fulfill({ json: { items: saved ? [saved] : [], limit: Number(url.searchParams.get('limit')), offset: Number(url.searchParams.get('offset')) } });
   });
-  await page.goto('http://127.0.0.1:5173/');
+  await page.goto(origin + '/');
   await page.getByRole('textbox', { name: '向助手提问' }).fill('生成听写');
   await page.getByRole('button', { name: '发送', exact: true }).click();
   await page.getByRole('button', { name: '开始听写', exact: true }).click();
@@ -62,13 +64,17 @@ async page => {
   await page.waitForTimeout(100);
   check(answerViewed, '编辑未标记已查看答案');
   await name.fill('未保存草稿');
-  await page.evaluate(() => { window.confirmCalls = 0; window.confirm = () => { window.confirmCalls++; return false; }; });
   await page.getByRole('button', { name: '关闭练习', exact: true }).click();
+  await page.locator('.app-dialog').getByRole('button', { name: '取消', exact: true }).click();
+  await page.locator('.app-dialog').waitFor({ state: 'detached' });
   check(await name.inputValue() === '未保存草稿', '取消关闭丢失草稿');
   await page.getByRole('button', { name: '取消', exact: true }).click();
+  await page.locator('.app-dialog').getByRole('button', { name: '取消', exact: true }).click();
+  await page.locator('.app-dialog').waitFor({ state: 'detached' });
   check(await name.isVisible(), '取消放弃操作仍退出了编辑');
-  await page.evaluate(() => { window.confirm = () => true; });
   await page.getByRole('button', { name: '取消', exact: true }).click();
+  await page.locator('.app-dialog').getByRole('button', { name: '放弃', exact: true }).click();
+  await page.locator('.app-dialog').waitFor({ state: 'detached' });
   await overlay.locator('.exercise-edit').click();
   check(await name.inputValue() === proposal.title, '取消没有恢复原题');
   await name.fill('校正后保存');
@@ -104,7 +110,7 @@ async page => {
   await page.getByRole('button', { name: '取消', exact: true }).click();
   await page.getByRole('button', { name: '关闭练习', exact: true }).click();
   await overlay.waitFor({ state: 'detached' });
-  await page.goto('http://127.0.0.1:5173/random/tapping');
+  await page.goto(origin + '/random/tapping');
   const workspace = page.locator('.random-page');
   const note = workspace.locator('.rhythm-score .vf-notehead').first();
   await note.waitFor();
@@ -130,7 +136,7 @@ async page => {
   check(saved.exercise.measures.length > 0 && saved.mode === 'tapping' && creates === 2, '随机题保存错误');
   await page.getByRole('button', { name: '换一题', exact: true }).click();
   await page.getByRole('heading', { name: '随机练习', exact: true }).waitFor();
-  await page.goto(`http://127.0.0.1:5173/custom/tapping/${saved.id}`);
+  await page.goto(`${origin}/custom/tapping/${saved.id}`);
   await page.locator('.custom-detail .exercise-edit').click();
   const customUrl = page.url();
   await name.fill('自定义修改');
@@ -145,19 +151,21 @@ async page => {
   await page.getByRole('button', { name: '开始听写', exact: true }).click();
   await overlay.locator('.exercise-edit').click();
   await overlay.getByRole('textbox', { name: '练习名称', exact: true }).fill('面板草稿');
-  await page.evaluate(() => { window.confirmCalls = 0; window.confirm = () => { window.confirmCalls++; return false; }; });
   await page.getByRole('button', { name: '关闭练习', exact: true }).click();
+  await page.locator('.app-dialog').getByRole('button', { name: '取消', exact: true }).click();
+  await page.locator('.app-dialog').waitFor({ state: 'detached' });
   check(await overlay.isVisible(), '面板草稿没有关闭保护');
-  await page.evaluate(() => { window.confirm = () => true; });
   await page.getByRole('button', { name: '关闭练习', exact: true }).click();
+  await page.locator('.app-dialog').getByRole('button', { name: '放弃', exact: true }).click();
+  await page.locator('.app-dialog').waitFor({ state: 'detached' });
   await overlay.waitFor({ state: 'detached' });
   await page.getByRole('button', { name: '收起助手', exact: true }).click();
-  await page.evaluate(() => { window.confirmCalls = 0; window.confirm = () => { window.confirmCalls++; return false; }; });
   await page.getByRole('link', { name: '题目列表', exact: true }).click();
-  await page.waitForFunction(() => window.confirmCalls > 0);
+  await page.getByRole('dialog', { name: '离开编辑页', exact: true }).getByRole('button', { name: '取消', exact: true }).click();
   check(await name.inputValue() === '背景草稿', '面板关闭清除了背景草稿保护');
-  await page.evaluate(() => { window.confirm = () => true; });
   await page.getByRole('link', { name: '题目列表', exact: true }).click();
+  await page.locator('.app-dialog').getByRole('button', { name: '离开', exact: true }).click();
+  await page.locator('.app-dialog').waitFor({ state: 'detached' });
   await page.getByRole('link', { name: '新建练习', exact: true }).click();
   await name.fill('新建题目');
   await page.getByRole('button', { name: '全音符', exact: true }).click();
@@ -166,12 +174,13 @@ async page => {
   await page.getByRole('button', { name: '保存练习', exact: true }).click();
   await page.locator('.custom-create .exercise-edit').waitFor();
   check(page.url().endsWith('/custom/tapping/new') && creates === 3, '新建未原地切换练习');
-  await page.goto('http://127.0.0.1:5173/custom/tapping/new');
+  await page.goto(origin + '/custom/tapping/new');
   await name.fill('取消的新建题');
-  await page.evaluate(() => { window.cancelChecks = 0; window.confirm = () => { window.cancelChecks++; return true; }; });
   await page.getByRole('button', { name: '取消', exact: true }).click();
+  await page.locator('.app-dialog').getByRole('button', { name: '放弃', exact: true }).click();
+  await page.locator('.app-dialog').waitFor({ state: 'detached' });
   await page.getByRole('heading', { name: '自定义练习', exact: true }).waitFor();
-  check(await page.evaluate(() => window.cancelChecks) === 1, '取消新建出现重复确认');
+  check(await page.locator('.app-dialog').count() === 0, '取消新建出现重复确认');
   check(!errors.length, errors.join('\n'));
   return 'AI 面板／卡片、随机、自定义原地编辑、取消、失败重试、另存及重复更新通过';
 }

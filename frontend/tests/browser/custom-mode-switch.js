@@ -18,6 +18,13 @@ async page => {
   });
   await page.goto(origin + '/custom/tapping');
   await page.getByRole('heading', { name: 'tapping 0', exact: true }).waitFor();
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 850 });
+    const gap = await page.evaluate(() => document.querySelector('.question-list').getBoundingClientRect().top
+      - document.querySelector('.library-mode-switch').getBoundingClientRect().bottom);
+    check(gap >= 0 && gap <= 24, `模式切换与列表间距异常：${width}px，${gap}px`);
+  }
+  await page.setViewportSize({ width: 1440, height: 850 });
   await page.getByRole('button', { name: '下一页', exact: true }).click();
   await page.getByRole('heading', { name: 'tapping 50', exact: true }).waitFor();
   await page.waitForFunction(() => document.getAnimations().length === 0);
@@ -35,6 +42,10 @@ async page => {
     const request = new Promise(resolve => { receive = resolve; });
     const oldText = await page.locator('.question-list').textContent();
     await action(); const finish = await request;
+    const listTop = await page.locator('.question-list').evaluate(el => el.getBoundingClientRect().top);
+    await page.waitForTimeout(400);
+    check(await page.locator('.question-list').evaluate(el => el.getBoundingClientRect().top) === listTop,
+      '加载提示出现时移动列表');
     check(await page.evaluate(() => window.oldCatalog === document.querySelector('.custom-catalog')), '模式切换重建列表');
     check(await page.locator('.question-list').textContent() === oldText, '等待时清空旧列表');
     check(await page.evaluate(() => window.entrances === 0), '模式切换触发整页淡入');

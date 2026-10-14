@@ -205,7 +205,7 @@
 .about-link .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .site-menu-drawer { margin: 0; padding: 20px 16px; width: min(288px, calc(100% - 40px)); max-width: none; height: 100dvh; max-height: none; border: 0; border-right: 1px solid var(--ds-line); background: var(--ds-surface); }
 .site-menu-drawer[open] { display: flex; flex-direction: column; gap: 24px; }
-.site-menu-drawer::backdrop { background: rgb(20 25 35 / 35%); }
+.site-menu-drawer::backdrop { background: var(--ds-modal-backdrop); }
 .site-menu-heading { display: flex; justify-content: space-between; align-items: center; font-size: 20px; font-weight: 750; }
 .design-system .site-menu-button { display: grid; place-items: center; width: 44px; height: 44px; padding: 10px; border: 0; background: transparent; color: var(--ds-primary); box-shadow: none; transform: none; }
 @media (max-width: 1000px) {
@@ -288,7 +288,7 @@
 .mode-unavailable { margin: var(--ds-space-6) 16px 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .random-generation { margin-bottom: var(--ds-space-6); }
 .random-settings-drawer { box-sizing: border-box; position: fixed; inset: 0 0 0 auto; width: min(520px, 100%); max-width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; padding: 24px; border: 0; border-left: 1px solid var(--ds-line); background: var(--ds-surface); overflow-y: auto; overscroll-behavior: contain; }
-.random-settings-drawer::backdrop { background: rgb(34 30 46 / 40%); }
+.random-settings-drawer::backdrop { background: var(--ds-modal-backdrop); }
 .random-settings-heading { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; background: var(--ds-surface); }
 .random-settings-heading h2 { margin: 0; }
 .random-settings-heading button { display: grid; place-items: center; padding: 0; width: 44px; min-height: 44px; border: 0; box-shadow: none; }
@@ -351,7 +351,9 @@
 /* 击拍样板：谱面固定在操作与反馈上方，不对谱面或时钟做动画。 */
 .practice-page { max-width: var(--site-content-width); margin: 0; }
 .practice-page.custom-library { width: 100%; max-width: none; margin: 0; }
-.custom-catalog { width: 100%; }
+.custom-catalog { position: relative; width: 100%; }
+/* 加载提示使用模式切换下方的间距，不额外撑高列表。 */
+.custom-catalog > .async-status { position: absolute; bottom: 100%; left: 0; right: 0; }
 .practice-page h1 { overflow-wrap: anywhere; }
 .practice-titlebar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: 49px; gap: 12px 24px; margin: 0 0 var(--site-heading-gap); }
 .practice-titlebar .practice-return { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; min-height: 44px; font-size: 18px; font-weight: 650; color: var(--ds-muted); flex: 0 0 auto; }
@@ -534,7 +536,7 @@
 .record-entry p { margin: 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .record-detail { padding: 0 0 24px; }
 .record-drawer { box-sizing: border-box; position: fixed; inset: 0 0 0 auto; width: min(1000px, 90vw); max-width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; padding: 32px; border: 0; border-left: 1px solid var(--ds-line); background: var(--ds-surface); color: var(--ds-ink); overflow-y: auto; overscroll-behavior: contain; }
-.record-drawer::backdrop { background: rgb(34 30 46 / 40%); }
+.record-drawer::backdrop { background: var(--ds-modal-backdrop); }
 .record-detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .record-detail-heading > div:first-child { min-width: 0; }
 .record-detail-heading h2 { margin: 0; font-size: 28px; overflow-wrap: anywhere; }
@@ -791,7 +793,7 @@
 .custom-mutation-error { color: var(--ds-error); }
 .design-system .custom-storage-error { padding: var(--ds-space-4); border-radius: var(--ds-radius-sm); background: var(--ds-error-bg); color: var(--ds-error); font-size: var(--ds-text-sm); }
 .design-system .custom-storage-error p { margin: 0 0 var(--ds-space-4); }
-.custom-catalog > [role="status"], .custom-library .empty-questions { min-height: 48px; padding: var(--ds-space-3) 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
+.custom-library .empty-questions { min-height: 48px; padding: var(--ds-space-3) 0; color: var(--ds-muted); font-size: var(--ds-text-sm); }
 .custom-library nav[aria-label="题目分页"] { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--ds-space-4); margin-top: var(--ds-space-8); color: var(--ds-muted); font-size: var(--ds-text-sm); }
 @media (max-width: 600px) {
   .custom-library .custom-saved-question { align-items: stretch; }
@@ -976,7 +978,7 @@
 
 /* 临时训练工作区保留来源页面；原生模态框隔离背景输入。 */
 .generated-practice-overlay { width: min(1280px, calc(100vw - 64px)); max-width: none; height: min(780px, calc(100dvh - 64px)); max-height: calc(100dvh - 64px); margin: auto; padding: 0; border: 1px solid var(--ds-line); border-radius: 20px; background: var(--ds-subtle); color: var(--ds-ink); box-shadow: 0 24px 80px #21193633; overflow: auto; overscroll-behavior: contain; }
-.generated-practice-overlay::backdrop { background: #21193666; }
+.generated-practice-overlay::backdrop { background: var(--ds-modal-backdrop); }
 .generated-practice-heading { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 28px; border-bottom: 1px solid var(--ds-line); background: var(--ds-surface); }
 .generated-practice-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; min-width: 0; }
 .generated-practice-title h2 { overflow-wrap: anywhere; }
@@ -1132,13 +1134,8 @@
 
 .assistant-model-control .assistant-model-trigger { min-height: 32px; padding: 6px 10px; border-radius: 16px; font-size: 13px; }
 .assistant-model-control .assistant-model-trigger:hover { background: var(--ds-hover); }
-.model-service-dialog { width: min(480px, calc(100vw - 32px)); box-sizing: border-box; max-height: calc(100dvh - 48px); overflow-y: auto; padding: 24px; border: 1px solid var(--ds-line); border-radius: 18px; background: var(--ds-surface); color: var(--ds-ink); box-shadow: 0 20px 60px #0002; }
-.model-service-dialog::backdrop { background: #0003; }
-.model-service-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.model-service-dialog-heading h2 { margin: 0; font-size: 22px; }
-.design-system .model-service-dialog-heading button { display: grid; place-items: center; min-height: 32px; padding: 6px; border: 0; box-shadow: none; background: transparent; }
-.model-service-dialog .model-connection-form { margin: 24px 0; }
-.model-service-account { margin: 24px 0; color: var(--ds-muted); overflow-wrap: anywhere; }
+.app-dialog .model-connection-form { margin: 0; }
+.model-service-account { margin: 0; color: var(--ds-muted); overflow-wrap: anywhere; }
 .model-service-dialog-secondary { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--ds-line); padding-top: 20px; margin-top: 24px; }
 .design-system .model-service-dialog-secondary button { padding: 4px 0; min-height: 32px; border: 0; box-shadow: none; background: transparent; color: var(--ds-error); font-size: 14px; }
 .model-service-dialog-secondary a { font-size: 14px; color: var(--ds-muted); }
@@ -1208,7 +1205,7 @@
 :root { --surface-duration: 180ms; --menu-duration: 140ms; --surface-ease: cubic-bezier(.2, .8, .2, 1); }
 .site-menu-drawer { --surface-offset: -20px 0; }
 .random-settings-drawer, .record-drawer { --surface-offset: 20px 0; }
-.assistant-panel, .generated-practice-overlay, .model-service-dialog, .app-dialog, .assistant-image-viewer { --surface-offset: 0 6px; }
+.assistant-panel, .generated-practice-overlay, .app-dialog, .assistant-image-viewer { --surface-offset: 0 6px; }
 
 @media (prefers-reduced-motion: no-preference) {
   @keyframes surface-enter {
@@ -1228,7 +1225,7 @@
     pointer-events: none;
   }
   .assistant-history--popover { --surface-offset: 0 -4px; animation: surface-enter var(--menu-duration) var(--surface-ease); }
-  .generated-practice-overlay[open], .record-drawer[open], .model-service-dialog[open], .app-dialog[open], .assistant-image-viewer[open],
+  .generated-practice-overlay[open], .record-drawer[open], .app-dialog[open], .assistant-image-viewer[open],
   .assistant-shell[data-layout="sidebar"] .assistant-panel[open] {
     animation: surface-enter var(--surface-duration) var(--surface-ease);
   }
@@ -1251,9 +1248,9 @@
     :is(.site-menu-drawer, .random-settings-drawer)[open] { opacity: 0; translate: var(--surface-offset, 0 6px); }
     :is(.site-menu-drawer, .random-settings-drawer)[open]::backdrop { opacity: 0; }
   }
-  :is(.record-drawer, .generated-practice-overlay, .model-service-dialog, .app-dialog, .assistant-image-viewer)::backdrop { transition: opacity 140ms ease-in; }
-  :is(.record-drawer, .generated-practice-overlay, .model-service-dialog, .app-dialog, .assistant-image-viewer)[data-dismissing]::backdrop { opacity: 0; }
-  @starting-style { :is(.record-drawer, .generated-practice-overlay, .model-service-dialog, .app-dialog, .assistant-image-viewer)[open]::backdrop { opacity: 0; } }
+  :is(.record-drawer, .generated-practice-overlay, .app-dialog, .assistant-image-viewer)::backdrop { transition: opacity 140ms ease-in; }
+  :is(.record-drawer, .generated-practice-overlay, .app-dialog, .assistant-image-viewer)[data-dismissing]::backdrop { opacity: 0; }
+  @starting-style { :is(.record-drawer, .generated-practice-overlay, .app-dialog, .assistant-image-viewer)[open]::backdrop { opacity: 0; } }
   .assistant-session-sidebar {
     --surface-offset: -16px 0;
     transition: opacity var(--surface-duration), translate var(--surface-duration), display var(--surface-duration) allow-discrete;

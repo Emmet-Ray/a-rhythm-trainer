@@ -1,3 +1,5 @@
+import { lockModalScroll } from "../ui/modalScroll";
+import { useConfirm } from "../ui/confirmation";
 import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
 import { useChat } from "@ai-sdk/react";
 import { isToolUIPart, getToolName, type FileUIPart } from "ai";
@@ -140,8 +142,10 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
   const imageDialog = useRef<HTMLDialogElement>(null);
   const closeImage = useAnimatedDismiss(imageDialog, () => setExpandedImage(null), !!expandedImage);
   useEffect(() => {
-    if (expandedImage) imageDialog.current?.showModal();
-    else imageDialog.current?.close();
+    if (!expandedImage) { imageDialog.current?.close(); return; }
+    const unlockScroll = lockModalScroll();
+    imageDialog.current?.showModal();
+    return unlockScroll;
   }, [expandedImage]);
   const historyHasImages = messages.some(message => message.parts.some(isMessageImage));
 
@@ -210,11 +214,12 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
     if (state.session?.id !== id) return;
     generation.current++; conversation.reset(); activity?.reset(); composer.current?.clear(); setPractice(null);
   };
+  const confirm = useConfirm();
   const openConversation = async (id: string) => {
     if (id === state.session?.id) {
       closeHistory(); setMobileHistoryOpen(false); return true;
     }
-    if (composer.current?.hasDraft() && !window.confirm("打开历史对话将清空当前输入草稿，是否继续？")) return false;
+    if (composer.current?.hasDraft() && !await confirm({ title: "切换对话", description: "当前输入将被清空。", confirmLabel: "切换" })) return false;
     generation.current++;
     const opened = await conversation.open(id);
     if (opened) {

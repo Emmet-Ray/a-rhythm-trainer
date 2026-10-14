@@ -1,5 +1,6 @@
 // Run with playwright-cli run-code on an isolated app and temporary backend.
 async (page) => {
+  page.on('dialog', dialog => { if (dialog.type() === 'beforeunload') void dialog.accept(); });
   const base = new URL(page.url()).origin;
   const check = (value, message) => { if (!value) throw new Error(message); };
   const meter = () => page.getByRole('combobox', { name: '拍号', exact: true });
@@ -12,12 +13,12 @@ async (page) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole('textbox', { name: '练习名称', exact: true }).fill('三拍回归');
   await page.getByRole('button', { name: '四分音符', exact: true }).click();
-  await page.evaluate(() => { window.confirm = () => false; });
   await choose('2/4');
+  await page.getByRole('dialog', { name: '切换拍号', exact: true }).getByRole('button', { name: '取消', exact: true }).click();
   check((await meter().textContent()).includes('3/4'), '取消切换必须保持原拍号');
   check(await page.getByRole('button', { name: '试听', exact: true }).isEnabled(), '取消切换保留内容');
-  await page.evaluate(() => { window.confirm = () => true; });
   await choose('2/4');
+  await page.getByRole('dialog', { name: '切换拍号', exact: true }).getByRole('button', { name: '切换', exact: true }).click();
   check(await page.getByRole('button', { name: '试听', exact: true }).isDisabled(), '确认切换清空内容');
   check(await page.getByRole('textbox', { name: '练习名称', exact: true }).inputValue() === '三拍回归', '切换保留名称');
   await choose('3/4');

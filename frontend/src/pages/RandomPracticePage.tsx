@@ -1,3 +1,4 @@
+import { lockModalScroll } from "../ui/modalScroll";
 import { ExerciseWorkbench } from "../exercise-workspace/ExerciseWorkbench";
 import { ActionError } from "../ui/ActionError";
 import { useAssistantPageContext } from "../assistant/assistantContext";
@@ -84,11 +85,10 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
     const dialog = drawerRef.current;
     if (!dialog) return;
     dialog.showModal();
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockModalScroll();
     return () => {
       dialog.close();
-      document.body.style.overflow = previousOverflow;
+      unlockScroll();
     };
   }, [settingsOpen, generated.id]);
 

@@ -1,3 +1,4 @@
+import { ConfirmationProvider } from "./ui/ConfirmationProvider";
 import { RecordDetailContext, type RecordDetailSnapshot } from "./practice-records/recordDetailContext";
 import { RecordDetailAssistantContext } from "./assistant/RecordDetailAssistantContext";
 import { UnsavedChangesScope } from "./navigation/UnsavedChanges";
@@ -34,7 +35,7 @@ function renderRecordDetailContext(snapshot: RecordDetailSnapshot) {
 
 function App() {
   const [playback] = useState(() => new PlaybackGroup());
-  return <PlaybackContext value={playback}><PageNavigation><UnsavedChangesScope><AppShell /></UnsavedChangesScope></PageNavigation></PlaybackContext>;
+  return <ConfirmationProvider><PlaybackContext value={playback}><PageNavigation><UnsavedChangesScope><AppShell /></UnsavedChangesScope></PageNavigation></PlaybackContext></ConfirmationProvider>;
 }
 
 function AppShell() {

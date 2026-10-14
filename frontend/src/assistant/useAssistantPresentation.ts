@@ -1,3 +1,4 @@
+import { lockModalScroll } from "../ui/modalScroll";
 import { useAnimatedDismiss } from "../ui/useAnimatedDismiss";
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
@@ -37,9 +38,8 @@ export function useAssistantPresentation(home: boolean, enabled = true) {
 
   useLayoutEffect(() => {
     if (!modal) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previous; };
+    const unlockScroll = lockModalScroll();
+    return () => { unlockScroll(); };
   }, [modal]);
 
   const close = useAnimatedDismiss(panel, () => {

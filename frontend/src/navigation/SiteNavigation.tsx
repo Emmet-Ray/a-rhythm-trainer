@@ -1,3 +1,4 @@
+import { lockModalScroll } from "../ui/modalScroll";
 import { useContext, useEffect, useRef, useState } from "react";
 import { VisitsContext } from "./usePageNavigation";
 import { Link, useLocation } from "react-router";
@@ -58,9 +59,8 @@ export default function SiteNavigation() {
   }, []);
   useEffect(() => {
     if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previous; };
+    const unlockScroll = lockModalScroll();
+    return () => { unlockScroll(); };
   }, [open]);
   return <>
     <aside className="site-sidebar design-system" data-collapsed="true">

@@ -1,3 +1,4 @@
+import { useConfirm } from "../ui/confirmation";
 import { useRetainedData } from "../ui/useRetainedData";
 import { useQuery } from "@tanstack/react-query";
 import { ActionError } from "../ui/ActionError";
@@ -109,8 +110,9 @@ function CustomExerciseList({
     setMutationMode(mode); setDeleting(null); setMutationMessage(null); setMutationError(null);
   }
   useEffect(() => () => { lifetime.current += 1; mutationActive.current = false; }, [mode]);
+  const confirm = useConfirm();
   async function remove(item: ExerciseSummary) {
-    if (mutationActive.current || !window.confirm(`确定删除「${item.name}」吗？删除后无法恢复。`)) return;
+    if (mutationActive.current || !await confirm({ title: "删除题目", description: "删除后无法恢复。", confirmLabel: "删除", danger: true })) return;
     mutationActive.current = true;
     const generation = lifetime.current;
     setDeleting(item.id);
