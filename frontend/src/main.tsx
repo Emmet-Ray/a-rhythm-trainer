@@ -1,3 +1,4 @@
+import { initializeFocusVisibility } from "./ui/focusVisibility";
 import { initializeSoundPreferences } from "./settings/soundPreferences";
 import { QueryClientProvider } from "@tanstack/react-query"
 import { queryClient } from "./query/queryClient"
@@ -9,6 +10,9 @@ import App from './App.tsx'
 import { initializeAppearance } from './settings/appearance'
 import { initializeTappingPrecision } from './settings/tappingPrecision'
 import { preloadDestination } from './navigation/routeModules'
+
+const disposeFocusVisibility = initializeFocusVisibility(document)
+if (import.meta.hot) import.meta.hot.dispose(disposeFocusVisibility)
 
 initializeAppearance()
 initializeTappingPrecision()

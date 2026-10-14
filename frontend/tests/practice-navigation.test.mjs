@@ -134,8 +134,14 @@ test("快捷键避开弹窗、输入控件、组合输入、长按与系统修�
     target.isContentEditable = true;
     assert.equal(canUsePracticeShortcut({ target }), false);
     target.isContentEditable = false;
-    target.closest = () => ({});
-    assert.equal(canUsePracticeShortcut({ target }), false);
+    for (const selector of [".assistant-shell", "input", "textarea", "select", "[role='combobox']", "[role='listbox']", "[role='menu']"]) {
+      target.closest = selectors => selectors.split(", ").includes(selector) ? target : null;
+      assert.equal(canUsePracticeShortcut({ target }), false, selector);
+    }
+    for (const selector of ["button", "a"]) {
+      target.closest = selectors => selectors.split(", ").includes(selector) ? target : null;
+      assert.equal(canUsePracticeShortcut({ target }), true, selector);
+    }
   } finally { globalThis.document = previousDocument; globalThis.HTMLElement = previousElement; }
 });
 

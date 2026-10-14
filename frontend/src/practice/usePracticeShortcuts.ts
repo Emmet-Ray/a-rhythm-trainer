@@ -11,11 +11,11 @@ export function canReceivePracticeKey(scope: HTMLElement | null = null): boolean
   return scope?.closest("dialog:modal") === modals[modals.length - 1];
 }
 
-/** Single-letter shortcuts must not intercept typing, native controls, or modal interaction. */
+/** 字母快捷键允许从普通按钮触发，但不截获输入、选择控件的字母搜索或其他弹层交互。 */
 export function canUsePracticeShortcut(event: KeyboardEvent, scope: HTMLElement | null = null): boolean {
   return !event.defaultPrevented && !event.repeat && !event.isComposing && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey
     && canReceivePracticeKey(scope)
-    && !(event.target instanceof HTMLElement && (event.target.isContentEditable || event.target.closest("input, textarea, select, button, a, [role='textbox']")));
+    && !(event.target instanceof HTMLElement && (event.target.isContentEditable || event.target.closest(".assistant-shell, input, textarea, select, [role='textbox'], [role='combobox'], [role='listbox'], [role='menu'], [role='tree'], [role='grid'], [role='slider'], [role='spinbutton']")));
 }
 
 /** Event handling, button hints and help all use this definition. */
@@ -40,6 +40,12 @@ export function usePracticeShortcuts(actions: Partial<Record<keyof typeof practi
       const action = name ? actions[name] : undefined;
       if (!action) return;
       event.preventDefault();
+      // 快捷键已接管操作，释放旧按钮焦点，避免后续空格仍激活旧按钮。
+      // 只在实际执行快捷键时处理；Tab、Enter、空格及未绑定按键不受影响。
+      if (event.target instanceof HTMLElement) {
+        const control = event.target.closest<HTMLElement>("button, a");
+        if (control === document.activeElement) control?.blur();
+      }
       action();
   });
   useEffect(() => {

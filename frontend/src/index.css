@@ -28,7 +28,7 @@ button {
 button:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); }
 button:disabled { cursor: not-allowed; color: var(--ds-muted); background: var(--ds-disabled); }
 input { min-height: 42px; border: 1px solid var(--ds-field-border); border-radius: 6px; padding: 7px 10px; color: var(--ds-ink); background: var(--ds-input); }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+:focus-visible:where(:not([data-pointer-focus])) { outline: 2px solid var(--accent); outline-offset: 4px; }
 /* VexFlow 的透明命中框会显式启用 pointer-events，答案谱面统一交由小节按钮接收点击。 */
 .rhythm-answer-notation svg * { pointer-events: none; }
 h1, h2, h3, p { margin: 0; }
@@ -39,3 +39,6 @@ kbd { padding: 2px 7px; border: 1px solid var(--ds-line); border-bottom-width: 2
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* 鼠标路径恢复焦点时不显示 UA 描边；不影响输入框或键盘导航。 */
+[data-pointer-focus]:focus { outline: none; }
