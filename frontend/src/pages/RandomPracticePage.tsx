@@ -102,7 +102,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
   function generate() {
     try {
       // 手动换题只在事件中执行；先生成成功，再替换题目及作答绑定。
-      const exercise = generateRandomExercise(config);
+      const exercise = generateRandomExercise(config, Math.random, generated.exercise);
       setGenerated({ id: crypto.randomUUID(), exercise });
       setError(null);
       if (settingsOpen) closeSettings();

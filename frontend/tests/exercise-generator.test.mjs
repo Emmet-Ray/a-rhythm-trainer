@@ -13,10 +13,11 @@ const server = await createServer({
 });
 let generateRandomExercise;
 let resolveRandomPatterns;
+let randomExerciseSimilarity;
 let randomMaterials;
 let validateRhythmExercise;
 try {
-  ({ generateRandomExercise, resolveRandomPatterns, randomMaterials } = await server.ssrLoadModule("/src/exercises/randomExercises.ts"));
+  ({ generateRandomExercise, resolveRandomPatterns, randomMaterials, randomExerciseSimilarity } = await server.ssrLoadModule("/src/exercises/randomExercises.ts"));
   ({ validateRhythmExercise } = await server.ssrLoadModule("/src/rhythm/RhythmModel.ts"));
 } finally {
   await server.close();
@@ -129,8 +130,10 @@ test("全部单项、两两组合与固定种子混合范围，均只使用所�
 });
 
 test("随机数首尾边界、单独节奏型以及纯休止符", () => {
-  assert.deepEqual(generateRandomExercise(config(basic), () => 0).measures[0].elements, [{ kind: "note", noteValue: "whole" }]);
-  assert.equal(generateRandomExercise(config(basic), () => 0.999999).measures[0].elements.length, 4);
+  for (const value of [0, 0.999999]) {
+    const result = generateRandomExercise(config(basic), () => value);
+    assert.deepEqual(new Set(result.measures.flatMap(m => m.elements.map(e => e.noteValue))), new Set(["whole", "half", "quarter"]));
+  }
   const eighths = generateRandomExercise(config(["two-eighths"]), () => 0);
   assert.equal(eighths.measures[0].elements.length, 8);
   assert.ok(eighths.measures[0].elements.every(e => e.kind === "note" && e.noteValue === "eighth"));
@@ -210,4 +213,124 @@ test("随机页面首次进入已有默认两小节题目，设置关闭且入�
       assert.equal(visits.read("default", `random:${mode}:question`, null), question);
     }
   } finally { await pageServer.close(); }
+});
+
+
+test("覆盖整道题；能全部覆盖时不遗漏，容纳不下时不固定偏向目录首项", () => {
+  const alternatives = new Set();
+  for (let seed = 1; seed <= 30; seed++) {
+    const one = generateRandomExercise(config(["whole-note", "quarter-note"], 1), seededRandom(seed * 10007));
+    alternatives.add(one.measures[0].elements[0].noteValue);
+    const two = generateRandomExercise(config(["whole-note", "quarter-note"], 2), seededRandom(seed));
+    assert.deepEqual(new Set(two.measures.flatMap(m => m.elements.map(e => e.noteValue))), new Set(["whole", "quarter"]));
+    const mixed = generateRandomExercise(config(["quarter-note", "two-eighths", "small-syncopation"], 1), seededRandom(seed));
+    const values = mixed.measures[0].elements.map(e => e.noteValue).join(',');
+    assert.ok(values.includes('sixteenth,eighth,sixteenth'), "小切分必须整体出现");
+    assert.ok(values.includes('eighth,eighth'), "二平均必须整体出现");
+    assert.ok(values.includes('quarter'));
+  }
+  assert.deepEqual(alternatives, new Set(["whole", "quarter"]));
+});
+
+test("独立穷举小范围合法组合，验证整题覆盖数确为最大值", () => {
+  const selections = [
+    ["whole-note", "half-note", "quarter-note"],
+    ["half-note", "dotted-quarter-note", "eighth-rest", "quarter-note"],
+    ["quarter-note", "two-eighths", "eighth-note", "small-syncopation"],
+    ["dotted-eighth-note", "sixteenth-rest", "eighth-triplet"],
+  ];
+  for (const beats of [2, 3, 4]) for (const count of [1, 2]) for (const materials of selections) {
+    const input = { ...config(materials, count), timeSignature: { beats, beatType: 4 } };
+    const patterns = resolveRandomPatterns(input);
+    const capacity = beats * 24;
+    const fullMasks = new Set();
+    function enumerate(tick, used) {
+      if (tick === capacity * count) { fullMasks.add(used); return; }
+      for (let i = 0; i < patterns.length; i++) {
+        const p = patterns[i];
+        if (p.startTicks.includes(tick % capacity)) enumerate(tick + p.durationTicks, used | (1 << i));
+      }
+    }
+    enumerate(0, 0);
+    const bits = mask => mask.toString(2).replaceAll('0', '').length;
+    const optimum = Math.max(...[...fullMasks].map(bits));
+    if (!fullMasks.size) {
+      assert.throws(() => generateRandomExercise(input), /无法填满/);
+      continue;
+    }
+    for (let seed = 1; seed <= 3; seed++) {
+      const result = generateRandomExercise(input, seededRandom(seed));
+      // 从最终谱面独立反推所有合法材料分解，而非读取生成器内部的选择。
+      let masks = new Set([0]);
+      for (const measure of result.measures) {
+        const next = new Set();
+        function match(index, tick, used) {
+          if (index === measure.elements.length) { next.add(used); return; }
+          patterns.forEach((p, i) => {
+            if (p.startTicks.includes(tick) && JSON.stringify(measure.elements.slice(index, index + p.elements.length)) === JSON.stringify(p.elements)) {
+              match(index + p.elements.length, tick + p.durationTicks, used | (1 << i));
+            }
+          });
+        }
+        for (const mask of masks) match(0, 0, mask);
+        masks = next;
+      }
+      assert.equal(Math.max(...[...masks].map(bits)), optimum);
+    }
+  }
+});
+
+const exerciseOf = (...measures) => ({ timeSignature: { beats: 4, beatType: 4 }, measures: measures.map(elements => ({ elements })) });
+const note = (noteValue = "quarter", kind = "note", dots) => ({ kind, noteValue, ...(dots ? { dots } : {}) });
+
+test("相似度按小节与展开事件比较，包含类型、附点实际时值、三连音及缺失元素", () => {
+  const a = exerciseOf([note(), note(), note(), note('eighth'), note('eighth')]);
+  const b = structuredClone(a); b.measures[0].elements[0].kind = 'rest';
+  assert.equal(randomExerciseSimilarity(a, b), 0.8);
+  assert.equal(randomExerciseSimilarity(a, a), 1);
+  assert.equal(randomExerciseSimilarity(a, exerciseOf([note(), note(), note(), note()])), 3 / 5);
+  assert.equal(randomExerciseSimilarity(exerciseOf([note('half'), note('half')]), exerciseOf([note('quarter', 'note', 1), note('quarter', 'note', 1)])), 0);
+  const triplet = exerciseOf([{ kind: 'triplet', notes: [note('eighth'), note('eighth'), note('eighth')] }]);
+  assert.equal(randomExerciseSimilarity(triplet, exerciseOf([note('eighth'), note('eighth'), note('eighth')])), 0);
+  assert.equal(randomExerciseSimilarity(exerciseOf([note()], [note()]), exerciseOf([note()])), 0.5);
+  assert.equal(randomExerciseSimilarity(a, { ...a, timeSignature: { beats: 3, beatType: 4 } }), 0);
+  const paired = generateRandomExercise(config(['two-eighths'], 1), () => 0);
+  const singles = generateRandomExercise(config(['eighth-note'], 1), () => 0);
+  assert.equal(randomExerciseSimilarity(paired, singles), 1);
+});
+
+test("超过 80% 最多额外三次，全部超限时取最不相似候选，仍保持覆盖", () => {
+  const input = config(['sixteenth-note', 'sixteenth-rest'], 1);
+  const previous = generateRandomExercise(input, () => 0.99);
+  function candidateTape(flips) {
+    const tape = [];
+    generateRandomExercise(input, () => { tape.push(0.99); return 0.99; });
+    // 两种材料在每个位置均合法；改变后续随机排列，保留开头两种材料的覆盖。
+    for (const index of flips) tape[index * 2] = 0;
+    return tape;
+  }
+  const tapes = [candidateTape([]), candidateTape([3]), candidateTape([3, 5, 7]), candidateTape([3, 5])];
+  const candidates = tapes.map(tape => { let i = 0; return generateRandomExercise(input, () => tape[i++]); });
+  const stream = tapes.flat(); let calls = 0;
+  const result = generateRandomExercise(input, () => { assert.ok(calls < stream.length, '不能第五次生成'); return stream[calls++]; }, previous);
+  assert.equal(calls, stream.length);
+  assert.deepEqual(result, candidates[2]);
+  assert.equal(randomExerciseSimilarity(result, previous), 13 / 16);
+  assert.deepEqual(new Set(result.measures[0].elements.map(e => e.kind)), new Set(['note', 'rest']));
+});
+
+test("达到 80% 即接受、首次不同不重试、只有一种结果也能结束", () => {
+  const input = config(['quarter-note', 'eighth-note'], 1);
+  let callsPerCandidate = 0;
+  const candidate = generateRandomExercise(input, () => { callsPerCandidate++; return 0.99; });
+  assert.equal(candidate.measures[0].elements.length, 5);
+  const previous = structuredClone(candidate); previous.measures[0].elements[0].kind = 'rest';
+  let calls = 0;
+  assert.deepEqual(generateRandomExercise(input, () => { calls++; return 0.99; }, previous), candidate);
+  assert.equal(calls, callsPerCandidate, '80% 不应重试');
+  const only = config(['quarter-note'], 1);
+  const same = generateRandomExercise(only, () => 0);
+  let singleCalls = 0;
+  assert.deepEqual(generateRandomExercise(only, () => { singleCalls++; return 0; }, same), same);
+  assert.equal(singleCalls, 16, '四次候选后停止');
 });
