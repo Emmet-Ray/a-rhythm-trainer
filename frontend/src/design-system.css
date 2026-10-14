@@ -1267,9 +1267,9 @@
 }
 
 /* 编辑与练习共享题头、控制栏和谱面容器。 */
-.exercise-name-field { display: block; min-width: 0; }
-.design-system .exercise-name-field input { width: 100%; max-width: 640px; min-width: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; line-height: inherit; }
-.exercise-name-field .custom-name-error { display: block; color: var(--ds-error); font-size: 13px; font-weight: 400; }
+.exercise-name-field { display: block; position: relative; min-width: 0; padding-bottom: 28px; }
+.design-system .exercise-name-field input { display: block; width: 100%; max-width: 640px; min-width: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; line-height: inherit; }
+.exercise-name-field .custom-name-error { position: absolute; left: 0; bottom: 0; color: var(--ds-error); font-size: 13px; font-weight: 400; line-height: 20px; }
 .exercise-editor .practice-content { padding-top: 28px; }
 .generated-practice-title { flex: 1; }
 .generated-practice-title h2 { width: 100%; }

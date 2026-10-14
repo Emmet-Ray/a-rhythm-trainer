@@ -40,6 +40,8 @@ const PREFERRED_MEASURE_WIDTH = 360;
 const ROW_HEIGHT = 150;
 const STAVE_TOP = 40;
 const MINIMUM_MEASURE_WIDTH = 320;
+// 双小节草稿的阅读基准；容量只影响横向留白，不改变符号大小。
+const DRAFT_READING_WIDTH = 1180;
 
 type MeasurePlacement = {
   x: number;
@@ -58,14 +60,14 @@ export type ScoreLayout = {
 
 /** 草稿始终单行。按最短可编辑时值（十六分音符）预留宽度，
  * 而非根据当前答案伸缩；宽屏优先显示两个完整小节，余下横向滚动。
- * 缩放始终以双小节阅读宽度为基准，不随题目小节数量改变；
+ * 缩放始终以双小节阅读宽度为基准，不随拍号或题目小节数量改变；
  * 单小节也保持双小节布局中的宽度，左对齐留白。
  * 不读取题目答案，空小节与填满后使用相同坐标。
  */
 export function createDraftScoreLayout(measureCount: number, containerWidth: number, quarterBeats: number): ScoreLayout {
   const minimumWidth = Math.max(360, 100 + Math.ceil(quarterBeats * 4) * 30);
   const viewport = Math.max(0, containerWidth);
-  const scale = Math.max(1, Math.min(1.6, viewport / (minimumWidth * 2 + 20)));
+  const scale = Math.max(1, Math.min(1.6, viewport / DRAFT_READING_WIDTH));
   const measureWidth = Math.max(minimumWidth, (viewport / scale - 20) / 2);
   return {
     width: measureCount * measureWidth + 20,

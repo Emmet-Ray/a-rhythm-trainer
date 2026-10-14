@@ -76,6 +76,20 @@ test("同宽窗口的一、二、多小节保持相同符号倍率和显示高�
   }
 });
 
+test("不同拍号草稿保持相同符号倍率与高度，容量仅影响最小小节宽度", () => {
+  for (const width of [320, 768, 1134, 1500, 2000]) {
+    for (const count of [1, 2, 8]) {
+      const reference = layout.createDraftScoreLayout(count, width, 4);
+      for (const beats of [2, 3, 4]) {
+        const draft = layout.createDraftScoreLayout(count, width, beats);
+        assert.equal(draft.scale, reference.scale);
+        assert.equal(draft.height * draft.scale, reference.height * reference.scale);
+        assert.ok(draft.measures[0].width >= 100 + beats * 4 * 30);
+      }
+    }
+  }
+});
+
 test("小节定位只在需要时滚动，窄屏对齐左端并限制末尾位置", () => {
   const draft = layout.createDraftScoreLayout(4, 1180, 4);
   assert.equal(layout.getDraftMeasureScrollLeft(draft, 0, 0, 1180), 0);
