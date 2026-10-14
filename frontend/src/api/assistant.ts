@@ -109,3 +109,13 @@ export async function saveCardState(sessionId: string, exerciseId: string, state
 export function isMessageImage(part: { type: string; url?: string }): part is import("ai").FileUIPart {
   return part.type === "file" && /^data:image\/(png|jpeg|webp);base64,/.test(part.url ?? "");
 }
+
+export type SessionName = Pick<SessionSummary, "id" | "title" | "updated_at">;
+export async function renameSession(id: string, title: string, signal: AbortSignal): Promise<SessionName> {
+  const value: unknown = await (await assistantFetch(`/api/assistant/sessions/${encodeURIComponent(id)}/title`, {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }),
+  }, signal)).json();
+  if (!object(value) || value.id !== id || typeof value.title !== "string" || typeof value.updated_at !== "string")
+    throw new Error("对话名称保存结果异常，请重试。");
+  return value as SessionName;
+}

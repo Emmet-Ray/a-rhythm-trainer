@@ -513,3 +513,30 @@ for (const withImage of [false, true]) test(`完成确认后不读取快照，�
   assert.ok(c.chat.messages.every(message => message.parts.every(part => !part.type.startsWith("data-"))));
   if (withImage) assert.equal(c.chat.messages[0].parts.filter(part => part.type === "file").length, 1);
 });
+
+test("重命名同步当前会话且保留消息，失败或迟到结果不覆盖其他会话", async t => {
+  let fail = false, release;
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    if (options.method === "PUT") {
+      if (fail) return new Response(null, { status: 503 });
+      if (release !== undefined) await new Promise(resolve => { release = resolve; });
+      return Response.json({ id: "session1", title: "我的训练", updated_at: stamp });
+    }
+    return Response.json({ ...final(), id: url.endsWith("session2") ? "session2" : "session1" });
+  });
+  const conversation = new AssistantConversation();
+  await conversation.open("session1");
+  const messages = conversation.chat.messages;
+  await conversation.rename("session1", "我的训练", new AbortController().signal);
+  assert.equal(conversation.getSnapshot().session.title, "我的训练");
+  assert.equal(conversation.chat.messages, messages);
+  fail = true;
+  await assert.rejects(conversation.rename("session1", "不会保存", new AbortController().signal));
+  assert.equal(conversation.getSnapshot().session.title, "我的训练");
+  fail = false; release = null;
+  const pending = conversation.rename("session1", "我的训练", new AbortController().signal);
+  await conversation.open("session2");
+  release(); await pending;
+  assert.equal(conversation.getSnapshot().session.id, "session2");
+  assert.notEqual(conversation.getSnapshot().session.title, "我的训练");
+});

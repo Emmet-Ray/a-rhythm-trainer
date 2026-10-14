@@ -1,6 +1,6 @@
 import { Chat } from "@ai-sdk/react";
 import { DefaultChatTransport, generateId, type FileUIPart } from "ai";
-import { AssistantApiError, assistantFetch, createSession, getSession, type AssistantMessage, type ChatSession, saveCardState, selectSessionModel, type CardState } from "../api/assistant";
+import { renameSession, AssistantApiError, assistantFetch, createSession, getSession, type AssistantMessage, type ChatSession, saveCardState, selectSessionModel, type CardState } from "../api/assistant";
 import { selectionChanged, type ModelSelection } from "../api/modelConnections";
 import type { PageContext } from "./assistantContext";
 
@@ -71,6 +71,11 @@ export class AssistantConversation {
     } finally {
       if (this.current(op)) { this.operation = null; this.update({ initialized: true, busy: false, restoring: false }); }
     }
+  }
+  async rename(id: string, title: string, signal: AbortSignal) {
+    const saved = await renameSession(id, title, signal);
+    if (this.state.session?.id === id) this.update({ session: { ...this.state.session, ...saved } });
+    return saved;
   }
   saveCard(exerciseId: string, value: CardState) {
     const sessionId = this.state.session?.id;

@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from assistant.messages import MessageImage, MAX_IMAGES
 
 from pydantic_ai.models import Model
-from assistant.sessions import ChatSession, SessionBusy, SessionStore, CardState
+from assistant.sessions import ChatSession, SessionBusy, SessionStore, CardState, SessionTitle
 from assistant.context import PageContext
 from assistant.model import ModelSelection
 from starlette.concurrency import run_in_threadpool
@@ -136,6 +136,15 @@ def select_model(body: ModelSelection, request: Request, session: Annotated[Chat
     remembered = connections.remember_selection(body)
     return JSONResponse({**session.snapshot(), "selection_notice": "" if remembered else
                          "当前对话已切换模型，但未能保存新对话的默认选择"}, headers={"Cache-Control": "no-store"})
+
+
+@router.put("/sessions/{session_id}/title")
+def rename_session(body: SessionTitle, session: Annotated[ChatSession, Depends(get_session)]):
+    try:
+        result = session.rename(body.title)
+    except SessionBusy as error:
+        raise HTTPException(409, str(error)) from error
+    return JSONResponse(result, headers={"Cache-Control": "no-store"})
 
 
 @router.delete("/sessions/{session_id}", status_code=204)

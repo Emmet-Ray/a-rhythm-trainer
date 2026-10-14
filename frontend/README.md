@@ -41,7 +41,7 @@ npm run preview
 | 修改范围 | 回归入口 |
 | --- | --- |
 | 记录、筛选稳定性、活动确认与分析上下文 | `record-filters.js`、`async-surfaces.js`、`custom-mode-switch.js`、`practice-activity.js`、`practice-insight.js`、`page-context.js` |
-| 助手跨路由挂载和响应式布局 | `assistant-resize.js`、`responsive-feedback.js`、`conversation-switch.js` |
+| 助手跨路由挂载和响应式布局 | `assistant-resize.js`、`responsive-feedback.js`、`conversation-switch.js`、`conversation-actions.js` |
 | 声音设置、试听、保存恢复与失败重试 | `sound-settings.js` |
 | 击拍小节选择、局部练习与记录 | `tapping-range.js` |
 | 击拍尾音重叠、停止与离页清理 | `tap-feedback.js` |

@@ -1,10 +1,12 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref, type RefObject } from "react";
-import { X, Trash2, Plus, PanelLeftClose } from "lucide-react";
-import { deleteSession, listSessions, type ChatSession, type SessionSummary } from "../api/assistant";
+import { X, Plus, PanelLeftClose } from "lucide-react";
+import { deleteSession, listSessions, type SessionName, type ChatSession, type SessionSummary } from "../api/assistant";
+import { ConversationActions } from "./ConversationActions";
 import { AsyncStatus } from "../ui/AsyncStatus";
 
 /** 按需读取历史摘要；打开和删除都由后端检查归属。 */
-export function ConversationHistory({ panelRef, anchor, currentId, onOpen, onDeleted, onClose, placement = "popover", onNew, currentSession }: {
+export function ConversationHistory({ panelRef, anchor, currentId, onOpen, onDeleted, onRename, onClose, placement = "popover", onNew, currentSession }: {
+  onRename: (id: string, title: string, signal: AbortSignal) => Promise<SessionName>;
   panelRef?: Ref<HTMLElement>; anchor?: RefObject<HTMLButtonElement | null>; placement?: "popover" | "sidebar"; onNew?: () => void; currentSession?: Omit<ChatSession, "messages"> | null; currentId?: string; onOpen: (id: string) => Promise<boolean>; onDeleted: (id: string) => void; onClose: () => void;
 }) {
   const [items, setItems] = useState<SessionSummary[]>([]);
@@ -61,14 +63,15 @@ export function ConversationHistory({ panelRef, anchor, currentId, onOpen, onDel
     }
   }
   async function remove(item: SessionSummary) {
-    if (!window.confirm("删除这段对话？")) return;
     setBusy(true); setError("");
     try {
       await deleteSession(item.id, lifetime.current!.signal);
       if (lifetime.current?.signal.aborted) return;
       onDeleted(item.id);
-      setRevision(value => value + 1);
-    } catch (error) { if (!lifetime.current?.signal.aborted) { setError(error instanceof Error ? error.message : "删除失败。"); setBusy(false); } }
+      setItems(previous => previous.filter(entry => entry.id !== item.id));
+      setTotal(value => Math.max(0, value - 1));
+      requestAnimationFrame(() => heading.current?.focus({ preventScroll: true }));
+    } finally { if (!lifetime.current?.signal.aborted) setBusy(false); }
   }
   async function more() {
     setBusy(true); setError("");
@@ -92,7 +95,12 @@ export function ConversationHistory({ panelRef, anchor, currentId, onOpen, onDel
         <span className="assistant-history-title">{item.title}</span>
         {item.unreadable && <small>无法读取</small>}
       </button>
-      <button type="button" className="assistant-history-delete" aria-label={`删除对话：${item.title}`} disabled={item.is_running} aria-disabled={busy || item.is_running} onClick={() => { if (!busy) void remove(item); }}><Trash2 size={16} aria-hidden="true" /></button>
+      <ConversationActions item={item} busy={busy} onDelete={() => remove(item)}
+        onRename={async title => {
+          const saved = await onRename(item.id, title, lifetime.current!.signal);
+          if (!lifetime.current?.signal.aborted) setItems(previous => previous.map(entry => entry.id === item.id ? { ...entry, ...saved } : entry));
+          return saved;
+        }} />
     </li>)}</ul>
     <AsyncStatus pending={busy} label="正在读取…" />
     {items.length < total && <button type="button" disabled={busy} onClick={() => void more()}>加载更多</button>}

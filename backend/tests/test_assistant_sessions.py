@@ -152,3 +152,36 @@ def test_completion_confirmation_is_persisted_and_old_cleanup_cannot_unlock_next
             _ = [chunk async for chunk in second.body_iterator]
         assert not session.is_running
     asyncio.run(scenario())
+
+
+def test_session_rename_validation_and_restart():
+    app = create_app()
+    app.dependency_overrides[get_model] = lambda: SDKTestModel(call_tools=[], custom_output_text="回答")
+    with TestClient(app) as client:
+        sid = client.post('/api/assistant/sessions').json()['id']
+        path = f'/api/assistant/sessions/{sid}'
+        assert client.put(path + '/title', json={"title": "  我的节奏练习  "}).json()['title'] == "我的节奏练习"
+        client.post(path + '/messages', json={"text": "你好", "message_id": "u1"})
+        for title in ["", "   ", "a" * 61, "第一行\n第二行"]:
+            assert client.put(path + '/title', json={"title": title}).status_code == 422
+        assert client.get(path).json()['title'] == "我的节奏练习"
+        assert client.put('/api/assistant/sessions/' + '0' * 32 + '/title', json={"title": "不存在"}).status_code == 404
+    with TestClient(create_app()) as client:
+        assert client.get(path).json()['title'] == "我的节奏练习"
+        assert client.get('/api/assistant/sessions').json()['sessions'][0]['title'] == "我的节奏练习"
+
+
+def test_session_rename_busy_and_storage_failure(monkeypatch):
+    from assistant.journal import SessionStorageError
+    session = ChatSession()
+    session.is_running = True
+    with pytest.raises(SessionBusy):
+        session.rename("新名称")
+    session.is_running = False
+    before = session.snapshot()
+    def fail(record):
+        raise SessionStorageError("磁盘写入失败")
+    monkeypatch.setattr(session, "save", fail)
+    with pytest.raises(SessionStorageError):
+        session.rename("新名称")
+    assert session.snapshot() == before

@@ -45,11 +45,11 @@ async page => {
         if (!window.recordSwitch) return;
         const flashedIcons = matchMedia('(hover: hover)').matches ? [...document.querySelectorAll('.assistant-history--sidebar li')]
           .filter(row => !row.matches(':hover, :focus-within'))
-          .filter(row => { const style = getComputedStyle(row.querySelector('.assistant-history-delete')); return style.visibility !== 'hidden' && Number(style.opacity) > 0; }).length : 0;
+          .filter(row => { const style = getComputedStyle(row.querySelector('.assistant-history-actions')); return style.visibility !== 'hidden' && Number(style.opacity) > 0; }).length : 0;
         window.switchFrames.push({
           cardY: el.querySelector('.exercise-card')?.getBoundingClientRect().y,
           focusedInput: document.activeElement?.matches('textarea'),
-          deleteOpacity: [...document.querySelectorAll('.assistant-history--sidebar li:hover .assistant-history-delete')].map(e=>getComputedStyle(e).opacity),
+          deleteOpacity: [...document.querySelectorAll('.assistant-history--sidebar li:hover .assistant-history-actions')].map(e=>getComputedStyle(e).opacity),
           composerY: document.querySelector('.assistant-composer').getBoundingClientRect().y,
           placeholder: document.querySelector('textarea').placeholder,
           imageError: [...document.querySelectorAll('.assistant-error')].some(e => e.textContent.includes('请选择支持图片的模型')),
@@ -81,8 +81,8 @@ async page => {
       check(samples.filter(sample => sample.text === id + '-').every(sample => Math.abs(sample.gap) < 2), '新会话先显示错误位置再跳到底部');
     }
     const allFrames = await page.evaluate(() => { window.recordSwitch = false; return window.switchFrames; });
-    check(allFrames.every(frame => frame.flashedIcons === 0), '未悬停或聚焦的会话行闪出删除图标');
-    check(allFrames.every(frame => frame.deleteOpacity.every(opacity=>opacity === '1')), '悬停行删除图标在切换中改变透明度');
+    check(allFrames.every(frame => frame.flashedIcons === 0), '未悬停或聚焦的会话行闪出操作图标');
+    check(allFrames.every(frame => frame.deleteOpacity.every(opacity=>opacity === '1')), '悬停行操作图标在切换中改变透明度');
     check(allFrames.every(frame => !frame.focusedInput), '历史切换自动聚焦输入框');
     if (!fail && ['a','b'].includes(id)) {
       const cardFrames = allFrames.filter(frame => frame.text === id + '-' && frame.cardY !== undefined);
@@ -102,9 +102,9 @@ async page => {
   await page.mouse.move(1400, 840);
   const row = page.locator('.assistant-history--sidebar li').first();
   await row.locator('.assistant-history-open').focus();
-  check(await row.locator('.assistant-history-delete').isVisible(), '键盘聚焦会话时删除入口不可见');
+  check(await row.locator('.assistant-history-actions').isVisible(), '键盘聚焦会话时操作入口不可见');
   await row.locator('.assistant-history-open').press('Tab');
-  check(await row.locator('.assistant-history-delete').evaluate(el => el === document.activeElement), '键盘无法进入删除按钮');
+  check(await row.locator('.assistant-history-actions').evaluate(el => el === document.activeElement), '键盘无法进入操作按钮');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: '展开会话列表', exact: true }).click();
   await switchTo('b');
@@ -113,9 +113,32 @@ async page => {
   await switchTo('c');
   await page.setViewportSize({ width: 1440, height: 850 });
   await page.getByRole('link', { name: '关于', exact: true }).click();
+  await page.getByRole('heading', { name: '关于', exact: true }).waitFor();
   const opener = page.getByRole('button', { name: '打开 AI 助手', exact: true });
   if (await opener.isVisible()) await opener.click();
-  await page.getByRole('button', { name: '历史对话', exact: true }).click();
+  // 历史入口多了一层定位容器，通用图标按钮规则不能覆盖文字按钮宽度。
+  const historyTrigger = page.getByRole('button', { name: '历史对话', exact: true });
+  for (const width of [1440, 1100, 390, 320]) {
+    await page.setViewportSize({ width, height: 850 });
+    await historyTrigger.waitFor();
+    // 响应式侧栏会在媒体查询变化后重新布局，等待最终尺寸。
+    await page.waitForFunction(() => {
+      const header = document.querySelector('.assistant-heading');
+      return header && header.scrollWidth <= header.clientWidth;
+    });
+    const layout = await historyTrigger.evaluate(button => {
+      const text = [...button.childNodes].find(node => node.nodeType === Node.TEXT_NODE);
+      const range = document.createRange(); range.selectNodeContents(text);
+      const box = button.getBoundingClientRect();
+      return { lines: range.getClientRects().length, width: box.width, height: box.height,
+        overflow: button.scrollWidth > button.clientWidth,
+        headerOverflow: button.closest('.assistant-heading').scrollWidth > button.closest('.assistant-heading').clientWidth };
+    });
+    check(layout.lines === 1 && !layout.overflow && !layout.headerOverflow && layout.width > layout.height,
+      `历史对话按钮换行或工具栏溢出：${width}px ${JSON.stringify(layout)}`);
+  }
+  await page.setViewportSize({ width: 1440, height: 850 });
+  await historyTrigger.click();
   await switchTo('b');
   // 真正不兼容的模型仍须提示并阻止发送，不能用隐藏错误来消除跳动。
   await page.getByRole('button', { name: '历史对话', exact: true }).click();
@@ -126,5 +149,5 @@ async page => {
   await page.getByText('请选择支持图片的模型', { exact: true }).waitFor();
   await page.getByRole('textbox', { name: '向助手提问' }).fill('继续解释');
   check(await page.getByRole('button', { name: '发送', exact: true }).isDisabled(), '图片与模型不兼容时仍可发送');
-  return '删除图标无集体闪现、键盘入口、正文无空白帧、慢请求布局与首帧定位、失败重试和窄屏/侧边助手通过';
+  return '操作图标无集体闪现、键盘入口、正文无空白帧、慢请求布局与首帧定位、失败重试和窄屏/侧边助手通过';
 }

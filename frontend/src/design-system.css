@@ -43,6 +43,7 @@
   --ds-input: #f8fbfa;
 }
 :root {
+  --ds-modal-backdrop: rgb(20 25 35 / 30%);
   --ds-on-primary: #fff;
   --ds-score: #19171f;
   /* 次级导航使用中性整行高亮；主题浅底用于全局导航与控件选中态。 */
@@ -816,9 +817,9 @@
 .assistant-heading { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--ds-line); }
 .assistant-heading h2 { font-size: 16px; font-weight: 650; margin: 0; white-space: nowrap; }
 .assistant-actions { display: flex; align-items: center; gap: 2px; }
-.assistant-actions button { width: 36px; min-height: 36px; padding: 0; border: 0; background: transparent; color: var(--ds-muted); border-radius: 8px; }
-.assistant-actions .assistant-new { width: auto; padding: 0 9px; font-size: 12px; }
-.assistant-actions button:hover:not(:disabled) { color: var(--ds-ink); background: var(--ds-hover); }
+.assistant-actions > button, .assistant-actions > :where(.assistant-history-anchor) > button { width: 36px; min-height: 36px; padding: 0; border: 0; background: transparent; color: var(--ds-muted); border-radius: 8px; }
+.assistant-actions .assistant-new { width: auto; flex-shrink: 0; white-space: nowrap; padding: 0 9px; font-size: 12px; }
+.assistant-actions > button:hover:not(:disabled), .assistant-actions > :where(.assistant-history-anchor) > button:hover:not(:disabled) { color: var(--ds-ink); background: var(--ds-hover); }
 .assistant-messages { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 24px; scrollbar-width: thin; }
 .assistant-messages:has(> .assistant-empty) { display: flex; flex-direction: column; }
 .assistant-empty { width: 100%; margin: auto; color: var(--ds-muted); padding: 24px 4px; line-height: 1.7; text-align: center; }
@@ -1025,9 +1026,9 @@
 .assistant-history .assistant-history-open { width: auto; color: inherit; display: flex; flex: 1; min-width: 0; justify-content: flex-start; gap: 8px; text-align: left; padding: 10px; min-height: 42px; background: transparent; border: 0; font-size: 13px; }
 .assistant-history-title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .assistant-history-open small { flex-shrink: 0; color: var(--ds-muted); font-weight: 400; }
-.assistant-history .assistant-history-delete { flex-shrink: 0; width: 30px; min-height: 30px; background: transparent; border: 0; padding: 6px; color: var(--ds-muted); }
+.assistant-history .assistant-history-actions { flex-shrink: 0; width: 30px; min-height: 30px; background: transparent; border: 0; padding: 6px; color: var(--ds-muted); }
 .assistant-history li button:hover:not(:disabled) { background: transparent; }
-.assistant-history li .assistant-history-delete:hover:not(:disabled) { color: var(--ds-danger, #c43d4b); }
+.assistant-history li .assistant-history-actions:hover:not(:disabled) { color: var(--ds-ink); }
 /* 快速恢复时只保留页头，耗时较长才显示占位，避免欢迎语闪现。 */
 .assistant-initializing { flex: 1; min-height: 0; padding: 36px 24px; }
 .assistant-loading-placeholder { opacity: 0; animation: assistant-loading-reveal 0s 250ms forwards; max-width: 640px; margin: 0 auto; }
@@ -1056,9 +1057,9 @@
 .assistant-history-caption { margin: 0 10px 12px; font-size: 12px; font-weight: 500; color: var(--ds-muted); }
 .assistant-history--sidebar .assistant-history-open { font-size: 14px; font-weight: 400; color: var(--ds-ink); }
 .assistant-history-empty { margin: 0 10px; font-size: 14px; font-weight: 400; line-height: 1.5; color: var(--ds-muted); }
-/* 显隐独立于禁用态的透明度，避免切换会话时所有删除按钮显现。 */
-.assistant-history--sidebar .assistant-history-delete { visibility: hidden; }
-.assistant-history--sidebar li:is(:hover, :focus-within) .assistant-history-delete { visibility: visible; }
+/* 显隐独立于禁用态的透明度，避免切换会话时所有操作按钮显现。 */
+.assistant-history--sidebar .assistant-history-actions { visibility: hidden; }
+.assistant-history--sidebar li:is(:hover, :focus-within) .assistant-history-actions, .assistant-history--sidebar .assistant-history-actions[data-state="open"] { visibility: visible; }
 .assistant-heading .assistant-actions[hidden] { display: none; }
 .assistant-shell[data-layout="home"] .assistant-heading { justify-content: flex-start; gap: 12px; padding: 20px 18px; min-height: 80px; }
 .assistant-session-toggle, .assistant-history--sidebar .assistant-history-heading button { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; min-height: 40px; padding: 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ds-muted); }
@@ -1071,7 +1072,7 @@
   .assistant-shell[data-mobile-history="true"] .assistant-session-sidebar { display: flex; }
   .assistant-history-backdrop { display: block; position: absolute; inset: 0; z-index: 64; border: 0; border-radius: 0; background: rgb(20 25 35 / 25%); }
 }
-@media (hover: none) { .assistant-history--sidebar .assistant-history-delete { visibility: visible; } }
+@media (hover: none) { .assistant-history--sidebar .assistant-history-actions { visibility: visible; } }
 
 /* 浏览页和工作区共用左侧基准，仅按内容类型限制宽度。 */
 .site-shell main:has(> :is(.preset-library, .settings-page, .practice-records-page, .custom-library)) { max-width: calc(1040px + 2 * var(--site-gutter)); }
@@ -1207,27 +1208,27 @@
 :root { --surface-duration: 180ms; --menu-duration: 140ms; --surface-ease: cubic-bezier(.2, .8, .2, 1); }
 .site-menu-drawer { --surface-offset: -20px 0; }
 .random-settings-drawer, .record-drawer { --surface-offset: 20px 0; }
-.assistant-panel, .generated-practice-overlay, .model-service-dialog, .assistant-image-viewer { --surface-offset: 0 6px; }
+.assistant-panel, .generated-practice-overlay, .model-service-dialog, .app-dialog, .assistant-image-viewer { --surface-offset: 0 6px; }
 
 @media (prefers-reduced-motion: no-preference) {
   @keyframes surface-enter {
     from { opacity: 0; translate: var(--surface-offset, 0 6px); }
     to { opacity: 1; translate: 0 0; }
   }
-  .assistant-composer-menu, .assistant-model-dialog {
+  .assistant-composer-menu, .assistant-model-dialog, .assistant-conversation-menu {
     --surface-offset: 0 4px;
     transform-origin: var(--radix-popover-content-transform-origin);
   }
-  :is(.assistant-composer-menu, .assistant-model-dialog)[data-side="bottom"] { --surface-offset: 0 -4px; }
-  :is(.assistant-composer-menu, .assistant-model-dialog)[data-state="open"] {
+  :is(.assistant-composer-menu, .assistant-model-dialog, .assistant-conversation-menu)[data-side="bottom"] { --surface-offset: 0 -4px; }
+  :is(.assistant-composer-menu, .assistant-model-dialog, .assistant-conversation-menu)[data-state="open"] {
     animation: surface-enter var(--menu-duration) var(--surface-ease);
   }
-  :is(.assistant-composer-menu, .assistant-model-dialog)[data-state="closed"] {
+  :is(.assistant-composer-menu, .assistant-model-dialog, .assistant-conversation-menu)[data-state="closed"] {
     animation: none;
     pointer-events: none;
   }
   .assistant-history--popover { --surface-offset: 0 -4px; animation: surface-enter var(--menu-duration) var(--surface-ease); }
-  .generated-practice-overlay[open], .record-drawer[open], .model-service-dialog[open], .assistant-image-viewer[open],
+  .generated-practice-overlay[open], .record-drawer[open], .model-service-dialog[open], .app-dialog[open], .assistant-image-viewer[open],
   .assistant-shell[data-layout="sidebar"] .assistant-panel[open] {
     animation: surface-enter var(--surface-duration) var(--surface-ease);
   }
@@ -1250,9 +1251,9 @@
     :is(.site-menu-drawer, .random-settings-drawer)[open] { opacity: 0; translate: var(--surface-offset, 0 6px); }
     :is(.site-menu-drawer, .random-settings-drawer)[open]::backdrop { opacity: 0; }
   }
-  :is(.record-drawer, .generated-practice-overlay, .model-service-dialog, .assistant-image-viewer)::backdrop { transition: opacity 140ms ease-in; }
-  :is(.record-drawer, .generated-practice-overlay, .model-service-dialog, .assistant-image-viewer)[data-dismissing]::backdrop { opacity: 0; }
-  @starting-style { :is(.record-drawer, .generated-practice-overlay, .model-service-dialog, .assistant-image-viewer)[open]::backdrop { opacity: 0; } }
+  :is(.record-drawer, .generated-practice-overlay, .model-service-dialog, .app-dialog, .assistant-image-viewer)::backdrop { transition: opacity 140ms ease-in; }
+  :is(.record-drawer, .generated-practice-overlay, .model-service-dialog, .app-dialog, .assistant-image-viewer)[data-dismissing]::backdrop { opacity: 0; }
+  @starting-style { :is(.record-drawer, .generated-practice-overlay, .model-service-dialog, .app-dialog, .assistant-image-viewer)[open]::backdrop { opacity: 0; } }
   .assistant-session-sidebar {
     --surface-offset: -16px 0;
     transition: opacity var(--surface-duration), translate var(--surface-duration), display var(--surface-duration) allow-discrete;
@@ -1330,3 +1331,26 @@
 .editor-meter { display: flex; align-items: center; gap: 12px; color: var(--ds-muted); }
 .editor-meter .record-filter-trigger { width: auto; min-width: 90px; }
 .random-config > .editor-meter { margin-bottom: 20px; }
+
+/* 会话操作与列表共享主题；固定定位菜单由 Radix 避让窗口边缘。 */
+.assistant-conversation-menu { z-index: 80; min-width: 160px; padding: 6px; border: 1px solid var(--ds-line); border-radius: 12px; background: var(--ds-surface); color: var(--ds-ink); box-shadow: 0 6px 24px rgb(0 0 0 / 12%); }
+.assistant-conversation-menu [role="menuitem"] { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 10px; border-radius: 7px; font-size: 14px; cursor: pointer; outline: none; }
+.assistant-conversation-menu [role="menuitem"][data-highlighted] { background: var(--ds-hover); }
+.assistant-conversation-menu [role="menuitem"][data-disabled] { opacity: .45; cursor: default; }
+.assistant-conversation-menu .assistant-conversation-delete { color: var(--ds-error); }
+
+/* 小型表单与确认弹窗共享容器和操作区。 */
+.app-dialog { width: min(480px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); box-sizing: border-box; margin: auto; padding: 24px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--ds-line); border-radius: 20px; background: var(--ds-surface); color: var(--ds-ink); box-shadow: 0 20px 60px #0002; }
+.app-dialog::backdrop { background: var(--ds-modal-backdrop); }
+.app-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.app-dialog-heading h2 { margin: 0; font-size: 22px; font-weight: 600; }
+.design-system .app-dialog-heading button { display: grid; place-items: center; width: 32px; min-height: 32px; padding: 6px; border: 0; background: transparent; color: var(--ds-muted); box-shadow: none; }
+.app-dialog-description { margin: 0 0 20px; color: var(--ds-muted); font-size: 14px; overflow-wrap: anywhere; }
+.app-dialog input { width: 100%; min-width: 0; box-sizing: border-box; padding: 12px; border: 1px solid var(--ds-field-border); border-radius: 8px; background: var(--ds-surface); color: var(--ds-ink); font: inherit; }
+.app-dialog .app-dialog-error { color: var(--ds-error); margin: 12px 0 0; }
+.app-dialog-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+.design-system .app-dialog-footer button { width: auto; flex-shrink: 0; white-space: nowrap; min-height: 40px; padding: 8px 20px; border: 1px solid var(--ds-line); border-radius: 24px; background: var(--ds-surface); color: var(--ds-ink); }
+.design-system .app-dialog-footer .app-dialog-primary { border-color: transparent; background: var(--ds-primary); color: var(--ds-on-primary); }
+.design-system .app-dialog-footer .app-dialog-primary:hover:not(:disabled) { background: var(--ds-primary-hover); }
+.design-system .app-dialog-footer .app-dialog-danger { border-color: transparent; background: var(--ds-error); color: var(--ds-surface); }
+.design-system .app-dialog-footer .app-dialog-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--ds-error) 85%, var(--ds-ink)); }

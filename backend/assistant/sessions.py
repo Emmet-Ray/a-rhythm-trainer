@@ -36,6 +36,11 @@ class CardState(BaseModel):
     answer_viewed: bool = False
 
 
+class SessionTitle(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    title: str = Field(min_length=1, max_length=60, pattern=r"^[^\r\n]+$")
+
+
 class ChatSession:
     def __init__(self, journal: SessionJournal | None = None, owner: str = ""):
         self.journal = journal
@@ -43,6 +48,7 @@ class ChatSession:
         self.created_at = datetime.now(UTC).isoformat()
         self.updated_at = self.created_at
         self.title = "新对话"
+        self._title_renamed = False
         self.model_selection: ModelSelection | None = None
         self.card_states: dict[str, dict] = {}
         self._save_lock = RLock()
@@ -77,6 +83,17 @@ class ChatSession:
             if self.model_selection != selection:
                 self.save({"type": "model_selection", "selection": selection.model_dump()})
                 self.model_selection = selection
+
+    def rename(self, title: str) -> dict:
+        """先持久化名称，再发布；后续消息不覆盖手动命名。"""
+        title = SessionTitle(title=title).title
+        with self._save_lock:
+            if self.is_running:
+                raise SessionBusy("请等待本轮结束后重命名对话。")
+            self.save({"type": "title", "title": title})
+            self.title = title
+            self._title_renamed = True
+            return {"id": self.id, "title": self.title, "updated_at": self.updated_at}
 
     async def checkpoint(self, turn: Turn):
         try:
@@ -146,7 +163,7 @@ class ChatSession:
             self._pending_images = False
             self.is_running = False
             raise
-        if not self.turns:
+        if not self.turns and not self._title_renamed:
             self.title = text.strip().replace("\n", " ")[:60] or "图片对话"
         self.turns.append(turn)
         self._pending_images = False
@@ -295,7 +312,7 @@ class SessionStore:
                             if any(turn.user_id == saved.user_id for turn in session.turns):
                                 raise ValueError()
                             turn = Turn(**saved.model_dump(exclude={"page_context", "images"}), page_context=saved.page_context, images=saved.images)
-                            if not session.turns:
+                            if not session.turns and not session._title_renamed:
                                 session.title = (turn.text.strip().replace("\n", " ")[:60] or "图片对话")
                             session.turns.append(turn)
                             session.last_run_status = "running"
@@ -304,6 +321,9 @@ class SessionStore:
                                 raise ValueError()
                             session.turns[-1].messages = ModelMessagesTypeAdapter.validate_python(entry["messages"])
                             session.last_run_status = TypeAdapter(Literal["running", "completed", "failed", "cancelled"]).validate_python(entry["status"])
+                        case "title":
+                            session.title = SessionTitle(title=entry["title"]).title
+                            session._title_renamed = True
                         case "model_selection":
                             session.model_selection = ModelSelection.model_validate(entry["selection"])
                         case "card_state":

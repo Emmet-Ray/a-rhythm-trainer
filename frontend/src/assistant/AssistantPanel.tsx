@@ -62,9 +62,10 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
     const sidebar = sessionSidebar.current;
     const toggle = sessionToggle.current;
     if (!sidebar) return;
-    const buttons = () => Array.from(sidebar.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+    const buttons = () => Array.from(sidebar.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled)"));
     buttons()[0]?.focus({ preventScroll: true });
     const keydown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       if (event.key === "Escape") {
         event.preventDefault();
         setMobileHistoryOpen(false);
@@ -231,7 +232,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
       {home && availability.ready && !initializing && <>
         {mobileHistoryOpen && <button className="assistant-history-backdrop" aria-label="关闭会话列表" onClick={() => setMobileHistoryOpen(false)} />}
         <aside ref={sessionSidebar} role={mobileHistoryOpen ? "dialog" : undefined} aria-modal={mobileHistoryOpen ? true : undefined} aria-label="会话列表" className="assistant-session-sidebar" onKeyDown={event => { if (event.key === "Escape" && !mobileHistoryOpen) { setSidebarExpanded(false); requestAnimationFrame(() => sessionToggle.current?.focus()); } }}>
-          <ConversationHistory placement="sidebar" currentId={state.session?.id} currentSession={state.session}
+          <ConversationHistory onRename={(id, title, signal) => conversation.rename(id, title, signal)} placement="sidebar" currentId={state.session?.id} currentSession={state.session}
             onNew={() => { newConversation(); setMobileHistoryOpen(false); }} onOpen={openConversation} onDeleted={deleteConversation}
             onClose={() => { setSidebarExpanded(false); setMobileHistoryOpen(false); }} />
         </aside>
@@ -304,7 +305,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
                   disabled={initializing || state.restoring} onClick={() => { playbackGroup.stop(); if (historyOpen) closeHistory(); else setHistoryOpen(true); }}>
                   <History size={16} aria-hidden="true" />历史对话
                 </button>
-            {!home && historyOpen && <ConversationHistory panelRef={historyPanel} anchor={historyButton} currentId={state.session?.id}
+            {!home && historyOpen && <ConversationHistory onRename={(id, title, signal) => conversation.rename(id, title, signal)} panelRef={historyPanel} anchor={historyButton} currentId={state.session?.id}
               onClose={closeHistory}
               onDeleted={deleteConversation} onOpen={openConversation} />}
                 </div>
