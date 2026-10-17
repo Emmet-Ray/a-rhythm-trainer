@@ -94,20 +94,16 @@ function RhythmTrainer({
     [perfectMs, hitMs],
   );
   const [selectionExercise, setSelectionExercise] = useState(exercise);
-  const [selectedMeasure, setSelectedMeasure] = useState(0);
-  const [currentMeasureOnly, setCurrentMeasureOnly] = useState(false);
+  const [selectedStart, setSelectedStart] = useState({ measure: 0, eventIndex: 0 });
   if (selectionExercise !== exercise) {
     setSelectionExercise(exercise);
-    setSelectedMeasure(0);
-    setCurrentMeasureOnly(false);
+    setSelectedStart({ measure: 0, eventIndex: 0 });
   }
   const range = useMemo(() => ({
-    startMeasure: selectionExercise === exercise ? selectedMeasure : 0,
-    endMeasure: selectionExercise === exercise && currentMeasureOnly ? selectedMeasure + 1 : exercise.measures.length,
-  }), [selectedMeasure, currentMeasureOnly, exercise, selectionExercise]);
-  const rangeLabel = range.endMeasure === range.startMeasure + 1
-    ? `第 ${range.startMeasure + 1} 小节`
-    : `第 ${range.startMeasure + 1} 小节 — 第 ${range.endMeasure} 小节`;
+    startMeasure: selectionExercise === exercise ? selectedStart.measure : 0,
+    endMeasure: exercise.measures.length,
+    startEventIndex: selectionExercise === exercise ? selectedStart.eventIndex : 0,
+  }), [selectedStart, exercise, selectionExercise]);
   const timeline = useMemo(
     () =>
       createExerciseTimeline(
@@ -337,7 +333,7 @@ function RhythmTrainer({
       if (requestedMode === "practice") tapFeedbackRef.current = createTapFeedback(context);
       const clock = createPracticeClock(context, nextTimeline.countInDurationMs);
       clockRef.current = clock;
-      metronomeRef.current = createMetronome(context, clock, bpm, exercise.timeSignature.beats, nextTimeline.durationMs);
+      metronomeRef.current = createMetronome(context, clock, bpm, exercise.timeSignature.beats, nextTimeline.durationMs, nextTimeline.startOffsetMs);
       metronomeRef.current.setEnabled(metronomeEnabledRef.current);
       setRoundTimingWindows(nextWindows);
       setMode(requestedMode);
@@ -367,6 +363,7 @@ function RhythmTrainer({
       clearMetronomePlaybackRef.current = metronomePlayback?.start({
         readTimeMs: clock.readTimeMs, bpm,
         countInDurationMs: nextTimeline.countInDurationMs,
+        startOffsetMs: nextTimeline.startOffsetMs,
         durationMs: nextTimeline.durationMs,
       }) ?? null;
 
@@ -472,13 +469,7 @@ function RhythmTrainer({
   const listenShortcut = practiceShortcuts[isRunning && mode === "listen" ? "stop" : "listen"];
   return (
     <div className="rhythm-trainer design-system">
-    <PracticeFrame settingsPanel={settingsPanel} scopeControls={<>
-        {exercise.measures.length > 1 && <label className="practice-scope-toggle">
-          <input type="checkbox" checked={currentMeasureOnly} disabled={busy}
-            onChange={event => setCurrentMeasureOnly(event.target.checked)} />
-          <span>只练习当前小节</span>
-        </label>}
-    </>} toolbar={<>
+    <PracticeFrame settingsPanel={settingsPanel} toolbar={<>
       <div className="trainer-actions">
         {/* 点击开始之后，该按钮变为停止状态，先播放预备拍，用户敲击键盘进行击拍练习 */}
         <button
@@ -515,10 +506,9 @@ function RhythmTrainer({
       <PracticeResult passed={result?.passed ?? null} />
       {audioError && <ActionError message={audioError} />}
     </>}>
-      <p className="tapping-range-summary" aria-live="polite">{rangeLabel}</p>
       <RhythmScore
         exercise={exercise}
-        selection={exercise.measures.length > 1 ? { range, disabled: busy, onSelect: setSelectedMeasure } : undefined}
+        selection={{ startEventIndex: timeline.firstEventIndex, disabled: busy, onSelect: (measure, eventIndex) => setSelectedStart({ measure, eventIndex }) }}
         activeEventIndex={activeEventIndex}
         timeline={timeline}
         timingEvents={timingEvents}

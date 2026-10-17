@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   BarlineType,
   Formatter,
@@ -9,13 +9,13 @@ import {
 
 import type { RhythmExercise } from "../RhythmModel";
 import { createRhythmStave, getRhythmLineY, prepareRhythmMeasure } from "./RhythmNotation";
-import type { ExerciseTimeline, MeasureRange, TimingEvent } from "../RhythmTiming";
+import type { ExerciseTimeline, TimingEvent } from "../RhythmTiming";
 import { drawTimingMarker } from "./RhythmTimingMarker";
 import {
   createPracticeScoreLayout,
   createTimingFeedbackLayout,
   getScoreViewportHeight,
-  getScoreMeasureBounds,
+  getScoreEventBounds,
   getScoreFollowTop,
   timingOffsetToScorePosition,
   type MeasureGeometry,
@@ -37,8 +37,8 @@ type RhythmScoreProps = {
   playback: { roundId: number; eventIndex: number } | null;
   /** 固定在可视窗口上的临时提示，由调用方决定内容；不随谱面滚动或参与排版。 */
   overlay?: ReactNode;
-  /** 小节选择只报告原谱面下标，不启动播放；范围由训练组件持有。 */
-  selection?: { range: MeasureRange; disabled: boolean; onSelect: (measure: number) => void };
+  /** 点击仅报告原谱事件起点，不启动播放、不改变浏览位置。 */
+  selection?: { startEventIndex: number; disabled: boolean; onSelect: (measure: number, eventIndex: number) => void };
 };
 
 type RenderedScore = {
@@ -72,6 +72,7 @@ function RhythmScore({
   const { measures, timeSignature } = exercise;
   const minimumWidth = useMemo(() => containerWidth === 0 ? 320 : Math.max(320, ...measures.map(measure => prepareRhythmMeasure(measure.elements).minimumWidth)), [measures, containerWidth]);
   const scoreLayout = useMemo(() => createPracticeScoreLayout(measures.length, containerWidth, minimumWidth), [measures.length, containerWidth, minimumWidth]);
+  const [eventBounds, setEventBounds] = useState<ReturnType<typeof getScoreEventBounds>>([]);
   const pointerOrigin = useRef<{ x: number; y: number; moved: boolean } | null>(null);
 
   useEffect(() => {
@@ -141,12 +142,27 @@ function RhythmScore({
       });
     });
     renderedRef.current = rendered;
+    setEventBounds(getScoreEventBounds(rendered.measures, scoreLayout.scale));
 
     return () => {
       renderedRef.current = null;
       container.replaceChildren();
     };
   }, [containerWidth, measures, timeSignature.beats, timeSignature.beatType, scoreLayout]);
+
+  useEffect(() => {
+    const cancelPointer = () => { if (pointerOrigin.current) pointerOrigin.current.moved = true; };
+    window.addEventListener("scroll", cancelPointer, true);
+    return () => window.removeEventListener("scroll", cancelPointer, true);
+  }, []);
+
+  useLayoutEffect(() => {
+    const notes = renderedRef.current?.notes ?? [];
+    notes.forEach((note, index) => {
+      const element = note.getSVGElement();
+      if (element) element.style.opacity = index < (selection?.startEventIndex ?? 0) ? "0.35" : "1";
+    });
+  }, [selection?.startEventIndex, containerWidth, measures, timeSignature, scoreLayout]);
 
   // 可视高度改变只改变裁剪窗口，不能重建谱面或影响音频时间线。
   useLayoutEffect(() => {
@@ -219,7 +235,12 @@ function RhythmScore({
     <div className="rhythm-score">
       <div className="rhythm-score-stage">
         <div ref={viewportRef} className="rhythm-score-viewport" role="region" aria-label="节奏乐谱" tabIndex={0}
-          onWheel={pauseFollow} onTouchMove={pauseFollow}
+          onWheel={() => { pointerOrigin.current = null; pauseFollow(); }} onTouchMove={pauseFollow}
+          onPointerLeave={() => { if (pointerOrigin.current) pointerOrigin.current.moved = true; }}
+          onPointerMove={event => {
+            const origin = pointerOrigin.current;
+            if (origin && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 8) origin.moved = true;
+          }}
           onScroll={event => {
             // 也覆盖原生滚动条拖动；自身的按行滚动不能被误认成用户操作。
             const top = event.currentTarget.scrollTop;
@@ -232,25 +253,22 @@ function RhythmScore({
           }}>
           <div className="rhythm-score-content">
             <div ref={containerRef} />
-            {selection && getScoreMeasureBounds(scoreLayout).map((bounds, index) => <button
-              key={index} type="button" className="score-measure-select"
-              aria-label={`第 ${index + 1} 小节，设为练习起点`}
-              aria-pressed={index === selection.range.startMeasure}
+            {selection && eventBounds.map(({ eventIndex, measure, localIndex, cursorX, ...bounds }) => <button
+              key={eventIndex} type="button" className="score-event-select"
+              aria-label={`第 ${measure + 1} 小节第 ${localIndex + 1} 个符号，设为练习起点`}
+              aria-pressed={eventIndex === selection.startEventIndex}
               disabled={selection.disabled}
-              data-in-range={index >= selection.range.startMeasure && index < selection.range.endMeasure}
-              style={bounds}
-              onPointerDown={event => { pointerOrigin.current = { x: event.clientX, y: event.clientY, moved: false }; }}
-              onPointerMove={event => {
-                const origin = pointerOrigin.current;
-                if (origin && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 8) origin.moved = true;
+              style={{ ...bounds, "--score-start-x": `${cursorX}px` } as CSSProperties}
+              onPointerDown={event => {
+                pointerOrigin.current = event.isPrimary && event.button === 0 ? { x: event.clientX, y: event.clientY, moved: false } : null;
               }}
               onPointerCancel={() => { pointerOrigin.current = null; }}
               onClick={event => {
                 if (event.detail > 0) event.currentTarget.blur();
-                const moved = pointerOrigin.current?.moved;
+                const origin = pointerOrigin.current;
                 pointerOrigin.current = null;
-                if (event.detail !== 0 && moved) return;
-                selection.onSelect(index);
+                if (event.detail !== 0 && (!origin || origin.moved)) return;
+                selection.onSelect(measure, eventIndex);
               }} />)}
           </div>
         </div>

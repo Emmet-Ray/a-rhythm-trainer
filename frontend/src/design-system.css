@@ -465,7 +465,7 @@
 .practice-controls .practice-toolbar { display: flex; align-items: center; flex-wrap: wrap; flex: 1 1 380px; gap: 12px; min-width: 0; }
 .practice-controls .trainer-actions { justify-content: flex-start; flex-wrap: wrap; }
 .practice-controls .practice-settings { flex: 0 0 auto; display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; padding: 0; border: 0; min-width: 0; }
-.practice-controls .practice-settings-row > .practice-settings { padding-left: 24px; border-left: 1px solid var(--ds-line); }
+.practice-controls .practice-settings-row > .practice-settings:where(:not(:first-child)) { padding-left: 24px; border-left: 1px solid var(--ds-line); }
 .practice-controls .mechanical-metronome { width: 44px; min-height: 48px; padding: 0; }
 .practice-controls .mechanical-metronome svg { width: 36px; height: 42px; }
 .practice-controls .tempo-settings { flex: 1; width: auto; grid-template-columns: auto; align-items: center; gap: 8px; }
@@ -1299,26 +1299,28 @@
 .editor-playback { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .exercise-editor .editor-playback .rhythm-playback-buttons button { min-width: 88px; min-height: 44px; }
 
-/* 小节选择覆盖谱面命中区域；不改变 SVG 排版或播放反馈。 */
+/* 透明命中区只覆盖谱表；起点竖线与预览复用实际符号坐标。 */
 .rhythm-score-content { position: relative; }
-.design-system button.score-measure-select {
+.design-system button.score-event-select {
   position: absolute; display: block; padding: 0; min-height: 0;
-  border: 1px solid transparent; border-radius: 6px; background: transparent;
+  border: 0; border-radius: 0; background: transparent;
   color: var(--ds-primary); box-shadow: none; transform: none;
   touch-action: pan-y; transition: none;
 }
-.design-system button.score-measure-select[data-in-range="true"] { background: color-mix(in srgb, var(--ds-primary) 4%, transparent); }
-.design-system button.score-measure-select[aria-pressed="true"] { background: color-mix(in srgb, var(--ds-primary) 8%, transparent); }
-.design-system button.score-measure-select:not(:disabled):hover { background: color-mix(in srgb, var(--ds-primary) 9%, transparent); border-color: transparent; box-shadow: none; transform: none; }
-.design-system button.score-measure-select:disabled { opacity: 1; cursor: default; }
-.design-system button.score-measure-select:focus-visible:where(:not([data-pointer-focus])),
-.design-system .rhythm-score-viewport:focus-visible:where(:not([data-pointer-focus])) { outline: none; }
-.design-system button.score-measure-select:focus-visible:where(:not([data-pointer-focus]))::after,
-.rhythm-score-stage:has(> .rhythm-score-viewport:focus-visible:where(:not([data-pointer-focus])))::after {
-  content: ""; position: absolute; top: 6px; left: 12px; width: 32px; height: 3px;
-  border-radius: 2px; background: var(--ds-primary); pointer-events: none;
+.design-system button.score-event-select:not(:disabled):hover,
+.design-system button.score-event-select:active { background: transparent; box-shadow: none; transform: none; }
+.design-system button.score-event-select:disabled { opacity: 1; cursor: default; }
+.score-event-select::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: var(--score-start-x);
+  width: 2px; background: var(--ds-primary); opacity: 0; pointer-events: none;
+  transform: translateX(-1px);
 }
-.tapping-range-summary { margin: 0; min-height: 1.6em; }
+.score-event-select[aria-pressed="true"]::after { opacity: 1; }
+@media (hover: hover) {
+  .score-event-select:not(:disabled):hover::after { opacity: .35; }
+  .score-event-select[aria-pressed="true"]:hover::after { opacity: 1; }
+}
+.design-system button.score-event-select:focus-visible:where(:not([data-pointer-focus])) { outline: 2px solid var(--ds-primary); outline-offset: -2px; }
 
 .sound-setting { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 28px; }
 .sound-setting > label { color: var(--ds-muted); font-size: var(--ds-text-sm); }

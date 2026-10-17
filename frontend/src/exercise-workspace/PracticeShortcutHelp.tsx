@@ -18,7 +18,7 @@ export default function PracticeShortcutHelp({ mode, source }: {
     <button type="button" popoverTarget={id} aria-label="查看快捷键"><Keyboard className="ui-icon" aria-hidden="true" />快捷键</button>
     <div id={id} popover="auto" className="practice-shortcuts-panel" role="dialog" aria-labelledby={id + "-title"}>
       <header><h2 id={id + "-title"}>快捷键</h2><button type="button" popoverTarget={id} popoverTargetAction="hide" aria-label="关闭快捷键"><X className="ui-icon" aria-hidden="true" /></button></header>
-      {mode === "tapping" && <p>点击谱面小节设置练习起点；局部练习不计入记录。</p>}
+      {mode === "tapping" && <p>点击谱面音符或休止符设置练习起点；局部练习不计入记录。</p>}
       <dl>{items.map(({ label, key }) => <div key={key}><dt>{label}</dt><dd><kbd>{key}</kbd></dd></div>)}</dl>
     </div>
   </div>;

@@ -351,3 +351,21 @@ test("旧音自然结束后不回收，每轮音色固定于创建时", async t 
   nextRound.stop();
   assert.equal(context.sources[1].stops.length, 0);
 });
+
+test("弱拍起点的节拍器保留原谱拍点与小节重音", async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => response());
+  const context = fakeContext();
+  await audio.prepareMetronomeSound(context);
+  const clock = audio.createPracticeClock(context, 3500);
+  const metronome = audio.createMetronome(context, clock, 60, 4, 4500, 3500);
+  metronome.setEnabled(true);
+  const start = clock.audioTimeAt(0);
+  assert.deepEqual(context.sources.map(source => Math.round((source.started[0] - start) * 1000)), [500,1500,2500,3500]);
+  assert.deepEqual(context.gains.map(g => g.gain.changes[1][0]), [0.7, 0.45, 0.45, 0.45]);
+});
+
+test("关闭预备拍后，弱拍起点的摆针仍与声音拍点一致", () => {
+  const playback = { bpm: 60, countInDurationMs: 0, durationMs: 2000, startOffsetMs: 500 };
+  assert.ok(Math.abs(metronomePlayback.getMetronomeAngle(0, playback)) < 1e-8);
+  assert.equal(metronomePlayback.getMetronomeAngle(500, playback), 25);
+});

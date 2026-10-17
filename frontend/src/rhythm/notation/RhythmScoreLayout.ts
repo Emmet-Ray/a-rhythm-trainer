@@ -236,3 +236,17 @@ export function getScoreMeasureBounds(layout: ScoreLayout) {
     };
   });
 }
+
+/** 命中区域按相邻符号中点分割，仅覆盖谱表，排除行间与首尾记谱留白。
+ * 返回显示像素及原谱事件编号，选点无需把排版距离当成音乐时间。
+ */
+export function getScoreEventBounds(measures: readonly MeasureGeometry[], scale: number) {
+  let eventIndex = 0;
+  return measures.flatMap((measure, measureIndex) => measure.eventXs.map((x, index) => {
+    const left = index === 0 ? Math.max(measure.minimumX, x - 24) : (measure.eventXs[index - 1] + x) / 2;
+    const right = index === measure.eventXs.length - 1 ? Math.min(measure.maximumX, x + 32) : (x + measure.eventXs[index + 1]) / 2;
+    return { eventIndex: eventIndex++, measure: measureIndex, localIndex: index,
+      left: left * scale, top: (measure.markerY - 70) * scale,
+      width: (right - left) * scale, height: 76 * scale, cursorX: (x - left) * scale };
+  }));
+}

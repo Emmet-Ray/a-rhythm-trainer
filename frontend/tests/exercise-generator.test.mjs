@@ -181,7 +181,7 @@ test("随机页面首次进入已有默认两小节题目，设置关闭且入�
       assert.equal((fieldset.match(/checked=""/g) ?? []).length, 3);
       assert.match(fieldset, /全音符/);
       assert.equal((html.match(/class="random-material-group"/g) ?? []).length, 3);
-      assert.equal((html.match(/type="checkbox"/g) ?? []).length, randomMaterials.length + 1);
+      assert.equal((html.match(/type="checkbox"/g) ?? []).length, randomMaterials.length + (mode === "dictation" ? 1 : 0));
       const drawer = html.match(/<dialog[^]*?<\/dialog>/)[0];
       assert.doesNotMatch(drawer, /生成题目|<form|type="submit"/);
       assert.ok(drawer.indexOf('class="measure-count"') < drawer.indexOf('class="random-material-group"'));

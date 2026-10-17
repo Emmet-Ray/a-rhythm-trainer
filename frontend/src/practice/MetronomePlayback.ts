@@ -6,6 +6,8 @@ export type MetronomePlayback = {
   bpm: number;
   countInDurationMs: number;
   durationMs: number;
+  /** 无预备拍时仍按原谱拍内位置显示摆针。 */
+  startOffsetMs?: number;
 };
 
 /** 设置区内的播放连接：仅在开始/清理时通知，逐帧时间由显示组件自行读取。
@@ -39,8 +41,10 @@ export const MetronomePlaybackContext = createContext<ReturnType<typeof createMe
 /** 第一声在左端，此后每拍到达另一端；掉帧或重新开启时直接恢复当前相位。
  * 调度余量期间和音乐结束后归中，不把额外的判定等待时间画成节拍。
  */
-export function getMetronomeAngle(timeMs: number, playback: Pick<MetronomePlayback, "bpm" | "countInDurationMs" | "durationMs">): number {
+export function getMetronomeAngle(timeMs: number, playback: Pick<MetronomePlayback, "bpm" | "countInDurationMs" | "durationMs" | "startOffsetMs">): number {
   if (!Number.isFinite(timeMs) || timeMs < -playback.countInDurationMs || timeMs >= playback.durationMs) return 0;
-  const beats = (timeMs + playback.countInDurationMs) / (60000 / playback.bpm);
+  const beatMs = 60000 / playback.bpm;
+  const phaseOffset = playback.countInDurationMs || ((playback.startOffsetMs ?? 0) % beatMs);
+  const beats = (timeMs + phaseOffset) / beatMs;
   return -25 * Math.cos(Math.PI * beats);
 }

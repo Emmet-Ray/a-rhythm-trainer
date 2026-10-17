@@ -6,8 +6,8 @@ import {
   type RhythmElement,
 } from "./RhythmModel";
 
-/** 小节范围使用从 0 开始的下标，endMeasure 不包含在范围内。 */
-export type MeasureRange = { startMeasure: number; endMeasure: number };
+/** 小节下标从 0 开始，endMeasure 不包含在范围内；startEventIndex 可指定起始小节内的全局事件起点。 */
+export type MeasureRange = { startMeasure: number; endMeasure: number; startEventIndex?: number };
 
 export type TargetTap = {
   // 按小节顺序展开后的全局事件下标，包含休止符占据的位置。
@@ -167,9 +167,22 @@ export function createExerciseTimeline(
   });
 
   // 保留完整谱面的事件编号与小节位置；仅本轮目标被筛选，所有偏移以选中起点归零。
-  const startOffset = measures[range.startMeasure]?.startOffsetMs ?? 0;
+  const measureFirstEvent = measures[range.startMeasure]?.firstEventIndex ?? 0;
+  const firstEventIndex = range.startEventIndex ?? measureFirstEvent;
+  const nextMeasureEvent = measures[range.startMeasure + 1]?.firstEventIndex ?? eventEndOffsetsMs.length;
+  if (!Number.isInteger(firstEventIndex) || firstEventIndex < measureFirstEvent
+    || (!emptyExercise && firstEventIndex >= nextMeasureEvent) || (emptyExercise && firstEventIndex !== 0)) {
+    throw new Error("练习起点必须是起始小节内的音符或休止符。");
+  }
+  const startOffset = eventStartOffsetsMs[firstEventIndex] ?? 0;
   const durationMs = (measures[range.endMeasure - 1]?.endOffsetMs ?? 0) - startOffset;
-  const firstEventIndex = measures[range.startMeasure]?.firstEventIndex ?? 0;
+  // 预备拍保持原有声数，最后一声到弱拍起点的距离遵循原谱拍位。
+  const phaseMs = startOffset % quarterNoteDurationMs;
+  if (countIn.countInOffsetsMs.length && phaseMs > 1e-8 && quarterNoteDurationMs - phaseMs > 1e-8) {
+    const shift = quarterNoteDurationMs - phaseMs;
+    countIn.countInDurationMs -= shift;
+    countIn.countInOffsetsMs = countIn.countInOffsetsMs.map(offset => offset + shift);
+  }
   const endEventIndex = measures[range.endMeasure]?.firstEventIndex ?? eventEndOffsetsMs.length;
   const selectedTargets = targetTaps.filter(target => target.eventIndex >= firstEventIndex && target.eventIndex < endEventIndex)
     .map(target => ({ ...target, offsetMs: target.offsetMs - startOffset }));
@@ -186,6 +199,7 @@ export function createExerciseTimeline(
     eventEndOffsetsMs: eventEndOffsetsMs.map(offset => offset - startOffset),
     range: { ...range },
     firstEventIndex,
+    startOffsetMs: startOffset,
     endEventIndex,
     durationMs,
     ...countIn,

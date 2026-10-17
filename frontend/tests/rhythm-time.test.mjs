@@ -1063,3 +1063,39 @@ test("单小节范围支持三连音和全休止符；非法小节范围在边�
     assert.throws(() => timing.createExerciseTimeline(score, 60, 0, windows, range), /练习范围/);
   }
 });
+
+test("小节中间的音符与休止起点保留事件编号，预备拍对齐原谱拍位", () => {
+  const score = { timeSignature: { beats: 4, beatType: 4 }, measures: [{ elements: [
+    { kind: 'note', noteValue: 'eighth' }, { kind: 'rest', noteValue: 'eighth' },
+    { kind: 'note', noteValue: 'quarter' }, { kind: 'rest', noteValue: 'half' },
+  ] }] };
+  const partial = timing.createExerciseTimeline(score, 60, undefined, windows, { startMeasure: 0, endMeasure: 1, startEventIndex: 1 });
+  assert.equal(partial.startOffsetMs, 500);
+  assert.equal(partial.durationMs, 3500);
+  assert.equal(partial.firstEventIndex, 1);
+  assert.deepEqual(partial.targetTaps, [{ eventIndex: 2, offsetMs: 500 }]);
+  assert.deepEqual(partial.countInOffsetsMs, [-3500, -2500, -1500, -500]);
+  assert.equal(partial.countInDurationMs, 3500);
+  assert.equal(timing.getPlaybackPosition(partial, 0).playingBeatIndex, 1);
+  const note = timing.createExerciseTimeline(score, 60, 0, windows, { startMeasure: 0, endMeasure: 1, startEventIndex: 2 });
+  assert.equal(note.targetTaps[0].offsetMs, 0);
+  assert.equal(note.durationMs, 3000);
+  assert.equal(note.countInDurationMs, 0);
+  for (const startEventIndex of [-1, 4, 0.5, NaN]) {
+    assert.throws(() => timing.createExerciseTimeline(score, 60, 4, windows, { startMeasure: 0, endMeasure: 1, startEventIndex }));
+  }
+});
+
+test("三连音内部起点按整数 tick 归零，保留后续小节及目标", () => {
+  const score = { timeSignature: { beats: 4, beatType: 4 }, measures: [
+    { elements: [triplet(), { kind: 'note', noteValue: 'quarter' }, { kind: 'rest', noteValue: 'half' }] },
+    { elements: [{ kind: 'note', noteValue: 'whole' }] },
+  ] };
+  const timeline = timing.createExerciseTimeline(score, 90, undefined, windows, { startMeasure: 0, endMeasure: 2, startEventIndex: 1 });
+  assert.ok(Math.abs(timeline.startOffsetMs - 60000 / 90 / 3) < 1e-8);
+  assert.equal(timeline.targetTaps[0].offsetMs, 0);
+  assert.equal(timeline.targetTaps[0].eventIndex, 1);
+  assert.equal(timeline.targetTaps.at(-1).eventIndex, 5);
+  assert.ok(Math.abs(timeline.countInOffsetsMs.at(-1) + timeline.startOffsetMs) < 1e-8);
+  assert.throws(() => timing.createExerciseTimeline(score, 90, undefined, windows, { startMeasure: 1, endMeasure: 2, startEventIndex: 1 }));
+});

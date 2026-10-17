@@ -210,3 +210,14 @@ test("小节背景包含谱面外侧留白，内部无缝且不拉伸末行", ()
   assert.equal(bounds[1].left + bounds[1].width, score.width * score.scale);
   assert.ok(bounds.at(-1).width < score.width * score.scale);
 });
+
+test("符号点击区域以实际坐标中点吸附，缩放后不覆盖行间空白", () => {
+  const bounds = layout.getScoreEventBounds([
+    { eventXs: [50, 90, 150], markerY: 110, minimumX: 30, maximumX: 190 },
+    { eventXs: [60], markerY: 260, minimumX: 40, maximumX: 200 },
+  ], 1.5);
+  assert.equal(bounds[0].left + bounds[0].width, bounds[1].left);
+  assert.equal(bounds[1].left + bounds[1].cursorX, 90 * 1.5);
+  assert.ok(bounds[2].top + bounds[2].height < bounds[3].top);
+  assert.deepEqual(bounds.map(b => [b.measure, b.eventIndex]), [[0,0],[0,1],[0,2],[1,3]]);
+});

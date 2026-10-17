@@ -16,7 +16,7 @@ async page => {
   });
   await page.setViewportSize({width:1440,height:1000});
   await page.goto(origin+'/custom/tapping/tapping');
-  await page.getByRole('checkbox',{name:'只练习当前小节'}).waitFor();
+  await page.locator('.score-event-select').first().waitFor();
   const help=page.locator('.practice-heading-actions').getByRole('button',{name:'查看快捷键'});
   await help.click();
   await page.getByRole('dialog',{name:'快捷键',exact:true}).waitFor();
@@ -26,7 +26,7 @@ async page => {
     const measure = await page.locator(selector).first().boundingBox();
     if(Math.abs(content.x - measure.x) > 1) throw Error('measure background is inset from content');
   };
-  await assertAligned('.score-measure-select');
+  await assertAligned('.rhythm-score-viewport');
   await page.screenshot({path:'/tmp/layout-tapping.png',fullPage:true});
   for(const width of [1440,800,600,390]){
     await page.setViewportSize({width,height:1000});
