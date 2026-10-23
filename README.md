@@ -4,7 +4,7 @@
 
 ## 核心功能
 
-**[在这里查看详细功能演示截图与视频](demo/README.md)**
+**[查看功能演示截图与视频](demo/README.md)**
 
 - **按自己的需要练**
   - **击拍与听写**：支持击拍练习、节奏听写练习。
@@ -30,7 +30,7 @@
 1. 下载项目并复制配置文件：
 
    ```sh
-   git clone https://github.com/Emmet-Ray/a-rhythm-trainer.git
+   git clone --branch game-beta --single-branch https://github.com/Emmet-Ray/a-rhythm-trainer.git
    cd a-rhythm-trainer
    cp .env.example .env
    ```
@@ -42,6 +42,10 @@
    ```
 
 打开 <http://localhost:8080> 即可使用。使用 AI 助手前，在「设置 → 模型服务」中配置模型。
+
+## 本地开发与曲目扩展
+
+日常开发在同一份核心代码上进行。额外曲目可放入被 Git 忽略的 `frontend/local-content/`，开发时自动加载；默认构建只包含内置关卡。本地曲目需单独备份，不随代码推送。运行、构建和验证命令见[前端说明](frontend/README.md#本地曲目与公开构建)，内容格式见[关卡制作说明](frontend/src/game-content/README.md#内置内容与本地曲目包)。
 
 ## 技术栈
 
