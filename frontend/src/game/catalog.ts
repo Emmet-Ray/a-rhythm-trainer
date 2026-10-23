@@ -15,9 +15,16 @@ import { eighthTriplet } from "../game-content/levels/eighth-triplet/index";
 import { comprehensive } from "../game-content/levels/comprehensive/index";
 import { glimmer } from "../game-content/levels/glimmer/index";
 import type { GameLevel } from "./core/GameLevel";
+import { localLevels } from "../game-content/localLevels";
 
 export const gameLevels: readonly GameLevel[] = [quarter, eighth, quarterEighth, sixteenth, eighthSixteenth,
-  eighthSixteenths, sixteenthsEighth, dottedEighth, reverseDottedEighth, smallSyncopation, triplet, eighthTriplet, comprehensive, glimmer];
+  eighthSixteenths, sixteenthsEighth, dottedEighth, reverseDottedEighth, smallSyncopation, triplet, eighthTriplet, comprehensive, glimmer, ...localLevels];
+
+const levelIds = new Set<string>();
+for (const level of gameLevels) {
+  if (levelIds.has(level.id)) throw new Error(`Duplicate game level ID: ${level.id}`);
+  levelIds.add(level.id);
+}
 
 import { sharedThemes } from "../game-content/shared/themes";
 export { DEFAULT_ORBIT_THEME } from "../game-content/shared/themes";

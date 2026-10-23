@@ -14,14 +14,15 @@ async function filesIn(directory, extension) {
 
 /** Check both directions: every declaration ships, and every shipped image/sample has an owner.
  * Source metadata is validated without regenerating approved art or loading audio in a browser. */
-export async function validateGameAssets({ repository, images, samples }) {
+export async function validateGameAssets({ repository, images, samples, local = false }) {
   const errors = [], publicRoot = path.join(repository, 'frontend/public');
   const declared = new Set(), identities = new Set();
   for (const image of images) {
     if (declared.has(image.url)) errors.push(`Duplicate image owner: ${image.url}`);
     declared.add(image.url);
     try {
-      const bytes = await readFile(path.join(publicRoot, image.url));
+      const bytes = await readFile(local && image.url.startsWith('/local-content/')
+        ? path.join(repository, 'frontend', image.url) : path.join(publicRoot, image.url));
       if (bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a'
         || bytes.readUInt32BE(16) !== image.width || bytes.readUInt32BE(20) !== image.height)
         errors.push(`Image dimensions/signature do not match: ${image.url}`);

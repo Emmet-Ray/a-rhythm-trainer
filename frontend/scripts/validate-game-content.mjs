@@ -2,15 +2,17 @@ import { createServer } from 'vite';
 import { readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { validateGameAssets } from './lib/game-assets.mjs';
+import { localGameContentAliases } from './lib/local-game-content.mjs';
 
 const repository = fileURLToPath(new URL('../../', import.meta.url));
-const server = await createServer({ configFile: false, server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const local = process.argv.includes('--local');
+const server = await createServer({ configFile: false, resolve: { alias: localGameContentAliases(local) }, server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
 try {
   const { gameLevels, orbitThemes, gameImages } = await server.ssrLoadModule('/src/game/catalog.ts');
   const { sampleBank } = await server.ssrLoadModule('/src/game/catalog.ts');
   const { createLevelTrack } = await server.ssrLoadModule('/src/game/core/GameLevel.ts');
   const { arrangeMusic } = await server.ssrLoadModule('/src/game/audio/MusicArrangement.ts');
-  const errors = await validateGameAssets({ repository, images: gameImages, samples: sampleBank });
+  const errors = await validateGameAssets({ repository, images: gameImages, samples: sampleBank, local });
   const ids = new Set(), imageUrls = new Set(gameImages.map(image => image.url));
   const themes = new Map(orbitThemes.map(theme => [theme.id, theme]));
   const checkImage = url => { if (!imageUrls.has(url)) errors.push(`Image reference has no declaration: ${url}`); };
@@ -45,6 +47,11 @@ try {
     } catch (error) { errors.push(`${level.id}: ${error.message}`); }
   }
   const folders = await readdir(new URL('../src/game-content/levels/', import.meta.url), { withFileTypes: true });
+  if (local) {
+    const localFolders = await readdir(new URL('../local-content/levels/', import.meta.url), { withFileTypes: true })
+      .catch(error => { if (error.code === 'ENOENT') return []; throw error; });
+    folders.push(...localFolders);
+  }
   for (const folder of folders.filter(entry => entry.isDirectory())) if (!ids.has(folder.name)) errors.push(`Unregistered level directory: ${folder.name}`);
   for (const id of ids) if (!folders.some(folder => folder.isDirectory() && folder.name === id)) errors.push(`Level has no owning directory: ${id}`);
   if (errors.length) { console.error(errors.join('\n')); process.exitCode = 1; }

@@ -5,3 +5,6 @@ dist
 .env.*
 *.log
 tests
+
+local-content
+dist-local

@@ -3,6 +3,7 @@ import { defineConfig, type Plugin, type ViteDevServer } from 'vite'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
+import { localGameContentAliases, localGameContentEnabled } from './scripts/lib/local-game-content.mjs'
 
 // 仅开发与本地预览提供内容路由；build 不复制题库，正式环境单独部署 content/。
 function presetContent(): Plugin {
@@ -27,8 +28,9 @@ function presetContent(): Plugin {
 }
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command, isPreview }) => ({
   plugins: [react(), presetContent()],
+  resolve: { alias: localGameContentAliases(localGameContentEnabled(isPreview ? 'build' : command)) },
   server: {
     // OAuth 回调固定使用 IPv4 loopback；避免 localhost 仅监听 ::1。
     host: '127.0.0.1',
@@ -38,4 +40,4 @@ export default defineConfig({
       '^/api(?:/|$)': process.env.BACKEND_URL || 'http://127.0.0.1:8000',
     },
   },
-})
+}))

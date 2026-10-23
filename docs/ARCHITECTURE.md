@@ -79,6 +79,8 @@ BPM 和节拍器按访问及设置作用域管理，不保存到题库；随机�
 | `game/ui/` | 关卡选择、设置、舞台和结果交互 |
 | `game-content/` | 关卡内容与公共基础素材；制作、共享边界和资源导出见[内容制作](../frontend/src/game-content/README.md) |
 
+额外曲目作为可选本地内容接入 catalog，默认公开构建只组装内置内容。开发时通过 Vite alias 与 glob 接入本地模块，图片通过原生资源导入处理；不引入运行时下载协议或第二套游戏引擎。选择构建期模块是因为现有关卡已经采用 TypeScript 声明并依赖共享的轨道工具，运行时 JSON 内容包会要求额外的格式转换与异步加载生命周期。接入契约和备份边界见[游戏内容制作](../frontend/src/game-content/README.md#内置内容与本地曲目包)。
+
 通用引擎通过参数接收内容，不读取歌曲注册表或按歌曲 ID 分支。`OrbitSession` 拥有音频上下文、加载取消、播放所有权、输入与后台推进，不依赖 DOM 或 Phaser。`OrbitGame` 组装浏览器舞台、尺寸监听和主题；渲染通过 `OrbitFrame` 消费运行快照。
 
 `OrbitMapView` 负责坐标投影和图层合成；`OrbitBackdrop` 管理静态背景、素材预载、取景及场景过渡；`OrbitRoad` 管理路面、落点、终点和功能标记；`OrbitBalls` 管理双球纹理、身份、尺寸及运动反馈；`OrbitMapCamera` 独立计算镜头。主题契约在 `OrbitTheme`，内容选择配色和材质，绘法由对应渲染模块拥有。视觉原则见 [DESIGN](../frontend/DESIGN.md#游戏像素主题)。

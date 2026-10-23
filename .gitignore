@@ -7,3 +7,5 @@ backups/
 # agents
 /.agents/
 /.claude
+# Optional local game content; never part of the public repository.
+/frontend/local-content/

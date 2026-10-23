@@ -18,6 +18,26 @@ ChatGPT 授权回调 `/auth/callback` 也由开发代理转发；自定义前端
 
 代理验证应从前端来源请求 `/api/health`；直接访问后端不能验证代理。配置入口为 [vite.config.ts](vite.config.ts)。
 
+## 本地曲目与公开构建
+
+核心代码可以直接提交与推送；额外曲目单独保存在被忽略的 `local-content/`。目录与关卡契约见[游戏内容制作](src/game-content/README.md#内置内容与本地曲目包)。没有该目录时，所有命令仍可正常运行。
+
+以下命令在 `frontend/` 执行：
+
+| 命令 | 内容范围与产物 |
+| --- | --- |
+| `npm run dev` | 自动发现本地曲目，默认完整开发体验 |
+| `npm run dev:public` | 只加载内置关卡，检查公开体验 |
+| `npm run build` | 默认仅内置关卡，输出 `dist/`，用于公开部署 |
+| `npm run build:local` | 检查本地 TypeScript 并包含本地曲目，输出 `dist-local/`，仅供本地使用 |
+| `npm run preview` / `npm run preview:local` | 分别预览 `dist/` / `dist-local/` |
+| `npm run validate:game` | 校验内置关卡与资源 |
+| `npm run validate:game:local` | 检查本地类型并校验内置与本地关卡、图片、音乐和轨道 |
+
+`GAME_LOCAL_CONTENT=0` 强制禁用本地内容，`GAME_LOCAL_CONTENT=1` 显式启用；其他值报错。该开关只从启动进程的环境读取，不从 `.env` 文件读取，以免持久配置意外改变发布范围。改变模式后需重启开发服务器；新增或删除本地关卡后若页面未更新，也应重启。
+
+发布使用默认 `build` 或不带本地目录的干净检出；不要发布 `dist-local/`。Docker 构建上下文同样排除本地包。构建范围和 Git 提交范围是两回事：本地包不提交，但显式本地构建会包含它。
+
 ## 检查与构建
 
 以下命令在 `frontend/` 执行；脚本定义见 [package.json](package.json)。

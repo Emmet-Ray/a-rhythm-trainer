@@ -11,7 +11,11 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "validate:game": "node scripts/validate-game-content.mjs"
+    "validate:game": "node scripts/validate-game-content.mjs",
+    "dev:public": "GAME_LOCAL_CONTENT=0 vite",
+    "build:local": "tsc -b && tsc -p tsconfig.local-content.json && GAME_LOCAL_CONTENT=1 vite build --outDir dist-local",
+    "preview:local": "vite preview --outDir dist-local",
+    "validate:game:local": "tsc -p tsconfig.local-content.json && node scripts/validate-game-content.mjs --local"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.131",
