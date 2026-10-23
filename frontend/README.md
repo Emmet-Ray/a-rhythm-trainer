@@ -48,8 +48,14 @@ npm run preview
 | 操作／设置布局、听写小节导航与参考答案 | `practice-layout.js` |
 | 编辑保存与生成题目 | `editor-feedback.js`、`edit-generated-exercise.js`、`random-settings.js`、`time-signatures.js` |
 | 图片、流与发送确认 | `assistant-images.js`、`assistant-stream.js`、`assistant-confirmation.js` |
+| 游戏内容加载、关卡固定主题与背景时间线 | `game-content.js`、`rhythm-posters.js` |
+| 游戏会话、判定、局部练习与结束清理 | `orbit-early-taps.js`、`orbit-range.js`、`orbit-preview.js` |
+| 游戏音乐排程与混音峰值 | `practice-music.js` |
 | 焦点提示、弹层焦点返回与练习快捷键 | `focus-visibility.js`、`practice-shortcut-focus.js`、`dialog-consistency.js` |
+| 练习信息架构、目录切换和手机导航 | `practice-navigation.js`、`navigation-repeat.js` |
 | 导航和浮层动效 | `page-motion.js`、`navigation-repeat.js`、`surface-motion.js` |
+
+表中列出主要入口；曲目和材质专项回归在 `tests/browser/` 按名称查找，执行条件以脚本开头说明为准。
 
 部分脚本会清空或新增数据，必须使用临时后端。可从 `backend/` 在独立终端启动：
 
@@ -72,3 +78,7 @@ Docker 启动见 [项目 README](../README.md#快速启动docker)。手动部署
 - `/api/` 与 `/auth/callback` 转发后端，SSE 转发超时应覆盖后端整轮超时。
 - `/content/preset-exercises.json` 独立提供真实 JSON；题库不在 `dist/`，详见题库发布说明。
 - 静态资源、API 与题库不能落入页面回退；开发代理配置不会随构建产物部署。
+
+## 游戏内容维护
+
+关卡内容、可编辑美术源及发布资源的归属见[游戏内容制作](src/game-content/README.md)。修改游戏内容后运行 `npm run validate:game`，并执行上面的前端检查与相关浏览器回归。

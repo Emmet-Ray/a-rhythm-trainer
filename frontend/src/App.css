@@ -119,3 +119,29 @@ main:focus { outline: none; }
 .custom-saved-question h2 { font-size: 16px; }
 .custom-storage-error { color: var(--ds-error); font-size: 13px; }
 .custom-storage-error button { margin-top: 12px; }
+
+
+.practice-hub { width: 100%; max-width: 960px; container: practice-hub / inline-size; }
+.practice-hub .page-heading { margin: 0 0 var(--site-heading-gap); }
+.practice-hub-list { list-style: none; margin: 0; padding: 0; }
+.practice-hub-list > li + li { border-top: 1px solid var(--ds-line); }
+.practice-hub-entry { display: grid; grid-template-columns: 120px minmax(0, 1fr) 20px; align-items: center; gap: 28px; padding: 20px 16px; border-radius: var(--ds-radius-sm); color: var(--ds-ink); transition: background-color var(--ds-motion); }
+.practice-hub-entry:hover { background: var(--ds-hover); }
+.practice-hub-image { display: block; width: 120px; height: 120px; object-fit: contain; mix-blend-mode: multiply; border-radius: var(--ds-radius-sm); }
+.practice-hub-entry h2 { margin: 0; font-size: 20px; font-weight: 750; }
+.practice-hub-entry .practice-hub-desc { margin: 6px 0 0; color: var(--ds-muted); font-size: 15px; line-height: 1.6; }
+.practice-hub-arrow { color: var(--ds-muted); }
+.practice-hub-entry:hover .practice-hub-arrow { color: var(--ds-primary); }
+.practice-hub-return { align-self: flex-start; flex-shrink: 0; margin-bottom: 4px; }
+:root[data-color-mode="dark"] .practice-hub-image { filter: invert(1); mix-blend-mode: screen; }
+@container practice-hub (max-width: 759px) {
+  .practice-hub-entry { grid-template-columns: 96px minmax(0, 1fr) 20px; gap: 20px; padding: 16px 12px; }
+  .practice-hub-image { width: 96px; height: 96px; }
+  .practice-hub-entry h2 { font-size: 18px; }
+}
+@container practice-hub (max-width: 559px) {
+  .practice-hub-entry { grid-template-columns: 72px minmax(0, 1fr) 18px; gap: 16px; padding: 16px 0; }
+  .practice-hub-image { width: 72px; height: 72px; border-radius: 10px; }
+  .practice-hub-entry h2 { font-size: 17px; }
+  .practice-hub-entry .practice-hub-desc { font-size: 14px; }
+}

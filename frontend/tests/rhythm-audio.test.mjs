@@ -351,3 +351,16 @@ test("旧音自然结束后不回收，每轮音色固定于创建时", async t 
   nextRound.stop();
   assert.equal(context.sources[1].stops.length, 0);
 });
+
+test("击拍收尾等待已有声部结束，stop 取消通知，新轮不继承旧回调", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => response());
+  const context = fakeContext();await audio.prepareTapSound(context);
+  const feedback = audio.createTapFeedback(context);let done = 0;
+  feedback.tap();context.currentTime += .2;feedback.tap();feedback.finish(() => done++);
+  assert.equal(done, 0);assert.ok(context.sources.every(source => source.stops.length === 0));
+  context.sources[0].onended();assert.equal(done, 0);
+  context.sources[1].onended();assert.equal(done, 1);
+  context.sources[1].onended();assert.equal(done, 1);
+  feedback.tap();feedback.finish(() => done++);feedback.stop();context.sources[2].onended();assert.equal(done, 1);
+  const fresh = audio.createTapFeedback(context);fresh.finish(() => done++);assert.equal(done, 2);
+});

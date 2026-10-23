@@ -1,0 +1,322 @@
+[
+  {
+    "file": "/assets/game/shared/audio/bass-35.flac",
+    "source": "https://raw.githubusercontent.com/sfzinstruments/karoryfer.black-and-blue-basses/6e7d674cdb41be7a54dbccb15472401ad01099b9/Samples/darkblack/reg/darkblack_b2_mf_rr1.wav",
+    "bytes": 271148,
+    "sha256": "506a75e435326b9bf78787b6119e37e0eae36a4f6ac55164a2c6f4297310ac68",
+    "instrument": "bass",
+    "midi": 35
+  },
+  {
+    "file": "/assets/game/shared/audio/bass-36.flac",
+    "source": "https://raw.githubusercontent.com/sfzinstruments/karoryfer.black-and-blue-basses/6e7d674cdb41be7a54dbccb15472401ad01099b9/Samples/darkblack/reg/darkblack_c3_mf_rr1.wav",
+    "bytes": 271009,
+    "sha256": "c0bb0383e7168a7971b7b699fb7b3a14c331063201926f5351b86d422af1e373",
+    "instrument": "bass",
+    "midi": 36
+  },
+  {
+    "file": "/assets/game/shared/audio/bass-41.flac",
+    "source": "https://raw.githubusercontent.com/sfzinstruments/karoryfer.black-and-blue-basses/6e7d674cdb41be7a54dbccb15472401ad01099b9/Samples/darkblack/reg/darkblack_f3_mf_rr1.wav",
+    "bytes": 272193,
+    "sha256": "e4abb99c3ebb896a169197cede7f57796878b21961eb6053a1e13b5d01f53676",
+    "instrument": "bass",
+    "midi": 41
+  },
+  {
+    "file": "/assets/game/shared/audio/bass-43.flac",
+    "source": "https://raw.githubusercontent.com/sfzinstruments/karoryfer.black-and-blue-basses/6e7d674cdb41be7a54dbccb15472401ad01099b9/Samples/darkblack/reg/darkblack_g3_mf_rr1.wav",
+    "bytes": 274553,
+    "sha256": "236ae7b65f8cf38915dc6a6816d476c48b98c905a6399c343406114554d2a0f9",
+    "instrument": "bass",
+    "midi": 43
+  },
+  {
+    "file": "/assets/game/shared/audio/ep-48.flac",
+    "source": "Surge XT 1.3.4 Keys/DX EP, velocity 75, effects bypass, held 8 seconds",
+    "bytes": 165111,
+    "sha256": "85a432b0887e6019a7b823e196669257bf3f17ef76353b9a778b2254aaddab8c",
+    "instrument": "ep",
+    "midi": 48
+  },
+  {
+    "file": "/assets/game/shared/audio/ep-51.flac",
+    "source": "Surge XT 1.3.4 Keys/DX EP, velocity 75, effects bypass, held 8 seconds",
+    "bytes": 177073,
+    "sha256": "3a4836216e8a3154144a53d7d6d3357bc5262c80fd629d9afd784afd4895d5ad",
+    "instrument": "ep",
+    "midi": 51
+  },
+  {
+    "file": "/assets/game/shared/audio/ep-54.flac",
+    "source": "Surge XT 1.3.4 Keys/DX EP, velocity 75, effects bypass, held 8 seconds",
+    "bytes": 189708,
+    "sha256": "f9641451a391fbdeaf99807d198fb7c13979c569547de2e42f5a42ca48db93f5",
+    "instrument": "ep",
+    "midi": 54
+  },
+  {
+    "file": "/assets/game/shared/audio/ep-57.flac",
+    "source": "Surge XT 1.3.4 Keys/DX EP, velocity 75, effects bypass, held 8 seconds",
+    "bytes": 204560,
+    "sha256": "ad14a8c84fed1191ef768250ec2cc89088ae33515f002f7cd8eded71cc127c73",
+    "instrument": "ep",
+    "midi": 57
+  },
+  {
+    "file": "/assets/game/shared/audio/ep-60.flac",
+    "source": "Surge XT 1.3.4 Keys/DX EP, velocity 75, effects bypass, held 8 seconds",
+    "bytes": 227378,
+    "sha256": "450c78749a1c86c00751686539257b693e04eb7fc0ac511cb50d12c610e5fb71",
+    "instrument": "ep",
+    "midi": 60
+  },
+  {
+    "file": "/assets/game/shared/audio/ep-63.flac",
+    "source": "Surge XT 1.3.4 Keys/DX EP, velocity 75, effects bypass, held 8 seconds",
+    "bytes": 253915,
+    "sha256": "4ef027f6b79cfd31ac5360299d8ad85e9798877422791c08282cbaa88ed4ca39",
+    "instrument": "ep",
+    "midi": 63
+  },
+  {
+    "file": "/assets/game/shared/audio/ep-66.flac",
+    "source": "Surge XT 1.3.4 Keys/DX EP, velocity 75, effects bypass, held 8 seconds",
+    "bytes": 280980,
+    "sha256": "900fd148f071f53462ee5f0b2efab15a8702bd685eee34b3a9f51e2f395cfbf7",
+    "instrument": "ep",
+    "midi": 66
+  },
+  {
+    "file": "/assets/game/shared/audio/ep-69.flac",
+    "source": "Surge XT 1.3.4 Keys/DX EP, velocity 75, effects bypass, held 8 seconds",
+    "bytes": 313247,
+    "sha256": "5338dc28f2f331983453e71f57b9c20d489561b11aa5debdc90a7275fa361298",
+    "instrument": "ep",
+    "midi": 69
+  },
+  {
+    "file": "/assets/game/shared/audio/ep-72.flac",
+    "source": "Surge XT 1.3.4 Keys/DX EP, velocity 75, effects bypass, held 8 seconds",
+    "bytes": 344359,
+    "sha256": "64479c066ce868831cca322de53f6c531edcd79cf8673ffcf682441b9c26db3d",
+    "instrument": "ep",
+    "midi": 72
+  },
+  {
+    "file": "/assets/game/shared/audio/ep-75.flac",
+    "source": "Surge XT 1.3.4 Keys/DX EP, velocity 75, effects bypass, held 8 seconds",
+    "bytes": 377857,
+    "sha256": "804f45c60a7266a86c59c69b9325693b1194d1da2462bb4a6b65c0e198e1e79c",
+    "instrument": "ep",
+    "midi": 75
+  },
+  {
+    "file": "/assets/game/shared/audio/hat.flac",
+    "source": "Virtuosity Drums mid_hh_closed_vl2_rr1.flac",
+    "bytes": 83468,
+    "sha256": "ca9a6b1ce1d274c329a987e21f22d34a9001bb1869d53f5b00cc88c0128199a3",
+    "instrument": "hat",
+    "midi": 60
+  },
+  {
+    "file": "/assets/game/shared/audio/kick.flac",
+    "source": "Virtuosity Drums mid_kick_snon_vl2_rr1.flac",
+    "bytes": 234232,
+    "sha256": "fb2da719f0ae30f668ada98df7503e6def1ee26c53a5e183de50075e43fa597a",
+    "instrument": "kick",
+    "midi": 60
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-30.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 657868,
+    "sha256": "4b6d81e61e4ad667d5c7ed5476cc99c0025897326efb631c3ec01e62b7d60721",
+    "instrument": "piano",
+    "midi": 30
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-33.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 662302,
+    "sha256": "61601494a390827a5c640cc378fb68f260b38881b3e79f46710629c591ee11a0",
+    "instrument": "piano",
+    "midi": 33
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-36.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 668533,
+    "sha256": "6b7529192107c5ccc28cba6b16a1e86d2b5bf9d402cdeeb1346936900a77e6fe",
+    "instrument": "piano",
+    "midi": 36
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-39.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 669659,
+    "sha256": "8d0204da81ed662117c53d6e99807af8e24c93a4129d68d5d833bb0b0c9ada01",
+    "instrument": "piano",
+    "midi": 39
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-42.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 655174,
+    "sha256": "d00b65558fab0837624275fd7e9160258ce0ca58d230864da51a1cb165e1637b",
+    "instrument": "piano",
+    "midi": 42
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-45.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 680757,
+    "sha256": "5a3bf9d0f2a860e286487b615fe3740869f991abe08fd286ca1d33dbcaf30e21",
+    "instrument": "piano",
+    "midi": 45
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-48.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 633952,
+    "sha256": "ea75f3733f10ed1991a3a7df5fa244f3fd0814a264787f181264c7e1abb8bede",
+    "instrument": "piano",
+    "midi": 48
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-51.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 643963,
+    "sha256": "fd385c54037bd9b520ba0c0689cff95548299fd873da88aeef2e4ac2feb1ba84",
+    "instrument": "piano",
+    "midi": 51
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-54.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 649384,
+    "sha256": "9a3ea1b87b20235be2bc3231c39f2c890dbc9468bf671fafccf0c09570f6c2d5",
+    "instrument": "piano",
+    "midi": 54
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-57.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 656822,
+    "sha256": "1110f68700a88bc61b0bebe890e34cbcba4fa8102010101a963e7a6097ba8b7f",
+    "instrument": "piano",
+    "midi": 57
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-60.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 642065,
+    "sha256": "475c273783ec280e456cb5e05bb792ebe4fafde17b54dc7613cc71ed08203f3c",
+    "instrument": "piano",
+    "midi": 60
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-63.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 607368,
+    "sha256": "81676dd2fcf9533f115080224121bedfae0f10ac56f0fa92b46ac15a98dac234",
+    "instrument": "piano",
+    "midi": 63
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-66.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 596382,
+    "sha256": "cdb1deec34ae97d1c17fa086a03ea7f8f49ad544e31779ed7698fad661409147",
+    "instrument": "piano",
+    "midi": 66
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-69.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 613762,
+    "sha256": "39bc11f06bfd41f5495640bdd89f70e6847a5bfbe7ca3db78add4c1e7442d89d",
+    "instrument": "piano",
+    "midi": 69
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-72.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 579319,
+    "sha256": "09b1eab9cdbd164618cd70e26f540dcb619bc571280407f07ec204841cf25a99",
+    "instrument": "piano",
+    "midi": 72
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-75.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 568586,
+    "sha256": "2866794fe2cc5a6bb35b3ef5b141eac7840233cac6b032a4a55b0ad975b4e593",
+    "instrument": "piano",
+    "midi": 75
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-78.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 568232,
+    "sha256": "5d18c0d62b19bd1a78475587b0a5c70273377076af620533b480e20926a69074",
+    "instrument": "piano",
+    "midi": 78
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-81.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 598990,
+    "sha256": "1289fb15ea4f5149c691b252b4fb82d974e7f3e9adb0185d8a4d8ff823ed8710",
+    "instrument": "piano",
+    "midi": 81
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-84.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 621026,
+    "sha256": "ea8cff123c059297d561fc397ff3b98210aec34bd711185fc4b2111ce8b02934",
+    "instrument": "piano",
+    "midi": 84
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-87.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 653092,
+    "sha256": "c4de2d7d697b40303c7688c89f436c16ddf999d0a4617769e9a56a46ac7c8b29",
+    "instrument": "piano",
+    "midi": 87
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-90.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 598922,
+    "sha256": "9ae6976a69abcbef477ce47be8777e4513f1297258419f56b70b781b3d2e40e2",
+    "instrument": "piano",
+    "midi": 90
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-93.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 559627,
+    "sha256": "c81757282bba914aeef10a1b08c9b17e03383ed680167b6b4710289b65f0f228",
+    "instrument": "piano",
+    "midi": 93
+  },
+  {
+    "file": "/assets/game/shared/audio/piano-96.flac",
+    "source": "Salamander v3 v9; 6 seconds, 44.1 kHz, final 50 ms fade",
+    "bytes": 380521,
+    "sha256": "18e820d28a6c43c8ecbce9fccdd75c67730a80ad6332b514727ea607582a8848",
+    "instrument": "piano",
+    "midi": 96
+  },
+  {
+    "file": "/assets/game/shared/audio/stick.flac",
+    "source": "Virtuosity Drums mid_snare_crossstick_vl8.flac",
+    "bytes": 321069,
+    "sha256": "1e2898046bc50864f7b57dbb82a0a7396f1f85abd8e866a7da35a66bf3450ca7",
+    "instrument": "stick",
+    "midi": 60
+  }
+]

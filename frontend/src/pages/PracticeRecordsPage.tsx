@@ -1,3 +1,4 @@
+import { PracticeReturn } from "../navigation/PracticeReturn";
 import { useConfirm } from "../ui/confirmation";
 import { useRetainedData } from "../ui/useRetainedData";
 import { useQuery } from "@tanstack/react-query";
@@ -85,6 +86,7 @@ function LocalRecords() {
   }
   return (
     <>
+      <PracticeReturn />
       <header className="page-heading record-page-heading">
         <h1>练习记录</h1>
         <RecordFilters mode={filter} period={period}

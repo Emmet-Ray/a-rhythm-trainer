@@ -1,6 +1,6 @@
 import type { RhythmEvent } from "./RhythmModel";
 
-// 快捷输入不是新的模型元素；图形和插入内容共同读取此定义。
+// 节奏型不是新的模型元素；快捷输入和专项游戏关卡共同读取此定义。
 export const rhythmPatterns = [
   { id: "two-eighths", label: "二平均", events: [{ kind: "note", noteValue: "eighth" }, { kind: "note", noteValue: "eighth" }] },
   { id: "four-sixteenths", label: "四平均", events: Array.from({ length: 4 }, () => ({ kind: "note", noteValue: "sixteenth" })) },

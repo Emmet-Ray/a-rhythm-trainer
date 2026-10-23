@@ -3,3 +3,7 @@ ignoreme/
 .env.*
 !.env.example
 backups/
+
+# agents
+/.agents/
+/.claude

@@ -1,0 +1,66 @@
+@font-face {
+  font-family: "Orbit Pixel";
+  src: url("/assets/game/shared/fonts/fusion-pixel/fusion-pixel-12px-proportional-zh_hans.otf.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+/* 像素主题覆盖整个关卡工作区；应用导航仍属于训练工具的公共外壳。 */
+.orbit-page[data-art="pixel"], .app-dialog:has([data-art="pixel"]) {
+  font-family: "Orbit Pixel", monospace;
+  font-synthesis: none;
+  color: var(--ds-ink);
+  background: var(--orbit-stage);
+  border-radius: 0;
+}
+.orbit-page[data-art="pixel"] { border: 0; box-shadow: none; }
+.orbit-page[data-art="pixel"] :is(h1,h2,strong,button), .app-dialog:has([data-art="pixel"]) :is(h2,button,input,select) { font-family: "Orbit Pixel", monospace; font-weight: 400; }
+.orbit-page[data-art="pixel"] .orbit-stage { border-radius: 0; outline: none; box-shadow: none; }
+
+.orbit-page[data-art="pixel"] button, .app-dialog:has([data-art="pixel"]) button {
+  border-radius: 0; font-weight: 400; transition: none;
+}
+.orbit-page[data-art="pixel"] :is(.orbit-settings-button,.orbit-stop,.orbit-secondary), .app-dialog:has([data-art="pixel"]) button {
+  border: 2px solid var(--ds-line); background: var(--ds-surface); box-shadow: 0 3px 0 var(--orbit-shadow); color: var(--ds-ink);
+}
+.orbit-page[data-art="pixel"] button:hover:not(:disabled), .app-dialog:has([data-art="pixel"]) button:hover:not(:disabled) { background: var(--ds-hover); color: var(--ds-ink); }
+.orbit-page[data-art="pixel"] button:active:not(:disabled), .app-dialog:has([data-art="pixel"]) button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+.app-dialog:has([data-art="pixel"]) .app-dialog-primary {
+  border: 2px solid var(--ds-ink); background: var(--ds-primary); color: var(--ds-on-primary); box-shadow: 0 4px 0 var(--ds-primary-base), 0 6px 0 var(--orbit-shadow); font-size: 20px;
+}
+
+.orbit-page[data-art="pixel"] .orbit-overlay p { font-size: 14px; line-height: 1.5; }
+.orbit-page[data-art="pixel"] .orbit-count strong { font-size: 48px; animation-timing-function: steps(3,end); text-shadow: 3px 3px var(--ds-on-primary); }
+.orbit-page[data-art="pixel"] .orbit-overlay[data-result] { animation-timing-function: steps(4,end); }
+.app-dialog:has([data-art="pixel"]) {
+  border: 2px solid var(--ds-line); box-shadow: 0 0 0 4px var(--orbit-stage), 8px 10px 0 var(--orbit-shadow);
+}
+.app-dialog:has([data-art="pixel"])::backdrop { background: #0c1324bf; backdrop-filter: none; }
+.app-dialog:has([data-art="pixel"]) .app-dialog-heading { border-bottom: 2px solid var(--ds-hover); padding-bottom: 16px; }
+.app-dialog:has([data-art="pixel"]) .app-dialog-heading button svg { display: none; }
+.app-dialog:has([data-art="pixel"]) .app-dialog-heading button::after { content: "×"; font-size: 20px; line-height: 20px; }
+.app-dialog:has([data-art="pixel"]) :is(input,select) { border-radius: 0; border: 2px solid var(--ds-line); background: var(--orbit-stage); color: var(--ds-ink); box-shadow: inset 2px 2px #0a1220; font-size: 16px; }
+.app-dialog:has([data-art="pixel"]) :is(label,legend,.orbit-settings-note,.orbit-tempo) { font-size: 16px; font-weight: 400; }
+.app-dialog:has([data-art="pixel"]) .app-dialog-footer { border-top: 2px solid var(--ds-hover); padding-top: 18px; }
+@media (max-width:680px) {
+  .orbit-page[data-art="pixel"] .orbit-overlay p { font-size: 12px; }
+}
+
+.orbit-page[data-art="pixel"] .orbit-overlay p { max-width: 38em; }
+@media (max-width:680px) {
+  .orbit-page[data-art="pixel"] .orbit-heading { gap: 8px; }
+}
+
+/* Scene artwork stays pixel-led; compact controls and source text favor legibility. */
+
+.orbit-page[data-art="pixel"] .orbit-overlay :is(h2,p) { margin: 0; }
+.orbit-page[data-art="pixel"] .orbit-overlay :is(.orbit-settings-button,.orbit-secondary) { border: 0; background: transparent; box-shadow: none; }
+.app-dialog:has([data-art="pixel"]) :is(.orbit-settings-form,.orbit-about,.orbit-settings-form input,.orbit-settings-form select,.orbit-settings-form button) { font-family: system-ui, sans-serif; }
+.app-dialog:has([data-art="pixel"]) .orbit-settings-form .app-dialog-primary { font-size: 16px; }
+
+.orbit-page[data-art="pixel"] .orbit-overlay .orbit-secondary { border: 1px solid var(--ds-line); background: transparent; color: var(--ds-ink); box-shadow: none; font: 14px system-ui, sans-serif; }
+.app-dialog:has([data-art="pixel"]) .orbit-tempo .orbit-tempo-reset { border: 0; box-shadow: none; background: transparent; padding: 8px; }
+.app-dialog:has([data-art="pixel"]) .orbit-settings-field > label,
+.app-dialog:has([data-art="pixel"]) .orbit-range-fields legend { color: var(--ds-muted); font-size: 14px; }
+
+.orbit-workspace[data-art="pixel"] .orbit-heading-actions button { font-family: "Orbit Pixel", monospace; }

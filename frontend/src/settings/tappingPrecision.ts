@@ -1,6 +1,6 @@
 import type { TimingWindows } from "../rhythm/RhythmTiming";
 
-/** 档位是练习产品参数，不是行业标准；所有击拍来源共用，不按 BPM 缩放。 */
+/** 档位是练习产品参数，不是行业标准；提供共用的最大容差，不按 BPM 缩放。 */
 export const tappingPrecisions = [
   { id: "relaxed", label: "宽松", windows: { perfectMs: 80, hitMs: 200 } },
   { id: "standard", label: "标准", windows: { perfectMs: 50, hitMs: 150 } },

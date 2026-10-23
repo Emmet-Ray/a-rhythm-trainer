@@ -1,5 +1,6 @@
 // Run on an isolated Vite origin. All API requests mocked; real Web Audio.
 async page => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   const origin = new URL(page.url()).origin;
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   await page.route(url => url.pathname.startsWith('/api/'), route => {
@@ -55,7 +56,8 @@ async page => {
   await page.getByRole('button',{name:'停止',exact:true}).waitFor();
   await page.waitForTimeout(1800);
   await page.keyboard.press('Space');
-  await page.getByRole('link', {name:'练习记录',exact:true}).click();
+  await page.locator('.site-sidebar a[href="/practice"]').click();
+  await page.locator('.practice-hub').waitFor();
   await page.waitForFunction(()=>window.feedbackContexts.every(c=>c.state==='closed'));
   return 'formal B playback, fifth tap steals oldest, stop, configuration change and navigation cleanup passed';
 }

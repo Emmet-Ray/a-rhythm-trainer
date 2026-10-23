@@ -21,12 +21,15 @@ import { AssistantWorkspace } from "./assistant/AssistantWorkspace";
 import { AssistantContext, AssistantContextScope } from "./assistant/assistantContext";
 
 // 题库和训练代码进入对应页面后再加载；助手在路由边界外持续挂载。
+const PracticePage = routeModules.practice.Component;
 const RandomPracticePage = routeModules.random.Component;
 const PresetPracticePage = routeModules.preset.Component;
 const CustomPracticePage = routeModules.custom.Component;
 const SettingsPage = routeModules.settings.Component;
 const PracticeRecordsPage = routeModules.records.Component;
 const AiPracticePage = routeModules.ai.Component;
+const GameLevelsPage = routeModules.game.Component;
+const RhythmGamePage = routeModules.gameLevel.Component;
 const AboutPage = routeModules.about.Component;
 
 function renderRecordDetailContext(snapshot: RecordDetailSnapshot) {
@@ -58,7 +61,7 @@ function AppShell() {
         跳到主要内容
       </a>
       <SiteNavigation />
-      <AssistantWorkspace home={pathname === "/"}>
+      <AssistantWorkspace home={pathname === "/"} available={pathname !== "/game" && !pathname.startsWith("/game/")}>
       <main id="main-content" hidden={pathname === "/"} ref={mainRef} tabIndex={-1} className={pathname === "/" ? "assistant-home-main" : undefined}>
         {/* 稳定的加载边界让路由过渡保留正文；只重建页面以隔离训练、编辑状态。 */}
         <Suspense
@@ -67,11 +70,14 @@ function AppShell() {
           }
         >
           <Routes key={pageMountKey(pathname, key)}>
+            <Route path="/game" element={<GameLevelsPage />} />
+            <Route path="/game/:levelId" element={<RhythmGamePage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/records" element={<PracticeRecordsPage />} />
             <Route path="/about" element={<AboutPage />} />
             {/* 首页仅发布页面上下文；对话与欢迎内容由路由外持续挂载的助手呈现。 */}
             <Route path="/" element={<HomePage />} />
+            <Route path="/practice" element={<PracticePage />} />
             <Route path="/preset" element={<PresetPracticePage />} />
             <Route
               path="/preset/:questionId"

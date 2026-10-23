@@ -42,10 +42,10 @@ async page => {
   await frames();
   if (await count()) throw new Error('loading placeholder animated');
   // A newer navigation must win even when an earlier module finishes later.
-  await page.getByRole('link', { name: '设置', exact: true }).click();
+  await page.getByRole('link', { name: '节奏游戏', exact: true }).click();
   release();
-  await entered('/settings');
-  if (!await page.getByRole('heading', { name: '设置', exact: true }).isVisible()) throw new Error('stale navigation replaced current page');
+  await entered('/game');
+  await page.getByRole('heading', { name: '节奏游戏', exact: true }).waitFor();
   await page.getByRole('link', { name: '关于', exact: true }).click();
   await entered('/about');
   await page.locator('.about-page').waitFor();
@@ -55,7 +55,9 @@ async page => {
   await page.getByRole('button', { name: '击拍精度', exact: true }).click();
   await frames();
   if (await count() !== beforeCategory) throw new Error('category change animated whole page');
-  await page.getByRole('link', { name: '随机练习', exact: true }).click();
+  await page.getByRole('link', { name: '练习', exact: true }).click();
+  await entered('/practice');
+  await page.getByRole('link', { name: '随机练习 按拍号与范围生成新题', exact: true }).click();
   await entered('/random/tapping');
   await page.getByRole('button', { name: '节奏听写', exact: true }).click();
   await entered('/random/dictation');
