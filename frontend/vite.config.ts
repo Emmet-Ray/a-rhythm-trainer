@@ -28,9 +28,9 @@ function presetContent(): Plugin {
 }
 
 // https://vite.dev/config/
-export default defineConfig(({ command, isPreview }) => ({
+export default defineConfig({
   plugins: [react(), presetContent()],
-  resolve: { alias: localGameContentAliases(localGameContentEnabled(isPreview ? 'build' : command)) },
+  resolve: { alias: localGameContentAliases(localGameContentEnabled()) },
   server: {
     // OAuth 回调固定使用 IPv4 loopback；避免 localhost 仅监听 ::1。
     host: '127.0.0.1',
@@ -40,4 +40,4 @@ export default defineConfig(({ command, isPreview }) => ({
       '^/api(?:/|$)': process.env.BACKEND_URL || 'http://127.0.0.1:8000',
     },
   },
-}))
+})

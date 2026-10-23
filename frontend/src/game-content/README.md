@@ -18,9 +18,9 @@ import backgroundUrl from "./assets/background.png?url";
 
 图片声明的 `source` 使用相对仓库根的本地路径，例如 `frontend/local-content/levels/<id>/art/background.px.js`。不要把本地图片复制到 `frontend/public/`：该目录会随公开构建发布。Vite 会为实际导入的本地图片处理开发 URL 和构建产物，不需要另建资源服务器。
 
-`catalog.ts` 默认导入空的 `localLevels.ts`；启用本地内容时，Vite 的精确 alias 将它替换为使用 `import.meta.glob` 的发现模块。公开构建不会导入发现模块或本地曲目。内置关卡列表和共享素材仍由 catalog 统一组装；本地包不能改写引擎规则。
+`catalog.ts` 默认导入空的 `localLevels.ts`；启用本地内容时，Vite 的精确 alias 将它替换为使用 `import.meta.glob` 的发现模块。开发与普通构建默认启用；显式公开模式不导入发现模块或本地曲目。内置关卡列表和共享素材仍由 catalog 统一组装；本地包不能改写引擎规则。
 
-`frontend/local-content/` 被 Git 和 Docker 构建上下文忽略，必须单独备份；仅推送核心仓库不会备份这些文件。推荐将该目录独立备份或在其中维护单独的私有仓库。不要强制添加被忽略的内容，也不要把包含旧曲目的完整历史合并到公开开发线。
+`frontend/local-content/` 被 Git 忽略，但会自动参与本地及 Docker 构建，必须单独备份；仅推送核心仓库不会备份这些文件。推荐将该目录独立备份或在其中维护单独的私有仓库。不要强制添加被忽略的内容，也不要把包含旧曲目的完整历史合并到公开开发线。
 
 日常开发、公开模式、构建及验证命令见[前端运行说明](../../README.md#本地曲目与公开构建)。公共核心从筛选后的历史继续开发，不再维护一套需要逐次复制的公开代码。旧完整分支仅作为本地迁移备份。
 

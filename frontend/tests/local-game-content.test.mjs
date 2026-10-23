@@ -6,12 +6,11 @@ import path from 'node:path';
 import { createServer, build } from 'vite';
 import { frontendRoot, localGameContentAliases, localGameContentEnabled } from '../scripts/lib/local-game-content.mjs';
 
-test('local content is opt-in for builds, automatic for dev, and rejects typos', () => {
-  assert.equal(localGameContentEnabled('serve', undefined), true);
-  assert.equal(localGameContentEnabled('build', undefined), false);
-  assert.equal(localGameContentEnabled('serve', '0'), false);
-  assert.equal(localGameContentEnabled('build', '1'), true);
-  assert.throws(() => localGameContentEnabled('build', 'true'), /must be 0.*or 1/);
+test('local content is enabled by default, explicitly disabled for public builds, and rejects typos', () => {
+  assert.equal(localGameContentEnabled(), true);
+  assert.equal(localGameContentEnabled('0'), false);
+  assert.equal(localGameContentEnabled('1'), true);
+  assert.throws(() => localGameContentEnabled('true'), /must be 0.*or 1/);
 });
 
 test('optional levels and images load only in local mode; clean installs need no content package', async () => {

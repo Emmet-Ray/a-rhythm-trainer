@@ -6,5 +6,6 @@ dist
 *.log
 tests
 
-local-content
 dist-local
+
+**/.git

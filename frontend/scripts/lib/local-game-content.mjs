@@ -12,9 +12,9 @@ export function localGameContentAliases(enabled, root = frontendRoot) {
   }] : [];
 }
 
-export function localGameContentEnabled(command, value = process.env.GAME_LOCAL_CONTENT) {
+export function localGameContentEnabled(value = process.env.GAME_LOCAL_CONTENT) {
   if (value !== undefined && value !== '0' && value !== '1') {
     throw new Error('GAME_LOCAL_CONTENT must be 0 (public) or 1 (include local content)');
   }
-  return value === undefined ? command === 'serve' : value === '1';
+  return value !== '0';
 }

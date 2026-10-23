@@ -43,10 +43,6 @@
 
 打开 <http://localhost:8080> 即可使用。使用 AI 助手前，在「设置 → 模型服务」中配置模型。
 
-## 本地开发与曲目扩展
-
-日常开发在同一份核心代码上进行。额外曲目可放入被 Git 忽略的 `frontend/local-content/`，开发时自动加载；默认构建只包含内置关卡。本地曲目需单独备份，不随代码推送。运行、构建和验证命令见[前端说明](frontend/README.md#本地曲目与公开构建)，内容格式见[关卡制作说明](frontend/src/game-content/README.md#内置内容与本地曲目包)。
-
 ## 技术栈
 
 - **前端**：React、TypeScript、Vite；React Router（路由）、Lucide（图标）、react-markdown（Markdown 渲染）、VexFlow（谱面渲染）、Web Audio API（音频与节拍调度）；AI SDK UI（助手流式消息）

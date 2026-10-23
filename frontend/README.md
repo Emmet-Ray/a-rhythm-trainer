@@ -28,15 +28,17 @@ ChatGPT 授权回调 `/auth/callback` 也由开发代理转发；自定义前端
 | --- | --- |
 | `npm run dev` | 自动发现本地曲目，默认完整开发体验 |
 | `npm run dev:public` | 只加载内置关卡，检查公开体验 |
-| `npm run build` | 默认仅内置关卡，输出 `dist/`，用于公开部署 |
-| `npm run build:local` | 检查本地 TypeScript 并包含本地曲目，输出 `dist-local/`，仅供本地使用 |
-| `npm run preview` / `npm run preview:local` | 分别预览 `dist/` / `dist-local/` |
+| `npm run build` | 检查类型并自动包含已有本地曲目，输出 `dist/`；没有本地目录也能构建 |
+| `npm run build:public` | 显式排除本地曲目，输出 `dist/` |
+| `npm run preview` | 预览上一次构建的 `dist/` |
 | `npm run validate:game` | 校验内置关卡与资源 |
 | `npm run validate:game:local` | 检查本地类型并校验内置与本地关卡、图片、音乐和轨道 |
 
-`GAME_LOCAL_CONTENT=0` 强制禁用本地内容，`GAME_LOCAL_CONTENT=1` 显式启用；其他值报错。该开关只从启动进程的环境读取，不从 `.env` 文件读取，以免持久配置意外改变发布范围。改变模式后需重启开发服务器；新增或删除本地关卡后若页面未更新，也应重启。
+`GAME_LOCAL_CONTENT=0` 强制禁用本地内容，`GAME_LOCAL_CONTENT=1` 显式启用；其他值报错。该开关只从启动进程的环境读取，不从 `.env` 文件读取，保持运行与构建方式明确。改变模式后需重启开发服务器；新增或删除本地关卡后若页面未更新，也应重启。
 
-发布使用默认 `build` 或不带本地目录的干净检出；不要发布 `dist-local/`。Docker 构建上下文同样排除本地包。构建范围和 Git 提交范围是两回事：本地包不提交，但显式本地构建会包含它。
+Docker 与普通构建一致，自动包含已有本地包；修改曲目后执行 `docker compose up -d --build frontend` 重建前端。关卡在构建时确定，给运行中的容器挂载目录不会自动增加关卡。
+
+发布仅含内置关卡的产物时，使用 `build:public` 或不带本地目录的干净检出。Git 仍然忽略本地包：代码推送不会包含它，但在本机正常构建的镜像和 `dist/` 会包含它。
 
 ## 检查与构建
 
