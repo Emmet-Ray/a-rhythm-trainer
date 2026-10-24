@@ -18,6 +18,28 @@ ChatGPT 授权回调 `/auth/callback` 也由开发代理转发；自定义前端
 
 代理验证应从前端来源请求 `/api/health`；直接访问后端不能验证代理。配置入口为 [vite.config.ts](vite.config.ts)。
 
+## 本地曲目与公开构建
+
+核心代码可以直接提交与推送；额外曲目单独保存在被忽略的 `local-content/`。目录与关卡契约见[游戏内容制作](src/game-content/README.md#内置内容与本地曲目包)。没有该目录时，所有命令仍可正常运行。
+
+以下命令在 `frontend/` 执行：
+
+| 命令 | 内容范围与产物 |
+| --- | --- |
+| `npm run dev` | 自动发现本地曲目，默认完整开发体验 |
+| `npm run dev:public` | 只加载内置关卡，检查公开体验 |
+| `npm run build` | 检查类型并自动包含已有本地曲目，输出 `dist/`；没有本地目录也能构建 |
+| `npm run build:public` | 显式排除本地曲目，输出 `dist/` |
+| `npm run preview` | 预览上一次构建的 `dist/` |
+| `npm run validate:game` | 校验内置关卡与资源 |
+| `npm run validate:game:local` | 检查本地类型并校验内置与本地关卡、图片、音乐和轨道 |
+
+`GAME_LOCAL_CONTENT=0` 强制禁用本地内容，`GAME_LOCAL_CONTENT=1` 显式启用；其他值报错。该开关只从启动进程的环境读取，不从 `.env` 文件读取，保持运行与构建方式明确。改变模式后需重启开发服务器；新增或删除本地关卡后若页面未更新，也应重启。
+
+Docker 与普通构建一致，自动包含已有本地包；修改曲目后执行 `docker compose up -d --build frontend` 重建前端。关卡在构建时确定，给运行中的容器挂载目录不会自动增加关卡。
+
+发布仅含内置关卡的产物时，使用 `build:public` 或不带本地目录的干净检出。Git 仍然忽略本地包：代码推送不会包含它，但在本机正常构建的镜像和 `dist/` 会包含它。
+
 ## 检查与构建
 
 以下命令在 `frontend/` 执行；脚本定义见 [package.json](package.json)。
@@ -48,8 +70,14 @@ npm run preview
 | 操作／设置布局、听写小节导航与参考答案 | `practice-layout.js` |
 | 编辑保存与生成题目 | `editor-feedback.js`、`edit-generated-exercise.js`、`random-settings.js`、`time-signatures.js` |
 | 图片、流与发送确认 | `assistant-images.js`、`assistant-stream.js`、`assistant-confirmation.js` |
+| 游戏内容加载、关卡固定主题与背景时间线 | `game-content.js`、`rhythm-posters.js` |
+| 游戏会话、判定、局部练习与结束清理 | `orbit-early-taps.js`、`orbit-range.js`、`orbit-preview.js` |
+| 游戏音乐排程与混音峰值 | `practice-music.js` |
 | 焦点提示、弹层焦点返回与练习快捷键 | `focus-visibility.js`、`practice-shortcut-focus.js`、`dialog-consistency.js` |
+| 练习信息架构、目录切换和手机导航 | `practice-navigation.js`、`navigation-repeat.js` |
 | 导航和浮层动效 | `page-motion.js`、`navigation-repeat.js`、`surface-motion.js` |
+
+表中列出主要入口；曲目和材质专项回归在 `tests/browser/` 按名称查找，执行条件以脚本开头说明为准。
 
 部分脚本会清空或新增数据，必须使用临时后端。可从 `backend/` 在独立终端启动：
 
@@ -72,3 +100,7 @@ Docker 启动见 [项目 README](../README.md#快速启动docker)。手动部署
 - `/api/` 与 `/auth/callback` 转发后端，SSE 转发超时应覆盖后端整轮超时。
 - `/content/preset-exercises.json` 独立提供真实 JSON；题库不在 `dist/`，详见题库发布说明。
 - 静态资源、API 与题库不能落入页面回退；开发代理配置不会随构建产物部署。
+
+## 游戏内容维护
+
+关卡内容、可编辑美术源及发布资源的归属见[游戏内容制作](src/game-content/README.md)。修改游戏内容后运行 `npm run validate:game`，并执行上面的前端检查与相关浏览器回归。

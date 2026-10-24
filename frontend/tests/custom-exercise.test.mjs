@@ -171,22 +171,23 @@ test("首页检查配置期间隐藏聊天控件，传统入口仅保留在导�
   assert.doesNotMatch(html, /正在检查助手配置|今天想练什么节奏/);
   assert.doesNotMatch(html, /生成击拍练习/);
   assert.doesNotMatch(html, /生成节奏听写/);
-  for (const path of ["preset", "random", "custom"]) assert.ok(html.includes(`href="/${path}"`));
+  assert.ok(html.includes('href="/practice"'));
+  assert.doesNotMatch(html, /href="\/(random|custom)"/);
   assert.match(withoutSvg(html), /aria-current="page"[^>]*><span>助手/);
   assert.doesNotMatch(html, /topic-section|击拍训练区|节奏听写区/);
 });
 
-test("随机工作区提供模式切换，不再返回中间入口页", async () => {
+test("随机工作区保留模式切换并可返回练习入口", async () => {
   const html = await renderApp("/random/tapping");
   assert.match(html, /aria-label="训练方式"/);
-  assert.match(html, /<h1>随机练习<\/h1>/);
+  assert.match(html, /<h1[^>]*>随机练习<\/h1>/);
   assert.match(html, /节奏听写/);
-  assert.doesNotMatch(html, /class="practice-return"|几何游戏|选择训练方式/);
+  assert.doesNotMatch(html, /几何游戏|选择训练方式/);
 });
 
 test("预设列表与详情都在 preset 下，旧 practice 地址不再兼容", async () => {
   const list = await renderApp("/preset");
-  assert.match(list, /<h1>预设练习<\/h1>/);
+  assert.match(list, /<h1[^>]*>预设练习<\/h1>/);
   assert.match(list, /href="\/preset\/basic-values-01"/);
   assert.doesNotMatch(list, /href="\/practice\//);
   const detail = await renderApp("/preset/basic-values-01");
@@ -201,10 +202,11 @@ test("预设列表与详情都在 preset 下，旧 practice 地址不再兼容",
   assert.doesNotMatch(old, /击拍训练区/);
 });
 
-test("三个来源页面不再展示来源切换栏，保留首页返回入口及训练方式选择", async () => {
+test("三个子页面保留原有布局并能返回练习入口", async () => {
   for (const path of ["/preset", "/random/tapping", "/custom/tapping"]) {
     const html = await renderApp(path);
-    assert.doesNotMatch(html, /aria-label="内容来源"/);
+    assert.doesNotMatch(html, /aria-label="练习来源"/);
+    assert.match(html, /href="\/practice"[^>]*>[^]*?返回练习/);
     assert.match(withoutSvg(html), /href="\/"[^>]*><span>节奏助手/);
     if (path !== "/custom/tapping") {
       assert.match(html, /击拍练习/);
@@ -221,35 +223,26 @@ test("三个来源页面不再展示来源切换栏，保留首页返回入口�
   assert.match(withoutSvg(await renderApp("/login")), /href="\/"[^>]*><span>节奏助手/);
 });
 
-test("侧栏直接展示所有栏目，移动菜单默认关闭，题目页标识所属栏目", async () => {
-  for (const [path, active, current] of [["/", "/", "page"], ["/preset", "/preset", "page"],
-    ["/preset/basic-values-01", "/preset", "location"], ["/random/tapping", "/random", "location"],
-    ["/custom/dictation", "/custom", "location"]]) {
+test("主导航仅有三类内容及辅助入口，练习详情仍归练习，移动菜单默认关闭", async () => {
+  for (const path of ["/", "/preset", "/preset/basic-values-01", "/random/tapping", "/custom/dictation", "/records"]) {
     const html = await renderApp(path);
     const sidebar = html.match(/<aside class="site-sidebar[\s\S]*?<\/aside>/)?.[0];
     assert.ok(sidebar);
-    assert.match(sidebar, /data-collapsed="true"/);
-    assert.doesNotMatch(sidebar, /aria-label="收起导航"/);
-    assert.doesNotMatch(html, /practice-navigation|<dialog[^>]*\bopen/);
+    assert.equal((sidebar.match(/<a /g) ?? []).length, 6);
+    for (const label of ["节奏助手", "练习", "节奏游戏", "设置", "关于"]) assert.ok(sidebar.includes(`aria-label="${label}"`));
+    assert.doesNotMatch(sidebar, /<span>(预设|随机|自定义|记录)<\/span>/);
+    if (path !== "/") assert.match(sidebar, /aria-current="location"[^>]*aria-label="练习"/);
     assert.match(html, /aria-label="打开导航菜单" aria-expanded="false" aria-controls="site-menu"/);
-    for (const target of ["/", "/preset", "/random", "/custom", "/settings"]) {
-      const destination = (target === "/random" || target === "/custom") && path.startsWith(target + "/") ? path : target;
-      assert.ok(sidebar.includes(`href="${destination}"`));
-    }
-    assert.match(sidebar, new RegExp(`<a(?=[^>]*href="${active === "/random" || active === "/custom" ? path : active}")(?=[^>]*aria-current="${current}")[^>]*>`));
   }
 });
 
-test("窄导航显示简短文字及完整名称，移动抽屉显示完整文字", () => {
+test("桌面与移动端均使用统一的练习入口", () => {
   const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ["/random/tapping"] }, createElement(SiteNavigation)));
   const sidebar = html.match(/<aside[^]*?<\/aside>/)[0];
-  for (const name of ["节奏助手", "预设练习", "随机练习", "自定义练习", "设置"]) {
-    assert.ok(sidebar.includes(`aria-label="${name}"`));
-  }
-  assert.match(sidebar, /<span>随机<\/span>/);
-  assert.match(sidebar, /aria-current="location"[^>]*title="随机练习"/);
+  assert.match(sidebar, /aria-current="location"[^>]*title="练习"/);
   const drawer = withoutSvg(html.match(/<dialog[^]*?<\/dialog>/)[0]);
-  assert.match(drawer, /<span>随机练习<\/span>/);
+  assert.match(drawer, /<span>练习<\/span>/);
+  assert.doesNotMatch(drawer, /<span>(预设练习|随机练习|自定义练习)<\/span>/);
 });
 
 test("设计系统覆盖公共页头、首页、预设列表与击拍页，其他主体不受影响", async () => {
@@ -471,7 +464,7 @@ test("公共练习设置可从已生效快照初始化，不自动触发变化�
 
 test("自定义题库提供模式切换和新建入口", async () => {
   const html = await renderPage("/custom/tapping", "/custom/:mode");
-  assert.match(html, /<h1>自定义练习<\/h1>/);
+  assert.match(html, /<h1[^>]*>自定义练习<\/h1>/);
   assert.match(html, /aria-label="训练方式"/);
   assert.match(html, /节奏听写/);
   assert.match(html, /href="\/custom\/tapping\/new"/);
@@ -651,3 +644,23 @@ test("新建练习无需身份检查，两种模式均提供保存入口", async
 function withQueryClient(element) { return createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, element); }
 function renderToStaticMarkup(element) { return renderStatic(withQueryClient(element)); }
 function renderToReadableStream(element, options) { return renderStream(withQueryClient(element), options); }
+
+test("练习入口提供四个独立目的地", async () => {
+ const html = await renderApp("/practice");
+ assert.match(html, /<h1>练习<\/h1>/);
+ for (const path of ["preset", "random", "custom", "records"]) assert.ok(html.includes(`href="/${path}"`));
+});
+
+test("练习栏目高亮覆盖子页面，且不会匹配相似路径", () => {
+  const childPaths = ["/preset", "/preset/q", "/random/dictation", "/custom/tapping/new", "/records", "/ai/tapping/id", "/ai/dictation/id"];
+  const otherPaths = ["/", "/game", "/customize", "/settings", "/records-extra", "/practice/unknown", "/ai/other/id"];
+  for (const path of ["/practice", ...childPaths, ...otherPaths]) {
+    const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path] }, createElement(SiteNavigation)));
+    const sidebar = html.match(/<aside[^]*?<\/aside>/)[0];
+    const link = sidebar.match(/<a[^>]*aria-label="练习"[^>]*>/)[0];
+    assert.match(link, /href="\/practice"/);
+    if (path === "/practice") assert.match(link, /aria-current="page"/);
+    else if (childPaths.includes(path)) assert.match(link, /aria-current="location"/);
+    else assert.doesNotMatch(link, /aria-current/);
+  }
+});

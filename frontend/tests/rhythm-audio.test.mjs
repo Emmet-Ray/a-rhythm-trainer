@@ -369,3 +369,16 @@ test("关闭预备拍后，弱拍起点的摆针仍与声音拍点一致", () =>
   assert.ok(Math.abs(metronomePlayback.getMetronomeAngle(0, playback)) < 1e-8);
   assert.equal(metronomePlayback.getMetronomeAngle(500, playback), 25);
 });
+
+test("击拍收尾等待已有声部结束，stop 取消通知，新轮不继承旧回调", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => response());
+  const context = fakeContext();await audio.prepareTapSound(context);
+  const feedback = audio.createTapFeedback(context);let done = 0;
+  feedback.tap();context.currentTime += .2;feedback.tap();feedback.finish(() => done++);
+  assert.equal(done, 0);assert.ok(context.sources.every(source => source.stops.length === 0));
+  context.sources[0].onended();assert.equal(done, 0);
+  context.sources[1].onended();assert.equal(done, 1);
+  context.sources[1].onended();assert.equal(done, 1);
+  feedback.tap();feedback.finish(() => done++);feedback.stop();context.sources[2].onended();assert.equal(done, 1);
+  const fresh = audio.createTapFeedback(context);fresh.finish(() => done++);assert.equal(done, 2);
+});

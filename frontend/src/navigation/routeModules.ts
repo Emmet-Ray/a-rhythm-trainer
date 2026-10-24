@@ -4,10 +4,13 @@ import { editorModule, workspaceModule } from "../exercise-workspace/workspaceMo
 import { presetCatalogStore } from "../exercises/presetCatalogStore";
 
 export const routeModules = {
+  practice: preloadable(() => import("../pages/PracticePage")),
   ai: preloadable(() => import("../pages/AiPracticePage")),
   preset: preloadable(() => import("../pages/PresetPracticePage")),
   random: preloadable(() => import("../pages/RandomPracticePage")),
   custom: preloadable(() => import("../pages/CustomPracticePage")),
+  game: preloadable(() => import("../game/ui/GameLevelList")),
+  gameLevel: preloadable(() => import("../pages/RhythmGamePage")),
   settings: preloadable(() => import("../pages/SettingsPage")),
   records: preloadable(() => import("../pages/PracticeRecordsPage")),
   about: preloadable(() => import("../pages/AboutPage")),
@@ -19,6 +22,7 @@ export function destinationModules(pathname: string) {
   const [section, mode, target] = segments;
   const page = section;
   if (!Object.hasOwn(routeModules, page)) return [];
+  if (section === "game" && segments.length > 1) return [routeModules.gameLevel];
   const modules = [routeModules[page as keyof typeof routeModules]];
   if (section === "custom" && ["tapping", "dictation"].includes(mode)
     && (target === "new" || segments.at(-1) === "edit")) return [...modules, editorModule];

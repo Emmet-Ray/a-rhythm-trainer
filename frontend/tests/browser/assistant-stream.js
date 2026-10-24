@@ -11,8 +11,9 @@ async (page) => {
     window.fetch = async (input, options = {}) => {
       const url = String(input);
       if (url.includes('/api/assistant/status')) return json({ status: 'ready', message: '' });
+      if (url.includes('/api/model-connections')) return json({ provider: 'deepseek', deepseek: { configured: true, model: 'test', models: [{ id: 'test', name: 'Test' }] }, chatgpt: { configured: false, models: [] } });
       if (!url.includes('/api/assistant/sessions')) return original(input, options);
-      if (!url.endsWith('/messages')) return json({ id: 'stream', messages, is_running: running, last_run_status: status });
+      if (!url.endsWith('/messages')) return json({ id: 'stream', messages, is_running: running, last_run_status: status, model_selection: { provider: 'deepseek', model: 'test' } });
       const body = JSON.parse(options.body);
       running = true; status = 'running'; count++;
       return new Response(new ReadableStream({ start(controller) {
@@ -32,6 +33,8 @@ async (page) => {
           { type: 'tool-propose_rhythm_exercise', toolCallId: callId, state: 'output-available', input: {}, output },
           { type: 'step-start' }] };
         messages.push(saved);
+        const stamp = new Date().toISOString();
+        emit({ type: 'data-turn-accepted', transient: true, data: { user_id: body.message_id, created_at: stamp, title: body.text, updated_at: stamp } });
         emit({ type: 'start', messageId: id }); emit({ type: 'start-step' });
         emit({ type: 'text-start', id: 'intro' });
         emit({ type: 'text-delta', id: 'intro', delta: '准备这道练习。' });
@@ -48,6 +51,7 @@ async (page) => {
           else {
             saved.parts.push({ type: 'text', text: advice, state: 'done' });
             emit({ type: 'text-end', id: 'advice' }); emit({ type: 'finish-step' });
+            emit({ type: 'data-turn-completed', transient: true, data: { user_id: body.message_id, assistant_id: id, title: body.text, updated_at: new Date().toISOString() } });
             emit({ type: 'finish' });
           }
           controller.close();
@@ -70,6 +74,7 @@ async (page) => {
   await start.click();
   await page.locator('.generated-practice-overlay').waitFor();
   await page.getByRole('button', { name: '关闭练习', exact: true }).click();
+  await page.locator('.generated-practice-overlay').waitFor({ state: 'hidden' });
   await input.fill('下一条草稿');
   await page.evaluate(() => window.streamMock.text());
   await page.locator('.assistant-pending strong').waitFor();

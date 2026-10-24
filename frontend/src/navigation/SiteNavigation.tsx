@@ -2,18 +2,23 @@ import { lockModalScroll } from "../ui/modalScroll";
 import { useContext, useEffect, useRef, useState } from "react";
 import { VisitsContext } from "./usePageNavigation";
 import { Link, useLocation } from "react-router";
-import { MessageCircle, FileText, Shuffle, PencilLine, History, Settings, Info, Menu, X } from "lucide-react";
+import { MessageCircle, ListMusic, Gamepad2, Settings, Info, Menu, X } from "lucide-react";
 import BrandMark from "../brand/BrandMark";
 
 const destinations = [
   { path: "/", shortLabel: "助手", label: "节奏助手", icon: MessageCircle },
-  { path: "/preset", shortLabel: "预设", label: "预设练习", icon: FileText },
-  { path: "/random", shortLabel: "随机", label: "随机练习", icon: Shuffle },
-  { path: "/custom", shortLabel: "自定义", label: "自定义练习", icon: PencilLine },
-  { path: "/records", shortLabel: "记录", label: "练习记录", icon: History },
+  { path: "/practice", shortLabel: "练习", label: "练习", icon: ListMusic },
+  { path: "/game", shortLabel: "游戏", label: "节奏游戏", icon: Gamepad2 },
   { path: "/settings", shortLabel: "设置", label: "设置", icon: Settings },
   { path: "/about", shortLabel: "关于", label: "关于", icon: Info },
 ];
+
+// 练习栏目包含独立题目来源、记录及助手生成题；入口始终指向 /practice。
+function isPracticePath(pathname: string) {
+  return pathname === "/practice" || pathname === "/records"
+    || /^\/(preset|random|custom)(\/|$)/.test(pathname)
+    || /^\/ai\/(tapping|dictation)\//.test(pathname);
+}
 
 function NavigationLinks({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
   const { pathname, search } = useLocation();
@@ -21,13 +26,12 @@ function NavigationLinks({ onNavigate, compact = false }: { onNavigate?: () => v
   const settingsDestination = pathname === "/settings" ? pathname + search : visits?.destination("/settings") ?? "/settings";
   return <nav className="site-navigation" aria-label="主导航">
     {destinations.map(({ path, label, shortLabel, icon: Icon }) => {
-      // 模式首页已是栏目入口，避免先跳根地址再重定向；详情、编辑仍返回列表。
-      const isModeHome = (path === "/random" || path === "/custom")
-        && (pathname === path + "/tapping" || pathname === path + "/dictation");
-      const destination = path === "/settings" ? settingsDestination : isModeHome ? pathname : path;
+      const practice = path === "/practice";
+      const destination = path === "/settings" ? settingsDestination : path;
+      const active = practice ? isPracticePath(pathname) : pathname === path || path !== "/" && pathname.startsWith(path + "/");
       return <Link key={path} to={destination}
       className={path === "/settings" ? "site-settings-link" : undefined}
-      aria-current={pathname === path ? "page" : path !== "/" && pathname.startsWith(`${path}/`) ? "location" : undefined}
+      aria-current={active ? destination === pathname + search ? "page" : "location" : undefined}
       title={compact ? label : undefined} aria-label={compact ? label : undefined}
       onClick={event => {
         if (destination === pathname + search && event.button === 0

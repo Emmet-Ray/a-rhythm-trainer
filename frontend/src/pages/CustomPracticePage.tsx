@@ -1,3 +1,4 @@
+import { PracticeReturn } from "../navigation/PracticeReturn";
 import { useConfirm } from "../ui/confirmation";
 import { useRetainedData } from "../ui/useRetainedData";
 import { useQuery } from "@tanstack/react-query";
@@ -139,6 +140,7 @@ function CustomExerciseList({
     <div className="design-system practice-page custom-library">
       <title>{`自定义${label} · 节奏训练`}</title>
       {navigationType !== "POP" && state?.createdExercise === true && <SuccessToast message="练习已创建" />}
+      <PracticeReturn />
       <header className="practice-titlebar custom-list-heading">
         <h1>自定义练习</h1>
         <Link className="custom-new-link" to={`/custom/${mode}/new`}>

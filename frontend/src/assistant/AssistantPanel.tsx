@@ -39,7 +39,7 @@ import { ConversationHistory } from "./ConversationHistory";
 import type { ModelSelection } from "../api/modelConnections";
 import type { CardState } from "../api/assistant";
 
-export function AssistantPanel({ home = false, onDockChange }: { home?: boolean; onDockChange?: (docked: boolean) => void }) {
+export function AssistantPanel({ home = false, onDockChange, available = true }: { home?: boolean; onDockChange?: (docked: boolean) => void; available?: boolean }) {
   const activity = useContext(PracticeActivityContext);
   const availability = useAssistantAvailability();
   const {
@@ -49,7 +49,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
     modal,
     open,
     close: closePanel,
-  } = useAssistantPresentation(home, availability.ready);
+  } = useAssistantPresentation(home, availability.ready && available);
   useLayoutEffect(() => { onDockChange?.(!home && visible && !modal); }, [home, visible, modal, onDockChange]);
   const [playbackGroup] = useState(() => new PlaybackGroup());
   const [conversation] = useState(() => new AssistantConversation("instance"));
@@ -245,7 +245,7 @@ export function AssistantPanel({ home = false, onDockChange }: { home?: boolean;
       <button
         ref={launcherRef}
         className="assistant-launcher"
-        hidden={visible || !availability.ready}
+        hidden={visible || !availability.ready || !available}
         type="button"
         aria-label="打开 AI 助手"
         aria-expanded={visible}

@@ -33,7 +33,7 @@ async page => {
         && document.querySelector('#page').getBoundingClientRect().width < 2;
     });
     await input.waitFor();
-    await page.getByRole('link', { name: i % 2 ? '设置' : '预设练习', exact: true }).click();
+    await page.getByRole('link', { name: i % 2 ? '设置' : '练习', exact: true }).click();
     await open.waitFor();
   }
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -71,7 +71,9 @@ async page => {
   await checkDraft();
   if (await separator.isVisible()) throw new Error('home separator visible');
   await noOverflow();
-  await page.getByRole('link', { name: '随机练习', exact: true }).click();
+  await page.getByRole('link', { name: '练习', exact: true }).click();
+  await page.locator('.practice-hub').waitFor();
+  await page.getByRole('link', { name: '随机练习 按拍号与范围生成新题', exact: true }).click();
   await page.getByRole('heading', { name: '随机练习', exact: true }).waitFor();
   await checkDraft();
   near(await width(), resized, 'route width');
@@ -93,7 +95,8 @@ async page => {
   await page.reload();
   await open.click();
   near(await width(), saved, 'reload width');
-  await page.getByRole('link', { name: '预设练习', exact: true }).click();
+  await page.getByRole('link', { name: '返回练习', exact: true }).click();
+  await page.locator('.practice-hub a[href="/preset"]').click();
   await page.locator('.preset-library').waitFor();
   await noOverflow();
   const dialog = await page.locator('.assistant-panel').boundingBox();

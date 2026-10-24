@@ -36,7 +36,7 @@ export function pageMountKey(pathname: string, visitKey: string): string {
 
 /** 只给浏览列表延续滚动；练习、编辑页的新访问仍从顶部开始。 */
 export function browsingScrollScope(pathname: string): string | undefined {
-  if (["/preset", "/records", "/random", "/custom"].includes(pathname)
+  if (["/preset", "/records", "/random", "/custom", "/game"].includes(pathname)
     || /^\/custom\/(tapping|dictation)$/.test(pathname)) {
     return `browse-scroll:${pathname}`;
   }

@@ -17,11 +17,7 @@ async page => {
     return route.fulfill({ json });
   });
   for (const [path, name, selector] of [
-    ['/random/tapping', '随机练习', '.random-page'],
-    ['/random/dictation', '随机练习', '.random-page'],
-    ['/custom/tapping', '自定义练习', '.custom-catalog'],
-    ['/custom/dictation', '自定义练习', '.custom-catalog'],
-    ['/records', '练习记录', '.practice-records-page'],
+    ['/practice', '练习', '.practice-hub'],
   ]) {
     await page.goto(origin + path);
     await page.locator(selector).waitFor();
@@ -45,8 +41,8 @@ async page => {
     }
   }
   await page.goto(origin + '/custom/tapping/new');
-  const back = page.getByRole('link', { name: '自定义练习', exact: true });
-  if (await back.getAttribute('href') !== '/custom') throw Error('editor cannot return to catalog');
+  const back = page.getByRole('link', { name: '题目列表', exact: true });
+  if (await back.getAttribute('href') !== '/custom/tapping') throw Error('editor cannot return to catalog');
   await back.click();
   await page.locator('.custom-catalog').waitFor();
   await page.unrouteAll({ behavior: 'ignoreErrors' });

@@ -1,3 +1,4 @@
+import { PracticeReturn } from "../navigation/PracticeReturn";
 import { lockModalScroll } from "../ui/modalScroll";
 import { ExerciseWorkbench } from "../exercise-workspace/ExerciseWorkbench";
 import { ActionError } from "../ui/ActionError";
@@ -186,7 +187,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
           origin={{ source: "random", exerciseId: generated.id, title: "随机练习" }} onBusyChange={setBusy} onEditingChange={setEditing}>
           {view => <>
             <div className="design-system practice-page">
-              <PracticeHeading title={view.title} history={view.editing ? undefined : view.history}>
+              <PracticeHeading backTo={view.editing ? undefined : "/practice"} backLabel="返回练习" title={view.title} history={view.editing ? undefined : view.history}>
                 {!view.editing && <>
                   <div className="topic-modes workspace-mode-switch" role="group" aria-label="训练方式">
                     {randomModes.map(item => <button key={item.id} type="button" aria-pressed={mode === item.id}
@@ -203,7 +204,7 @@ function RandomExerciseWorkspace({ mode }: { mode: RandomGenerationConfig["mode"
             <div className="design-system">{view.content}</div>
           </>}
         </ExerciseWorkbench>}
-        {!generated.exercise && <div className="design-system practice-page"><PracticeHeading title="随机练习" />
+        {!generated.exercise && <div className="design-system practice-page"><PracticeReturn /><PracticeHeading title="随机练习" />
           <button type="button" onClick={() => setSettingsOpen(true)}>生成设置</button>
           <button type="button" disabled={config.materials.length === 0} onClick={generate}>换一题</button></div>}
 

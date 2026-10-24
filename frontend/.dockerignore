@@ -5,3 +5,7 @@ dist
 .env.*
 *.log
 tests
+
+dist-local
+
+**/.git

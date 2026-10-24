@@ -15,14 +15,14 @@ function readWidth() {
 
 /** 页面与助手始终留在各自面板中；首页独占、窄屏模态及收起只改变尺寸。
  * 仅保存用户调整的宽度，不让窗口约束或模式切换覆盖用户偏好。 */
-export function AssistantWorkspace({ home, children }: { home: boolean; children: ReactNode }) {
+export function AssistantWorkspace({ home, children, available = true }: { home: boolean; children: ReactNode; available?: boolean }) {
   const [docked, setDocked] = useState(false);
   const groupElement = useRef<HTMLDivElement>(null);
   const separatorElement = useRef<HTMLDivElement>(null);
   const [assistant, assistantRef] = usePanelCallbackRef();
   const [initialWidth] = useState(readWidth);
   const width = useRef(initialWidth);
-  const split = !home && docked;
+  const split = available && !home && docked;
   useLayoutEffect(() => {
     // 首页与收起由尺寸约束保证；只在展开分栏时恢复用户偏好。
     if (split) assistant?.resize(width.current);
@@ -45,7 +45,7 @@ export function AssistantWorkspace({ home, children }: { home: boolean; children
     <Panel id="assistant" role={home ? "main" : undefined} tabIndex={home ? -1 : undefined} panelRef={assistantRef} defaultSize={home ? "100%" : "0%"}
       minSize={home ? "100%" : split ? minAssistantWidth : 0} maxSize={home ? "100%" : split ? maxAssistantWidth : "0%"}
       groupResizeBehavior="preserve-pixel-size" style={{ overflow: "visible" }}>
-      <AssistantPanel home={home} onDockChange={setDocked} />
+      <AssistantPanel home={home} available={available} onDockChange={setDocked} />
     </Panel>
   </Group>;
 }

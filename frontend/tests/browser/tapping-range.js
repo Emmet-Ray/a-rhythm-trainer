@@ -48,13 +48,14 @@ async page => {
   await event(2, 2).focus(); await page.keyboard.press('Enter');
   check(await event(2, 2).getAttribute('aria-pressed') === 'true', '键盘选择失败');
   check(!await page.locator('.practice-result').textContent(), '换起点保留旧成绩');
+  const fullSaved = page.waitForResponse(response => response.url().endsWith('/records') && response.request().method() === 'POST');
   await event(1, 1).click();
   await page.getByRole('button', { name: '击拍练习', exact: true }).click();
   await page.locator(".trainer-countdown").waitFor();
   await page.locator(".trainer-countdown").waitFor({ state: "detached" });
   await page.waitForTimeout(200);
   await page.getByRole('button', { name: '停止', exact: true }).click();
-  await page.waitForTimeout(150);
+  await fullSaved;
   check(writes.length === 1 && writes[0].attempts[0].targetCount === 6, '整题记录异常：' + JSON.stringify(writes));
   await page.setViewportSize({ width: 390, height: 700 });
   await event(2, 2).scrollIntoViewIfNeeded();
@@ -105,9 +106,10 @@ async page => {
   check(await event(1, 2).getAttribute('aria-pressed') === 'true', '单小节不能选内部起点');
   await event(1, 1).click();
   await bpm.fill('240'); await bpm.blur();
+  const singleSaved = page.waitForResponse(response => response.url().endsWith('/records') && response.request().method() === 'POST');
   await page.getByRole('button', { name: '击拍练习', exact: true }).click();
   await page.getByText('本次未通过', { exact: true }).waitFor({ timeout: 6000 });
-  await page.waitForTimeout(150);
+  await singleSaved;
   check(writes.length === 2 && writes[1].attempts[0].targetCount === 4, '单小节整题未保存');
   check(!errors.length, errors.join('\n'));
   return '自由起点、试听、键盘、浏览手势隔离、稳定谱面、运行锁定、重复练习与记录边界通过';

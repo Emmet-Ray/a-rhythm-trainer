@@ -143,7 +143,7 @@ export async function prepareMetronomeSound(context: AudioContext, sound: Metron
   } catch { throw new Error("节拍器声音加载失败，请重试。"); }
 }
 
-/** 提前安排一声预备拍提示音，并保留声源以便中途取消。 */
+/** 提前安排一声预备拍提示音；sources 仅持有尚未结束的声源，结束自动移除，可用于取消或等待收尾。 */
 export function scheduleCountIn(
   context: AudioContext,
   startsAt: number,
@@ -186,7 +186,9 @@ export async function prepareTapSound(context: AudioContext, sound: PracticeSoun
   } catch { throw new Error("练习声音加载失败，请重试。"); }
 }
 
-/** 起止时刻均为 AudioContext 上的绝对秒数；终点前平滑淡出，不越过音符边界。 */
+/** 起止时刻均为 AudioContext 上的绝对秒数；终点前平滑淡出，不越过音符边界。
+ * 若提供 sources，仅保留尚未结束的声源，结束自动移除。
+ */
 export function scheduleTapSound(
   context: AudioContext,
   startsAt: number,
@@ -230,13 +232,18 @@ export function scheduleTapSound(
  * 每次 tap 同步起音，松键不截断。stop 清除所有尾音，之后仍可继续敲击。
  * 有限重叠：2 秒自然采样（末尾 300ms 收音），最多 4 个有效声部，
  * 超额时最旧声部用 40ms 淡出；淡出期间允许短暂共存。
- * 自然结算不必 stop，让末次尾音衰减；主动停止或开始下一轮时必须 stop。
+ * finish 等待已有尾音结束，不截断；stop 取消待完成回调并收音。
  */
 export function createTapFeedback(context: AudioContext) {
   const buffer = tapBuffers.get(context);
   if (!buffer) throw new Error("请先等待 prepareTapSound() 完成。");
   type Voice = { source: AudioBufferSourceNode; gain: GainNode; end: number; retiring: boolean };
   const voices = new Set<Voice>();
+  let onFinished: (() => void) | null = null;
+  function finishIfSilent() {
+    if (voices.size > 0) return;
+    const done = onFinished; onFinished = null; done?.();
+  }
   function retire(voice: Voice, at: number) {
     if (voice.retiring || voice.end <= at) return;
     voice.retiring = true;
@@ -264,10 +271,12 @@ export function createTapFeedback(context: AudioContext) {
       source.connect(gain).connect(context.destination);
       const voice = { source, gain, end, retiring: false };
       voices.add(voice);
-      source.onended = () => { voices.delete(voice); source.disconnect(); gain.disconnect(); };
+      source.onended = () => { voices.delete(voice); source.disconnect(); gain.disconnect(); finishIfSilent(); };
       source.start(at, 0, duration);
     },
+    finish(done: () => void) { onFinished = done; finishIfSilent(); },
     stop() {
+      onFinished = null;
       for (const voice of voices) retire(voice, context.currentTime);
     },
   };

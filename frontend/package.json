@@ -8,9 +8,13 @@
     "validate:content": "node scripts/validate-preset-catalog.mjs",
     "test": "node --test tests/*.test.mjs",
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && tsc -p tsconfig.local-content.json && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "validate:game": "node scripts/validate-game-content.mjs",
+    "dev:public": "GAME_LOCAL_CONTENT=0 vite",
+    "validate:game:local": "tsc -p tsconfig.local-content.json && node scripts/validate-game-content.mjs --local",
+    "build:public": "tsc -b && GAME_LOCAL_CONTENT=0 vite build"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.131",
@@ -21,6 +25,7 @@
     "ai": "^7.0.128",
     "cmdk": "^1.1.1",
     "lucide-react": "^1.46.0",
+    "phaser": "^4.2.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",

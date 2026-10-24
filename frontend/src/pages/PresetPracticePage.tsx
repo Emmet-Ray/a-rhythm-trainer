@@ -1,3 +1,4 @@
+import { PracticeReturn } from "../navigation/PracticeReturn";
 import { useQuery } from "@tanstack/react-query";
 import { practiceProgressOptions, summaryAchievement } from "../practice-records/practiceRecordStorage";
 import { recordKey } from "../practice-records/practiceRecords";
@@ -32,6 +33,7 @@ export default function PresetPracticePage() {
   if (state.status === "error") return (
     <div className="design-system practice-page">
       <title>题库读取失败 · 节奏训练</title>
+      <PracticeReturn />
       <h1>预设练习</h1>
       <div className="custom-storage-error">
         <p role="alert">{state.message}</p>
@@ -44,6 +46,7 @@ export default function PresetPracticePage() {
   if (presetTopics.length === 0) return (
     <div className="design-system practice-page">
       <title>预设练习 · 节奏训练</title>
+      <PracticeReturn />
       <h1>预设练习</h1>
       <p role="status">题库暂时没有练习。</p>
     </div>
@@ -74,6 +77,7 @@ function PresetLibrary({ presetTopics }: { presetTopics: PracticeTopic[] }) {
   return (
     <div className="design-system preset-library">
       <title>预设练习 · 节奏训练</title>
+      <PracticeReturn />
       <header className="page-heading preset-heading">
         <h1>预设练习</h1>
       </header>
