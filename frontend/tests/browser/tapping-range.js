@@ -56,11 +56,13 @@ async page => {
   await page.getByText('本次未通过', { exact: true }).waitFor({ timeout: 6000 });
   if (writes.length) throw Error('first measure counted as whole exercise');
   await only.uncheck();
+  const fullSaved = page.waitForResponse(response => response.url().endsWith('/records') && response.request().method() === 'POST');
   await page.getByRole('button', { name: '击拍练习', exact: true }).click();
-  // Stop after count-in; normal full-exercise interrupted recording must remain intact.
-  await page.waitForTimeout(1450);
+  // Stop when count-in actually ends, regardless of sample loading or machine speed.
+  await page.locator('.trainer-countdown').waitFor();
+  await page.locator('.trainer-countdown').waitFor({ state: 'hidden' });
   await page.getByRole('button', { name: '停止', exact: true }).click();
-  await page.waitForTimeout(150);
+  await fullSaved;
   if (writes.length !== 1 || writes[0].attempts[0].targetCount !== 6 || writes[0].attempts[0].passed) throw Error('full attempt recording changed');
   await page.setViewportSize({ width: 390, height: 844 });
   if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw Error('mobile overflow');
@@ -82,10 +84,11 @@ async page => {
   await page.goto(origin + '/custom/tapping/one');
   await page.getByRole('button', { name: '击拍练习', exact: true }).waitFor();
   if (await only.count()) throw Error('single-measure exercise has unnecessary scope toggle');
+  const singleSaved = page.waitForResponse(response => response.url().endsWith('/records') && response.request().method() === 'POST');
   await page.getByRole('spinbutton').fill('240'); await page.getByRole('spinbutton').blur();
   await page.getByRole('button', { name: '击拍练习', exact: true }).click();
   await page.getByText('本次未通过', { exact: true }).waitFor({ timeout: 6000 });
-  await page.waitForTimeout(150);
+  await singleSaved;
   if (writes.length !== 2 || writes[1].attempts[0].targetCount !== 4) throw Error('single-measure full exercise was not recorded');
   if (errors.length) throw Error(errors.join('\n'));
   await page.unrouteAll({ behavior: 'ignoreErrors' });

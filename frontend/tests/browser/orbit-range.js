@@ -12,10 +12,16 @@ async page => {
   });
   await page.addInitScript(()=>{
     if(window.orbitContexts)return;
-    window.orbitContexts=[];window.orbitSources=[];
+    window.orbitContexts=[];window.orbitSources=[];window.orbitBoundaries=[];
     const Native=window.AudioContext;
     window.AudioContext=class extends Native{
       constructor(...args){super(...args);window.orbitContexts.push(this);}
+      createConstantSource(){
+        const source=super.createConstantSource(),entry={};
+        const start=source.start.bind(source),stop=source.stop.bind(source);
+        source.start=at=>{entry.at=at;window.orbitBoundaries.push(entry);return start(at);};
+        source.stop=at=>{entry.end=at;return stop(at);};return source;
+      }
       createBufferSource(){
         const source=super.createBufferSource(),entry={stopped:false,ended:false};
         const start=source.start.bind(source),stop=source.stop.bind(source);
@@ -36,7 +42,9 @@ async page => {
   };
   const start=page.getByRole('button',{name:/^(开始游戏|我来试试)$/,exact:true});
   const ready=()=>page.waitForFunction(()=>document.querySelector('.orbit-start')?.disabled===false);
+  let currentBpm=60;
   const apply=async(bpm,first,last)=>{
+    currentBpm=bpm;
     await settings.click();await page.getByRole('spinbutton',{name:'速度',exact:true}).fill(String(bpm));
     await page.getByLabel('起始小节',{exact:true}).selectOption(String(first));
     await page.getByLabel('结束小节',{exact:true}).selectOption(String(last));
@@ -52,8 +60,9 @@ async page => {
     await page.evaluate(()=>{window.orbitSources=[];});await start.click();
     await page.locator('[data-phase="count-in"]').waitFor();
     check(await settings.isDisabled(),'settings editable during play');
-    return page.evaluate(async targets=>{
-      const first=window.orbitSources[4].time,beat=window.orbitSources[5].time-first,context=window.orbitContexts.at(-1);
+    return page.evaluate(async ({targets,bpm})=>{
+      // Music boundary is independent of backing voice count and sample order.
+      const first=window.orbitBoundaries.at(-1).at,beat=60/bpm,context=window.orbitContexts.at(-1);
       let index=0;
       await new Promise(resolve=>{
         const frame=()=>{
@@ -67,7 +76,7 @@ async page => {
           if(index===targets.length)resolve();else requestAnimationFrame(frame);
         };requestAnimationFrame(frame);
       });
-    },targets);
+    },{targets,bpm:currentBpm});
   };
   await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/game/comprehensive');await ready();
   check(await page.getByLabel('完成 0 / 77',{exact:true}).isVisible(),'initial full target count');
@@ -120,7 +129,8 @@ async page => {
   await play(targets(4,6));await page.locator('[data-phase="completed"]').waitFor();
   check(await page.getByRole('heading',{name:'完成',exact:true}).isVisible(),'partial counted as full challenge');
   check(await page.getByLabel('完成 18 / 18',{exact:true}).isVisible(),'partial did not complete');
-  check(await page.evaluate(()=>window.orbitSources.length===30),'range scheduled beyond eight beats'); // 12 metronome + 18 taps.
+  check(await page.evaluate(()=>{const b=window.orbitBoundaries.at(-1);return Math.abs(b.end-b.at-4)<1e-8;}),'range music boundary is not eight beats at 120 BPM');
+  check(await page.evaluate(()=>window.orbitSources.every(s=>s.stopped||s.ended)),'completed range left audio');
   await page.getByRole('button',{name:'再来一次',exact:true}).click();await page.locator('[data-phase="failed"]').waitFor();
   check(await page.getByRole('heading',{name:'错过了这一拍',exact:true}).isVisible(),'failure result missing');
   check(await page.evaluate(()=>window.orbitSources.every(s=>s.stopped||s.ended)),'failed range left audio');
