@@ -40,5 +40,5 @@
 
 ### 关卡示范：Just the Two of Us
 
-以下为关卡的自动示范播放，[点击查看视频](videos/just-the-two-of-us.mp4)。
+[点击查看视频](videos/just-the-two-of-us.mp4)
 [![观看 Just the Two of Us 关卡示范](images/game-video-cover.jpg)](videos/just-the-two-of-us.mp4)
