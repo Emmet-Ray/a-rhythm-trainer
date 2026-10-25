@@ -1,55 +1,65 @@
 # 节奏训练
 
-面向音乐自学者的节奏训练工具，哪里不会练哪里：练什么内容、多少BPM、从哪里开始，都由你自己掌控。
+哪里不会练哪里，面向音乐自学者的节奏训练工具：看谱击拍、听音写谱，也可以通过单键节奏游戏练习。自由调整速度，把难点单独拿出来反复练，再根据反馈检查自己的节奏偏差。
+
+内置预设题库，支持随机出题、自定义谱面和 AI 辅助生成练习。基础练习无需配置模型；使用 AI 助手时再连接模型服务。
+
+[快速开始](#快速开始) · [界面预览](#界面预览) · [核心功能](#核心功能) · [开发与扩展](#开发与扩展)
+
+## 界面预览
+
+### 看谱击拍
+
+试听谱面，按空格键击拍。练习结束后查看逐拍反馈，调整 BPM 或从指定符号开始，再练一次。
+
+![击拍结束后的逐拍反馈与本次结果](demo/images/tapping.png)
+
+### 把问题变成练习
+
+输入要求或上传乐谱图片，让 AI 助手讲解节奏、生成题目，并结合当前题目和练习表现继续交流。
+
+![助手根据上传的谱面生成可试听、可练习的节奏题目](demo/images/assistant.png)
+
+### [更多预览内容](demo/README.md)
 
 ## 核心功能
 
-**[查看功能演示截图与视频](demo/README.md)**
+- **看谱击拍**：试听谱面，按空格键击拍，查看准确度和逐拍判定反馈。自由调整 BPM，支持从指定音符或休止符开始练习。
+- **节奏听写**：聆听节奏并填写谱面，播放自己的答案，逐小节验证；支持单独播放和练习某个小节。
+- **选题与 AI 助手**：从预设、随机或自定义题目开始，也可以通过文字或乐谱图片让 AI 讲解节奏、生成练习。随机、AI 和自定义题目均可编辑并保存。
+- **练习记录**：保存击拍与听写结果，回看每道题的历史记录和单次练习详情；按时间与模式筛选，查看练习次数、练习天数及变化趋势。
+- **节奏游戏**：采用类似[《冰与火之舞》](https://store.steampowered.com/app/977950/A_Dance_of_Fire_and_Ice/)的单键双球玩法，支持观看示范、调整速度和指定练习范围。内置基础节奏关卡与 AI 原创曲目《微光》，支持自行修改和创建关卡。
 
-- **AI 节奏助手**
-  - 通过文字或乐谱图片提问，进行节奏讲解与多轮交流。
-  - 根据要求生成击拍或听写题目，结合当前题目和练习表现提供建议。
-  - 支持通过 DeepSeek API Key 或 ChatGPT 订阅授权接入模型。
+## 快速开始
 
-- **击拍与听写练习**
-  - 使用预设题目、随机生成题目，或自行编写；支持编辑并保存 AI、随机和自定义题目。
-  - 跟随谱面击拍，查看准确度与判定反馈；聆听节奏并填写谱面，逐小节验证答案。
-  - 自由调整 BPM；击拍可从指定符号开始，听写可单独播放和练习某个小节。
+### Docker 启动
 
-- **节奏游戏**
-  - 采用类似《冰与火之舞》的单键玩法，跟随节奏控制双球沿轨道前进。
-  - 支持观看示范、调整速度和指定练习范围。
-  - 内置基础节奏关卡与 AI 原创曲目《微光》，支持自行修改和创建关卡。
+```sh
+git clone https://github.com/Emmet-Ray/a-rhythm-trainer.git
+cd a-rhythm-trainer
+cp .env.example .env
+docker compose up -d --build
+```
 
-- **练习记录**
-  - 保存击拍与听写结果，查看每道题的历史记录和单次练习详情。
-  - 按时间与练习模式筛选，查看练习次数、练习天数及变化趋势。
+打开 <http://localhost:8080> 即可使用。
 
-## 快速启动（Docker）
+### 可选：配置 AI 助手
 
-1. 下载项目并复制配置文件：
+在「设置 → 模型服务」中配置模型。目前支持 DeepSeek API Key 和 ChatGPT 订阅授权。
 
-   ```sh
-   git clone https://github.com/Emmet-Ray/a-rhythm-trainer.git
-   cd a-rhythm-trainer
-   cp .env.example .env
-   ```
+## 开发与扩展
 
-2. 启动：
+想在本地开发、整理题库或制作游戏关卡，可以从以下文档开始：
 
-   ```sh
-   docker compose up -d --build
-   ```
-
-打开 <http://localhost:8080> 即可使用。使用 AI 助手前，需在「设置 → 模型服务」中配置模型。
+- [前端开发与部署](frontend/README.md)：本地启动、构建与浏览器验收。
+- [后端运行与维护](backend/README.md)：模型配置、数据备份与接口联调。
+- [架构说明](docs/ARCHITECTURE.md)：模块职责、状态归属与记录规则。
+- [预设题库编辑与发布](content/README.md)：维护和校验预设练习。
+- [游戏内容制作](frontend/src/game-content/README.md)：制作关卡、接入本地曲目与管理资源。
 
 ## 技术栈
 
-- **前端**：React、TypeScript、Vite；React Router（路由）、TanStack Query（服务端状态与缓存）、Radix UI（交互组件）、Lucide（图标）、Recharts（记录图表）、react-markdown（Markdown 渲染）；AI SDK UI（助手流式消息）
-- **谱面与音频**：VexFlow（谱面渲染）、Web Audio API（节拍调度、乐器采样播放与多声部编配）
-- **游戏**：Phaser 4（游戏场景与轨道渲染）、Canvas 2D（像素纹理与节奏海报）；游戏排程与判定由 Web Audio 音频时钟驱动
-- **后端**：Python、FastAPI；SQLite、SQLAlchemy、Alembic（数据存储与迁移）；Pydantic AI（模型接入与工具调用）、OpenAI Python SDK（DeepSeek 与 ChatGPT 订阅 Responses）
-- **部署**：Docker、Nginx
+前端使用 React、TypeScript 和 Vite；谱面由 VexFlow 渲染，音频由 Web Audio API 调度，节奏游戏使用 Phaser 4。后端使用 FastAPI 和 SQLite，AI 助手通过 Pydantic AI 接入模型，支持 Docker 部署。
 
 ## TODO
 
@@ -83,3 +93,7 @@
 
 - [ ] 检查UI/UX一致性
 - [ ] 为预设题目提供不同视图（目前都是文字）
+
+## 许可
+
+项目代码采用 [MIT License](LICENSE)。第三方音源、字体等资源保留各自许可，详见对应资源目录中的许可文件。

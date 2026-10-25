@@ -28,9 +28,9 @@
 
 敲击空格，跟随节奏控制双球沿轨道前进，可以先看示范，再调整 BPM 和练习范围进行挑战。
 
-> 由于版权问题，本仓库中只含有AI生成/原创关卡。您可以根据自己的需要自行扩展关卡。
+> 公开仓库内置基础节奏关卡与 AI 原创曲目《微光》。下方曲目目录截图与《Just the Two of Us》视频包含本地扩展曲目，不随公开仓库提供；可按[游戏内容制作说明](../frontend/src/game-content/README.md)自行扩展关卡。
 
-### 曲目
+### 曲目（含本地扩展）
 
 ![完整开发版的曲目目录](images/game-songs.png)
 
@@ -38,7 +38,7 @@
 
 ![基础节奏关卡目录，展示部分关卡](images/game-basics.png)
 
-### 关卡示范：Just the Two of Us
+### 本地扩展关卡示范：Just the Two of Us
 
 [点击查看视频](videos/just-the-two-of-us.mp4)
 [![观看 Just the Two of Us 关卡示范](images/game-video-cover.jpg)](videos/just-the-two-of-us.mp4)
