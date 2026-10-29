@@ -55,7 +55,7 @@ import backgroundUrl from "./assets/background.png?url";
 node .agents/skills/pxl-pixel-art/bin/pxl.js build <source> --out /tmp/game-art-preview --scale <scale>
 ```
 
-检查 `/tmp/game-art-preview/<output>` 后复制到 `frontend/public<url>`。单纯目录重构无需重生成已经验收的 PNG。游戏没有运行时 pxl 依赖。画面变化需检查桌面、宽屏、手机取景和道路对比；音频变化还需试听，制作规则见[游戏音乐](../../../docs/GAME_MUSIC.md)。
+检查 `/tmp/game-art-preview/<output>` 后复制到 `frontend/public<url>`。单纯目录重构无需重生成已经验收的 PNG。游戏没有运行时 pxl 依赖。画面变化需检查桌面、宽屏取景和道路对比，手机检查按任务需要进行；音频变化还需试听，制作规则见[游戏音乐](../../../docs/GAME_MUSIC.md)。
 
 ## 验证
 
