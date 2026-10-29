@@ -186,6 +186,7 @@
  .orbit-workspace .orbit-heading .orbit-heading-actions .orbit-settings-button { position: absolute; top: -52px; right: 0; width: 44px; }
  .orbit-heading-actions .orbit-settings-button span { display: none; }
  .orbit-overlay { top: auto; bottom: max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px)); width: calc(100% - 32px); }
+ .orbit-overlay::before { inset-inline: -16px; }
  .orbit-workspace[data-art] .orbit-stage-frame .orbit-overlay h2 { font-size: 28px; }
 }
 

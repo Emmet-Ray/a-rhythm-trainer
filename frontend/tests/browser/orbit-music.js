@@ -67,6 +67,13 @@ async page=>{
   await play;await page.locator('[data-phase="completed"]').waitFor();
   check(await page.getByLabel(fullAudio?'完成 108 / 108':'完成 24 / 24',{exact:true}).isVisible(),'music challenge failed');
 
+  // The result halo must stay within the viewport, including on narrow screens.
+  for (const width of [390, 680, 681, 1440]) {
+    await page.setViewportSize({width,height:1000});
+    await page.getByRole('heading',{name:'完成',exact:true}).waitFor();
+    check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'completion halo causes horizontal overflow');
+  }
+
 
   if (fullAudio) {
     await page.waitForFunction(()=>window.musicSources[0].ended);
