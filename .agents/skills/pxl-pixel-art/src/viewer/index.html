@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pxl live</title>
+<style>
+  :root {
+    --bg: #15131c; --panel: #1d1a27; --panel2: #24202f; --line: #322d40; --text: #e8e4f0; --dim: #9a93ab;
+    --accent: #ffb454; --accent2: #6fd3c1; --bad: #ff6b7a; --ok: #7bd88f;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, sans-serif; }
+  body { display: grid; grid-template: "head head head" 44px "list main side" 1fr / 230px 1fr 290px; }
+  header { grid-area: head; display: flex; align-items: center; gap: 14px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header .logo { font: 700 15px var(--mono); color: var(--accent); letter-spacing: 1px; }
+  header .file { font-family: var(--mono); color: var(--dim); }
+  .pill { padding: 2px 9px; border-radius: 99px; font: 600 11px var(--mono); background: var(--panel2); color: var(--dim); }
+  .pill.ok { color: var(--ok); } .pill.bad { color: var(--bad); } .pill.busy { color: var(--accent); }
+  header .grow { flex: 1; }
+  label.tog { display: flex; gap: 6px; align-items: center; color: var(--dim); cursor: pointer; user-select: none; }
+  #list { grid-area: list; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  #filter { margin: 10px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: 12px var(--mono); }
+  #assets { overflow: auto; flex: 1; padding: 0 6px 10px; }
+  .sect { font: 600 10px var(--mono); text-transform: uppercase; letter-spacing: 1px; color: var(--dim); margin: 12px 6px 4px; }
+  .row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; cursor: pointer; position: relative; }
+  .row:hover { background: var(--panel2); }
+  .row.sel { background: #3a3150; }
+  .row canvas { width: 32px; height: 32px; image-rendering: pixelated; background: #0e0d13; border-radius: 4px; flex: none; }
+  .row .nm { font: 12px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .sz { font: 10px var(--mono); color: var(--dim); }
+  .row .dot { position: absolute; right: 8px; width: 7px; height: 7px; border-radius: 9px; }
+  .row .dot.err { background: var(--bad); }
+  .row .dot.new { background: var(--accent); animation: fade 2.5s forwards; }
+  @keyframes fade { to { opacity: 0; } }
+  main { grid-area: main; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  #stage { flex: 1; position: relative; overflow: hidden; background: #0e0d13; cursor: crosshair; }
+  #view { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #err { position: absolute; left: 16px; right: 16px; bottom: 16px; display: none; padding: 12px 14px; border-radius: 8px;
+         background: #2b1720ee; border: 1px solid var(--bad); color: #ffd3d8; font: 12px/1.5 var(--mono); white-space: pre-wrap; }
+  #hud { position: absolute; left: 12px; top: 10px; font: 11px var(--mono); color: var(--dim); pointer-events: none; }
+  #timeline { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--panel); border-top: 1px solid var(--line); }
+  #timeline button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px; cursor: pointer; font: 12px var(--mono); }
+  #timeline button:hover { border-color: var(--accent); }
+  #slider { flex: 1; accent-color: var(--accent); }
+  #speed { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: 12px var(--mono); }
+  #stepinfo { padding: 6px 12px 9px; background: var(--panel); font: 12px var(--mono); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #stepinfo b { color: var(--text); font-weight: 600; }
+  #side { grid-area: side; background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  #side h3 { margin: 12px 12px 6px; font: 600 10px var(--mono); text-transform: uppercase; letter-spacing: 1px; color: var(--dim); }
+  #steps { list-style: none; margin: 0; padding: 0 6px; overflow: auto; flex: 1; font: 11px var(--mono); }
+  #steps li { padding: 3px 6px; border-radius: 4px; cursor: pointer; display: flex; gap: 6px; }
+  #steps li:hover { background: var(--panel2); }
+  #steps li.cur { background: #3a3150; color: var(--accent); }
+  #steps li .i { color: var(--dim); min-width: 30px; text-align: right; }
+  #steps li .l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  #steps li.none .l { opacity: .45; }
+  #inspect { margin: 0 12px; font: 12px var(--mono); min-height: 38px; display: flex; gap: 8px; align-items: center; }
+  #inspect .sw { width: 26px; height: 26px; border-radius: 5px; border: 1px solid var(--line); flex: none; }
+  #pal { display: flex; flex-wrap: wrap; gap: 3px; padding: 0 12px 12px; }
+  #pal span { width: 22px; height: 22px; border-radius: 4px; font: 10px var(--mono); display: grid; place-items: center; text-shadow: 0 0 3px #000, 0 0 2px #000; color: #fff; }
+  kbd { font: 10px var(--mono); background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+  .keys { padding: 8px 12px 12px; color: var(--dim); font-size: 11px; line-height: 1.9; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">pxl</span>
+  <span class="file" id="file">…</span>
+  <span class="pill" id="status">connecting</span>
+  <span class="pill" id="buildinfo"></span>
+  <span class="grow"></span>
+  <label class="tog"><input type="checkbox" id="follow" checked> follow edits</label>
+  <label class="tog"><input type="checkbox" id="gridtog" checked> grid</label>
+  <label class="tog"><input type="checkbox" id="hl" checked> highlight step</label>
+  <label class="tog"><input type="checkbox" id="animtog" checked> animate</label>
+</header>
+<section id="list">
+  <input id="filter" placeholder="filter assets…" spellcheck="false">
+  <div id="assets"></div>
+</section>
+<main>
+  <div id="stage"><canvas id="view"></canvas><div id="hud"></div><div id="err"></div></div>
+  <div id="timeline">
+    <button id="first" title="first step (Home)">⏮</button>
+    <button id="prev" title="previous step (←)">◀</button>
+    <button id="play" title="play / pause (space)">▶</button>
+    <button id="next" title="next step (→)">▶|</button>
+    <button id="last" title="last step (End)">⏭</button>
+    <input type="range" id="slider" min="0" max="0" value="0">
+    <select id="speed" title="steps per second">
+      <option value="auto">auto</option><option value="4">4/s</option><option value="12">12/s</option>
+      <option value="30">30/s</option><option value="120">120/s</option>
+    </select>
+  </div>
+  <div id="stepinfo">&nbsp;</div>
+</main>
+<section id="side">
+  <h3>Painting steps</h3>
+  <ol id="steps"></ol>
+  <h3>Pixel</h3>
+  <div id="inspect">hover the image</div>
+  <h3>Palette</h3>
+  <div id="pal"></div>
+  <div class="keys"><kbd>space</kbd> play <kbd>←</kbd><kbd>→</kbd> step <kbd>↑</kbd><kbd>↓</kbd> asset <kbd>wheel</kbd> zoom <kbd>drag</kbd> pan <kbd>f</kbd> fit</div>
+</section>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

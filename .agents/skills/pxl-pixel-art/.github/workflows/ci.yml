@@ -1,0 +1,25 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ["22.18", "24"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm run check
+      - run: node bin/pxl.js build examples/shop.px.js --no-preview
+      - name: Installed package runs
+        shell: bash
+        run: |
+          npm pack
+          mkdir ../smoke && cd ../smoke && npm init -y > /dev/null
+          npm install ../${{ github.event.repository.name }}/pxl-pixelart-*.tgz
+          npx pxl build node_modules/pxl-pixelart/examples/basics.px.js --no-preview

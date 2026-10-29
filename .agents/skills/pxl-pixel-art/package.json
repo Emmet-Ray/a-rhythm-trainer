@@ -1,0 +1,57 @@
+{
+  "name": "pxl-pixelart",
+  "version": "0.1.0",
+  "description": "A compact pixel-art DSL for AI agents and humans: sprites, layers, scenes, sheets, with a live painting viewer.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "pxl": "./bin/pxl.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./core": "./dist/core/index.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "dist",
+    "scripts",
+    "types",
+    "examples/*.px.js",
+    "SKILL.md",
+    "reference.md",
+    "lighting.md"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "node scripts/build.js",
+    "prepare": "node scripts/build.js",
+    "test": "node --test --disable-warning=ExperimentalWarning \"test/**/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.json",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.0"
+  },
+  "keywords": [
+    "pixel-art",
+    "sprites",
+    "dsl",
+    "gamedev",
+    "sprite-sheet",
+    "ai-agent",
+    "claude-code",
+    "skill"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crsolver/claude-pxl.git"
+  },
+  "homepage": "https://github.com/crsolver/claude-pxl#readme",
+  "bugs": {
+    "url": "https://github.com/crsolver/claude-pxl/issues"
+  }
+}

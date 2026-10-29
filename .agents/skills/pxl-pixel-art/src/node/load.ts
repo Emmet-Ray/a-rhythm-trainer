@@ -1,0 +1,68 @@
+// Loads art files (.js or .ts) into a Project by running them in a vm sandbox whose globals
+// are the DSL. Each load gets a fresh context, so reloading after an edit is clean.
+import { readFileSync } from "node:fs";
+import { dirname, isAbsolute, resolve } from "node:path";
+import * as vm from "node:vm";
+import { stripTypeScriptTypes } from "node:module";
+import { PxError, wrap } from "../core/errors.ts";
+import { Project, type ProjectOptions } from "../core/project.ts";
+
+function compile(code: string, file: string): string {
+  // Type stripping keeps every line and column in place, so error locations stay exact.
+  return /\.[cm]?ts$/.test(file) ? stripTypeScriptTypes(code, { mode: "strip" }) : code;
+}
+
+/** Load an art file from disk. Throws PxError with a file:line:col location on failure. */
+export function loadProject(file: string, opts: ProjectOptions = {}): Project {
+  const p = new Project(opts);
+  const ctx = vm.createContext({ ...p.env(), console });
+  const stack: string[] = [];
+  const run = (path: string) => {
+    const abs = resolve(path);
+    if (stack.includes(abs)) throw new PxError(`include cycle: ${[...stack, abs].join(" -> ")}`);
+    let code: string;
+    try { code = readFileSync(abs, "utf8"); } catch {
+      throw new PxError(`cannot read art file '${abs}'`, p.callerLoc());
+    }
+    p.addFile(abs);
+    stack.push(abs);
+    try {
+      vm.runInContext(compile(code, abs), ctx, { filename: abs });
+    } catch (e) {
+      throw syntaxAware(e, abs, p);
+    } finally {
+      stack.pop();
+    }
+  };
+  p.includeHook = (path) => run(isAbsolute(path) ? path : resolve(dirname(stack[stack.length - 1]), path));
+  run(file);
+  return p;
+}
+
+/** Load art source from a string (tests, embedding). `name` appears in error locations. */
+export function loadSource(src: string, name = "art.px.js", opts: ProjectOptions = {}): Project {
+  const p = new Project(opts);
+  const ctx = vm.createContext({ ...p.env(), console });
+  p.addFile(name);
+  try {
+    vm.runInContext(compile(src, name), ctx, { filename: name });
+  } catch (e) {
+    throw syntaxAware(e, name, p);
+  }
+  return p;
+}
+
+function syntaxAware(e: unknown, file: string, p: Project): PxError {
+  const err = wrap(e, (s) => p.locFromStack(s));
+  // SyntaxErrors put the location in the first stack line ("file:line").
+  if (!err.loc && typeof e === "object" && e && "stack" in e) {
+    const m = new RegExp(escape(file) + ":(\\d+)").exec(String((e as Error).stack));
+    if (m) err.loc = `${file.replace(/^.*[\\/]/, "")}:${m[1]}`;
+    err.message = err.format();
+  }
+  return err;
+}
+
+function escape(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
