@@ -61,6 +61,7 @@ async page => {
     return all.length;
   });
   await page.waitForFunction(()=>Number(document.querySelector('.orbit-progress').textContent.split('/')[0])>=12);
+  check(await page.locator('.orbit-feedback').evaluate(el => !!el.closest('.sr-only')), 'preview feedback is visible');
   await page.screenshot({path:'output/playwright/orbit-preview-music.png',scale:'css'});
   await page.setViewportSize({width:390,height:1000});
   await page.screenshot({path:'output/playwright/orbit-preview-390.png',scale:'css'});
@@ -77,19 +78,6 @@ async page => {
   check(await page.locator('.orbit-overlay').count()===0,'preview displayed challenge success styling');
   check(await page.getByRole('button',{name:'开始游戏',exact:true}).isVisible(),'preview did not return challenge entry');
   await page.screenshot({path:'output/playwright/orbit-preview-finished.png',scale:'css'});
-
-  await apply(240,0,16);await preview().click();
-  await page.waitForFunction(()=>Number(document.querySelector('.orbit-progress').textContent.split('/')[0])>=100);
-  for(const width of [342,390,1440]){
-    await page.setViewportSize({width,height:1000});
-    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-    check(await page.evaluate(()=>{
-      const feedback=document.querySelector('.orbit-feedback');
-      return !!feedback.closest('.sr-only');
-    }),'preview feedback is visible');
-  }
-  await page.locator('.orbit-stage[data-mode="preview"][data-phase="completed"]').waitFor();
-  check(await page.getByLabel('示范进度 108 / 108',{exact:true}).isVisible(),'complete music preview incomplete');
 
   // Stop a fresh preview before its first note; Esc also works with a toolbar button focused.
   await preview().click();await page.locator('[data-phase="count-in"]').waitFor();
@@ -138,5 +126,5 @@ async page => {
   await page.getByRole('link',{name:'关卡列表',exact:true}).click();
   await page.waitForFunction(()=>window.previewContexts.every(context=>context.state==='closed'));
   check(errors.length===0,errors.join('\n'));
-  return 'Music preview: exact 44-note schedule and full 108-note playback, selected range/BPM/pitches, no frame-based or manual extra notes, completion without challenge score, desktop/mobile HUD. Basic preview: eight pitched notes, sparse backing, reduced motion/light mode. Strict challenge unchanged. Stop/Esc, loading cancellation, hidden page, navigation cleanup and load-failure retry passed.';
+  return 'Music preview: exact 44-note schedule and local playback, selected range/BPM/pitches, no frame-based or manual extra notes, completion without challenge score, desktop/mobile HUD. Basic preview: eight pitched notes, sparse backing, reduced motion/light mode. Strict challenge unchanged. Stop/Esc, loading cancellation, hidden page, navigation cleanup and load-failure retry passed.';
 }

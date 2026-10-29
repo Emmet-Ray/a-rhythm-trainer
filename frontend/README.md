@@ -71,11 +71,15 @@ npm run preview
 | 编辑保存与生成题目 | `editor-feedback.js`、`edit-generated-exercise.js`、`random-settings.js`、`time-signatures.js` |
 | 图片、流与发送确认 | `assistant-images.js`、`assistant-stream.js`、`assistant-confirmation.js` |
 | 游戏内容加载、关卡固定主题与背景时间线 | `game-content.js`、`rhythm-posters.js` |
-| 游戏会话、判定、局部练习与结束清理 | `orbit-early-taps.js`、`orbit-range.js`、`orbit-preview.js` |
-| 游戏音乐排程与混音峰值 | `practice-music.js` |
+| 游戏会话、判定、局部练习与结束清理 | `orbit-game.js`、`orbit-early-taps.js`、`orbit-range.js`、`orbit-preview.js` |
+| 游戏音乐排程、短段挑战与混音峰值 | `orbit-music.js`、`practice-music.js` |
 | 焦点提示、弹层焦点返回与练习快捷键 | `focus-visibility.js`、`practice-shortcut-focus.js`、`dialog-consistency.js` |
 | 练习信息架构、目录切换和手机导航 | `practice-navigation.js`、`navigation-repeat.js` |
 | 导航和浮层动效 | `page-motion.js`、`navigation-repeat.js`、`surface-motion.js` |
+
+常规回归只运行与本次修改相关的入口。游戏通关使用普通、密集、三连音代表场景；所有关卡的节拍与目标由逻辑测试和内容校验覆盖。
+
+`orbit-music.js` 默认运行短片段。修改编配、音源或混音时，先打开测试来源的 `/game/glimmer?validation=full-audio`，再执行该脚本，显式启用整曲录音与截图验收。每次运行完整模式前都要重新打开此 URL；脚本后续导航不保留该参数。音色质量仍需实际试听，不能仅由响度断言判断。
 
 表中列出主要入口；曲目和材质专项回归在 `tests/browser/` 按名称查找，执行条件以脚本开头说明为准。
 
