@@ -1,5 +1,3 @@
-import samples from "../game-content/shared/audio/samples.json";
-import type { SampleBank } from "./audio/GameInstruments";
 import { quarter } from "../game-content/levels/quarter/index";
 import { eighth } from "../game-content/levels/eighth/index";
 import { quarterEighth } from "../game-content/levels/quarter-eighth/index";
@@ -39,4 +37,5 @@ import { images as sharedImages } from "../game-content/shared/assets";
 export const gameImages = [...Object.values(sharedImages), ...gameLevels.flatMap(level => level.images ?? [])];
 
 export { pixelAssets } from "../game-content/shared/assets";
-export const sampleBank: SampleBank = samples as SampleBank;
+
+export { default as soundFontBanks } from "../game-content/shared/audio/soundfonts.json";

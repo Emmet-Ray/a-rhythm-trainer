@@ -1,5 +1,4 @@
 import type { GameVisualAssets } from "./OrbitMapView";
-import type { SampleBank } from "../audio/GameInstruments";
 import Phaser from "phaser";
 import type { OrbitVisualTimeline } from "./OrbitBackdrop";
 import type { OrbitTheme } from "./OrbitTheme";
@@ -13,7 +12,6 @@ type Options = {
   theme: OrbitTheme;
   themes: readonly OrbitTheme[];
   pixelAssets: GameVisualAssets;
-  sampleBank: SampleBank;
   visualTimeline?: OrbitVisualTimeline;
   music?: MusicScore;
   parent: HTMLElement;

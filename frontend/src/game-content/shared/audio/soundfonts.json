@@ -1,0 +1,9 @@
+[
+  {
+    "file": "/assets/game/shared/audio/generaluser-gs/GeneralUser-GS.sf2",
+    "bytes": 32319396,
+    "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe",
+    "source": "S. Christian Collins, GeneralUser GS 2.0.3, commit 684543d5e5efaef08d02be50dcda8d552478fa60",
+    "licenses": ["/assets/game/shared/audio/generaluser-gs/LICENSE.txt", "/assets/game/shared/audio/generaluser-gs/SpessaSynth-LICENSE.txt"]
+  }
+]

@@ -8,7 +8,9 @@ async page => {
     return route.fulfill({json:path.includes('sessions')?[]:path.includes('model-connections')?{provider:'deepseek',deepseek:{configured:true,models:['deepseek-chat']},chatgpt:{configured:false,models:[]}}:{status:'ready',message:''}});
   });
   await page.addInitScript(()=>{
-    window.previewContexts=[];window.previewSources=[];window.previewBoundaries=[];
+    window.previewContexts=[];window.previewSources=[];window.previewBoundaries=[];window.previewNotes=0;window.previewWorklets=[];
+    const Worklet=window.AudioWorkletNode;
+    window.AudioWorkletNode=class extends Worklet {constructor(...args){super(...args);const entry={destroyed:false};window.previewWorklets.push(entry);const post=this.port.postMessage.bind(this.port);this.port.postMessage=(message,...rest)=>{if(message.type==='destroyWorklet')entry.destroyed=true;if(message.type==='midiMessage'&&(message.data.messageData[0]&240)===144&&message.data.messageData[2]>0)window.previewNotes++;return post(message,...rest);};}};
     const Native=window.AudioContext;
     window.AudioContext=class extends Native{
       constructor(...args){super(...args);window.previewContexts.push(this);}
@@ -38,27 +40,21 @@ async page => {
     await page.getByRole('button',{name:'应用设置',exact:true}).click();
     await page.getByRole('dialog').waitFor({state:'hidden'});await ready();
   };
-  const stopped=()=>page.waitForFunction(()=>window.previewSources.every(source=>source.stopped||source.ended));
+  const stopped=()=>page.waitForFunction(()=>window.previewSources.every(source=>source.stopped||source.ended)&&window.previewWorklets.every(w=>w.destroyed));
   await page.setViewportSize({width:1440,height:1000});
   await page.goto(origin+'/game/glimmer');await ready();await apply(160,8,12);
   await preview().click();await page.locator('[data-mode="preview"][data-phase="count-in"]').waitFor();
   check(await page.getByRole('button',{name:'练习设置',exact:true}).isDisabled(),'settings active during preview');
   const scheduled=await page.evaluate(async()=>{
     const {glimmer}=await import('/src/game-content/levels/glimmer/index.ts');
-    const context=window.previewContexts.at(-1);
-    const all=window.previewSources.filter(source=>source.context===context),backing=window.previewBoundaries.at(-1);
-    const sources=all.filter(source=>source.output?.output?.output===context.destination);
-    const notes=glimmer.music.melody.filter(note=>note.beat>=32&&note.beat<48);
-    if(sources.length!==notes.length)throw Error('Expected all lead notes before playback');
+    const {compileMultipartScore}=await import('/src/game/core/MultipartScore.ts');
+    const count=compileMultipartScore(glimmer.music).notes.filter(n=>n.beat<48&&n.beat+n.duration>32).length;
+    if(window.previewNotes!==count)throw Error('Preview did not schedule every selected note exactly once');
+    const backing=window.previewBoundaries.at(-1);
     if(Math.abs(backing.end-backing.at-6)>1e-8)throw Error('Wrong selected music slice');
-    notes.forEach((note,index)=>{
-      const source=sources[index];
-      if(Math.abs(source.at-backing.at-(note.beat-32)*.375)>1e-8)throw Error('Lead scheduled outside its target');
-      if(Math.abs(source.rate-2**((note.midi-Array.from({length:13},(_,i)=>48+i*3).reduce((a,b)=>Math.abs(b-note.midi)<Math.abs(a-note.midi)?b:a))/12))>1e-6)throw Error('Wrong melody pitch');
-    });
     document.body.dispatchEvent(new KeyboardEvent('keydown',{code:'Space',key:' ',bubbles:true}));
     document.querySelector('.orbit-stage').dispatchEvent(new PointerEvent('pointerdown',{button:0,bubbles:true}));
-    return all.length;
+    return window.previewNotes;
   });
   await page.waitForFunction(()=>Number(document.querySelector('.orbit-progress').textContent.split('/')[0])>=12);
   check(await page.locator('.orbit-feedback').evaluate(el => !!el.closest('.sr-only')), 'preview feedback is visible');
@@ -74,7 +70,7 @@ async page => {
   });
   await page.locator('.orbit-stage[data-mode="preview"][data-phase="completed"]').waitFor();
   check(await page.getByLabel('示范进度 44 / 44',{exact:true}).isVisible(),'preview failed to traverse all targets');
-  check(await page.evaluate(count=>window.previewSources.length===count,scheduled),'user taps or frames emitted extra audio');
+  check(await page.evaluate(count=>window.previewNotes===count,scheduled),'user taps or frames emitted extra audio');
   check(await page.locator('.orbit-overlay').count()===0,'preview displayed challenge success styling');
   check(await page.getByRole('button',{name:'开始游戏',exact:true}).isVisible(),'preview did not return challenge entry');
   await page.screenshot({path:'output/playwright/orbit-preview-finished.png',scale:'css'});
@@ -87,26 +83,16 @@ async page => {
   await page.goto(origin+'/game/eighth');await ready();await apply(240,1,2);
   await page.emulateMedia({reducedMotion:'reduce'});
   await page.evaluate(()=>{document.documentElement.dataset.colorMode='light';});
-  const firstSource=await page.evaluate(()=>window.previewSources.length);
   await preview().click();await page.locator('[data-mode="preview"][data-phase="count-in"]').waitFor();
-  check(await page.evaluate(first=>{
-    const context=window.previewContexts.at(-1),at=window.previewBoundaries.at(-1).at;
-    const sources=window.previewSources.slice(first).filter(source=>source.output?.output?.output===context.destination);
-    return sources.length===8&&sources.every((source,index)=>Math.abs(source.at-at-index*.125)<1e-8);
-  },firstSource),'basic melody did not schedule eight pitched notes at selected BPM');
+  check(await page.evaluate(()=>Math.abs(window.previewBoundaries.at(-1).end-window.previewBoundaries.at(-1).at-1)<1e-8),'basic preview duration at selected BPM');
   await page.locator('.orbit-stage[data-mode="preview"][data-phase="completed"]').waitFor();
   check(await page.getByLabel('示范进度 8 / 8',{exact:true}).isVisible(),'ordinary partial preview incomplete');
   await page.getByRole('button',{name:'开始游戏',exact:true}).click();await page.locator('[data-mode="challenge"][data-phase="count-in"]').waitFor();
   await page.locator('[data-phase="failed"]').waitFor();
   check(await page.getByLabel('完成 0 / 8',{exact:true}).isVisible(),'preview changed strict challenge behavior or leaked auto hits');
 
-  // Cancel while loading, then release the delayed response: old playback must not revive.
+  // Hiding the tab must not cancel an automatic demonstration.
   await page.goto(origin+'/game/glimmer');await ready();
-  await page.route('**/assets/game/shared/audio/piano-60.flac',async route=>{await new Promise(resolve=>setTimeout(resolve,500));await route.continue();},{times:1});
-  await preview().click();await page.locator('[data-phase="loading"][data-mode="preview"]').waitFor();
-  await stop().click();await ready();await page.waitForTimeout(750);
-  check(await page.evaluate(()=>document.querySelector('.orbit-stage').dataset.phase==='ready'),'cancelled load restarted preview');
-  await stopped();
   await preview().click();await page.locator('[data-phase="count-in"]').waitFor();
   await page.evaluate(()=>{
     Object.defineProperty(document,'hidden',{configurable:true,value:true});
@@ -114,17 +100,7 @@ async page => {
   });
   check(await stop().isVisible(),'switching tabs stopped preview');
   await stop().click();await ready();await stopped();
-  await preview().click();await page.locator('[data-phase="count-in"]').waitFor();
   await page.getByRole('link',{name:'关卡列表',exact:true}).click();
-  await page.waitForFunction(()=>window.previewContexts.every(context=>context.state==='closed'));await stopped();
-
-  await page.goto(origin+'/game/glimmer');await ready();
-  await page.route('**/assets/game/shared/audio/piano-60.flac',route=>route.fulfill({status:503,body:'test'}),{times:1});
-  await preview().click();await page.getByRole('alert').filter({hasText:'音乐加载失败'}).waitFor();await ready();
-  await preview().click();await page.locator('[data-mode="preview"][data-phase="count-in"]').waitFor();
-  await stop().click();await ready();await stopped();
-  await page.getByRole('link',{name:'关卡列表',exact:true}).click();
-  await page.waitForFunction(()=>window.previewContexts.every(context=>context.state==='closed'));
   check(errors.length===0,errors.join('\n'));
-  return 'Music preview: exact 44-note schedule and local playback, selected range/BPM/pitches, no frame-based or manual extra notes, completion without challenge score, desktop/mobile HUD. Basic preview: eight pitched notes, sparse backing, reduced motion/light mode. Strict challenge unchanged. Stop/Esc, loading cancellation, hidden page, navigation cleanup and load-failure retry passed.';
+  return 'Music preview: 44-target traversal and local playback, selected range/BPM, frame stalls and manual taps do not change traversal, completion without challenge score, desktop/mobile HUD. Basic preview: eight targets, sparse backing, reduced motion/light mode. Strict challenge unchanged. Preview Stop/Esc controls and hidden-page continuation passed. GS loading/retry/disposal are covered by generaluser-gs.js.';
 }

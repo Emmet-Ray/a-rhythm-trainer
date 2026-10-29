@@ -6,7 +6,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { validateGameAssets } from '../scripts/lib/game-assets.mjs';
 
-test('资源清单双向验证归属、尺寸、源文件与采样完整性', async () => {
+test('资源清单双向验证归属、尺寸、源文件与音色库完整性', async () => {
   const repository = await mkdtemp(path.join(tmpdir(), 'game-assets-'));
   try {
     const dir = path.join(repository, 'frontend/public/assets/game');
@@ -15,17 +15,18 @@ test('资源清单双向验证归属、尺寸、源文件与采样完整性', as
     png.writeUInt32BE(22, 16); png.writeUInt32BE(22, 20);
     await writeFile(path.join(dir, 'ball.png'), png);
     await writeFile(path.join(repository, 'art.px.js'), 'export default {};');
-    const bytes = Buffer.from('sample'); await writeFile(path.join(dir, 'piano.flac'), bytes);
+    const bytes = Buffer.from('RIFF0000sfbk'); await writeFile(path.join(dir, 'bank.sf2'), bytes);
+    await writeFile(path.join(dir,'LICENSE.txt'),'fixture license');
     const image = { url: '/assets/game/ball.png', width: 22, height: 22, source: 'art.px.js', output: 'sprites/ball.png', scale: 1 };
-    const sample = { file: '/assets/game/piano.flac', instrument: 'piano', midi: 60, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), source: 'fixture' };
-    const validate = (images = [image], samples = [sample]) => validateGameAssets({ repository, images, samples });
+    const bank = { file: '/assets/game/bank.sf2', licenses: ['/assets/game/LICENSE.txt'], bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), source: 'fixture' };
+    const validate = (images = [image], banks = [bank]) => validateGameAssets({ repository, images, banks });
     assert.deepEqual(await validate(), []);
     assert.match((await validate([])).join('\n'), /no declaration/);
     assert.match((await validate([image, image])).join('\n'), /Duplicate image owner/);
     assert.match((await validate([{ ...image, width: 10 }])).join('\n'), /dimensions/);
     assert.match((await validate([{ ...image, source: 'missing.js' }])).join('\n'), /missing.js/);
-    assert.match((await validate([image], [sample, sample])).join('\n'), /Duplicate sample pitch/);
-    await writeFile(path.join(dir, 'piano.flac'), 'changed');
+    assert.match((await validate([image], [bank, bank])).join('\n'), /Duplicate soundfont/);
+    await writeFile(path.join(dir, 'bank.sf2'), 'changed');
     assert.match((await validate()).join('\n'), /checksum/);
     await rm(path.join(dir, 'ball.png'));
     assert.match((await validate()).join('\n'), /ball.png/);

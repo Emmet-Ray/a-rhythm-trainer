@@ -32,6 +32,7 @@
     "react-resizable-panels": "^4.14.2",
     "react-router": "^8.3.1",
     "recharts": "^3.10.1",
+    "spessasynth_lib": "4.4.0",
     "vexflow": "^5.0.0"
   },
   "devDependencies": {

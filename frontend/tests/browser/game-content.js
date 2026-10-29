@@ -10,8 +10,8 @@ async page => {
   await page.goto(origin + '/game');
   const content = await page.evaluate(async () => {
     const { gameLevels, orbitThemes, gameImages, DEFAULT_ORBIT_THEME } = await import('/src/game/catalog.ts');
-    const { sampleBank } = await import('/src/game/catalog.ts');
-    for (const url of [...gameImages.map(image => image.url), ...sampleBank.map(sample => sample.file)]) {
+    const { soundFontBanks } = await import('/src/game/catalog.ts');
+    for (const url of [...gameImages.map(image => image.url), ...soundFontBanks.map(sample => sample.file)]) {
       const response = await fetch(url);
       if (!response.ok || !(await response.arrayBuffer()).byteLength) throw Error('Missing content: ' + url);
     }

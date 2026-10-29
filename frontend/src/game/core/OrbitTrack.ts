@@ -1,4 +1,5 @@
-import { musicMeasureStarts, type MusicScore } from "./MusicScore";
+import { compileMultipartScore } from "./MultipartScore";
+import type { MusicScore } from "./MusicScore";
 import type { RhythmExercise } from "../../rhythm/RhythmModel";
 import { createExerciseTimeline, type MeasureRange } from "../../rhythm/RhythmTiming";
 
@@ -14,19 +15,8 @@ function sourceTimeline(source: OrbitSource) {
     return { targets: timeline.targetTaps.map(tap => tap.offsetMs / 1000), durationBeats: timeline.durationMs / 1000,
       measureStarts: [...timeline.measures.map(measure => measure.startOffsetMs / 1000), timeline.durationMs / 1000] };
   }
-  const measureStarts = musicMeasureStarts(source);
-  const durationBeats = measureStarts.at(-1)!;
-  source.melody.forEach((note, index) => {
-    if (!Number.isFinite(note.beat) || !Number.isFinite(note.duration) || note.duration <= 0
-      || note.beat < 0 || note.beat + note.duration > durationBeats + 1e-9
-      || !Number.isInteger(note.midi) || note.midi < 0 || note.midi > 127
-      || note.additionalMidis?.some(midi => !Number.isInteger(midi) || midi < 0 || midi > 127 || midi === note.midi)
-      || !Number.isFinite(note.gain) || note.gain <= 0 || note.gain > 1
-      || (index > 0 && note.beat < source.melody[index - 1].beat + source.melody[index - 1].duration - 1e-9)) {
-      throw new Error(`曲谱第 ${index + 1} 个旋律音需要有效音高、力度及不重叠的拍位和时长。`);
-    }
-  });
-  return { targets: source.melody.map(note => note.beat), durationBeats, measureStarts };
+  const score = compileMultipartScore(source);
+  return { targets: score.hits.map(h => h.beat), durationBeats: score.measureStarts.at(-1)!, measureStarts: score.measureStarts };
 }
 
 /** 用音乐拍位编写转向，返回绘图/运行使用的落点序号。

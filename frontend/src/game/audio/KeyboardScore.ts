@@ -1,3 +1,4 @@
+import type { PartNote } from "../core/MultipartScore";
 import type { MusicNote } from "../core/MusicScore";
 
 /** Written quarter-note durations, MIDI pitches (a chord is one attack), rests and tied continuations.
@@ -43,4 +44,12 @@ export function performKeyboardPart(bars: readonly (readonly KeyboardEvent[])[],
     if (Math.abs(offset - measureBeats) > 1e-8) throw new Error(`第 ${index + 1} 小节需要 ${measureBeats} 拍，实际 ${offset}。`);
   });
   return notes;
+}
+
+/** Expand simultaneous pitches into independently addressable notes, preserving chord balance. */
+export function partNotes(notes: readonly MusicNote[]): PartNote[] {
+  return notes.flatMap((note, i) => [note.midi, ...(note.additionalMidis ?? [])].map((midi, j) => ({
+    id: `${i}:${j}`, beat: note.beat, duration: note.duration, midi,
+    velocity: note.gain / Math.sqrt(1 + (note.additionalMidis?.length ?? 0)),
+  })));
 }

@@ -1,4 +1,3 @@
-import type { SampleBank } from "../audio/GameInstruments";
 import { createPracticeClock, createTapFeedback, prepareMetronomeSound, prepareTapSound, scheduleCountIn, scheduleTapSound, type PracticeClock } from "../../rhythm/RhythmAudio";
 import type { PracticeSound, MetronomeSound } from "../../rhythm/SoundSamples";
 import { OrbitRound, READY_ORBIT } from "../core/OrbitRound";
@@ -14,7 +13,6 @@ export type OrbitPlaybackSnapshot = OrbitDisplaySnapshot & { mode: OrbitMode };
 type Options = {
   track: OrbitTrack;
   music?: MusicScore;
-  sampleBank: SampleBank;
   onChange: (snapshot: OrbitPlaybackSnapshot) => void;
   acquirePlayback: (stop: () => void) => () => void;
 };
@@ -48,6 +46,7 @@ export function createOrbitSession(options: Options) {
   let ending: OrbitEnding | null = null;
   let hitFlash = { index: 0, at: -Infinity };
   let release: (() => void) | null = null;
+  let loading: AbortController | null = null;
   const sources: AudioScheduledSourceNode[] = [];
   let published: OrbitDisplaySnapshot = READY_ORBIT;
 
@@ -77,6 +76,7 @@ export function createOrbitSession(options: Options) {
   }
   function stop() {
     generation++;
+    loading?.abort(); loading = null;
     clearInterval(progressTimer); progressTimer = undefined;
     stopAudio();
     clock = null;
@@ -121,6 +121,8 @@ export function createOrbitSession(options: Options) {
       sounds = { ...sounds };
       mode = playbackMode;
       const version = generation;
+      const controller = new AbortController();
+      loading = controller;
       release = options.acquirePlayback(stop);
       publish({ ...READY_ORBIT, phase: "loading" });
       try {
@@ -128,8 +130,9 @@ export function createOrbitSession(options: Options) {
         await context.resume();
         if (disposed || generation !== version) return;
         const [, preparedMusic] = await Promise.all([prepareMetronomeSound(context, sounds.metronome),
-          options.music ? prepareGameMusic(context, options.music, options.track, bpm, options.sampleBank) : prepareTapSound(context, sounds.practice)]);
-        if (disposed || generation !== version) return;
+          options.music ? prepareGameMusic(context, options.music, options.track, bpm, controller.signal) : prepareTapSound(context, sounds.practice)]);
+        if (disposed || generation !== version) { preparedMusic?.stop(); return; }
+        loading = null;
         round = mode === "preview" ? new OrbitPreview(bpm, options.track) : new OrbitRound(bpm, windows, options.track);
         ending = new OrbitEnding(options.track.durationBeats * round.beatMs);
         clock = createPracticeClock(context, round.beatMs * 4);

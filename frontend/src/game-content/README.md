@@ -27,8 +27,8 @@ import backgroundUrl from "./assets/background.png?url";
 一个关卡的修改从 `levels/<id>/index.ts` 开始：基本信息、路线、主题、资源声明及可选的视觉时间线都在入口中，以局部变量组织，最终导出关卡定义。较长的音乐谱面独立放在 `score.ts`，可编辑美术源放 `art/`，独有的来源和改编说明放 README。简单关卡可以只有入口，不要求每关具有相同文件结构。只有内容复杂到妨碍阅读或需要独立维护时才进一步拆分，不按配置类别机械建文件。只改某关内容通常无需修改通用渲染器或音频引擎。
 
 - `levels/` 拥有独立关卡；关卡之间不直接导入。
-- `shared/` 只拥有面向所有关卡的基础内容：默认主题、统一双球模板和通用采样。双球定制边界见下文公共素材。少数关卡恰好相同的谱面、路线、主题或专属背景允许在各关独立保存，不因重复而提取到 shared。音源许可见[音源说明](shared/audio/README.md)。
-- `../game/catalog.ts` 是注册和组装入口，收集关卡、主题、图像及采样清单；共享 `assets.ts` 同时声明发布图片与默认视觉资源组合；`../game/ui/` 从 catalog 获取内容并注入引擎。引擎不了解具体歌曲 ID。
+- `shared/` 只拥有面向所有关卡的基础内容：默认主题、统一双球模板和公共音色库。双球定制边界见下文公共素材。少数关卡恰好相同的谱面、路线、主题或专属背景允许在各关独立保存，不因重复而提取到 shared。音源许可见[音源说明](shared/audio/README.md)。
+- `../game/catalog.ts` 是注册和组装入口，收集关卡、主题、图像及音色库清单；共享 `assets.ts` 同时声明发布图片与默认视觉资源组合；`../game/ui/` 从 catalog 获取内容并注入引擎。引擎不了解具体歌曲 ID。
 - `public/assets/game/levels/<id>/` 存放专属发布资源，`public/assets/game/shared/` 存放共用资源；这里的路径相对于 frontend。可编辑源留在内容目录，运行时只加载导出成品。
 
 新增关卡时创建内容目录，入口满足 `GameLevel`，再在 catalog 注册。修改现有关卡时从入口寻找拥有者，避免在全局表重复保存配色、路径或谱面。视觉时间线属于关卡，场景使用原谱从 0 开始的小节编号，`cropX`、`cropY` 从 0（左／上）到 1（右／下），省略纵向位置时顶对齐。
@@ -59,7 +59,7 @@ node .agents/skills/pxl-pixel-art/bin/pxl.js build <source> --out /tmp/game-art-
 
 ## 验证
 
-在 `frontend/` 运行 `npm run validate:game`。它双向核对全部已声明和已发布的 PNG/FLAC、图像尺寸与源文件、采样大小与校验和、主题引用、关卡注册、谱面目标和时间线边界。采样清单 `shared/audio/samples.json` 同时驱动加载与验证，不另维护音高映射表。
+在 `frontend/` 运行 `npm run validate:game`。它双向核对全部已声明和已发布的 PNG/SF2、图像尺寸与源文件、音色库大小、文件头、许可与校验和、主题引用、关卡注册、谱面目标和时间线边界。音色库清单 `shared/audio/soundfonts.json` 核对谱面引用与发布文件；音符与音色都由 `MultipartScore.parts` 声明，`hits` 独立引用可击拍的音符组。
 
 `npm run validate:architecture` 限制引擎到内容库的反向依赖及关卡间导入；`npm test` 覆盖规则与各关内容。完整验证与隔离浏览器回归要求见[前端 README](../../README.md)。
 

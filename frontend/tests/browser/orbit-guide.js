@@ -8,10 +8,11 @@ async page => {
     return route.fulfill({json:path.includes('sessions')?[]:path.includes('model-connections')?{provider:'deepseek',deepseek:{configured:true,models:['deepseek-chat']},chatgpt:{configured:false,models:[]}}:{status:'ready',message:''}});
   });
   await page.addInitScript(()=>{
-    window.guideContexts=[];window.guideSources=[];
+    window.guideContexts=[];window.guideSources=[];window.guideBoundaries=[];
     const Native=window.AudioContext;
     window.AudioContext=class extends Native{
       constructor(...args){super(...args);window.guideContexts.push(this);}
+      createConstantSource(){const s=super.createConstantSource(),start=s.start.bind(s);s.start=at=>{window.guideBoundaries.push(at);return start(at);};return s;}
       createBufferSource(){const source=super.createBufferSource(),start=source.start.bind(source);source.start=(...args)=>{window.guideSources.push({time:args[0]});return start(...args);};return source;}
     };
   });
@@ -30,8 +31,8 @@ async page => {
     await page.screenshot({path:`output/playwright/orbit-guide-${level}-ready.png`,scale:'css'});
     await page.getByRole('button',{name:/^(开始游戏|我来试试)$/,exact:true}).click();
     await page.locator('[data-phase="count-in"]').waitFor();
-    await page.evaluate(async music=>{
-      const context=window.guideContexts.at(-1),first=window.guideSources[music?0:4].time;
+    await page.evaluate(async ()=>{
+      const context=window.guideContexts.at(-1),first=window.guideBoundaries.at(-1);
       await new Promise((resolve,reject)=>{const frame=()=>{
         if(context.currentTime<first)document.querySelector('.orbit-stage').dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true}));
         if(document.querySelector('[data-phase="failed"]'))resolve();

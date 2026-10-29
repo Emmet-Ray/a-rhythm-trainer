@@ -8,10 +8,13 @@ async page=>{
     return route.fulfill({json:path.includes('sessions')?[]:path.includes('model-connections')?{provider:'deepseek',deepseek:{configured:true,models:['deepseek-chat']},chatgpt:{configured:false,models:[]}}:{status:'ready',message:''}});
   });
   await page.addInitScript(()=>{
-    window.earlyContexts=[];window.earlySources=[];
+    window.earlyContexts=[];window.earlySources=[];window.earlyBoundaries=[];window.earlyNotes=0;
+    const Worklet=window.AudioWorkletNode;
+    window.AudioWorkletNode=class extends Worklet {constructor(...args){super(...args);const post=this.port.postMessage.bind(this.port);this.port.postMessage=(message,...rest)=>{if(message.type==='midiMessage'&&(message.data.messageData[0]&240)===144&&message.data.messageData[2]>0)window.earlyNotes++;return post(message,...rest);};}};
     const Native=window.AudioContext;
     window.AudioContext=class extends Native{
       constructor(...args){super(...args);window.earlyContexts.push(this);}
+      createConstantSource(){const s=super.createConstantSource(),start=s.start.bind(s);s.start=at=>{window.earlyBoundaries.push(at);return start(at);};return s;}
       createBufferSource(){
         const source=super.createBufferSource(),entry={ended:false,stopped:false};
         const start=source.start.bind(source),stop=source.stop.bind(source);
@@ -29,13 +32,13 @@ async page=>{
   await page.getByLabel('起始小节',{exact:true}).selectOption('0');await page.getByLabel('结束小节',{exact:true}).selectOption('1');
   await page.getByRole('button',{name:'应用设置',exact:true}).click();await page.getByRole('dialog').waitFor({state:'hidden'});await ready();
   const begin=async label=>{
-    await page.evaluate(()=>{window.earlyRunStart=window.earlySources.length;});
+    await page.evaluate(()=>{window.earlyRunStart=window.earlyNotes;});
     await page.getByRole('button',{name:label,exact:true}).click();await page.locator('[data-phase="count-in"]').waitFor();
     check(await page.locator('.orbit-early-count').count()===0,'old target counter survived restart');
   };
   const tap=async(offset,pointer=false)=>{
     await page.evaluate(async({offset,pointer})=>{
-      const context=window.earlyContexts.at(-1),first=window.earlySources[window.earlyRunStart].at;
+      const context=window.earlyContexts.at(-1),first=window.earlyBoundaries.at(-1);
       const key=()=>document.body.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true}));
       await new Promise(resolve=>{
         const frame=()=>{
@@ -47,13 +50,14 @@ async page=>{
       await new Promise(resolve=>requestAnimationFrame(resolve));
     },{offset,pointer});
   };
-  const sounds=()=>page.evaluate(()=>window.earlySources.length-window.earlyRunStart);
+  const sounds=()=>page.evaluate(()=>window.earlyNotes-window.earlyRunStart);
   const hits=number=>page.getByLabel(`完成 ${number} / 4`,{exact:true}).waitFor();
   const counter=number=>page.getByRole('status').filter({hasText:`本目标提前误敲 ${number} / 3`}).waitFor();
   await begin('开始游戏');await tap(.015);await hits(1);
+  const firstSounds=await sounds();
   for(let count=1;count<=3;count++){
     await tap(count*.1,count%2===1);await counter(count);await hits(1);
-    check(await sounds()===6,'early input played a melody voice');
+    check(await sounds()===firstSounds,'early input played a melody voice');
     check(await page.locator('[data-phase="playing"]').count()===1,'three early taps ended the game');
   }
   for(const width of [1440,342]){
@@ -65,20 +69,20 @@ async page=>{
   }
   await tap(1.015);await hits(2);
   check(await page.locator('.orbit-early-count').count()===0,'successful target did not reset its counter');
-  check(await sounds()===7,'valid second target did not play its melody');
+  check(await sounds()===firstSounds+1,'valid second target did not play its melody');
   for(let count=1;count<=3;count++){
     await tap(1+count*.1,count%2===0);await counter(count);await hits(2);
-    check(await sounds()===7,'next target early taps changed the melody');
+    check(await sounds()===firstSounds+1,'next target early taps changed the melody');
   }
   await tap(1.4,true);await page.getByRole('heading',{name:'提前误敲过多',exact:true}).waitFor();await hits(2);
-  check(await sounds()===7,'fourth early input played audio');await stopped();
+  check(await sounds()===firstSounds+1,'fourth early input played audio');await stopped();
   await page.screenshot({path:'output/playwright/orbit-early-fourth.png',scale:'css'});
 
   // A fresh target still expires at its original deadline after three tolerated inputs.
   await begin('再试一次');await tap(.015);await hits(1);
   for(let count=1;count<=3;count++){await tap(count*.1);await counter(count);}
   await page.getByRole('heading',{name:'错过了这一拍',exact:true}).waitFor();await hits(1);
-  check(await sounds()===6,'missed target was automatically played');await stopped();
+  check(await sounds()===firstSounds,'missed target was automatically played');await stopped();
   await page.screenshot({path:'output/playwright/orbit-early-missed.png',scale:'css'});
 
   // Preview remains automatic and never inherits a target's premature-input count.

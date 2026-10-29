@@ -8,7 +8,7 @@ const { createOrbitSession } = await server.ssrLoadModule('/src/game/runtime/Orb
 const { createOrbitTrack } = await server.ssrLoadModule('/src/game/core/OrbitTrack.ts');
 const { practiceSounds, metronomeSounds } = await server.ssrLoadModule('/src/rhythm/SoundSamples.ts');
 await server.close();
-const track = createOrbitTrack({ melody: [{ beat: 0, duration: 1, midi: 60, gain: .4 }, { beat: 1, duration: 1, midi: 62, gain: .4 }], chords: [[]], measureBeats: [2] });
+const track = createOrbitTrack({timeSignature:{beats:2,beatType:4},measures:[{elements:[{kind:'note',noteValue:'quarter'},{kind:'note',noteValue:'quarter'}]}]});
 const sounds = { practice: 'piano', metronome: 'mechanical' };
 const windows = { hitMs: 150, perfectMs: 50 };
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };

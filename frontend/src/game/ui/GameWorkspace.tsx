@@ -1,6 +1,6 @@
 import { useContext, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { orbitThemeStyle } from "../rendering/OrbitTheme";
-import { DEFAULT_ORBIT_THEME, getOrbitTheme, orbitThemes, pixelAssets, sampleBank } from "../catalog";
+import { DEFAULT_ORBIT_THEME, getOrbitTheme, orbitThemes, pixelAssets } from "../catalog";
 import { GameIcon } from "./GameIcon";
 import { Link } from "react-router";
 import { createLevelTrack, type GameLevel } from "../core/GameLevel";
@@ -70,7 +70,6 @@ export function GameWorkspace({ level }: { level: GameLevel }) {
         theme: initialTheme(),
         themes: orbitThemes,
         pixelAssets,
-        sampleBank,
         track,
         music: level.music,
         visualTimeline: level.visualTimeline,

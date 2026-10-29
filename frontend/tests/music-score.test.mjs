@@ -39,7 +39,7 @@ test('转向按音乐拍位定位，前面增减音符会自动更新序号，�
 test('微光旋律逐一对应108个目标，四段覆盖16小节并落回主音',()=>{
   const full=createOrbitTrack(glimmer.exercise,glimmer.twirlTiles);
   assert.equal(full.durationBeats,64);assert.equal(full.targets.length,108);
-  assert.deepEqual(glimmer.music.melody.map(note=>note.beat),full.targets);
+  assert.deepEqual(glimmer.music.parts[0].notes.map(note=>note.beat),full.targets);
   assert.deepEqual(glimmer.music.sections.map(section=>section.measure),[0,4,8,12]);
-  assert.equal(glimmer.music.chords.length,16);assert.equal(glimmer.music.melody.at(-1).midi,60);
+  assert.equal(glimmer.music.bars.length,16);assert.equal(glimmer.music.parts[0].notes.at(-1).midi,60);
 });

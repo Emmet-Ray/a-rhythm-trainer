@@ -9,10 +9,10 @@ const local = process.argv.includes('--local');
 const server = await createServer({ configFile: false, resolve: { alias: localGameContentAliases(local) }, server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
 try {
   const { gameLevels, orbitThemes, gameImages } = await server.ssrLoadModule('/src/game/catalog.ts');
-  const { sampleBank } = await server.ssrLoadModule('/src/game/catalog.ts');
+  const { soundFontBanks } = await server.ssrLoadModule('/src/game/catalog.ts');
   const { createLevelTrack } = await server.ssrLoadModule('/src/game/core/GameLevel.ts');
-  const { arrangeMusic } = await server.ssrLoadModule('/src/game/audio/MusicArrangement.ts');
-  const errors = await validateGameAssets({ repository, images: gameImages, samples: sampleBank, local });
+  const { compileMultipartScore } = await server.ssrLoadModule('/src/game/core/MultipartScore.ts');
+  const errors = await validateGameAssets({ repository, images: gameImages, banks: soundFontBanks, local });
   const ids = new Set(), imageUrls = new Set(gameImages.map(image => image.url));
   const themes = new Map(orbitThemes.map(theme => [theme.id, theme]));
   const checkImage = url => { if (!imageUrls.has(url)) errors.push(`Image reference has no declaration: ${url}`); };
@@ -30,9 +30,10 @@ try {
     try {
       const track = createLevelTrack(level);
       if (level.music) {
-        arrangeMusic(level.music);
-        if (track.targets.length !== level.music.melody.length) throw Error('targets and melody differ');
-        track.targets.forEach((beat, index) => { if (Math.abs(beat - level.music.melody[index].beat) > 1e-8) throw Error(`target ${index} and melody differ`); });
+        const performance = compileMultipartScore(level.music), targets = performance.hits.map(h=>h.beat);
+        if (!soundFontBanks.some(bank=>bank.file===level.music.soundFont.file)) throw Error('undeclared soundfont');
+        if (track.targets.length !== targets.length) throw Error('targets and music hit map differ');
+        track.targets.forEach((beat,index)=>{if(Math.abs(beat-targets[index])>1e-8)throw Error(`target ${index} and music hit map differ`);});
       }
       const timeline = level.visualTimeline;
       if (timeline) {
@@ -55,5 +56,5 @@ try {
   for (const folder of folders.filter(entry => entry.isDirectory())) if (!ids.has(folder.name)) errors.push(`Unregistered level directory: ${folder.name}`);
   for (const id of ids) if (!folders.some(folder => folder.isDirectory() && folder.name === id)) errors.push(`Level has no owning directory: ${id}`);
   if (errors.length) { console.error(errors.join('\n')); process.exitCode = 1; }
-  else console.log(`Game content verified: ${ids.size} levels, ${themes.size} themes, ${gameImages.length} images, ${sampleBank.length} samples.`);
+  else console.log(`Game content verified: ${ids.size} levels, ${themes.size} themes, ${gameImages.length} images, ${soundFontBanks.length} soundfonts.`);
 } finally { await server.close(); }

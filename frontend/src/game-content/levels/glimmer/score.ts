@@ -1,6 +1,10 @@
+import { partNotes } from "../../../game/audio/KeyboardScore";
+import { hitsFromParts, type MusicPart, type MultipartScore } from "../../../game/core/MultipartScore";
+import { generalUserFile, generalUserPresets as presets } from "../../shared/audio/generalUser";
+import { createHarmonyParts, type ChordArrangement } from "../../shared/harmony";
 import type { RhythmExercise } from "../../../rhythm/RhythmModel";
 import { rhythmPatterns } from "../../../rhythm/RhythmPatterns";
-import { createMusicMelody, type MusicScore } from "../../../game/core/MusicScore";
+import { createMusicMelody } from "../../../game/core/MusicScore";
 
 const q = [{ kind: "note", noteValue: "quarter" }] as const;
 const e = rhythmPatterns.find(pattern => pattern.id === "two-eighths")!.events;
@@ -25,13 +29,18 @@ const phrases = [
   [67,71,74,72,71,69,67,62],
   [67,64,60,64,67,64], [64,60,57,60,62,64], [65,64,62,60,59,62], [67,64,62,60],
 ];
-export const music: MusicScore = {
-  title: "微光", recommendedBpm: 100,
+const harmony: ChordArrangement = {
   arrangements: [{ measure: 0, style: "spacious" }, { measure: 4, style: "rhythmic" }, { measure: 12, style: "spacious" }],
   chords: Array.from({ length: 16 }, (_, bar) => {
     if (bar === 15) return [48,55,60,64];
     return [[48,55,59,64], [45,52,55,60], [41,48,52,57], [43,50,55,59]][bar % 4];
   }),
-  melody: createMusicMelody(exercise, phrases, (_beat, index) => index % 4 === 0 ? .48 : .40),
+};
+
+const lead: MusicPart = {id:"melody",name:"旋律",preset:presets.piano,velocityScale:1.6,
+  notes:partNotes(createMusicMelody(exercise,phrases,(_beat,index)=>index%4===0?.48:.40))};
+export const music: MultipartScore = {
+  title:"微光",recommendedBpm:100,soundFont:{file:generalUserFile,gain:1.2},
+  bars:exercise.measures.map(()=>4),parts:[lead,...createHarmonyParts(harmony)],hits:hitsFromParts([lead]),
   sections: [{ measure: 0, title: "启程" }, { measure: 4, title: "展开" }, { measure: 8, title: "奔跑" }, { measure: 12, title: "归来" }],
 };
