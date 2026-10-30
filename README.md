@@ -94,6 +94,10 @@ docker compose up -d --build
 - [ ] 检查UI/UX一致性
 - [ ] 为预设题目提供不同视图（目前都是文字）
 
+### 文档与demo
+
+- [ ] 更新demo：新音色库
+
 ## 致谢
 
 - [GeneralUser GS](https://github.com/mrbumpy409/GeneralUser-GS)（GeneralUser GS License v2.0）：音色库
