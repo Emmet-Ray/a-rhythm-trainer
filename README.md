@@ -43,6 +43,14 @@ docker compose up -d --build
 
 打开 <http://localhost:8080> 即可使用。
 
+### 热加载模式
+
+```sh
+docker compose -f compose.dev.yaml up --build --watch
+```
+
+打开 <http://localhost:8081> 即可使用。
+
 ### 可选：配置 AI 助手
 
 在「设置 → 模型服务」中配置模型。目前支持 DeepSeek API Key 和 ChatGPT 订阅授权。
@@ -55,7 +63,7 @@ docker compose up -d --build
 - [后端运行与维护](backend/README.md)：模型配置、数据备份与接口联调
 - [架构说明](docs/ARCHITECTURE.md)：模块职责、状态归属与记录规则
 - [预设题库编辑与发布](content/README.md)：维护和校验预设练习
-- [游戏关卡制作](.agents/skills/create-rhythm-level/SKILL.md)：让你的Agent（Codex/Claude Code/...）使用关卡制作skill来制作关卡。
+- [游戏关卡制作](.agents/skills/create-rhythm-level/SKILL.md)：让你的Agent（Codex/Claude Code/...）使用关卡制作skill来制作关卡
 
 ## 技术栈
 
@@ -96,6 +104,7 @@ docker compose up -d --build
 
 ### 文档与demo
 
+- [ ] 梳理更新关卡制作skill
 - [ ] 更新demo：新音色库
 
 ## 致谢

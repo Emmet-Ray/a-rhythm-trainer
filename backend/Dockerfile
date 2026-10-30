@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.12-slim-bookworm AS base
 COPY --from=ghcr.io/astral-sh/uv:0.12.15 /uv /usr/local/bin/uv
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -12,6 +12,13 @@ RUN groupadd --gid 10001 rhythm \
     && useradd --uid 10001 --gid rhythm --no-create-home rhythm \
     && mkdir -p /var/lib/rhythm-trainer \
     && chown rhythm:rhythm /var/lib/rhythm-trainer
+
+FROM base AS development
+# Compose Watch writes synchronized source as the container user.
+RUN chown -R rhythm:rhythm /app
+USER rhythm
+
+FROM base AS production
 USER rhythm
 EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers"]

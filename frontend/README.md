@@ -18,6 +18,28 @@ ChatGPT 授权回调 `/auth/callback` 也由开发代理转发；自定义前端
 
 代理验证应从前端来源请求 `/api/health`；直接访问后端不能验证代理。配置入口为 [vite.config.ts](vite.config.ts)。
 
+## Docker 开发模式
+
+使用支持 Compose Watch 的新版 Docker Compose，在仓库根目录执行：
+
+```sh
+docker compose -f compose.dev.yaml up --build --watch
+```
+
+保持此终端运行，打开 <http://localhost:8081>。这是独立的开发配置，不与 `compose.yaml` 叠加。端口可通过 `DEV_HTTP_PORT` 设置，例如 `DEV_HTTP_PORT=8082 docker compose -f compose.dev.yaml up --build --watch`；后续管理命令保持相同端口设置。
+
+Compose Watch 将源码变化同步到容器：前端代码和 `level-packs/` 修改由 Vite 热更新或刷新页面，新增、删除关卡也会更新；后端 Python 修改由 Uvicorn 自动重启进程，正在进行的请求可能中断。题库 `content/` 单独挂载，页面重新获取时读取最新内容。不要省略 `--watch`，否则后续源码修改不会同步。
+
+开发项目名为 `rhythm-trainer-dev`，数据库、助手会话和模型连接保存在独立的 `backend-data` 卷中，不与普通 Docker 实例共享；首次使用需重新配置模型。依赖安装在镜像中，不使用或覆盖本机的 `node_modules`、`.venv`。
+
+| 修改内容 | 操作 |
+| --- | --- |
+| 前端代码、关卡音乐与背景、后端 Python 代码 | 保存后自动更新 |
+| 两端依赖清单、锁文件或 Dockerfile | Watch 自动重建对应服务，等待构建完成 |
+| Compose 环境变量、端口或同步配置 | 停止后重新执行开发启动命令 |
+
+查看日志用 `docker compose -f compose.dev.yaml logs -f`。按 Ctrl+C 停止开发进程，或在另一终端执行 `docker compose -f compose.dev.yaml down`；停止保留开发数据卷，添加 `-v` 会删除开发数据。生产运行仍使用根目录 README 中的普通 Docker 命令。
+
 ## 本地曲目与公开构建
 
 核心代码可以直接提交与推送；额外曲目单独保存在被忽略的 `level-packs/`。目录与关卡契约见[游戏内容制作](src/game-content/README.md#内置内容与本地曲目包)。没有该目录时，所有命令仍可正常运行。
@@ -36,7 +58,7 @@ ChatGPT 授权回调 `/auth/callback` 也由开发代理转发；自定义前端
 
 `GAME_LOCAL_CONTENT=0` 强制禁用本地内容，`GAME_LOCAL_CONTENT=1` 显式启用；其他值报错。该开关只从启动进程的环境读取，不从 `.env` 文件读取，保持运行与构建方式明确。改变模式后需重启开发服务器；新增或删除本地关卡后若页面未更新，也应重启。
 
-Docker 与普通构建一致，自动包含已有本地包；修改曲目后执行 `docker compose up -d --build frontend` 重建前端。关卡在构建时确定，给运行中的容器挂载目录不会自动增加关卡。
+生产 Docker 与普通构建一致，自动包含已有本地包；修改曲目后执行 `docker compose up -d --build frontend` 重建前端。关卡在构建时确定，给运行中的容器挂载目录不会自动增加关卡。
 
 发布仅含内置关卡的产物时，使用 `build:public` 或不带本地目录的干净检出。Git 仍然忽略本地包：代码推送不会包含它，但在本机正常构建的镜像和 `dist/` 会包含它。
 

@@ -1,0 +1,76 @@
+# Standalone development stack: docker compose -f compose.dev.yaml up --build --watch
+name: rhythm-trainer-dev
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    working_dir: /app
+    init: true
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173", "--strictPort"]
+    environment:
+      BACKEND_URL: http://backend:8000
+      PRESET_CONTENT_DIR: /srv/content
+    ports:
+      - "127.0.0.1:${DEV_HTTP_PORT:-8081}:5173"
+    volumes:
+      - ./content:/srv/content:ro
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend
+          target: /app
+          initial_sync: true
+          ignore: [node_modules/, dist/, .git/, package.json, package-lock.json, Dockerfile]
+        - action: rebuild
+          path: ./frontend/package.json
+        - action: rebuild
+          path: ./frontend/package-lock.json
+        - action: rebuild
+          path: ./frontend/Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 120s
+
+  backend:
+    build:
+      context: ./backend
+      target: development
+    working_dir: /app
+    init: true
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers", "--reload", "--reload-dir", "/app"]
+    environment:
+      AI_SESSIONS_DIR: /var/lib/rhythm-trainer/assistant-sessions
+      DATABASE_URL: sqlite:////var/lib/rhythm-trainer/rhythm_trainer.db
+      ALLOWED_ORIGINS: "http://localhost:${DEV_HTTP_PORT:-8081},http://127.0.0.1:${DEV_HTTP_PORT:-8081}"
+    volumes:
+      - backend-data:/var/lib/rhythm-trainer
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app
+          initial_sync: true
+          ignore: [.venv/, data/, .git/, pyproject.toml, uv.lock, Dockerfile]
+        - action: rebuild
+          path: ./backend/pyproject.toml
+        - action: rebuild
+          path: ./backend/uv.lock
+        - action: rebuild
+          path: ./backend/Dockerfile
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+volumes:
+  backend-data:

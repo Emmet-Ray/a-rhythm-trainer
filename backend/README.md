@@ -27,6 +27,8 @@ ChatGPT 订阅授权要求从本机 HTTP loopback 来源打开网站，授权回
 非空 `ALLOWED_ORIGINS` 优先于兼容配置 `AI_ALLOWED_ORIGINS`，详见 [settings.py](settings.py)。
 只启动一个 worker；会话目录的排他锁会拒绝第二个后端进程。
 
+Docker 热加载联调见[Docker 开发模式](../frontend/README.md#docker-开发模式)，开发配置使用独立数据卷。
+
 ## 数据与备份
 
 Docker 将数据库、会话和连接配置保存在 `backend-data` 卷的 `/var/lib/rhythm-trainer`；预设题库由独立 `content/` 目录提供。
