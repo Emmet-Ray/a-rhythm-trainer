@@ -51,11 +51,11 @@ docker compose up -d --build
 
 想在本地开发、整理题库或制作游戏关卡，可以从以下文档开始：
 
-- [前端开发与部署](frontend/README.md)：本地启动、构建与浏览器验收。
-- [后端运行与维护](backend/README.md)：模型配置、数据备份与接口联调。
-- [架构说明](docs/ARCHITECTURE.md)：模块职责、状态归属与记录规则。
-- [预设题库编辑与发布](content/README.md)：维护和校验预设练习。
-- [游戏内容制作](frontend/src/game-content/README.md)：制作关卡、接入本地曲目与管理资源。
+- [前端开发与部署](frontend/README.md)：本地启动、构建与浏览器验收
+- [后端运行与维护](backend/README.md)：模型配置、数据备份与接口联调
+- [架构说明](docs/ARCHITECTURE.md)：模块职责、状态归属与记录规则
+- [预设题库编辑与发布](content/README.md)：维护和校验预设练习
+- [游戏关卡制作](.agents/skills/create-rhythm-level/SKILL.md)：让你的Agent（Codex/Claude Code/...）使用关卡制作skill来制作关卡。
 
 ## 技术栈
 
@@ -93,6 +93,11 @@ docker compose up -d --build
 
 - [ ] 检查UI/UX一致性
 - [ ] 为预设题目提供不同视图（目前都是文字）
+
+## 致谢
+
+- [GeneralUser GS](https://github.com/mrbumpy409/GeneralUser-GS)（GeneralUser GS License v2.0）：音色库
+- [claude pxl](https://github.com/crsolver/claude-pxl)（MIT）：像素美术工具与skill
 
 ## 许可
 
