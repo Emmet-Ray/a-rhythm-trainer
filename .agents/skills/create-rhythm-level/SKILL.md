@@ -1,6 +1,6 @@
 ---
 name: create-rhythm-level
-description: 为 rhythm_trainer 从乐谱图片、PDF 或已有谱面数据制作和修改节奏游戏关卡，完成读谱、GS 多声部编配、击拍映射、路线、专属背景与游戏视觉及验收。用于制作具体曲目；通用播放器开发或单纯获取乐谱不属于本技能。
+description: 为 rhythm_trainer 从乐谱图片、PDF、MIDI 或已有谱面数据制作和修改节奏游戏关卡，完成读谱、GS 多声部编配、击拍映射、路线、专属背景与游戏视觉及验收。用于制作具体曲目；通用播放器开发或单纯获取乐谱不属于本技能。
 ---
 
 # 制作节奏游戏关卡
@@ -17,6 +17,8 @@ description: 为 rhythm_trainer 从乐谱图片、PDF 或已有谱面数据制�
 - 开始音乐制作前读[音乐制作约定](../../../docs/GAME_MUSIC.md)及[声音与试听架构](../../../docs/ARCHITECTURE.md#声音与试听)。字段和校验以当前 [MultipartScore.ts](../../../frontend/src/game/core/MultipartScore.ts) 和 [GameLevel.ts](../../../frontend/src/game/core/GameLevel.ts) 为准，不复制整套类型到关卡。
 
 ## 读谱并建立演奏顺序
+
+输入包含 `.mid`／`.midi` 时，先读 [MIDI 制作流程](references/midi-workflow.md)，解析演奏事件、核对声部与完整时间轴，再进入音乐与击拍编写。MIDI 已记录实际演奏顺序；以下展开反复等步骤针对纸面谱，不对 MIDI 重复展开。
 
 先在制作笔记或代码附近建立“谱页／书面小节 → 实际演奏小节”的对应，展开反复、跳房与返回段落，保持各声部使用同一条时间轴。小节总数和段落应能回查原谱，而不是靠不断复制音符凑到预计时长。
 
