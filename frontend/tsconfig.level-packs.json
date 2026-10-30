@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.level-packs.tsbuildinfo"
+  },
+  "include": ["src", "level-packs/**/*.ts"]
+}

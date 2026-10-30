@@ -15,7 +15,7 @@ test('local content is enabled by default, explicitly disabled for public builds
 
 test('optional levels and images load only in local mode; clean installs need no content package', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'rhythm-content-'));
-  const localDirectory = path.join(root, 'local-content/levels/local-fixture');
+  const localDirectory = path.join(root, 'level-packs/levels/local-fixture');
   const load = async (enabled) => {
     const server = await createServer({ root, configFile: false, logLevel: 'silent',
       resolve: { alias: localGameContentAliases(enabled, root) },
@@ -52,8 +52,8 @@ test('optional levels and images load only in local mode; clean installs need no
     await writeFile(path.join(localDirectory, 'index.ts'), fixture.replace("id: 'local-fixture'", "id: 'wrong-id'"));
     await assert.rejects(load(true), /id matches its directory/);
     // The same ID as a built-in must never silently replace the built-in level.
-    await rm(path.join(root, 'local-content'), { recursive: true });
-    const duplicate = path.join(root, 'local-content/levels/quarter');
+    await rm(path.join(root, 'level-packs'), { recursive: true });
+    const duplicate = path.join(root, 'level-packs/levels/quarter');
     await mkdir(duplicate, { recursive: true });
     await writeFile(path.join(duplicate, 'index.ts'), "export { quarter as default } from '../../../src/game-content/levels/quarter/index';");
     await assert.rejects(load(true), /Duplicate game level ID: quarter/);

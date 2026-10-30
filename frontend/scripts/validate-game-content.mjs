@@ -49,7 +49,7 @@ try {
   }
   const folders = await readdir(new URL('../src/game-content/levels/', import.meta.url), { withFileTypes: true });
   if (local) {
-    const localFolders = await readdir(new URL('../local-content/levels/', import.meta.url), { withFileTypes: true })
+    const localFolders = await readdir(new URL('../level-packs/levels/', import.meta.url), { withFileTypes: true })
       .catch(error => { if (error.code === 'ENOENT') return []; throw error; });
     folders.push(...localFolders);
   }

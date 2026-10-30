@@ -1,6 +1,6 @@
 # 跨声部击拍的最小例子
 
-这是一小节虚构数据，只说明“声部”和“击拍职责”相互独立。按仓库当前 `MultipartScore` 类型编写，导入路径按 `frontend/local-content/levels/<id>/score.ts` 编写，放进其他目录时调整相对路径。
+这是一小节虚构数据，只说明“声部”和“击拍职责”相互独立。按仓库当前 `MultipartScore` 类型编写，导入路径按 `frontend/level-packs/levels/<id>/score.ts` 编写，放进其他目录时调整相对路径。
 
 ```ts
 import type { MultipartScore } from "../../../src/game/core/MultipartScore.ts";

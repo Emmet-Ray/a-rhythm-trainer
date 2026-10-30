@@ -13,7 +13,7 @@ description: 为 rhythm_trainer 从乐谱图片、PDF、MIDI 或已有谱面数�
 
 - 查看提供的全部谱页或数据，确认页序、曲名、编曲版本与制作范围。需要读取图片或 PDF 时实际查看谱面；OCR 和文件名只能辅助定位。
 - 先从材料及上下文推导拍号、速度、声部和击拍来源；只有缺页、关键符号模糊或要求相互冲突时才询问，其他明确段落可以继续处理。仅有曲名不足以宣称完成逐音转录。
-- 读取[内容归属与注册规则](../../../frontend/src/game-content/README.md#内置内容与本地曲目包)，确定本地或内置内容。额外曲目默认放 `frontend/local-content/levels/<id>/`；已有曲目在原目录修改。先搜索 ID，保持目录名、ID 和默认导出一致。本地内容自动发现，无需修改核心 catalog，也不强制加入 Git。
+- 读取[内容归属与注册规则](../../../frontend/src/game-content/README.md#内置内容与本地曲目包)，确定本地或内置内容。额外曲目默认放 `frontend/level-packs/levels/<id>/`；已有曲目在原目录修改。先搜索 ID，保持目录名、ID 和默认导出一致。本地内容自动发现，无需修改核心 catalog，也不强制加入 Git。
 - 开始音乐制作前读[音乐制作约定](../../../docs/GAME_MUSIC.md)及[声音与试听架构](../../../docs/ARCHITECTURE.md#声音与试听)。字段和校验以当前 [MultipartScore.ts](../../../frontend/src/game/core/MultipartScore.ts) 和 [GameLevel.ts](../../../frontend/src/game/core/GameLevel.ts) 为准，不复制整套类型到关卡。
 
 ## 读谱并建立演奏顺序

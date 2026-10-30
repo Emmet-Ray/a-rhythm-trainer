@@ -21,7 +21,7 @@ export async function validateGameAssets({ repository, images, banks, local = fa
     if (declared.has(image.url)) errors.push(`Duplicate image owner: ${image.url}`);
     declared.add(image.url);
     try {
-      const bytes = await readFile(local && image.url.startsWith('/local-content/')
+      const bytes = await readFile(local && image.url.startsWith('/level-packs/')
         ? path.join(repository, 'frontend', image.url) : path.join(publicRoot, image.url));
       if (bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a'
         || bytes.readUInt32BE(16) !== image.width || bytes.readUInt32BE(20) !== image.height)

@@ -9,4 +9,4 @@ backups/
 !/.agents/skills/
 /.claude
 # Optional local game content; never part of the public repository.
-/frontend/local-content/
+/frontend/level-packs/

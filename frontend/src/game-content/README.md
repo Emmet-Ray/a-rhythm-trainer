@@ -4,7 +4,7 @@
 
 可发布的核心项目保留 13 个基础节奏关卡、AI 生成的原创曲目《微光》（`glimmer`）及通用游戏功能。基础关卡音乐来源见[游戏音乐](../../../docs/GAME_MUSIC.md)。共用采样和字体随各自来源说明及许可文件保留。
 
-额外曲目放在 `frontend/local-content/levels/<id>/`，每个目录的 `index.ts` 默认导出一个满足 `GameLevel` 的对象，`id` 必须与目录名一致，且不能与内置关卡重复。目录按名称排序后追加到内置目录；无需修改核心注册表。只加载你信任的本地代码。
+额外曲目放在 `frontend/level-packs/levels/<id>/`，每个目录的 `index.ts` 默认导出一个满足 `GameLevel` 的对象，`id` 必须与目录名一致，且不能与内置关卡重复。目录按名称排序后追加到内置目录；无需修改核心注册表。只加载你信任的本地代码。
 
 本地关卡仍使用同一套类型、轨道、音频和渲染引擎。谱面、背景及美术源跟随关卡存放，图片用 Vite 的 `?url` 导入，例如：
 
@@ -16,11 +16,11 @@ import backgroundUrl from "./assets/background.png?url";
 // 按 GameLevel 契约定义完整的关卡内容，再 export default level。
 ```
 
-图片声明的 `source` 使用相对仓库根的本地路径，例如 `frontend/local-content/levels/<id>/art/background.px.js`。不要把本地图片复制到 `frontend/public/`：该目录会随公开构建发布。Vite 会为实际导入的本地图片处理开发 URL 和构建产物，不需要另建资源服务器。
+图片声明的 `source` 使用相对仓库根的本地路径，例如 `frontend/level-packs/levels/<id>/art/background.px.js`。不要把本地图片复制到 `frontend/public/`：该目录会随公开构建发布。Vite 会为实际导入的本地图片处理开发 URL 和构建产物，不需要另建资源服务器。
 
 `catalog.ts` 默认导入空的 `localLevels.ts`；启用本地内容时，Vite 的精确 alias 将它替换为使用 `import.meta.glob` 的发现模块。开发与普通构建默认启用；显式公开模式不导入发现模块或本地曲目。内置关卡列表和共享素材仍由 catalog 统一组装；本地包不能改写引擎规则。
 
-`frontend/local-content/` 被 Git 忽略，但会自动参与本地及 Docker 构建，必须单独备份；仅推送核心仓库不会备份这些文件。推荐将该目录独立备份或在其中维护单独的私有仓库。不要强制添加被忽略的内容，也不要把包含旧曲目的完整历史合并到公开开发线。
+`frontend/level-packs/` 被 Git 忽略，但会自动参与本地及 Docker 构建，必须单独备份；仅推送核心仓库不会备份这些文件。推荐将该目录独立备份或在其中维护单独的私有仓库。不要强制添加被忽略的内容，也不要把包含旧曲目的完整历史合并到公开开发线。
 
 日常开发、公开模式、构建及验证命令见[前端运行说明](../../README.md#本地曲目与公开构建)。公共核心从筛选后的历史继续开发，不再维护一套需要逐次复制的公开代码。旧完整分支仅作为本地迁移备份。
 

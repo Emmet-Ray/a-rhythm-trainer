@@ -1,6 +1,6 @@
 import type { GameLevel } from "../game/core/GameLevel";
 
-const modules = import.meta.glob<GameLevel>("/local-content/levels/*/index.ts", {
+const modules = import.meta.glob<GameLevel>("/level-packs/levels/*/index.ts", {
   eager: true,
   import: "default",
 });
